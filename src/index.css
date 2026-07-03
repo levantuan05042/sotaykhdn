@@ -1,0 +1,11 @@
+@import "tailwindcss";
+
+/* Tùy chỉnh màu sắc thương hiệu ngay trong CSS */
+@theme {
+  --color-agri-red: #A62026;
+  --color-agri-light: #FEEBEB;
+}
+
+body {
+  @apply bg-[#F9FAFB] font-sans;
+}

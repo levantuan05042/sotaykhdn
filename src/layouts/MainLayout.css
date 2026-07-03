@@ -1,0 +1,104 @@
+/* Đảm bảo reset margin của body */
+body {
+  margin: 0;
+  padding: 0;
+}
+
+/* Container cha ôm toàn bộ trang */
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* Chiếm tối thiểu 100% chiều cao màn hình */
+}
+
+/* HEADER: Dùng sticky để ghim lên đầu */
+.grid-header {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  
+  /* Cần fix cứng chiều cao header để tính toán khoảng hở cho sidebar */
+  height: 60px; 
+}
+
+/* Lưới chứa Sidebar và Content */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  flex: 1; /* Kéo giãn lấp đầy khoảng trống giữa Header và Footer */
+  align-items: start; /* QUAN TRỌNG: Ngăn Sidebar bị kéo giãn chiều cao theo Content */
+}
+
+/* SIDEBAR: Ghim cố định nhưng sẽ bị đẩy lên khi vùng cha (grid-container) cuộn hết */
+.grid-sidebar {
+  grid-column: span 2;
+  background-color: #FFF0F0;
+  border-right: 1px dashed #FFCDCD;
+  position: sticky;
+  top: 120px; /* Bám dính ngay dưới Header (chiều cao Header) */
+  height: calc(100vh - 60px); /* Kéo dài tới đáy màn hình */
+}
+
+/* NỘI DUNG: Không giới hạn chiều cao, để tự nhiên đẩy trang dài ra */
+.grid-content {
+  grid-column: span 10;
+  background-color: #f9f9f9;
+}
+
+.page-body {
+  padding-top: 60px;
+  min-height: calc(100vh - 60px); 
+}
+
+/* FOOTER: Nằm độc lập phía dưới, tự nhiên chiếm 100% ngang */
+.grid-footer {
+  background-color: #ffffff;
+  border-top: 1px solid #eee;
+  padding: 15px 40px;
+  color: #666;
+  font-size: 13px;
+  z-index: 100;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.footer-right {
+  text-align: right;
+  line-height: 1.6;
+}
+
+/* ======================================================
+   RESPONSIVE (CHO TABLET VÀ MOBILE)
+   ====================================================== */
+@media (max-width: 992px) {
+  .grid-sidebar { grid-column: span 4; }
+  .grid-content { grid-column: span 8; }
+}
+
+@media (max-width: 768px) {
+  .grid-container {
+    display: block; /* Bỏ grid trên mobile để các khối xếp chồng */
+  }
+  .grid-sidebar {
+    position: static; /* Gỡ sticky trên mobile */
+    height: auto;
+  }
+  .grid-footer {
+    padding: 15px 20px;
+  }
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 10px;
+  }
+  .footer-right {
+    text-align: center;
+  }
+}

@@ -1,0 +1,250 @@
+/* Định nghĩa font-face nếu dự án chưa có Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+.product-table-container {
+  width: 100%;
+}
+
+.product-table {
+  width: 100%;
+  text-align: left;
+  border-separate: border-separate;
+  border-spacing: 0;
+}
+
+/* Base Text Style */
+.table-text-base {
+  color: #1a191b;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 140%;
+  font-feature-settings: 'ss01' on, 'cv01' on;
+  letter-spacing: 0;
+}
+
+/* Header Styles */
+.product-table thead tr {
+  background-color: #f2eff3;
+}
+
+.product-table th {
+  padding: 12px 24px; /* Default padding cho các ô giữa */
+  font-weight: 700;
+}
+
+/* Padding 40px cho cột đầu và cuối */
+.product-table .px-40 {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+.product-table .rounded-l-12 {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.product-table .rounded-r-12 {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Body Styles */
+.product-table tbody {
+  background-color: #ffffff;
+}
+
+.product-table td {
+  padding: 12px 24px;
+  border-bottom: 1px solid #e3dfe6;
+  vertical-align: middle;
+  font-weight: 400;
+}
+
+/* Badge Trạng thái */
+/* Badge Trạng thái chung */
+.status-badge {
+display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 4px 16px; /* Padding có thể điều chỉnh tùy độ rộng badge */
+  height: 32px;
+  
+  /* Thông số kiểu chữ bạn cung cấp */
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  text-align: center;
+}
+
+.status-badge span {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 100%;
+}
+
+/* Các biến thể màu sắc dựa trên image_cd4383.png */
+
+/* Đang hoạt động - Xanh lá */
+.status-active {
+  background-color: #E0F9EC;
+  color: #14532D;
+}
+
+
+/* Lưu nháp - Vàng nhạt */
+.status-draft {
+  background-color: #FEF9C3;
+  color: #713F12;
+}
+
+/* Từ chối - Xám */
+.status-rejected {
+  background-color: #EAE7EC;
+  color: #65636D;
+}
+
+/* Yêu cầu chỉnh sửa - Đỏ hồng */
+.status-revision {
+  background-color: #FECACA;
+  color: #7F1D1D;
+}
+
+/* Chờ duyệt - Cam nhạt */
+.status-pending {
+  background-color: #FED7AA;
+  color: #7C2D12;
+}
+
+/* Lưu trữ - Xanh dương nhạt */
+.status-archived {
+  background-color: #BAE6FD;
+  color: #0C4A6E;
+}
+
+/* Action Button */
+.btn-view-detail {
+  color: #a62026;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: text-decoration 0.2s;
+}
+
+.btn-view-detail:hover {
+  text-decoration: underline;
+}
+
+.select-custom {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236C6E79' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
+  padding-right: 32px !important;
+}
+
+.input:focus {
+  border-color: #AE1C3F;
+  outline: none;
+}
+
+.product-name-cell {
+  max-width: 111px; 
+}
+
+.truncate-text {
+  display: block;
+  white-space: nowrap;     
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+  cursor: help;             
+}
+
+/* Wrapper căn giữa */
+.pagination-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+/* Container */
+.pagination-container {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f4f5;
+  border-radius: 12px;
+  padding: 6px;
+}
+
+/* Arrow */
+.pagination-arrow {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  color: #333;
+  transition: 0.2s;
+}
+
+.pagination-arrow:hover:not(:disabled) {
+  background: #ece7e9;
+}
+
+.pagination-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-number {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a191b;
+  transition: all 0.2s ease;
+}
+
+.pagination-number.active {
+  background: #f6dfe4;
+  color: #ae1c3f;
+  font-weight: 600;
+}
+
+.pagination-number:hover:not(.active) {
+  background: #ece7e9;
+}
+
+.pagination-dots {
+  padding: 0 6px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Container chính cho phép cuộn ngang */
+.product-table-container {
+  overflow-x: auto;
+  position: relative;
+  padding-bottom: 10px; /* Tránh bị cắt mất bóng đổ nếu có */
+}
+
+.product-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 800px; /* Đảm bảo bảng có chiều rộng tối thiểu để kích hoạt cuộn */
+}

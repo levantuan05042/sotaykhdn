@@ -1,0 +1,226 @@
+/* --- LAYOUT CHÍNH --- */
+.product-group-container {
+  display: flex;
+  flex-direction: column;
+  background-color: #F9FAFB;
+  min-height: 100vh;
+  padding: 24px;
+  gap: 20px;
+}
+
+.content-wrapper,
+.filter-section,
+.table-placeholder {
+  width: 100%;
+  max-width: 1550px;
+  margin: 0 auto;
+}
+
+/* --- HEADER SECTION --- */
+.content-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  color: #1A191B;
+  font-family: 'Inter', sans-serif;
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 44px;
+  letter-spacing: -0.72px;
+  margin: 0;
+}
+
+.btn-add-new {
+  display: flex;
+  align-items: center;
+  background-color: #AE1C3F;
+  padding: 10px 18px;
+  border-radius: 8px;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-add-new:hover {
+  background-color: #8e1734;
+}
+
+.btn-add-new span {
+  color: #FDFCFD;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* --- FILTER & SEARCH SECTION --- */
+.filter-section {
+  display: flex;
+  flex-direction: column;
+  border-radius: 12px;
+  border: 1px solid #F2EFF3;
+  background-color: #F2EFF3;
+  padding: 10px 20px;
+  gap: 20px;
+}
+
+.search-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 16px;
+  display: flex;
+  align-items: center;
+}
+
+.search-input {
+  display: block;
+  width: 100%;
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+  background-color: #FDFCFD;
+  padding: 16px 16px 16px 48px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #1A191B;
+  outline: none;
+  transition: box-shadow 0.2s;
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 1px #AE1C3F;
+}
+
+.search-input::placeholder {
+  color: #737373;
+}
+
+/* --- DROPDOWN FILTERS --- */
+.dropdown-group-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dropdown-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  height: 44px;
+}
+
+.dropdown-wrapper {
+  position: relative;
+}
+
+.btn-dropdown {
+  display: flex;
+  align-items: center;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 10px 0; /* Giảm padding ngang nếu đã có gap ở parent */
+  gap: 8px;
+}
+
+.btn-dropdown span {
+  color: #171717;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.chevron-icon {
+  transition: transform 0.2s;
+}
+
+.chevron-icon.rotate {
+  transform: rotate(180deg);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 240px;
+  background: #FFFFFF;
+  border-radius: 8px;
+  box-shadow: 0px 12px 16px -4px rgba(16, 24, 40, 0.08);
+  border: 1px solid #F2F4F7;
+  padding: 4px 0;
+  z-index: 1000;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #344054;
+}
+
+.menu-item:hover, 
+.menu-item.selected {
+  background-color: #F9FAFB;
+  color: #171717;
+}
+
+/* --- SELECTED TAGS (CHIPS) --- */
+.selected-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.filter-tag {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border: 1px solid #E5E5E5;
+  padding: 4px 8px;
+  gap: 8px;
+  border-radius: 4px;
+  box-shadow: 0px 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.filter-tag span {
+  color: #1A191B;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.btn-remove-tag {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #737373;
+  transition: color 0.2s;
+}
+
+.btn-remove-tag:hover {
+  color: #AE1C3F;
+}
+
+/* --- TABLE SECTION --- */
+.table-placeholder {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #E5E5E5;
+  min-height: 400px;
+  overflow: hidden; /* Đảm bảo table không tràn qua border-radius */
+}

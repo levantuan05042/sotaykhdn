@@ -1,0 +1,214 @@
+.table-wrapper {
+  background: white;
+  border-radius: 8px;
+  overflow-x: auto; /* KÍCH HOẠT SCROLL NGANG CHO CẢ BẢNG */
+  border: 1px solid #E5E7EB;
+}
+
+.custom-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1300px; 
+}
+
+.custom-table th {
+  background: #F9FAFB;
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 14px;          
+  color: #111827;           
+  text-transform: none;    
+  font-weight: 600;        
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.custom-table td {
+  padding: 16px;
+  border-bottom: 1px solid #F3F4F6;
+  font-size: 14px;
+  white-space: nowrap; 
+}
+
+.custom-table th:nth-child(1),
+.custom-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 65px;
+  min-width: 65px;
+  text-align: center;
+}
+.custom-table th:nth-child(1) { background: #F9FAFB; }
+.custom-table td:nth-child(1) { background: white; }
+
+.custom-table th:nth-child(2),
+.custom-table td:nth-child(2) {
+  position: sticky;
+  left: 65px; 
+  z-index: 3;
+  width: 260px;
+  min-width: 260px;
+  box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.08); 
+}
+.custom-table th:nth-child(2) { background: #F9FAFB; }
+.custom-table td:nth-child(2) { background: white; }
+
+.custom-table th:last-child,
+.custom-table td:last-child {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  width: 60px;
+  min-width: 60px;
+  background: white; /* Màu nền cho td */
+  box-shadow: -4px 0 8px -4px rgba(0, 0, 0, 0.08); /* Bóng đổ ngăn cách */
+}
+
+.custom-table th:last-child {
+  background: #F9FAFB;
+}
+
+.col-group { min-width: 180px; }
+.col-category { min-width: 180px; }
+.col-business { min-width: 200px; }
+
+/* Badge trạng thái */
+.status-badge-custom {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status-active { background: #E1F7E3; color: #22C55E; }
+.status-active .dot { width: 6px; height: 6px; background: #22C55E; border-radius: 50%; margin-right: 8px; }
+
+.status-draft { background: #F3F4F6; color: #6B7280; }
+.status-draft .dot { display: none; }
+
+.text-success {
+  color: #14532D; /* Màu mới từ Figma: --Green-900 */
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 24px;
+}
+.text-danger { 
+  color: #EF4444; 
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 600;
+  line-height: 24px;
+}
+
+.btn-action-view {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.btn-action-view:hover {
+   color: #AE1C3F;
+  }
+
+/* Phân trang */
+.pagination-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  gap: 12px;
+}
+
+.p-item {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #E5E7EB;
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+}
+
+.p-item.active {
+  background: #AE1C3F;
+  color: white;
+  border-color: #AE1C3F;
+}
+
+.p-nav-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #6B7280;
+  display: flex;
+  align-items: center;
+}
+
+.p-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.pagination-dots { color: #9CA3AF; }
+
+.table-wrapper::-webkit-scrollbar {
+  width: 6px;   
+  height: 6px;   
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+  background: transparent; 
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15); 
+  border-radius: 10px;                   
+  border: 1px solid transparent;         
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.3);  
+}
+
+.table-wrapper {
+  scrollbar-width: thin;          
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent; 
+}
+
+
+.col-highlight {
+  background-color: #F2FCF7 !important;
+  border-bottom: 1px solid #E5E7EB;     
+  border-left: none;
+  border-right: none;
+}
+
+.col-highlight-first {
+  border-left: 1px solid #63B693 !important; /* Green-8 */
+}
+
+.col-highlight-last {
+  border-right: 1px solid #63B693 !important; /* Green-8 */
+}
+
+/* 4. Padding giống Figma */
+.col-highlight-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
