@@ -15,7 +15,9 @@ import AddBusinessPage from './pages/AddBusinessPage';
 import ProductPage from './pages/ProductPage';
 import AddProductPage from './pages/AddProductPage';
 import DetailProductPage from './pages/DetailProductPage';
+import DetailProductsPage from './pages/DetailProductsPage';
 import RequestListPage from './pages/RequestListPage';
+import BatchRequestDetailPage from './pages/BatchRequestDetailPage';
 
 
 
@@ -52,6 +54,8 @@ function App() {
           <Route path="/products/requests" element={<RequestListPage />} />
           <Route path="/products/add" element={<AddProductPage />} />
           <Route path="/products/:id" element={<DetailProductPage />} />
+          <Route path="/product/:id" element={<DetailProductsPage />} />
+          <Route path="/products/batch/:requestId" element={<BatchRequestDetailPage />} />
 
         </Route>
       </Routes>

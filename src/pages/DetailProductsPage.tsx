@@ -62,6 +62,7 @@ const checkIsRequired = (item: any) => {
   const t2 = String(item.noiDung || item.value || '');
   return t1.includes('(*)') || t2.includes('(*)');
 };
+
 const toDisplayUrl = (raw: string) => {
   if (!raw) return '';
   if (raw.startsWith('http')) {
@@ -75,12 +76,6 @@ const toDisplayUrl = (raw: string) => {
     : `/files/products/${raw}`;
   return cleanPath; 
 };
-const toRelativePath = (raw: string) => {
-  return raw.replace(BASE_URL, '');
-};
-// ─────────────────────────────────────────────
-// Canvas crop → Blob
-// ─────────────────────────────────────────────
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new Image();
@@ -489,18 +484,22 @@ const DetailProductPage: React.FC = () => {
     setImageRemoved(true);
   };
 
-const uploadImage = async (file: File): Promise<string> => {
-  const fd = new FormData();
-  fd.append('file', file);
+  const uploadImage = async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file);
 
-  try {
-    const response = await axios.post(API_ENDPOINTS.FILES.UPLOAD, fd);
-    return response.data.url; 
-  } catch (error) {
-    console.error("Lỗi upload ảnh:", error);
-    throw new Error('Upload ảnh lên hệ thống thất bại');
-  }
-};
+    try {
+      const response = await axios.post(API_ENDPOINTS.FILES.UPLOAD, fd);
+      
+      const data = response.data;
+      if (!data.url) throw new Error('Backend không trả về đường dẫn ảnh');
+      
+      return data.url; 
+    } catch (error) {
+      console.error("Lỗi upload ảnh:", error);
+      throw new Error('Upload ảnh lên hệ thống thất bại');
+    }
+  };
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -781,7 +780,7 @@ const uploadImage = async (file: File): Promise<string> => {
               <div className="formGroup" style={{ marginBottom: 16 }}>
                 <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nhóm sản phẩm (*)</label>
                 <div className="custom-select-container" ref={groupRef}>
-                  <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(v => !v)}>
+                  <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(v => !v)} style={{ backgroundColor: 'white' }}>
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || 'Chọn nhóm'}</span>
                   </div>
                   {isGroupOpen && (
@@ -801,7 +800,7 @@ const uploadImage = async (file: File): Promise<string> => {
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
-                    <div className={`select-custom ${isCategoryOpen ? 'open' : ''}`} onClick={() => setIsCategoryOpen(v => !v)} >
+                    <div className={`select-custom ${isCategoryOpen ? 'open' : ''}`} onClick={() => setIsCategoryOpen(v => !v)} style={{ backgroundColor: 'white' }}>
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục')}</span>
                     </div>
                     {isCategoryOpen && (
@@ -818,7 +817,7 @@ const uploadImage = async (file: File): Promise<string> => {
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
-                    <div className={`select-custom ${isOperationOpen ? 'open' : ''}`} onClick={() => setIsOperationOpen(v => !v)}>
+                    <div className={`select-custom ${isOperationOpen ? 'open' : ''}`} onClick={() => setIsOperationOpen(v => !v)} style={{ backgroundColor: 'white' }}>
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn nghiệp vụ')}</span>
                     </div>
                     {isOperationOpen && (
@@ -882,7 +881,7 @@ const uploadImage = async (file: File): Promise<string> => {
               {previewImage ? (
                 <div className="product-image-wrapper" style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
                   <img
-                    src={previewImage}
+                    src={toDisplayUrl(productData.imageUrl)}
                     alt="Product"
                     className="product-image"
                     style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 12, border: '1px solid #E5E7EB', display: 'block' }}

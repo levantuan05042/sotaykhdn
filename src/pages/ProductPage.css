@@ -385,3 +385,28 @@
   from { opacity: 1; }
   to { opacity: 0; }
 }
+
+
+/* Styling cho Panel bên phải */
+.quick-view-panel {
+    width: 450px;
+    height: 100vh;
+    background: #fff;
+    border-left: 1px solid #E5E7EB;
+    box-shadow: -4px 0 10px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 100;
+}
+
+.input-group { margin-bottom: 20px; }
+.label { font-weight: 600; display: block; margin-bottom: 8px; color: #374151; }
+.action-footer { display: flex; gap: 10px; margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; }
+
+/* Nút bấm đồng bộ */
+.btn-reject { flex: 1; padding: 10px; background: #FEE2E2; border: none; border-radius: 6px; cursor: pointer; color: #991B1B; font-weight: 600; }
+.btn-revision { flex: 1; padding: 10px; background: #9E1F36; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }

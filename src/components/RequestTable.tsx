@@ -3,26 +3,26 @@ import { useNavigate } from 'react-router-dom';
 import './ProductTable.css'; 
 
 export interface RequestItem {
-  id: string;
+  requestId: string;
   requestName: string;   
-  status: string; // Mở rộng kiểu string để nhận các trạng thái ACTIVE, DRAFT, REJECTED...
+  status: string; 
   createdAt: string;     
-  createdBy: string;     
-  approvedBy: string;    
-  note?: string;         
+  totalProducts: number;
+  isBatch: boolean;      
+  productId: string | null; 
+  createdBy?: string;    
+  approvedBy?: string;   
 }
 
 interface Props {
   data: RequestItem[];
 }
 
-// 1. Hàm loại bỏ thẻ HTML thừa
 const stripHtml = (htmlString: string) => {
   if (!htmlString) return '---';
   return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
-// 2. Hàm format ngày tháng từ ISO (VD: 2026-05-21T16:47:25 -> 21/05/2026)
 const formatDate = (dateString: string) => {
   if (!dateString) return '---';
   try {
@@ -53,27 +53,21 @@ const RequestTable: React.FC<Props> = ({ data }) => {
     return (data || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [data, currentPage]);
 
-  const handleViewDetail = (id: string) => {
-    navigate(`/products/${id}`);
+  const handleViewDetail = (item: RequestItem) => {
+    if (item.isBatch) {
+      navigate(`/products/batch/${item.requestId}`);
+    } else {
+      navigate(`/product/${item.productId}`);
+    }
   };
 
-  // 3. Hàm map và sinh Badge cho toàn bộ trạng thái thực tế
   const renderStatusBadge = (status: string) => {
     const safeStatus = status?.toUpperCase();
-    
-    // Khai báo style dùng chung cho nhanh gọn
     const badgeStyle = (bgColor: string, textColor: string) => ({
-      backgroundColor: bgColor, 
-      color: textColor, 
-      padding: '4px 12px', 
-      borderRadius: '12px', 
-      display: 'inline-flex', 
-      alignItems: 'center', 
-      gap: '6px', 
-      fontSize: '14px', 
-      fontWeight: 500
+      backgroundColor: bgColor, color: textColor, padding: '4px 12px', 
+      borderRadius: '12px', display: 'inline-flex', alignItems: 'center', 
+      gap: '6px', fontSize: '14px', fontWeight: 500
     });
-    
     const dotStyle = (color: string) => ({
       width: '6px', height: '6px', borderRadius: '50%', backgroundColor: color
     });
@@ -86,7 +80,7 @@ const RequestTable: React.FC<Props> = ({ data }) => {
           </div>
         );
       case 'COMPLETED':
-      case 'ACTIVE': // Giả định ACTIVE cũng là màu xanh Hoàn thành/Đang HĐ
+      case 'ACTIVE': 
         return (
           <div className="status-badge-custom" style={badgeStyle('#DCFCE7', '#16A34A')}>
             <span style={dotStyle('#16A34A')}></span><span>Hoàn thành</span>
@@ -124,8 +118,9 @@ const RequestTable: React.FC<Props> = ({ data }) => {
             <th>Tên yêu cầu</th>     
             <th>Trạng thái</th> 
             <th>Thời gian</th> 
-            <th>Người tạo</th> 
-            <th>Người kiểm duyệt</th>
+            <th>Số lượng</th>
+            <th>Người tạo</th>
+            <th>Người duyệt</th>
             <th style={{ width: '60px' }}></th>
           </tr>
         </thead>
@@ -133,35 +128,37 @@ const RequestTable: React.FC<Props> = ({ data }) => {
         <tbody>
           {paginatedData.length > 0 ? (
             paginatedData.map((item, index) => {
-              const plainTextName = stripHtml(item.requestName); // Gọi hàm xóa HTML
+              const plainTextName = stripHtml(item.requestName); 
               
               return (
-                <tr key={item.id || index}>
-                  <td>
-                    {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                  </td>
+                <tr key={item.requestName || index}>
+                  <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                   
                   <td>
                     <span className="truncate-text" title={plainTextName} style={{ fontWeight: 500, color: '#1F2937' }}>
-                      {plainTextName} 
+                      {plainTextName}
                     </span>
                   </td>
 
-                  <td>
-                    {renderStatusBadge(item.status)}
+                  <td>{renderStatusBadge(item.status)}</td>
+                  <td style={{ color: '#4B5563' }}>{formatDate(item.createdAt)}</td>
+                  
+                  <td style={{ color: '#4B5563', fontWeight: item.isBatch ? 600 : 400 }}>
+                    {item.isBatch ? `${item.totalProducts} Sản phẩm` : 'Tạo lẻ'}
                   </td>
 
-                  {/* Gọi hàm format date để hiển thị */}
-                  <td style={{ color: '#4B5563' }}>{formatDate(item.createdAt)}</td>
-
-                  <td style={{ color: '#4B5563' }}>{item.createdBy || '---'}</td>
-
-                  <td style={{ color: '#4B5563' }}>{item.approvedBy || '---'}</td>
+                  {/* Render 2 thẻ td riêng biệt */}
+                  <td style={{ color: '#4B5563' }}>
+                    {item.createdBy || 'Hệ thống'}
+                  </td>
+                  <td style={{ color: '#4B5563' }}>
+                    {item.approvedBy || '---'}
+                  </td>
 
                   <td>
                     <button
                       className="btn-action-view"
-                      onClick={() => handleViewDetail(item.id)}
+                      onClick={() => handleViewDetail(item)} 
                       title="Xem chi tiết"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF' }}
                     >
@@ -176,7 +173,8 @@ const RequestTable: React.FC<Props> = ({ data }) => {
             })
           ) : (
             <tr>
-              <td colSpan={7} className="text-center" style={{ padding: '30px', color: '#9CA3AF' }}>
+              {/* Thay đổi colSpan từ 7 thành 8 do đã thêm 1 cột */}
+              <td colSpan={8} className="text-center" style={{ padding: '30px', color: '#9CA3AF' }}>
                 Không có dữ liệu hiển thị
               </td>
             </tr>

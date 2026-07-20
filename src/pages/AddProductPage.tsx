@@ -277,6 +277,7 @@ const AddProductPage: React.FC = () => {
           isSelected: item.isRequired ? true : false,
           value: ''
         })).sort((a: any, b: any) => Number(b.isRequired) - Number(a.isRequired));
+        setCriteria(formattedCriteria);
          
       } catch (error) {
         console.error("Lỗi fetch criteria:", error);

@@ -1,22 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios'; // Đã thêm để tránh lỗi "Cannot find name 'axios'"
-import './ProductPage.css'; // Dùng chung file css layout của hệ thống
+import axios from 'axios';
+import './ProductPage.css';
 import RequestTable from '../components/RequestTable';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
 
-// Khớp với các trạng thái thực tế trong ảnh thiết kế của bạn
 const STATUS_OPTIONS = [
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
-  { label: 'Hoàn thành', value: 'COMPLETED' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' }
-];
-
-const TIME_OPTIONS = [
-  { label: 'Tất cả thời gian', value: 'ALL' },
-  { label: 'Hôm nay', value: 'TODAY' },
-  { label: '7 ngày qua', value: 'LAST_7_DAYS' },
-  { label: 'Tháng này', value: 'THIS_MONTH' }
+  { label: 'Hoàn thành', value: 'ACTIVE' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Từ chối', value: 'REJECTED' },
+  { label: 'Lưu nháp', value: 'DRAFT' }
 ];
 
 const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
@@ -35,9 +29,13 @@ const RequestListPage: React.FC = () => {
 
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // States cho bộ lọc
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<string>(''); // YYYY-MM-DD
+  const [endDate, setEndDate] = useState<string>('');     // YYYY-MM-DD
+  
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const statusRef = useRef<HTMLDivElement>(null);
@@ -47,12 +45,12 @@ const RequestListPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Giả định API endpoint, bạn đổi lại cho khớp config thực tế của bạn nhé
-      const response = await axios.get(API_ENDPOINTS.PRODUCT?.LIST, {
+      const response = await axios.get(API_ENDPOINTS.PRODUCT?.LIST2, {
         params: {
           keyword: searchTerm.trim() || undefined,
           status: selectedStatus || undefined,
-          timeRange: selectedTime !== 'ALL' ? selectedTime : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
         }
       });
       
@@ -66,11 +64,11 @@ const RequestListPage: React.FC = () => {
     }
   };
 
-  // Debounce tìm kiếm 500ms để tránh spam API liên tục khi gõ phím
+  // Debounce tìm kiếm 500ms để tránh spam API liên tục
   useEffect(() => {
     const handler = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(handler);
-  }, [searchTerm, selectedStatus, selectedTime]);
+  }, [searchTerm, selectedStatus, startDate, endDate]);
 
   // Click outside để tự động đóng dropdown menu
   useEffect(() => {
@@ -86,8 +84,33 @@ const RequestListPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const getLabel = (options: any[], value: string) => {
-    return options.find(opt => opt.value === value)?.label || value;
+  const getStatusLabel = (value: string) => {
+    return STATUS_OPTIONS.find(opt => opt.value === value)?.label || value;
+  };
+
+  // Hàm render Tag lọc cho thời gian linh hoạt
+  const renderDateTag = () => {
+    if (!startDate && !endDate) return null;
+    
+    let label = '';
+    if (startDate && endDate) {
+      if (startDate === endDate) {
+        label = `Ngày: ${startDate}`;
+      } else {
+        label = `${startDate} đến ${endDate}`;
+      }
+    } else if (startDate) {
+      label = `Từ: ${startDate}`;
+    } else if (endDate) {
+      label = `Đến: ${endDate}`;
+    }
+
+    return (
+      <FilterTag 
+        label={label} 
+        onRemove={() => { setStartDate(''); setEndDate(''); }} 
+      />
+    );
   };
 
   return (
@@ -138,7 +161,7 @@ const RequestListPage: React.FC = () => {
               )}
             </div>
 
-            {/* Dropdown Thời gian */}
+            {/* Dropdown Thời gian (Đổi thành chọn khoảng ngày) */}
             <div className="dropdown-wrapper" ref={timeRef}>
               <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')}>
                 <span>Thời gian</span>
@@ -147,14 +170,26 @@ const RequestListPage: React.FC = () => {
                 </svg>
               </button>
               {openDropdown === 'time' && (
-                <div className="dropdown-menu">
-                  {TIME_OPTIONS.map(opt => (
-                    <div key={opt.value} className={`menu-item ${selectedTime === opt.value ? 'selected' : ''}`}
-                      onClick={() => { setSelectedTime(opt.value); setOpenDropdown(null); }}>
-                      <span>{opt.label}</span>
-                      {selectedTime === opt.value && <i className="check-icon">✔</i>}
-                    </div>
-                  ))}
+                <div className="dropdown-menu" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '200px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>Từ ngày</label>
+                    <input 
+                      type="date" 
+                      value={startDate} 
+                      onChange={(e) => setStartDate(e.target.value)}
+                      style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', outline: 'none' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>Đến ngày</label>
+                    <input 
+                      type="date" 
+                      value={endDate}
+                      min={startDate} // Chặn chọn ngày kết thúc trước ngày bắt đầu
+                      onChange={(e) => setEndDate(e.target.value)}
+                      style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', outline: 'none' }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -164,16 +199,13 @@ const RequestListPage: React.FC = () => {
           <div className="selected-filters-row">
             {selectedStatus && (
               <FilterTag 
-                label={getLabel(STATUS_OPTIONS, selectedStatus)} 
+                label={getStatusLabel(selectedStatus)} 
                 onRemove={() => setSelectedStatus(null)} 
               />
             )}
-            {selectedTime && selectedTime !== 'ALL' && (
-              <FilterTag 
-                label={getLabel(TIME_OPTIONS, selectedTime)} 
-                onRemove={() => setSelectedTime(null)} 
-              />
-            )}
+            
+            {/* Render Tag thời gian linh hoạt */}
+            {renderDateTag()}
           </div>
         </div>
       </div>
