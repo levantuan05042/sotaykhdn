@@ -1,0 +1,514 @@
+/* =========================================
+   CSS VARIABLES (BIẾN TOÀN CỤC)
+========================================= */
+:root {
+  /* Colors - Nền & Viền */
+  --bg-white: #FFFFFF;
+  --bg-gray-light: #F9FAFB;
+  --bg-gray-hover: #F3F4F6;
+  --border-light: #F3F4F6;
+  --border-default: #E5E7EB;
+  --border-dark: #D1D5DB;
+
+  /* Colors - Text */
+  --text-main: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4B5563;
+  --text-disabled: #9CA3AF;
+
+  /* Colors - Trạng thái (Danger/Red) */
+  --danger-bg: #FDEBEB;
+  --danger-text: #DC2626;
+
+  /* Colors - Trạng thái (Success/Green) */
+  --success-indicator: #22C55E;
+  --success-bg-light: #E0F9EC;
+  --success-text: #053E2B;
+
+  /* Colors - Panel (Quick View) */
+  --panel-bg: #F2FCF7;
+  --panel-border: #A7F3D0;
+  --panel-close-bg: #D1FAE5;
+  --panel-close-text: #065F46;
+
+  /* Colors - Nút Primary (Đỏ/Xám) */
+  --btn-primary-bg: #AE1C3F;
+  --btn-primary-text: #FFFFFF;
+  --btn-disabled-bg: #E3DFE6;
+  --btn-disabled-text: #8A858F;
+  --btn-save-panel: #E3859A;
+
+  /* Typography & Radius */
+  --font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --text-sm: 13px;
+  --text-md: 14px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+}
+
+/* =========================================
+   LAYOUT & CONTAINER
+========================================= */
+.batch-detail-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-white);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-family);
+}
+
+/* =========================================
+   HEADER
+========================================= */
+.batch-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-white);
+  border-bottom: 1px solid var(--border-default);
+  flex-shrink: 0;
+  height: 72px;
+}
+
+.batch-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+}
+
+.batch-back-btn {
+  background: none;
+  border: none;
+  border-right: 1px solid #EAE7EC;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px;
+  height: 100%;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: var(--text-md);
+}
+
+.batch-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.batch-status-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.batch-header-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+}
+
+.batch-meta-text {
+  font-size: var(--text-md);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.batch-header-divider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--border-default);
+  margin: 0 4px;
+}
+
+.batch-actions-group {
+  display: flex;
+  gap: 12px;
+}
+
+/* =========================================
+   WORKSPACE & TABLE
+========================================= */
+.batch-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  padding: 16px;
+  gap: 16px;
+  background-color: var(--bg-gray-light);
+}
+
+.batch-table-container {
+  flex: 1;
+  background-color: var(--bg-white);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.batch-table-scroll {
+  overflow: auto;
+  flex: 1;
+}
+
+.batch-custom-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.batch-table-header-tr {
+  background-color: var(--bg-gray-light);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.batch-table-th {
+  padding: 16px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: left;
+  border-bottom: 1px solid var(--border-default);
+  border-right: 1px solid var(--border-light);
+}
+
+.batch-table-th:last-child {
+  border-right: none;
+}
+
+.batch-custom-table tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  background-color: var(--bg-white);
+}
+
+/* --- Active Row & Triangle Indicator --- */
+.batch-tr-selected {
+  position: relative;
+}
+
+.batch-tr-selected::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid var(--success-indicator);
+  z-index: 2;
+}
+
+.batch-table-td {
+  padding: 16px;
+  color: var(--text-main);
+  font-size: var(--text-sm);
+  text-align: left;
+  vertical-align: middle;
+  border-right: 1px solid var(--border-light);
+}
+
+.batch-table-td:last-child {
+  border-right: none;
+}
+
+.batch-table-td-name {
+  font-weight: 500;
+  width: 25%;
+}
+
+.batch-action-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+/* Các Nút Trong Bảng */
+.btn-icon-eye {
+  display: flex;
+  padding: 8px;
+  justify-content: center;
+  align-items: center;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border: none;
+  cursor: pointer;
+}
+
+.btn-xem-nhanh {
+  display: flex;
+  padding: 6px 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--radius-md);
+  background: var(--success-bg-light);
+  color: var(--success-text);
+  border: none;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.batch-pagination {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-white);
+}
+
+/* =========================================
+   QUICK VIEW PANEL & FORM COMPONENTS
+========================================= */
+.batch-quickview-panel {
+  width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  border-radius: var(--radius-xl);
+}
+
+.batch-card-box {
+  background-color: var(--panel-bg);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  position: relative;
+  border: 1px solid var(--panel-border);
+}
+
+.batch-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--panel-close-bg);
+  color: var(--panel-close-text);
+  font-weight: bold;
+}
+
+.batch-form-label, .label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.formGroup {
+  margin-bottom: 20px;
+  margin-top: 16px;
+}
+
+.batch-form-select {
+  width: 100%;
+  padding: 10px 14px;
+  padding-right: 36px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #111827;
+  background-color: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3Cpolyline points='6 9 12 15 18 9'%3e%3C/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+.batch-form-select:focus {
+  border-color: #AE1C3F;
+  box-shadow: 0 0 0 3px rgba(174, 28, 63, 0.12);
+}
+
+.batch-form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-dark);
+  font-size: var(--text-sm);
+  outline: none;
+  box-sizing: border-box;
+  background-color: var(--bg-white);
+  margin-bottom: 16px;
+}
+
+.batch-form-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-dark);
+  font-size: var(--text-sm);
+  outline: none;
+  resize: vertical;
+  box-sizing: border-box;
+  background-color: var(--bg-white);
+  min-height: 100px;
+}
+
+/* Image Upload & Preview Styles */
+.product-image-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+}
+
+.product-image {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--border-default);
+  display: block;
+}
+
+.image-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+
+.upload-placeholder {
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--border-default);
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: all 0.2s;
+}
+
+.upload-placeholder:hover {
+  border-color: var(--success-indicator);
+  background: #F0FDF4;
+}
+
+/* Quill Editor Override */
+.ql-editor {
+  background-color: var(--bg-white);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: pre-wrap !important;
+}
+
+/* =========================================
+   BUTTON ACTIONS (PRIMARY & SECONDARY)
+========================================= */
+.btn-primary-action {
+  display: flex;
+  padding: 10px 18px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-text);
+  border: none;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  font-size: var(--text-md);
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.btn-primary-action:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-primary-action:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.btn-secondary-action {
+  display: flex;
+  padding: 10px 18px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border-radius: 8px;
+  background: #E3DFE6;
+  color: #111827;
+  border: 1px solid #D1D5DB;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.2s ease;
+}
+
+.btn-secondary-action:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-secondary-action:disabled {
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
+  border: none;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.overlay-btn {
+  background: rgba(107, 114, 128, 0.75); /* Màu xám trong (có độ trong suốt) */
+  border: none;
+  border-radius: 4px;
+  padding: 6px;
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.overlay-btn:hover {
+  background: rgba(84, 86, 88, 0.95); /* Xám đậm hơn khi hover */
+}
+

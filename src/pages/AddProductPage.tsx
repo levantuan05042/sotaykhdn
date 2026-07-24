@@ -188,7 +188,7 @@ const AddProductPage: React.FC = () => {
 
   // --- STATE UPLOAD & CẮT ẢNH ---
   const [showImageModal, setShowImageModal] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string>(''); 
   const [isUploading, setIsUploading] = useState(false);
@@ -354,7 +354,7 @@ const AddProductPage: React.FC = () => {
     }
   };
 
-  const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+  const onCropComplete = (_croppedArea: any, croppedAreaPixels: any) => {
     setCroppedAreaPixels(croppedAreaPixels);
   };
 

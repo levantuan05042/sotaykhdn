@@ -37,7 +37,6 @@ const ProductGroupPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Cập nhật lại logic check URL theo route mới
   const isProcessingPage = location.pathname.includes('/products/processing');
   const isRejectedPage = location.pathname.includes('/products/rejected');
   const isOfficialPage =
@@ -129,6 +128,7 @@ const ProductGroupPage: React.FC = () => {
   const handleImportSuccess = () => {
     fetchData();
     setToast({ type: 'success', message: 'Nhập sản phẩm từ Excel thành công.' });
+    navigate('/products/requests');
   };
 
   const renderTable = () => {

@@ -21,5 +21,19 @@ export default defineConfig({
         secure: false,
       }
     }
-  } 
+  },
+  // THÊM ĐOẠN BUILD DƯỚI ĐÂY
+  build: {
+    chunkSizeWarningLimit: 1000, // Nâng giới hạn cảnh báo lên 1000 kB (1MB)
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // Tách các thư viện node_modules ra file vendor riêng để tối ưu cache và giảm tải file chính
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
+        }
+      }
+    }
+  }
 })

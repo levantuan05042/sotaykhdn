@@ -75,9 +75,6 @@ const toDisplayUrl = (raw: string) => {
     : `/files/products/${raw}`;
   return cleanPath; 
 };
-const toRelativePath = (raw: string) => {
-  return raw.replace(BASE_URL, '');
-};
 // ─────────────────────────────────────────────
 // Canvas crop → Blob
 // ─────────────────────────────────────────────

@@ -1,5 +1,5 @@
 // Nơi quản lý tập trung đường dẫn Server Backend
-export const BASE_URL = 'https://determine-september-helmet-archive.trycloudflare.com/api/v1';
+export const BASE_URL = 'api/v1';
 
 // Bạn có thể gom sẵn các đầu Endpoint vào đây cho dễ quản lý
 export const API_ENDPOINTS = {
@@ -41,7 +41,7 @@ export const API_ENDPOINTS = {
     IMPORT: `${BASE_URL}/products/import`,
   },
   FILES: {
-    UPLOAD: `${BASE_URL}/api/v1/files/upload`,
+    UPLOAD: `${BASE_URL}/files/upload`,
   },
   PRODUCT_REQUESTS: {
       UPDATE_STATUS: (requestId: string) => `${BASE_URL}/product-requests/${requestId}/status`,
