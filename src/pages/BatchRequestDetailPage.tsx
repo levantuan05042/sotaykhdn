@@ -1069,11 +1069,15 @@ const BatchRequestDetailPage: React.FC = () => {
             
             <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
               <div className="batch-card-box" style={{ marginBottom: '12px' }}>
+                
+                {/* Dấu X để đóng xem nhanh */}
                 <button 
                   onClick={() => setQuickViewProduct(null)} 
                   className="batch-close-btn"
+                  title="Đóng xem nhanh"
                 >✕</button>
                 
+                <div style={{ marginTop: '20px' }}>
                 <CustomSelect
                   label="Nhóm sản phẩm"
                   value={formData.productGroupId}
@@ -1084,15 +1088,10 @@ const BatchRequestDetailPage: React.FC = () => {
                     handleFormChange({ productGroupId: val, productCategoryId: '', businessId: '' });
                   }}
                 />
-                
-                {priorityCriteria.length > 0 && (
-                  <div style={{ marginBottom: '16px' }}>
-                    {priorityCriteria.map(c => renderCriterion(c))}
-                  </div>
-                )}
-                
+                </div>
+                {/* 2 & 3. Danh mục & Nghiệp vụ */}
                 {(categoryOptions.length > 0 || operationOptions.length > 0) && (
-                   <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+                   <div style={{ display: 'flex', gap: '10px', marginTop: '16px', marginBottom: '16px' }}>
                      <div style={{ flex: 1, minWidth: 0 }}>
                        <CustomSelect
                          label="Danh mục"
@@ -1117,12 +1116,20 @@ const BatchRequestDetailPage: React.FC = () => {
                    </div>
                 )}
                 
+                {/* 4. Tiêu chí bắt buộc (Bao gồm nhóm Priority và nhóm Required) */}
+                {priorityCriteria.length > 0 && (
+                  <div style={{ marginTop: '16px' }}>
+                    {priorityCriteria.map(c => renderCriterion(c))}
+                  </div>
+                )}
+                
                 {requiredCriteria.length > 0 && (
                   <div style={{ marginTop: '16px' }}>
                     {requiredCriteria.map(c => renderCriterion(c))}
                   </div>
                 )}
 
+                {/* 5. Tiêu chí không bắt buộc (Đã được điền hoặc vừa thêm) */}
                 {visibleOptionalCriteria.length > 0 && (
                   <div style={{ marginTop: '16px' }}>
                     {visibleOptionalCriteria.map(criterion => 
@@ -1138,9 +1145,9 @@ const BatchRequestDetailPage: React.FC = () => {
                   </div>
                 )}
 
-                <div className="formGroup">
+                {/* 6. Ảnh mô tả */}
+                <div className="formGroup" style={{ marginTop: '16px' }}>
                   <label className="label">Ảnh mô tả</label>
-
                   {previewImage ? (
                     <div className="product-image-wrapper">
                       <img
@@ -1149,21 +1156,20 @@ const BatchRequestDetailPage: React.FC = () => {
                         className="product-image"
                       />
                       <div className="image-overlay">
-  {/* Nút sửa ảnh */}
-  <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)} title="Đổi ảnh">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </svg>
-  </button>
-
-  {/* Nút xóa ảnh (nếu vẫn muốn giữ màu đỏ cảnh báo) */}
-  <button type="button" className="overlay-btn btn-delete" onClick={handleRemoveImage} title="Xóa ảnh">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    </svg>
-  </button>
-</div>
+                        {/* Nút sửa ảnh */}
+                        <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)} title="Đổi ảnh">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
+                        </button>
+                        {/* Nút xóa ảnh */}
+                        <button type="button" className="overlay-btn btn-delete" onClick={handleRemoveImage} title="Xóa ảnh">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button type="button" onClick={() => setShowImageModal(true)}
@@ -1182,6 +1188,7 @@ const BatchRequestDetailPage: React.FC = () => {
                   )}
                 </div>
 
+                {/* 7. Button thêm tiêu chí không bắt buộc */}
                 {hiddenOptionalCriteria.length > 0 && (
                   <div style={{ position: 'relative', marginTop: '16px' }}>
                     <button
@@ -1251,6 +1258,7 @@ const BatchRequestDetailPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Phần dưới cùng: Ghi chú và Nút Lưu */}
             <div style={{ flexShrink: 0, backgroundColor: '#FFFFFF', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
               <div className="batch-card-box" style={{ marginBottom: '8px' }}>
                 <label className="batch-form-label">

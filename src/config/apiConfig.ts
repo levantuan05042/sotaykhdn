@@ -1,5 +1,5 @@
 // Nơi quản lý tập trung đường dẫn Server Backend
-export const BASE_URL = 'api/v1';
+export const BASE_URL = 'http://localhost:8082/api/v1';
 
 // Bạn có thể gom sẵn các đầu Endpoint vào đây cho dễ quản lý
 export const API_ENDPOINTS = {

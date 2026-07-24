@@ -300,12 +300,12 @@
 
 .batch-close-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  top: 16px; /* Chỉnh thành 16px để đồng đều với padding của thẻ .batch-card-box */
+  right: 16px; /* Chỉnh thành 16px */
   border: none;
   border-radius: var(--radius-sm);
-  width: 24px;
-  height: 24px;
+  width: 28px; /* Tăng kích thước lên một chút cho dễ click */
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -313,8 +313,16 @@
   background: var(--panel-close-bg);
   color: var(--panel-close-text);
   font-weight: bold;
+  font-size: 16px; /* Cố định kích thước font */
+  line-height: 1; /* Ép dòng để chữ ✕ không bị lệch dọc */
+  padding: 0; /* Xóa padding mặc định của button */
+  z-index: 10; /* Tránh bị thẻ khác đè lên */
+  transition: all 0.2s ease;
 }
 
+.batch-close-btn:hover {
+  background: #A7F3D0; /* Thêm hiệu ứng hover cho mượt */
+}
 .batch-form-label, .label {
   display: block;
   color: var(--text-secondary);
