@@ -67,9 +67,9 @@ const MainLayout: React.FC = () => {
 
   if (isFullScreenPage) {
     return (
-      <div className="fullscreen-layout-wrapper" style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <div className="fullscreen-layout-wrapper" style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
         <Toaster position="top-right" reverseOrder={false} />
-        <main style={{ width: '100%', height: '100%', backgroundColor: '#f9fafb' }}>
+        <main style={{ width: '100%', minHeight: '100%', backgroundColor: '#f9fafb' }}>
           <Outlet />
         </main>
       </div>

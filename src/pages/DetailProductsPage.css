@@ -1,0 +1,627 @@
+/* ==========================================================================
+   DETAIL PRODUCT PAGE - FIGMA UI STYLES
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+}
+
+.pageWrapper {
+  display: flex;
+  justify-content: center;
+  background-color: #FCFCFC;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  padding: 24px 0;
+}
+
+.mainContainer {
+  display: flex;
+  width: 1220px;
+  padding: 0 40px 40px 40px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+  background-color: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* ─────────────────────────────────────────────
+   1. HEADER SECTION
+   ───────────────────────────────────────────── */
+.header {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #E5E7EB; /* Gạch phân ô dưới header */
+}
+
+.breadcrumb-truncate {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 16px; /* Tăng khoảng cách để chứa vạch kẻ dọc */
+  min-width: 0;
+}
+
+.btnBack {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 16px 0 0; /* Thêm padding bên phải */
+  border-right: 1px solid #E5E7EB; /* Vạch kẻ dọc ngăn cách */
+  flex-shrink: 0;
+}
+
+.breadcrumbText {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 600; /* Đổi thành in đậm cho chữ 'Quay lại' */
+  line-height: 140%;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* Thêm class mới cho Nhóm sản phẩm (nhạt màu hơn) */
+.breadcrumbGroup {
+  color: #4B5563;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.breadcrumbActive {
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700; /* Đậm hơn giống bản thiết kế */
+}
+
+/* ─────────────────────────────────────────────
+   2. STATUS BADGES
+   ───────────────────────────────────────────── */
+.statusBadge {
+  display: flex;
+  padding: 6px 16px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  border-radius: 100px;
+  flex-shrink: 0;
+  height: 32px;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.statusText {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+/* Status variants */
+.status-active {
+  background-color: #E0F9EC;
+}
+.status-active .statusText { color: #14532D; }
+.status-active .dot { background-color: #12B76A; }
+
+.status-draft {
+  background-color: #FEF9C3;
+}
+.status-draft .statusText { color: #713F12; }
+.status-draft .dot { background-color: #CA8A04; }
+
+.status-rejected {
+  background-color: #EAE7EC;
+}
+.status-rejected .statusText { color: #65636D; }
+.status-rejected .dot { background-color: #65636D; }
+
+.status-revision {
+  background-color: #FECACA;
+}
+.status-revision .statusText { color: #7F1D1D; }
+.status-revision .dot { background-color: #EF4444; }
+
+.status-pending {
+  background-color: #FED7AA;
+}
+.status-pending .statusText { color: #7C2D12; }
+.status-pending .dot { background-color: #F97316; }
+
+.status-archived {
+  background-color: #BAE6FD;
+}
+.status-archived .statusText { color: #0C4A6E; }
+.status-archived .dot { background-color: #0EA5E9; }
+
+/* ─────────────────────────────────────────────
+   3. ACTION BUTTONS
+   ───────────────────────────────────────────── */
+.btnDraft {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #E3DFE6;
+  border: none;
+  color: #1A191B;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btnDraft:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnDraft:not(:disabled):hover {
+  background: #D4CFD8; 
+}
+
+.btnSubmit {
+  padding: 8px 20px;
+  border-radius: 8px;
+  background: #AE1C3F;
+  border: none;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btnSubmit:disabled {
+  background: #E3DFE6;
+  color: #9CA3AF;
+  cursor: not-allowed;
+}
+
+.btnSubmit:not(:disabled):hover {
+  background: #8E1734;
+}
+
+.btnRestore {
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: #10B981;
+  color: #FFF;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.badgeRequestRevision {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 100px;
+  background: #FEF9C3;
+  color: #713F12;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────
+   4. CONTENT GRID & FORMS (LEFT COLUMN)
+   ───────────────────────────────────────────── */
+.contentGrid {
+  display: flex;
+  width: 100%;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.leftCol {
+  flex: 1 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formCard {
+  border-radius: 12px;
+  background: #F2EFF3;
+  display: flex;
+  padding: 24px;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  border: 1px solid #E5E7EB;
+}
+
+.label {
+  color: #374151;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #D1D5DB;
+  background-color: #FFFFFF;
+  font-size: 15px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: #AE1C3F;
+  box-shadow: 0 0 0 2px rgba(174, 28, 63, 0.1);
+}
+
+/* Custom Dropdown Styles */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.select-custom {
+  background-color: #FFFFFF;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: border-color 0.2s;
+  color: #1F2937;
+}
+
+.select-custom.open {
+  border-color: #AE1C3F;
+  box-shadow: 0 0 0 2px rgba(174, 28, 63, 0.1);
+}
+
+.custom-options-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  overflow: hidden;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.custom-option {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: background 0.2s;
+}
+
+.custom-option:nth-child(odd) {
+  background-color: #FFFFFF;
+}
+
+.custom-option:nth-child(even) {
+  background-color: #F9FAFB;
+}
+
+.custom-option:hover {
+  background-color: #FFF0F0 !important;
+  color: #AE1C3F;
+}
+
+.custom-option.selected {
+  background-color: #FFF0F0 !important;
+  color: #AE1C3F;
+  font-weight: 600;
+}
+
+/* ─────────────────────────────────────────────
+   5. RIGHT COLUMN (STATUS, INFO, COMMENTS)
+   ───────────────────────────────────────────── */
+.rightCol {
+  width: 340px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Comment Section Card */
+.commentCard {
+  display: flex;
+  padding: 20px;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 12px;
+  background: #F2EFF3;
+  border: 1px solid #E5E7EB;
+  box-sizing: border-box;
+}
+
+.commentHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.commentAvatarFloating {
+  position: absolute;
+  top: -18px;
+  right: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #FF24BD;
+  color: #FFFFFF;
+  border: 2px solid #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.unreadDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #12B76A;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.commentTitle {
+  color: #AE1C3F;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.commentList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.commentItem {
+  display: flex;
+  padding: 12px;
+  gap: 12px;
+  border-radius: 8px;
+  background: #E3DFE6;
+  box-sizing: border-box;
+}
+
+.userInfo {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.userHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.userName {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.commentDate {
+  color: #6B7280;
+  font-size: 12px;
+}
+
+.commentText {
+  margin: 0;
+  color: #4B5563;
+  font-size: 13px;
+  line-height: 18px;
+  word-break: break-word;
+}
+
+.commentDivider {
+  border: 0;
+  border-top: 1px solid #D4D4D8;
+  margin: 4px 0;
+}
+
+.no-comments {
+  color: #6B7280;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 0;
+  font-style: italic;
+}
+
+.btnAddCriteria {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #10B981;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btnAddCriteria:hover {
+  color: #0E9F72;
+  text-decoration: underline;
+}
+
+/* ─────────────────────────────────────────────
+   6. TOAST NOTIFICATIONS & MODALS
+   ───────────────────────────────────────────── */
+.toast-pill-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  border: 1px solid #E5E7EB;
+  min-width: 320px;
+  pointer-events: auto;
+}
+
+.toast-pill-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toast-pill-icon {
+  background: #ECFDF5;
+  color: #10B981;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toast-pill-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1F2937;
+}
+
+.toast-pill-close {
+  background: none;
+  border: none;
+  color: #9CA3AF;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Confirm Toast Card */
+.confirm-toast-card {
+  background: #FFFFFF;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  border: 1px solid #E5E7EB;
+  width: 380px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.confirm-toast-body {
+  display: flex;
+  gap: 12px;
+}
+
+.confirm-toast-icon {
+  background: #FEE2E2;
+  color: #EF4444;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.confirm-toast-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.confirm-toast-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.confirm-toast-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #6B7280;
+  line-height: 18px;
+}
+
+.confirm-toast-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.confirm-btn-delete {
+  padding: 6px 16px;
+  background: #AE1C3F;
+  color: #FFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.confirm-btn-cancel {
+  padding: 6px 16px;
+  background: #F3F4F6;
+  color: #374151;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import './ProductPage.css';
 import RequestTable from '../components/RequestTable';
@@ -11,6 +11,18 @@ const STATUS_OPTIONS = [
   { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
   { label: 'Từ chối', value: 'REJECTED' },
   { label: 'Lưu nháp', value: 'DRAFT' }
+];
+
+const DATE_PRESETS = [
+  { label: 'Hôm nay', value: 'today' },
+  { label: 'Hôm qua', value: 'yesterday' },
+  { label: 'Tuần này', value: 'thisWeek' },
+  { label: 'Tuần trước', value: 'lastWeek' },
+  { label: 'Tháng này', value: 'thisMonth' },
+  { label: 'Tháng trước', value: 'lastMonth' },
+  { label: 'Năm nay', value: 'thisYear' },
+  { label: 'Năm trước', value: 'lastYear' },
+  { label: 'Toàn bộ thời gian', value: 'allTime' },
 ];
 
 const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
@@ -25,21 +37,57 @@ const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, o
 );
 
 const RequestListPage: React.FC = () => {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   
-  // States cho bộ lọc
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<string>(''); // YYYY-MM-DD
-  const [endDate, setEndDate] = useState<string>('');     // YYYY-MM-DD
+  // Khởi tạo state trực tiếp từ URL Parameters để giữ lại khi chuyển trang/quay lại
+  const [searchTerm, setSearchTerm] = useState(searchParams.get('keyword') || '');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(searchParams.get('status') || null);
+  const [startDate, setStartDate] = useState<string>(searchParams.get('startDate') || ''); 
+  const [endDate, setEndDate] = useState<string>(searchParams.get('endDate') || '');    
+
+  // Temp states khi mở dropdown thời gian (chưa bấm Lưu)
+  const [tempStartDate, setTempStartDate] = useState<string>('');
+  const [tempEndDate, setTempEndDate] = useState<string>('');
+  const [activePreset, setActivePreset] = useState<string | null>(null);
   
+  // State quản lý tháng hiển thị ở lịch bên trái (mặc định là tháng hiện tại)
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => {
+    const sDate = searchParams.get('startDate');
+    return sDate ? new Date(sDate) : new Date();
+  });
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   const statusRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLDivElement>(null);
+
+  // Đồng bộ state bộ lọc vào URL mỗi khi giá trị thay đổi
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (searchTerm.trim()) params.keyword = searchTerm.trim();
+    if (selectedStatus) params.status = selectedStatus;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+
+    // Cập nhật URLSearchParams mà không làm reload lại trang
+    setSearchParams(params, { replace: true });
+  }, [searchTerm, selectedStatus, startDate, endDate, setSearchParams]);
+
+  // Khi mở dropdown thời gian, đồng bộ temp state và đưa lịch về tháng của startDate (nếu có)
+  useEffect(() => {
+    if (openDropdown === 'time') {
+      setTempStartDate(startDate);
+      setTempEndDate(endDate);
+      if (startDate) {
+        setCalendarViewDate(new Date(startDate));
+      } else {
+        setCalendarViewDate(new Date());
+      }
+    }
+  }, [openDropdown, startDate, endDate]);
 
   // Gọi API lấy danh sách yêu cầu dựa vào bộ lọc
   const fetchData = async () => {
@@ -87,6 +135,224 @@ const RequestListPage: React.FC = () => {
   const getStatusLabel = (value: string) => {
     return STATUS_OPTIONS.find(opt => opt.value === value)?.label || value;
   };
+
+  const formatDateString = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  const applyPreset = (type: string) => {
+    setActivePreset(type);
+    const now = new Date();
+    let startStr = '';
+    let endStr = '';
+
+    if (type === 'today') {
+      startStr = formatDateString(now);
+      endStr = formatDateString(now);
+    } else if (type === 'yesterday') {
+      const y = new Date(now);
+      y.setDate(now.getDate() - 1);
+      startStr = formatDateString(y);
+      endStr = formatDateString(y);
+    } else if (type === 'thisWeek') {
+      const day = now.getDay();
+      const diffToMon = now.getDate() - day + (day === 0 ? -6 : 1);
+      const mon = new Date(now);
+      mon.setDate(diffToMon);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
+      startStr = formatDateString(mon);
+      endStr = formatDateString(sun);
+    } else if (type === 'lastWeek') {
+      const day = now.getDay();
+      const diffToMon = now.getDate() - day + (day === 0 ? -6 : 1);
+      const lastMon = new Date(now);
+      lastMon.setDate(diffToMon - 7);
+      const lastSun = new Date(lastMon);
+      lastSun.setDate(lastMon.getDate() + 6);
+      startStr = formatDateString(lastMon);
+      endStr = formatDateString(lastSun);
+    } else if (type === 'thisMonth') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      startStr = formatDateString(firstDay);
+      endStr = formatDateString(lastDay);
+    } else if (type === 'lastMonth') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const lastDay = new Date(now.getFullYear(), now.getMonth(), 0);
+      startStr = formatDateString(firstDay);
+      endStr = formatDateString(lastDay);
+    } else if (type === 'thisYear') {
+      const firstDay = new Date(now.getFullYear(), 0, 1);
+      const lastDay = new Date(now.getFullYear(), 11, 31);
+      startStr = formatDateString(firstDay);
+      endStr = formatDateString(lastDay);
+    } else if (type === 'lastYear') {
+      const firstDay = new Date(now.getFullYear() - 1, 0, 1);
+      const lastDay = new Date(now.getFullYear() - 1, 11, 31);
+      startStr = formatDateString(firstDay);
+      endStr = formatDateString(lastDay);
+    } else if (type === 'allTime') {
+      startStr = '';
+      endStr = '';
+    }
+
+    setTempStartDate(startStr);
+    setTempEndDate(endStr);
+    if (startStr) {
+      setCalendarViewDate(new Date(startStr));
+    }
+  };
+
+  const handleDayClick = (dateStr: string) => {
+    setActivePreset(null);
+    if (!tempStartDate || (tempStartDate && tempEndDate)) {
+      setTempStartDate(dateStr);
+      setTempEndDate('');
+    } else if (tempStartDate && !tempEndDate) {
+      if (dateStr < tempStartDate) {
+        setTempStartDate(dateStr);
+      } else {
+        setTempEndDate(dateStr);
+      }
+    }
+  };
+
+  const handleSaveDate = () => {
+    setStartDate(tempStartDate);
+    setEndDate(tempEndDate);
+    setOpenDropdown(null);
+  };
+
+  const handleCancelDate = () => {
+    setOpenDropdown(null);
+  };
+
+  // Tạo mảng ngày cho một tháng cụ thể (Bắt đầu bằng Thứ Hai - Mo)
+  const getDaysForMonth = (year: number, month: number) => {
+    const firstDayOfMonth = new Date(year, month, 1);
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    
+    let firstDayOfWeek = firstDayOfMonth.getDay(); // 0: Sun, 1: Mon...
+    firstDayOfWeek = firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1; // Chuyển sang chuẩn Thứ 2 đầu tuần
+
+    const daysInMonth = lastDayOfMonth.getDate();
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+    const days = [];
+
+    // Ngày của tháng trước bù vào đầu tuần
+    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+      const d = new Date(year, month - 1, prevMonthLastDay - i);
+      days.push({ dateStr: formatDateString(d), dayNum: d.getDate(), isCurrentMonth: false });
+    }
+
+    // Ngày của tháng hiện tại
+    for (let i = 1; i <= daysInMonth; i++) {
+      const d = new Date(year, month, i);
+      days.push({ dateStr: formatDateString(d), dayNum: i, isCurrentMonth: true });
+    }
+
+    // Ngày của tháng sau bù vào cuối để đủ 42 ô (6 hàng x 7 cột)
+    const remainingCells = 42 - days.length;
+    for (let i = 1; i <= remainingCells; i++) {
+      const d = new Date(year, month + 1, i);
+      days.push({ dateStr: formatDateString(d), dayNum: i, isCurrentMonth: false });
+    }
+
+    return days;
+  };
+
+  const leftYear = calendarViewDate.getFullYear();
+  const leftMonth = calendarViewDate.getMonth();
+  
+  const rightViewDate = new Date(leftYear, leftMonth + 1, 1);
+  const rightYear = rightViewDate.getFullYear();
+  const rightMonth = rightViewDate.getMonth();
+
+  const leftDays = getDaysForMonth(leftYear, leftMonth);
+  const rightDays = getDaysForMonth(rightYear, rightMonth);
+
+  const renderCalendarGrid = (days: Array<{ dateStr: string; dayNum: number; isCurrentMonth: boolean }>, monthLabel: string, showPrevArrow: boolean, showNextArrow: boolean) => (
+    <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column' }}>
+      {/* Header tháng và nút chuyển */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        {showPrevArrow ? (
+          <button 
+            onClick={() => setCalendarViewDate(new Date(leftYear, leftMonth - 1, 1))}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '4px' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+        ) : <div style={{ width: 16 }} />}
+        
+        <span style={{ fontWeight: 600, fontSize: '14px', color: '#111827' }}>{monthLabel}</span>
+
+        {showNextArrow ? (
+          <button 
+            onClick={() => setCalendarViewDate(new Date(leftYear, leftMonth + 1, 1))}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '4px' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        ) : <div style={{ width: 16 }} />}
+      </div>
+
+      {/* Tiêu đề thứ trong tuần */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#4B5563' }}>
+        <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+      </div>
+
+      {/* Lưới các ngày */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: '4px', textAlign: 'center' }}>
+        {days.map((item, idx) => {
+          const isStart = tempStartDate === item.dateStr;
+          const isEnd = tempEndDate === item.dateStr;
+          const isInRange = tempStartDate && tempEndDate && item.dateStr > tempStartDate && item.dateStr < tempEndDate;
+          
+          let bg = 'transparent';
+          let color = item.isCurrentMonth ? '#111827' : '#9CA3AF';
+          let borderRadius = '50%';
+          let fontWeight = 400;
+
+          if (isStart || isEnd) {
+            bg = '#9F1239';
+            color = '#FFFFFF';
+            fontWeight = 600;
+          } else if (isInRange) {
+            bg = '#FFE4E6';
+            color = '#9F1239';
+            borderRadius = '0%';
+          }
+
+          return (
+            <div
+              key={idx}
+              onClick={() => handleDayClick(item.dateStr)}
+              style={{
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '13px',
+                cursor: 'pointer',
+                background: bg,
+                color: color,
+                borderRadius: borderRadius,
+                fontWeight: fontWeight,
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {item.dayNum}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   // Hàm render Tag lọc cho thời gian linh hoạt
   const renderDateTag = () => {
@@ -161,7 +427,7 @@ const RequestListPage: React.FC = () => {
               )}
             </div>
 
-            {/* Dropdown Thời gian (Đổi thành chọn khoảng ngày) */}
+            {/* Dropdown Thời gian chuẩn phong cách Figma */}
             <div className="dropdown-wrapper" ref={timeRef}>
               <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')}>
                 <span>Thời gian</span>
@@ -170,25 +436,103 @@ const RequestListPage: React.FC = () => {
                 </svg>
               </button>
               {openDropdown === 'time' && (
-                <div className="dropdown-menu" style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '200px' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>Từ ngày</label>
-                    <input 
-                      type="date" 
-                      value={startDate} 
-                      onChange={(e) => setStartDate(e.target.value)}
-                      style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', outline: 'none' }}
-                    />
+                <div className="dropdown-menu" style={{ 
+                  padding: '0', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  width: '680px', 
+                  maxWidth: '95vw',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#fff',
+                  zIndex: 1000
+                }}>
+                  {/* Phần trên: Sidebar bên trái + 2 Lịch đôi bên phải */}
+                  <div style={{ display: 'flex', flexDirection: 'row' }}>
+                    {/* Sidebar Presets */}
+                    <div style={{ 
+                      width: '180px', 
+                      borderRight: '1px solid #E5E7EB', 
+                      padding: '12px 0', 
+                      display: 'flex', 
+                      flexDirection: 'column',
+                      background: '#FFFFFF',
+                      flexShrink: 0
+                    }}>
+                      {DATE_PRESETS.map(preset => (
+                        <div 
+                          key={preset.value}
+                          onClick={() => applyPreset(preset.value)}
+                          style={{
+                            padding: '10px 16px',
+                            fontSize: '13px',
+                            color: activePreset === preset.value ? '#9F1239' : '#374151',
+                            fontWeight: activePreset === preset.value ? 600 : 400,
+                            background: activePreset === preset.value ? '#FFE4E6' : 'transparent',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (activePreset !== preset.value) (e.currentTarget as HTMLElement).style.background = '#F3F4F6';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (activePreset !== preset.value) (e.currentTarget as HTMLElement).style.background = 'transparent';
+                          }}
+                        >
+                          {preset.label}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Dual Month Calendar View */}
+                    <div style={{ display: 'flex', flexDirection: 'row', flex: 1 }}>
+                      {renderCalendarGrid(leftDays, `Tháng ${leftMonth + 1}/${leftYear}`, true, false)}
+                      <div style={{ width: '1px', background: '#E5E7EB' }} />
+                      {renderCalendarGrid(rightDays, `Tháng ${rightMonth + 1}/${rightYear}`, false, true)}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <label style={{ fontSize: '13px', color: '#555', fontWeight: 500 }}>Đến ngày</label>
-                    <input 
-                      type="date" 
-                      value={endDate}
-                      min={startDate} // Chặn chọn ngày kết thúc trước ngày bắt đầu
-                      onChange={(e) => setEndDate(e.target.value)}
-                      style={{ padding: '6px', borderRadius: '6px', border: '1px solid #ccc', outline: 'none' }}
-                    />
+
+                  {/* Phần dưới: Footer chứa Input Từ ngày - Đến ngày và Nút Hủy / Lưu */}
+                  <div style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    borderTop: '1px solid #E5E7EB', 
+                    padding: '12px 16px',
+                    background: '#FAFAFA'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input 
+                        type="date" 
+                        value={tempStartDate} 
+                        onChange={(e) => { setTempStartDate(e.target.value); setActivePreset(null); }}
+                        style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', outline: 'none', fontSize: '13px', background: '#fff' }}
+                      />
+                      <span style={{ color: '#9CA3AF' }}>-</span>
+                      <input 
+                        type="date" 
+                        value={tempEndDate}
+                        min={tempStartDate}
+                        onChange={(e) => { setTempEndDate(e.target.value); setActivePreset(null); }}
+                        style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', outline: 'none', fontSize: '13px', background: '#fff' }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={handleCancelDate}
+                        style={{ padding: '6px 16px', borderRadius: '6px', border: '1px solid #D1D5DB', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                      >
+                        Hủy
+                      </button>
+                      <button 
+                        onClick={handleSaveDate}
+                        style={{ padding: '6px 20px', borderRadius: '6px', border: 'none', background: '#9F1239', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 500 }}
+                      >
+                        Lưu
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
