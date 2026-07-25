@@ -1,0 +1,73 @@
+.data-table-container {
+  width: 100%;
+  flex: 1;
+  overflow: auto;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+
+.data-table th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: #F5F3F6;
+  color: #171717;
+  font-weight: 600;
+  padding: 16px;
+  border-bottom: 1px solid #E5E5E5;
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 16px;
+  color: #262626;
+  border-bottom: 1px solid #F0F0F0;
+  vertical-align: middle;
+}
+
+.data-table tbody tr {
+  transition: background-color 0.15s;
+}
+
+.data-table tbody tr:hover {
+  background-color: #FAF8FA;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table-empty {
+  text-align: center;
+  padding: 40px 16px;
+  color: #737373;
+  font-style: italic;
+}
+
+/* Eye action icon button */
+.btn-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: #AE1C3F;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.15s;
+}
+
+.btn-icon-action:hover {
+  background-color: #FFF0F3;
+  transform: scale(1.1);
+}

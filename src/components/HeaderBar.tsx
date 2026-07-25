@@ -1,8 +1,39 @@
-import React from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import logoAgribank from '../assets/logo-agribank.png';
-import './HeaderBar.css'; // Import file CSS vừa tạo
+import './HeaderBar.css';
+import { type UserRole } from '../config/menuConfig';
+
+const ROLE_LABELS: Record<UserRole, string> = {
+  ETN08: 'Quản lý nội dung',
+  ETK08: 'Kiểm duyệt nội dung',
+  VIEWER: 'Tra cứu sản phẩm',
+};
 
 const HeaderBar: React.FC = () => {
+  const [role, setRole] = useState<UserRole>(() => {
+    return (localStorage.getItem('userRole') as UserRole) || 'ETN08';
+  });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleRoleSelect = (newRole: UserRole) => {
+    setRole(newRole);
+    localStorage.setItem('userRole', newRole);
+    window.dispatchEvent(new Event('userRoleChanged'));
+    setIsDropdownOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <header className="header-container">
       {/* Khối bên trái */}
@@ -31,18 +62,82 @@ const HeaderBar: React.FC = () => {
           </svg>
         </button>
 
-        <div className="flex items-center space-x-4">
-          <div className="text-right flex flex-col justify-center self-stretch">
-            <p className="user-name">Phạm Thùy Linh</p>
-            <p className="user-role">Quản trị nội dung</p>
+        {/* Khối User Profile với Dropdown Menu */}
+        <div className="user-profile-container" ref={dropdownRef}>
+          <div 
+            className="flex items-center space-x-4 cursor-pointer"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          >
+            <div className="text-right flex flex-col justify-center self-stretch">
+              <p className="user-name">Phạm Thùy Linh</p>
+              <p className="user-role">{ROLE_LABELS[role] || 'Quản lý nội dung'}</p>
+            </div>
+            <div className="avatar-container">
+              <img 
+                src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92&_nc_eui2=AeElV1lB8lxE-Jl95Brt5yL0LdMbKgfDiPot0xsqB8OI-kQvt-NXlC2_iQ2LpjOlsP_Sj8JB4tlBq6Qh5qcQD-aq&_nc_ohc=B9tUax_rWcUQ7kNvwGbtNW8&_nc_oc=Ado2VW0tNyfSJvCs3OCpA8USP2wUqKSgB_pesbBXYXzije1mYwA01dv_Go9XPC3JRu1wWgwHPm4Vw404DpcFzxqm&_nc_zt=24&_nc_ht=scontent-hkg1-2.xx&_nc_gid=hdKbd8IqLtAGg9csLT1Atg&_nc_ss=7b2a8&oh=00_Af6Qe-5KSfSnIshr1ykW4CWS0M9GhucP97bQF2jEdMqaYg&oe=6A09D4B9" 
+                alt="Avatar" 
+                className="avatar-img" 
+              />
+            </div>
           </div>
-          <div className="avatar-container">
-            <img 
-              src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92&_nc_eui2=AeElV1lB8lxE-Jl95Brt5yL0LdMbKgfDiPot0xsqB8OI-kQvt-NXlC2_iQ2LpjOlsP_Sj8JB4tlBq6Qh5qcQD-aq&_nc_ohc=B9tUax_rWcUQ7kNvwGbtNW8&_nc_oc=Ado2VW0tNyfSJvCs3OCpA8USP2wUqKSgB_pesbBXYXzije1mYwA01dv_Go9XPC3JRu1wWgwHPm4Vw404DpcFzxqm&_nc_zt=24&_nc_ht=scontent-hkg1-2.xx&_nc_gid=hdKbd8IqLtAGg9csLT1Atg&_nc_ss=7b2a8&oh=00_Af6Qe-5KSfSnIshr1ykW4CWS0M9GhucP97bQF2jEdMqaYg&oe=6A09D4B9" 
-              alt="Avatar" 
-              className="avatar-img" 
-            />
-          </div>
+
+          {/* Menu Popup chuẩn theo thiết kế */}
+          {isDropdownOpen && (
+            <div className="user-dropdown-menu">
+              <button 
+                className={`dropdown-item ${role === 'VIEWER' ? 'active' : ''}`}
+                onClick={() => handleRoleSelect('VIEWER')}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>Tra cứu sản phẩm</span>
+              </button>
+
+              <button 
+                className={`dropdown-item ${role === 'ETN08' ? 'active' : ''}`}
+                onClick={() => handleRoleSelect('ETN08')}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Quản lý nội dung</span>
+              </button>
+
+              <button 
+                className={`dropdown-item ${role === 'ETK08' ? 'active' : ''}`}
+                onClick={() => handleRoleSelect('ETK08')}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+                <span>Kiểm duyệt nội dung</span>
+              </button>
+
+              <div className="dropdown-divider" />
+
+              <button 
+                className="dropdown-item"
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span>Đăng xuất</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

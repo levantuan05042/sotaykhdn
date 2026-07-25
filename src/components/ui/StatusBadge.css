@@ -1,0 +1,64 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.status-badge-dot {
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* Biến thể màu sắc tương ứng với ảnh thiết kế */
+.status-badge--pending {
+  background-color: #FFE8D6;
+  color: #C05621;
+}
+
+.status-badge--completed {
+  background-color: #DCFCE7;
+  color: #15803D;
+}
+
+.status-badge--revision {
+  background-color: #FEF9C3;
+  color: #854D0E;
+}
+
+.status-badge--rejected {
+  background-color: #FEE2E2;
+  color: #B91C1C;
+}
+
+.status-badge--draft {
+  background-color: #E0F2FE;
+  color: #0369A1;
+}
+
+.status-badge--default {
+  background-color: #F3F4F6;
+  color: #4B5563;
+}
+
+/* Count Badge màu đỏ trên menu */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #AE1C3F;
+  color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 100px;
+  min-width: 20px;
+  height: 20px;
+}

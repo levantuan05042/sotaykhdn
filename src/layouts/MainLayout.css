@@ -2,57 +2,72 @@
 body {
   margin: 0;
   padding: 0;
+  overflow: hidden; /* Chặn cuộn toàn trang */
+  height: 100vh;
 }
 
 /* Container cha ôm toàn bộ trang */
 .main-layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh; /* Chiếm tối thiểu 100% chiều cao màn hình */
+  height: 100vh; /* Kéo giãn đúng bằng chiều cao màn hình */
+  overflow: hidden;
 }
 
-/* HEADER: Dùng sticky để ghim lên đầu */
+/* HEADER: Ghim cố định ở đỉnh */
 .grid-header {
-  position: sticky;
-  top: 0;
+  flex-shrink: 0;
   z-index: 1000;
   background-color: #fff;
   border-bottom: 1px solid #eee;
-  
-  /* Cần fix cứng chiều cao header để tính toán khoảng hở cho sidebar */
-  height: 60px; 
 }
 
 /* Lưới chứa Sidebar và Content */
 .grid-container {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  flex: 1; /* Kéo giãn lấp đầy khoảng trống giữa Header và Footer */
-  align-items: start; /* QUAN TRỌNG: Ngăn Sidebar bị kéo giãn chiều cao theo Content */
+  flex: 1; /* Chiếm toàn bộ khoảng trống còn lại */
+  overflow: hidden;
 }
 
-/* SIDEBAR: Ghim cố định nhưng sẽ bị đẩy lên khi vùng cha (grid-container) cuộn hết */
+/* SIDEBAR: Tự cuộn nếu vượt quá chiều cao */
 .grid-sidebar {
   grid-column: span 2;
   background-color: #FFF0F0;
   border-right: 1px dashed #FFCDCD;
-  position: sticky;
-  top: 120px; /* Bám dính ngay dưới Header (chiều cao Header) */
-  height: calc(100vh - 60px); /* Kéo dài tới đáy màn hình */
+  height: 100%;
+  overflow-y: auto;
 }
 
-/* NỘI DUNG: Không giới hạn chiều cao, để tự nhiên đẩy trang dài ra */
+/* Custom scrollbar cho Sidebar */
+.grid-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+.grid-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.grid-sidebar::-webkit-scrollbar-thumb {
+  background-color: #FFCDCD;
+  border-radius: 3px;
+}
+
+/* NỘI DUNG CHÍNH */
 .grid-content {
   grid-column: span 10;
   background-color: #f9f9f9;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .page-body {
-  padding-top: 60px;
-  min-height: calc(100vh - 60px); 
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
 }
 
-/* FOOTER: Nằm độc lập phía dưới, tự nhiên chiếm 100% ngang */
+/* FOOTER: Luôn nằm dưới cùng và cố định */
 .grid-footer {
   background-color: #ffffff;
   border-top: 1px solid #eee;
@@ -60,6 +75,7 @@ body {
   color: #666;
   font-size: 13px;
   z-index: 100;
+  flex-shrink: 0;
 }
 
 .footer-content {
@@ -84,11 +100,12 @@ body {
 
 @media (max-width: 768px) {
   .grid-container {
-    display: block; /* Bỏ grid trên mobile để các khối xếp chồng */
+    display: block;
+    overflow-y: auto;
   }
   .grid-sidebar {
-    position: static; /* Gỡ sticky trên mobile */
     height: auto;
+    overflow-y: visible;
   }
   .grid-footer {
     padding: 15px 20px;
