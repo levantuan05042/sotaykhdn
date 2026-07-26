@@ -427,11 +427,11 @@ const BatchRequestDetailPage: React.FC = () => {
                     )}
                   </div> */}
 
-                  <label className="quickview-label">Nội dung phản hồi mới (nếu có)</label>
+                  <label className="quickview-label">Nội dung yêu cầu chỉnh sửa (nếu có)</label>
                   <textarea 
                     className="quickview-feedback-textarea"
                     rows={3}
-                    placeholder="Nhập nội dung phản hồi mới..."
+                    placeholder="Nhập nội dung yêu cầu chỉnh sửa..."
                     value={quickViewProduct.feedback}
                     disabled={batchRequest?.status !== 'PENDING_APPROVAL'}
                     onChange={(e) => {
@@ -464,12 +464,26 @@ const BatchRequestDetailPage: React.FC = () => {
         )}
       </main>
 
-      {selectedDetailProductId && (
-        <SingleProductDetailPage 
-          requestId={selectedDetailProductId} 
-          onClose={() => setSelectedDetailProductId(null)} 
-        />
-      )}
+      {selectedDetailProductId && (() => {
+        const prod = products.find(p => p.id === selectedDetailProductId);
+        return (
+          <SingleProductDetailPage 
+            requestId={selectedDetailProductId} 
+            initialNotes={prod?.notes}
+            initialFeedback={prod?.feedback}
+            onClose={(updatedData) => {
+              if (updatedData) {
+                setProducts(prev => prev.map(p => p.id === selectedDetailProductId ? { 
+                  ...p, 
+                  notes: updatedData.notes, 
+                  feedback: updatedData.feedback 
+                } : p));
+              }
+              setSelectedDetailProductId(null);
+            }} 
+          />
+        );
+      })()}
     </div>
   );
 };

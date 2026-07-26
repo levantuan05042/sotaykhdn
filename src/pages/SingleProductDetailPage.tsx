@@ -194,10 +194,12 @@ const EditorBlock: React.FC<EditorBlockProps> = ({ label, value, onChange }) => 
 
 interface SingleProductDetailPageProps {
   requestId?: string;
-  onClose?: () => void;
+  onClose?: (updatedData?: { notes: string | null; feedback: string }) => void;
+  initialNotes?: string | null;
+  initialFeedback?: string;
 }
 
-const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ requestId: propRequestId, onClose }) => {
+const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ requestId: propRequestId, onClose, initialNotes, initialFeedback }) => {
   const { requestId: routeRequestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const activeRequestId = propRequestId || routeRequestId || '1';
@@ -216,7 +218,14 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
       setLoading(true);
       try {
         const response = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(activeRequestId));
-        setDetail(response.data);
+        const data = response.data;
+        if (initialNotes !== undefined) {
+          data.notes = initialNotes;
+        }
+        setDetail(data);
+        if (initialFeedback !== undefined) {
+          setNewComment(initialFeedback);
+        }
       } catch (error) {
         console.error("Error fetching product detail:", error);
         toast.error("Không thể tải chi tiết sản phẩm!");
@@ -225,7 +234,7 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
       }
     };
     fetchDetail();
-  }, [activeRequestId]);
+  }, [activeRequestId, initialNotes, initialFeedback]);
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -289,38 +298,26 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
 
   const handleBack = () => {
     if (onClose) {
-      onClose();
+      onClose({
+        notes: detail?.notes || null,
+        feedback: newComment
+      });
     } else {
       navigate(-1);
     }
   };
 
-  const handlePostComment = () => {
-    if (!newComment.trim()) return;
-    const addedComment = {
-      id: `c_${Date.now()}`,
-      createdBy: 'Phạm Thùy Linh',
-      createdAt: new Date().toISOString(),
-      comment: newComment.trim(),
-    };
+  const handleSaveReview = (notesVal: string) => {
+    const label = notesVal === '0' ? 'Yêu cầu chỉnh sửa' : 'Từ chối';
+    toast.success(`Đã chọn trạng thái: ${label} (Nhấn Duyệt / Lưu ở màn ngoài để lưu chính thức)`);
 
     setDetail((prev: any) => {
       if (!prev) return prev;
       return {
         ...prev,
-        comments: [...(prev.comments || []), addedComment],
+        notes: notesVal
       };
     });
-    setNewComment('');
-    toast.success('Đã gửi phản hồi chỉnh sửa thành công!');
-  };
-
-  const handleAction = (type: 'REJECT' | 'REVISION') => {
-    if (type === 'REJECT') {
-      toast.success(`Đã TỪ CHỐI yêu cầu: ${detail?.name || ''}`);
-    } else {
-      toast.success(`Đã yêu cầu CHỈNH SỬA: ${detail?.name || ''}`);
-    }
   };
 
   if (loading || !detail) {
@@ -349,23 +346,66 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
           </button>
           <div className="header-separator" />
           <h2 className="breadcrumb-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#595959' }}>{detail.requestName || 'Lô sản phẩm 12/04'}</span>
+            <span style={{ color: '#595959' }}>Lô {detail.requestName || '1250384'}</span>
             <span style={{ color: '#8c8c8c', fontSize: '14px' }}>&rsaquo;</span>
             <span className="breadcrumb-active" style={{ fontWeight: 600 }}>{detail.name}</span>
           </h2>
         </div>
 
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span className="header-notes-label" style={{ fontSize: '13px', color: '#595959' }}>
-            Ghi chú: &nbsp;<span style={{ fontWeight: 500 }}>{detail.notes || '—'}</span>
+          <span className="header-notes-label" style={{ fontSize: '13px', color: '#595959', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>Ghi chú:</span>
+            {detail.notes === '0' && (
+              <span className="note-badge note-badge--revision" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                </svg>
+                Yêu cầu chỉnh sửa
+              </span>
+            )}
+            {detail.notes === '1' && (
+              <span className="note-badge note-badge--rejected" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                </svg>
+                Từ chối
+              </span>
+            )}
+            {detail.notes === '2' && (
+              <span className="note-badge note-badge--approved" style={{ padding: '4px 10px', fontSize: '12px' }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Đã duyệt
+              </span>
+            )}
+            {!['0', '1', '2'].includes(detail.notes) && '—'}
           </span>
-          {detail.status === 'PENDING_APPROVAL' && (
+          {(detail.status === 'PENDING_APPROVAL' || detail.requestStatus === 'PENDING_APPROVAL') && (
             <>
-              <button className="btn-reject" onClick={() => handleAction('REJECT')} style={{ backgroundColor: '#ffffff', color: '#262626', border: '1px solid #d9d9d9', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
+              <button 
+                className="btn-reject" 
+                onClick={() => handleSaveReview('1')} 
+                style={{ backgroundColor: '#ffffff', color: '#262626', border: '1px solid #d9d9d9', padding: '8px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+              >
                 Từ chối
               </button>
-              <button className="btn-save-red" onClick={() => handleAction('REVISION')} style={{ backgroundColor: '#AE1C3F', color: '#ffffff', border: 'none', padding: '8px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}>
-                Lưu
+              <button 
+                className="btn-revision-request-yellow" 
+                onClick={() => handleSaveReview('0')} 
+                disabled={!newComment.trim()}
+                style={{ 
+                  backgroundColor: newComment.trim() ? '#FEF08A' : '#F5F5F5', 
+                  color: newComment.trim() ? '#854D0E' : '#BFBFBF', 
+                  border: newComment.trim() ? '1px solid #FEF08A' : '1px solid #D9D9D9', 
+                  padding: '8px 24px', 
+                  borderRadius: '6px', 
+                  cursor: newComment.trim() ? 'pointer' : 'not-allowed', 
+                  fontWeight: 600 
+                }}
+              >
+                Yêu cầu chỉnh sửa
               </button>
             </>
           )}
@@ -385,6 +425,7 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
             <select
               className="form-select"
               value={detail.productGroupId || ''}
+              disabled
               onChange={(e) => {
                 const grpId = e.target.value;
                 const grpName = productGroups.find(g => g.id === grpId)?.name || '';
@@ -408,6 +449,7 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
               <select
                 className="form-select"
                 value={detail.productCategoryId || ''}
+                disabled
                 onChange={(e) => {
                   const catId = e.target.value;
                   const catName = categories.find(c => c.id === catId)?.name || '';
@@ -431,7 +473,7 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
               <select
                 className="form-select"
                 value={detail.businessId || ''}
-                disabled={!detail.productCategoryId}
+                disabled
                 onChange={(e) => {
                   const busId = e.target.value;
                   const busName = businesses.find(b => b.id === busId)?.name || '';
@@ -507,6 +549,7 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
             <select
               className="form-select"
               value={detail.active ? 'Hiển thị' : 'Ẩn'}
+              disabled
               onChange={(e) => handleFieldChange('active', e.target.value === 'Hiển thị')}
             >
               <option value="Ẩn">Ẩn</option>
@@ -597,13 +640,11 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
               <textarea
                 className="comment-textarea"
                 rows={3}
-                placeholder="Nhập nội dung chỉnh sửa"
+                placeholder="Nhập nội dung phản hồi mới..."
                 value={newComment}
+                disabled={detail.status !== 'PENDING_APPROVAL' && detail.requestStatus !== 'PENDING_APPROVAL'}
                 onChange={(e) => setNewComment(e.target.value)}
               />
-              <button className="btn-send-comment" onClick={handlePostComment}>
-                Gửi góp ý
-              </button>
             </div>
           </div>
 

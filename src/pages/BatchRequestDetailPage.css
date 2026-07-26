@@ -256,10 +256,38 @@
   background-color: #F9FAFB;
 }
 
-.active-quickview-row {
-  background-color: #F2FBF7 !important;
-  border-left: 4px solid #10B981;
+.active-quickview-row td {
+  background-color: #F0FDF4 !important;
+  border-top: 1.5px solid #86EFAC !important;
+  border-bottom: 1.5px solid #86EFAC !important;
+  position: relative;
 }
+
+.active-quickview-row td:first-child {
+  border-left: 1.5px solid #86EFAC !important;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+}
+
+.active-quickview-row td:last-child {
+  border-right: 1.5px solid #86EFAC !important;
+  border-top-right-radius: 8px;
+  border-bottom-right-radius: 8px;
+}
+
+/* .active-quickview-row td:last-child::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid #059669;
+  z-index: 10;
+} */
 
 .product-title-cell {
   font-weight: 500;
@@ -530,8 +558,20 @@
   }
 }
 
+.quickview-title-pill {
+  background-color: #8B5CF6;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  margin-bottom: -4px;
+}
+
 .quickview-card {
-  background-color: #ffffff;
+  background-color: #F0FDF4;
   border-radius: 12px;
   padding: 20px;
   position: relative;
@@ -655,8 +695,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  background-color: #F0FDF4;
+  border: 1.5px solid #86EFAC;
+  border-radius: 12px;
+  padding: 16px 20px;
   margin-top: 4px;
-  padding-bottom: 10px;
 }
 
 .btn-qv-reject {

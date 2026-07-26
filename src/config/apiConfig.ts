@@ -34,6 +34,7 @@ export const API_ENDPOINTS = {
 
     PRODUCT: {
     DETAIL: (id: string | number) => `${BASE_URL}/products/detail/${id}`,
+    REVIEW: (id: string | number) => `${BASE_URL}/products/review/${id}`,
     UPDATE: (id: string | number) => `${BASE_URL}/products/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/products/delete/${id}`,
     LIST: `${BASE_URL}/products`,
