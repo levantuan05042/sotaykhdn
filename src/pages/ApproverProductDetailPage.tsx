@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import './SingleProductDetailPage.css';
+import './ApproverProductDetailPage.css';
 
 interface CommentItem {
   id: string;
@@ -192,14 +192,14 @@ const EditorBlock: React.FC<EditorBlockProps> = ({ label, value, onChange }) => 
   );
 };
 
-interface SingleProductDetailPageProps {
+interface ApproverProductDetailPageProps {
   requestId?: string;
   onClose?: (updatedData?: { notes: string | null; feedback: string }) => void;
   initialNotes?: string | null;
   initialFeedback?: string;
 }
 
-const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ requestId: propRequestId, onClose, initialNotes, initialFeedback }) => {
+const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ requestId: propRequestId, onClose, initialNotes, initialFeedback }) => {
   const { requestId: routeRequestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const activeRequestId = propRequestId || routeRequestId || '1';
@@ -655,4 +655,4 @@ const SingleProductDetailPage: React.FC<SingleProductDetailPageProps> = ({ reque
   );
 };
 
-export default SingleProductDetailPage;
+export default ApproverProductDetailPage;

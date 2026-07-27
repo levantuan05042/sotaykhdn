@@ -100,8 +100,8 @@ const Sidebar: React.FC = () => {
             <div className="sidebar-indicator" />
             <div className="sidebar-content">
               <span className="sidebar-text">{item.name}</span>
-              {(item.path === '/request-list' ? requestCount : item.count) !== undefined && (
-                <CountBadge count={item.path === '/request-list' ? requestCount : (item.count || 0)} />
+              {(['/request-list', '/approver/request-list'].includes(item.path || '') ? requestCount : item.count) !== undefined && (
+                <CountBadge count={['/request-list', '/approver/request-list'].includes(item.path || '') ? requestCount : (item.count || 0)} />
               )}
               {hasChildren && (
                 <span className={`sidebar-caret ${isOpen ? 'open' : ''}`}>

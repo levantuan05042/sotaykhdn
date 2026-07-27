@@ -33,7 +33,7 @@ export const EDIT_MENU_ITEMS: MenuItem[] = [
 ];
 // 2. Menu Quyền Kiểm duyệt (ETK08)
 export const APPROVE_MENU_ITEMS: MenuItem[] = [
-  { name: 'Danh sách yêu cầu', path: '/request-list', count: 100 },
+  { name: 'Danh sách yêu cầu', path: '/approver/request-list', count: 100 },
   { name: 'Danh sách sản phẩm kiểm duyệt', path: '/product-approval-list' }
 ];
 // 3. Menu Quyền Tra cứu (VIEWER)
