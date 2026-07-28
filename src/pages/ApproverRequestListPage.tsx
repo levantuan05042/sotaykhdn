@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
 import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
+import DateRangePicker from '../components/ui/DateRangePicker';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -27,18 +28,12 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
 ];
 
-const TIME_FILTER_OPTIONS: FilterOption[] = [
-  { label: 'Tất cả thời gian', value: '' },
-  { label: 'Hôm nay', value: 'today' },
-  { label: '7 ngày qua', value: '7days' },
-  { label: 'Tháng này', value: 'thisMonth' },
-];
-
 const ApproverRequestListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [startDate, setStartDate] = useState<string>('');
+  const [endDate, setEndDate] = useState<string>('');
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -56,31 +51,12 @@ const ApproverRequestListPage: React.FC = () => {
     const fetchRequests = async () => {
       setLoading(true);
       try {
-        let startDateStr = undefined;
-        let endDateStr = undefined;
-
-        if (selectedTime === 'today') {
-          const today = new Date().toISOString().split('T')[0];
-          startDateStr = today;
-          endDateStr = today;
-        } else if (selectedTime === '7days') {
-          const sevenDaysAgo = new Date();
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-          startDateStr = sevenDaysAgo.toISOString().split('T')[0];
-          endDateStr = new Date().toISOString().split('T')[0];
-        } else if (selectedTime === 'thisMonth') {
-          const now = new Date();
-          const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-          startDateStr = firstDay.toISOString().split('T')[0];
-          endDateStr = now.toISOString().split('T')[0];
-        }
-
         const response = await axios.get(API_ENDPOINTS.PRODUCT.LIST2, {
           params: {
             keyword: searchTerm || undefined,
             status: selectedStatus || undefined,
-            startDate: startDateStr,
-            endDate: endDateStr,
+            startDate: startDate || undefined,
+            endDate: endDate || undefined,
           },
         });
 
@@ -114,7 +90,7 @@ const ApproverRequestListPage: React.FC = () => {
     };
 
     fetchRequests();
-  }, [searchTerm, selectedStatus, selectedTime]);
+  }, [searchTerm, selectedStatus, startDate, endDate]);
 
   const columns: Column<RequestItem>[] = [
     {
@@ -194,11 +170,13 @@ const ApproverRequestListPage: React.FC = () => {
             onSelect={setSelectedStatus}
           />
 
-          <FilterDropdown
-            label="Thời gian"
-            options={TIME_FILTER_OPTIONS}
-            selectedValue={selectedTime}
-            onSelect={setSelectedTime}
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            onSave={(start, end) => {
+              setStartDate(start);
+              setEndDate(end);
+            }}
           />
         </div>
       </div>
