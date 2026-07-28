@@ -197,9 +197,10 @@ interface ApproverProductDetailPageProps {
   onClose?: (updatedData?: { notes: string | null; feedback: string }) => void;
   initialNotes?: string | null;
   initialFeedback?: string;
+  isModal?: boolean;
 }
 
-const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ requestId: propRequestId, onClose, initialNotes, initialFeedback }) => {
+const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ requestId: propRequestId, onClose, initialNotes, initialFeedback, isModal = false }) => {
   const { requestId: routeRequestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const activeRequestId = propRequestId || routeRequestId || '1';
@@ -322,7 +323,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
 
   if (loading || !detail) {
     return (
-      <div className="single-product-detail-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+      <div className={`single-product-detail-page ${isModal ? 'is-modal' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
         <div className="quickview-loading-card">
           Đang tải chi tiết sản phẩm...
         </div>
@@ -331,7 +332,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   }
 
   return (
-    <div className="single-product-detail-page">
+    <div className={`single-product-detail-page ${isModal ? 'is-modal' : ''}`}>
       <Toaster position="top-right" />
 
       {/* HEADER BAR */}
@@ -354,7 +355,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
 
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <span className="header-notes-label" style={{ fontSize: '13px', color: '#595959', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>Ghi chú:</span>
+            <span>Trạng thái:</span>
             {detail.notes === '0' && (
               <span className="note-badge note-badge--revision" style={{ padding: '4px 10px', fontSize: '12px' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>

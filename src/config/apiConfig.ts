@@ -9,6 +9,8 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `${BASE_URL}/product-groups/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/product-groups/delete/${id}`,
     LIST: `${BASE_URL}/product-groups`,
+    REVIEW: (id: string | number) => `${BASE_URL}/product-groups/review/${id}`,
+    DETAILS: (id: string | number) => `${BASE_URL}/product-groups/${id}/details`,
   },
 
    PRODUCT_CATEGORY: {
@@ -16,6 +18,8 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `${BASE_URL}/product-category/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/product-category/delete/${id}`,
     LIST: `${BASE_URL}/product-category`,
+    REVIEW: (id: string | number) => `${BASE_URL}/product-category/review/${id}`,
+    DETAILS: (id: string | number) => `${BASE_URL}/product-category/${id}/details`,
   },
 
   PRODUCT_CRITERIA: {

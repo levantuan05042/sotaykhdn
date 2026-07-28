@@ -1,0 +1,69 @@
+.product-group-list-page {
+  padding: 24px 32px;
+  background-color: #FAFAFA;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.product-group-page-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: #171717;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.filter-card {
+  background-color: #F5F3F6;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.product-group-item-title {
+  color: #171717;
+  font-weight: 500;
+}
+
+.table-card {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.btn-eye-view-green {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background-color: #ECFDF5;
+  color: #10B981;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.15s;
+}
+
+.btn-eye-view-green:hover {
+  background-color: #D1FAE5;
+  transform: scale(1.08);
+}

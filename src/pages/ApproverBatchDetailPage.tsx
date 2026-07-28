@@ -261,15 +261,20 @@ const ApproverBatchDetailPage: React.FC = () => {
                 <th>Nhóm sản phẩm</th>
                 <th>Danh mục sản phẩm</th>
                 <th>Nghiệp vụ</th>
-                <th>Ghi chú</th>
-                <th style={{ width: '160px', textAlign: 'center' }}>Thao tác</th>
+                <th>Trạng thái</th>
+                <th style={{ width: '80px', textAlign: 'center' }}></th>
               </tr>
             </thead>
             <tbody>
               {products.map((p) => {
                 const isActive = quickViewProduct?.id === p.id;
                 return (
-                  <tr key={p.id} className={isActive ? 'active-quickview-row' : ''}>
+                  <tr 
+                    key={p.id} 
+                    className={isActive ? 'active-quickview-row' : ''}
+                    onClick={() => navigate(`/approver/product-detail/${p.id}`)}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <td className="product-title-cell">{p.name}</td>
                     <td>{p.group}</td>
                     <td>{p.category}</td>
@@ -306,19 +311,16 @@ const ApproverBatchDetailPage: React.FC = () => {
                       <div className="action-buttons-group">
                         <button
                           className="btn-eye-view"
-                          title="Xem chi tiết"
-                          onClick={() => setSelectedDetailProductId(p.id)}
+                          title="Xem nhanh"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleQuickView(p);
+                          }}
                         >
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                             <circle cx="12" cy="12" r="3"></circle>
                           </svg>
-                        </button>
-                        <button
-                          className={`btn-toggle-quickview ${isActive ? 'active' : ''}`}
-                          onClick={() => handleToggleQuickView(p)}
-                        >
-                          Xem nhanh »
                         </button>
                       </div>
                     </td>
@@ -486,6 +488,7 @@ const ApproverBatchDetailPage: React.FC = () => {
               requestId={selectedDetailProductId} 
               initialNotes={prod?.notes}
               initialFeedback={prod?.feedback}
+              isModal={true}
               onClose={(updatedData) => {
                 if (updatedData) {
                   setProducts(prev => prev.map(p => p.id === selectedDetailProductId ? { 

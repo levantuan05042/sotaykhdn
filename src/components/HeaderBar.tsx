@@ -41,9 +41,9 @@ const HeaderBar: React.FC = () => {
         <img 
           src={logoAgribank} 
           alt="Logo Agribank" 
-          className="w-[70px] h-[70px] rounded-[7px] object-contain" 
+          className="w-[48px] h-[48px] rounded-[7px] object-contain" 
         />
-        <div className="ml-3 flex flex-col justify-center h-[70px]">
+        <div className="ml-3 flex flex-col justify-center h-[48px]">
           <h1 className="header-title">
             Sổ tay sản phẩm dịch vụ <br />
             Khách hàng doanh nghiệp

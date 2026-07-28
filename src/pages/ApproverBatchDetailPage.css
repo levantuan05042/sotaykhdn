@@ -2,7 +2,7 @@
 .batch-list-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
   background-color: #FAFAFA;
   font-family: 'Inter', sans-serif;
   overflow: hidden;
@@ -85,17 +85,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   padding: 16px 24px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #E5E7EB;
-  flex-shrink: 0;
-
   background-color: var(--bg-white);
   border-bottom: 1px solid var(--border-default);
   flex-shrink: 0;
   height: 72px;
-
 }
 
 .batch-header-left {
@@ -310,14 +304,14 @@
   height: 32px;
   border-radius: 50%;
   border: none;
-  background-color: #FFF0F3;
-  color: #AE1C3F;
+  background-color: #ECFDF5;
+  color: #10B981;
   cursor: pointer;
   transition: background-color 0.15s, transform 0.15s;
 }
 
 .btn-eye-view:hover {
-  background-color: #FFE1E6;
+  background-color: #D1FAE5;
   transform: scale(1.08);
 }
 

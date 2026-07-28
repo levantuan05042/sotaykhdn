@@ -21,6 +21,10 @@ import ApproverRequestListPage from './pages/ApproverRequestListPage';
 import BatchRequestDetailPage from './pages/BatchRequestDetailPage';
 import ApproverBatchDetailPage from './pages/ApproverBatchDetailPage';
 import ApproverProductDetailPage from './pages/ApproverProductDetailPage';
+import ApproverProductGroupListPage from './pages/ApproverProductGroupListPage';
+import ApproverProductGroupDetailPage from './pages/ApproverProductGroupDetailPage';
+import ApproverProductCategoryListPage from './pages/ApproverProductCategoryListPage';
+import ApproverProductCategoryDetailPage from './pages/ApproverProductCategoryDetailPage';
 
 function App() {
   return (
@@ -60,9 +64,13 @@ function App() {
           <Route path="/products/:id" element={<DetailProductPage />} />
           <Route path="/product/:id" element={<DetailProductsPage />} />
           <Route path="/products/batch/:requestId" element={<BatchRequestDetailPage />} />
+          <Route path="/approver/batch/:requestId" element={<ApproverBatchDetailPage />} />
+          <Route path="/approver/product-detail/:requestId" element={<ApproverProductDetailPage />} />
+          <Route path="/approver/product-groups" element={<ApproverProductGroupListPage />} />
+          <Route path="/approver/product-groups/:groupId" element={<ApproverProductGroupDetailPage />} />
+          <Route path="/approver/product-category" element={<ApproverProductCategoryListPage />} />
+          <Route path="/approver/product-category/:categoryId" element={<ApproverProductCategoryDetailPage />} />
         </Route>
-        <Route path="/approver/batch/:requestId" element={<ApproverBatchDetailPage />} />
-        <Route path="/approver/product-detail/:requestId" element={<ApproverProductDetailPage />} />
       </Routes>
     </BrowserRouter>
   );
