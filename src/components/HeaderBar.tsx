@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import logoAgribank from '../assets/logo-agribank.png';
 import './HeaderBar.css';
 import { type UserRole } from '../config/menuConfig';
+import { AUTH_SERVICE_LOGOUT_URL } from '../config/apiConfig';
 
 const ROLE_LABELS: Record<UserRole, string> = {
   ETN08: 'Quản lý nội dung',
@@ -13,6 +14,9 @@ const ROLE_LABELS: Record<UserRole, string> = {
 const HeaderBar: React.FC = () => {
   const [role, setRole] = useState<UserRole>(() => {
     return (localStorage.getItem('userRole') as UserRole) || 'ETN08';
+  });
+  const [displayName, setDisplayName] = useState<string>(() => {
+    return localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh';
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -30,8 +34,24 @@ const HeaderBar: React.FC = () => {
         setIsDropdownOpen(false);
       }
     };
+    
+    const handleRoleChange = () => {
+      setRole((localStorage.getItem('userRole') as UserRole) || 'ETN08');
+    };
+    
+    const handleUserChange = () => {
+      setDisplayName(localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh');
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('userRoleChanged', handleRoleChange);
+    window.addEventListener('currentUserChanged', handleUserChange);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('userRoleChanged', handleRoleChange);
+      window.removeEventListener('currentUserChanged', handleUserChange);
+    };
   }, []);
 
   return (
@@ -69,7 +89,7 @@ const HeaderBar: React.FC = () => {
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
           >
             <div className="text-right flex flex-col justify-center self-stretch">
-              <p className="user-name">Phạm Thùy Linh</p>
+              <p className="user-name">{displayName}</p>
               <p className="user-role">{ROLE_LABELS[role] || 'Quản lý nội dung'}</p>
             </div>
             <div className="avatar-container">
@@ -127,6 +147,8 @@ const HeaderBar: React.FC = () => {
                 className="dropdown-item"
                 onClick={() => {
                   setIsDropdownOpen(false);
+                  localStorage.removeItem('userRole'); // Clear user info cache from localStorage
+                  window.location.href = AUTH_SERVICE_LOGOUT_URL;
                 }}
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

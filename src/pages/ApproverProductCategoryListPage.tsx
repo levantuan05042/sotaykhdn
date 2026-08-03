@@ -35,11 +35,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Gán mock user
-    (window as any).currentUser = "Phạm Thùy Linh_001";
-    localStorage.setItem('currentUser', "Phạm Thùy Linh_001");
-  }, []);
+
 
   // Fetch product groups to fill filter options
   useEffect(() => {

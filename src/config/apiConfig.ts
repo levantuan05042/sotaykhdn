@@ -1,6 +1,8 @@
 // Nơi quản lý tập trung đường dẫn Server Backend
 // export const BASE_URL = 'https://determine-september-helmet-archive.trycloudflare.com/api/v1';
 export const BASE_URL = 'http://localhost:8082/api/v1';
+export const AUTH_SERVICE_LOGIN_URL = 'http://localhost:8080/login';
+export const AUTH_SERVICE_LOGOUT_URL = 'http://localhost:8080/logout';
 
 // Bạn có thể gom sẵn các đầu Endpoint vào đây cho dễ quản lý
 export const API_ENDPOINTS = {

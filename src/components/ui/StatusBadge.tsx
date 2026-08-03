@@ -28,7 +28,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, classNa
 
   return (
     <span className={`status-badge status-badge--${config.variant} ${className}`}>
-      <span className="status-badge-dot">•</span>
+      {/* <span className="status-badge-dot">•</span> */}
       <span className="status-badge-text">{displayLabel}</span>
     </span>
   );

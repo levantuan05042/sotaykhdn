@@ -37,10 +37,7 @@ const ApproverRequestListPage: React.FC = () => {
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    (window as any).currentUser = "Phạm Thùy Linh_001";
-    localStorage.setItem('currentUser', "Phạm Thùy Linh_001");
-  }, []);
+
 
   useEffect(() => {
     const event = new CustomEvent('requestCountChanged', { detail: requests.length });

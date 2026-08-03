@@ -93,9 +93,6 @@ const ApproverBatchDetailPage: React.FC = () => {
   });
 
   useEffect(() => {
-    (window as any).currentUser = "Phạm Thùy Linh_001";
-    localStorage.setItem('currentUser', "Phạm Thùy Linh_001");
-
     const handleRoleChange = () => {
       setUserRole(localStorage.getItem('userRole') || 'ETN08');
     };
@@ -114,7 +111,7 @@ const ApproverBatchDetailPage: React.FC = () => {
     }
 
     try {
-      const approvedByStr = (window as any).currentUser || localStorage.getItem('currentUser') || 'Phạm Thùy Linh_001';
+       const approvedByStr = localStorage.getItem('currentUser') || '';
       await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: 'REJECTED',
         approvedBy: approvedByStr,
@@ -147,7 +144,7 @@ const ApproverBatchDetailPage: React.FC = () => {
     if (!window.confirm(`Bạn có chắc chắn muốn phê duyệt lưu lô sản phẩm này với trạng thái "${hasRevision ? 'Gửi lại chỉnh sửa' : 'Hoàn thành'}" không?`)) return;
 
     try {
-      const approvedByStr = (window as any).currentUser || localStorage.getItem('currentUser') || 'Phạm Thùy Linh_001';
+       const approvedByStr = localStorage.getItem('currentUser') || '';
       await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: targetStatus,
         approvedBy: approvedByStr,

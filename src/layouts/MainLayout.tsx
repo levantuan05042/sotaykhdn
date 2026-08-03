@@ -50,14 +50,41 @@
 
 // export default MainLayout;
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Outlet, useLocation, matchPath } from 'react-router-dom'; // 1. Thêm matchPath
 import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
 import './MainLayout.css';
 import { Toaster } from 'react-hot-toast';
+import axios from 'axios';
 
 const MainLayout: React.FC = () => {
+  useEffect(() => {
+    axios.get('http://localhost:8082/api/v1/auth/me', { withCredentials: true })
+      .then(res => {
+        if (res.data) {
+          const user = res.data;
+          const fullName = user.fullName || user.username;
+          const branchCode = user.branchCode || '001';
+          const username = user.username;
+          const role = user.role || 'ETN08';
+
+          // Set into localstorage
+          localStorage.setItem('currentUser', `${fullName}_${branchCode}`);
+          localStorage.setItem('currentUserUsername', username);
+          localStorage.setItem('currentUserFullName', fullName);
+          localStorage.setItem('currentUserBranchCode', branchCode);
+          localStorage.setItem('userRole', role);
+
+          // Dispatch event so other components (like HeaderBar) update
+          window.dispatchEvent(new Event('userRoleChanged'));
+          window.dispatchEvent(new Event('currentUserChanged'));
+        }
+      })
+      .catch(err => {
+        console.error("Failed to fetch user info", err);
+      });
+  }, []);
   const location = useLocation();
   const isBatchPage = location.pathname.startsWith('/products/batch');
   const isDetailPage = matchPath({ path: '/product/:id' }, location.pathname);

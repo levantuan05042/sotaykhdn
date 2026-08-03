@@ -48,11 +48,7 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
 
-  useEffect(() => {
-    // Gán mock user
-    (window as any).currentUser = "Phạm Thùy Linh_001";
-    localStorage.setItem('currentUser', "Phạm Thùy Linh_001");
-  }, []);
+
 
   const fetchDetail = async () => {
     if (!groupId) return;
@@ -98,7 +94,7 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
       return;
     }
 
-    const approvedBy = localStorage.getItem('currentUser') || 'Phạm Thùy Linh_001';
+    const approvedBy = localStorage.getItem('currentUser') || '';
 
     try {
       setLoading(true);
