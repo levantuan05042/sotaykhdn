@@ -79,6 +79,21 @@ const MainLayout: React.FC = () => {
           // Dispatch event so other components (like HeaderBar) update
           window.dispatchEvent(new Event('userRoleChanged'));
           window.dispatchEvent(new Event('currentUserChanged'));
+
+          // console.log(`username: ${username}, branchCode: ${branchCode}`);
+
+          // Gọi BEAdmin API với actionType=4 lấy danh sách user và lưu sessionStorage
+          axios.get(`http://localhost:8080/api/v1/branches/users-from-beadmin?username=${encodeURIComponent(username)}&branchCode=${encodeURIComponent(branchCode)}`)
+            .then(usersRes => {
+              if (usersRes.data) {
+                const rawData = typeof usersRes.data === 'string' ? usersRes.data : JSON.stringify(usersRes.data);
+                sessionStorage.setItem('beadminUsers', rawData);
+                console.log("Successfully fetched and saved BEAdmin users to sessionStorage");
+              }
+            })
+            .catch(e => {
+              console.error("Failed to fetch users from BEAdmin", e);
+            });
         }
       })
       .catch(err => {

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverProductCategoryDetailPage.css';
 
 interface CommentItem {
@@ -87,7 +88,9 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
       return;
     }
 
-    const approvedBy = localStorage.getItem('currentUser') || '';
+    const username = localStorage.getItem('currentUserUsername') || '';
+    const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+    const approvedBy = username ? `${username}_${branchCode}` : '';
 
     try {
       setLoading(true);
@@ -231,7 +234,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
                 </div>
                 <div className="meta-item-vertical">
                   <span className="meta-label">Người kiểm duyệt</span>
-                  <span className="meta-value">{detail.approvedBy || '---'}</span>
+                  <span className="meta-value">{formatApprovedBy(detail.approvedBy)}</span>
                 </div>
                 <div className="meta-item-vertical">
                   <span className="meta-label">Thời gian tạo</span>

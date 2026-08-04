@@ -28,12 +28,12 @@ const ApproverBatchDetailPage: React.FC = () => {
   const [selectedDetailProductId, setSelectedDetailProductId] = useState<string | null>(null);
   const [batchRequest, setBatchRequest] = useState<any>(null);
 
-  const [loading, setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!requestId) return;
     const fetchBatchAndProducts = async () => {
-      setLoading(true);
+      // setLoading(true);
       try {
         // Fetch batch request metadata
         const batchRes = await axios.get(API_ENDPOINTS.PRODUCT_REQUESTS.GET_DETAIL(requestId));
@@ -59,7 +59,7 @@ const ApproverBatchDetailPage: React.FC = () => {
         console.error("Error fetching batch request detail:", error);
         toast.error("Không thể tải thông tin yêu cầu!");
       } finally {
-        setLoading(false);
+        // setLoading(false);
       }
     };
 
@@ -111,7 +111,9 @@ const ApproverBatchDetailPage: React.FC = () => {
     }
 
     try {
-       const approvedByStr = localStorage.getItem('currentUser') || '';
+      const username = localStorage.getItem('currentUserUsername') || '';
+      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+      const approvedByStr = username ? `${username}_${branchCode}` : '';
       await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: 'REJECTED',
         approvedBy: approvedByStr,
@@ -144,7 +146,9 @@ const ApproverBatchDetailPage: React.FC = () => {
     if (!window.confirm(`Bạn có chắc chắn muốn phê duyệt lưu lô sản phẩm này với trạng thái "${hasRevision ? 'Gửi lại chỉnh sửa' : 'Hoàn thành'}" không?`)) return;
 
     try {
-       const approvedByStr = localStorage.getItem('currentUser') || '';
+      const username = localStorage.getItem('currentUserUsername') || '';
+      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+      const approvedByStr = username ? `${username}_${branchCode}` : '';
       await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: targetStatus,
         approvedBy: approvedByStr,

@@ -3,63 +3,74 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
 import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
-import DateRangePicker from '../components/ui/DateRangePicker';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
-import './ApproverRequestListPage.css';
+import './ApproverProductSingleListPage.css';
 
-export interface RequestItem {
+interface ProductItem {
   id: string;
   stt: number;
-  title: string;
+  name: string;
+  createdBy: string;
+  approvedBy: string;
   status: string;
   createdAt: string;
-  creator: string;
-  approver: string;
 }
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Lưu nháp', value: 'DRAFT' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Hoàn thành', value: 'ACTIVE' },
-  { label: 'Từ chối', value: 'REJECTED' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Đã duyệt', value: 'ACTIVE' },
+  { label: 'Từ chối', value: 'REJECTED' },
 ];
 
-const ApproverRequestListPage: React.FC = () => {
+export const ApproverProductSingleListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [startDate, setStartDate] = useState<string>('');
-  const [endDate, setEndDate] = useState<string>('');
-  const [requests, setRequests] = useState<RequestItem[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [productGroups, setProductGroups] = useState<FilterOption[]>([]);
   const [loading, setLoading] = useState(false);
 
-
-
+  // Load product groups for filter
   useEffect(() => {
-    const event = new CustomEvent('requestCountChanged', { detail: requests.length });
-    window.dispatchEvent(event);
-  }, [requests]);
+    const fetchGroups = async () => {
+      try {
+        const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST);
+        const mapped: FilterOption[] = [
+          { label: 'Tất cả loại nội dung', value: '' },
+          ...response.data.map((g: any) => ({
+            label: g.name,
+            value: g.id,
+          })),
+        ];
+        setProductGroups(mapped);
+      } catch (error) {
+        console.error('Error fetching product groups:', error);
+      }
+    };
+    fetchGroups();
+  }, []);
 
+  // Load single products for approval
   useEffect(() => {
-    const fetchRequests = async () => {
+    const fetchProducts = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT.LIST2, {
+        const response = await axios.get(API_ENDPOINTS.PRODUCT.SINGLE_FOR_APPROVAL, {
           params: {
             keyword: searchTerm || undefined,
             status: selectedStatus || undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
-            forApproval: true,
+            types: selectedGroupId || undefined,
           },
         });
 
-        const mapped: RequestItem[] = response.data.map((item: any, index: number) => {
+        const mapped: ProductItem[] = response.data.map((item: any, index: number) => {
           let formattedDate = '---';
           if (item.createdAt) {
             const d = new Date(item.createdAt);
@@ -70,28 +81,28 @@ const ApproverRequestListPage: React.FC = () => {
           }
 
           return {
-            id: item.requestId,
+            id: item.id,
             stt: index + 1,
-            title: item.requestName || '---',
+            name: item.name || '---',
+            createdBy: item.createdBy || '---',
+            approvedBy: item.approvedBy || '---',
             status: item.status || 'DRAFT',
             createdAt: formattedDate,
-            creator: item.createdBy || '---',
-            approver: item.approvedBy || '---',
           };
         });
 
-        setRequests(mapped);
+        setProducts(mapped);
       } catch (error) {
-        console.error('Error fetching requests from backend:', error);
+        console.error('Error fetching single products:', error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchRequests();
-  }, [searchTerm, selectedStatus, startDate, endDate]);
+    fetchProducts();
+  }, [searchTerm, selectedStatus, selectedGroupId]);
 
-  const columns: Column<RequestItem>[] = [
+  const columns: Column<ProductItem>[] = [
     {
       key: 'stt',
       header: 'STT',
@@ -100,9 +111,21 @@ const ApproverRequestListPage: React.FC = () => {
       render: (row) => row.stt,
     },
     {
-      key: 'title',
-      header: 'Tên yêu cầu',
-      render: (row) => <span className="request-item-title">{row.title}</span>,
+      key: 'name',
+      header: 'Tên nội dung',
+      render: (row) => <span className="product-item-title-text">{row.name}</span>,
+    },
+    {
+      key: 'createdBy',
+      header: 'Người tạo',
+      width: '180px',
+      render: (row) => row.createdBy,
+    },
+    {
+      key: 'approvedBy',
+      header: 'Người Phê duyệt',
+      width: '180px',
+      render: (row) => formatApprovedBy(row.approvedBy),
     },
     {
       key: 'status',
@@ -113,34 +136,24 @@ const ApproverRequestListPage: React.FC = () => {
     {
       key: 'createdAt',
       header: 'Thời gian',
-      width: '140px',
+      width: '130px',
       render: (row) => row.createdAt,
     },
     {
-      key: 'creator',
-      header: 'Người tạo',
-      render: (row) => row.creator,
-    },
-    {
-      key: 'approver',
-      header: 'Người kiểm duyệt',
-      render: (row) => formatApprovedBy(row.approver),
-    },
-    {
-      key: 'action',
+      key: 'actions',
       header: '',
-      width: '60px',
+      width: '80px',
       align: 'center',
       render: (row) => (
         <button
-          className="btn-icon-action"
-          title="Xem chi tiết"
+          className="btn-eye-view-green"
+          title="Xem chi tiết phê duyệt"
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/approver/batch/${row.id}`);
+            navigate(`/approver/products/single/${row.id}`);
           }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
@@ -150,10 +163,10 @@ const ApproverRequestListPage: React.FC = () => {
   ];
 
   return (
-    <div className="request-list-page">
-      <h1 className="request-page-title">Danh sách yêu cầu</h1>
+    <div className="product-single-list-page">
+      <h1 className="single-page-title">Phê duyệt sản phẩm lẻ</h1>
 
-      {/* Khối tìm kiếm & Bộ lọc */}
+      {/* Filter and Search Section */}
       <div className="filter-card shadow-sm">
         <SearchInput
           value={searchTerm}
@@ -169,29 +182,27 @@ const ApproverRequestListPage: React.FC = () => {
             onSelect={setSelectedStatus}
           />
 
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onSave={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-            }}
+          <FilterDropdown
+            label="Loại nội dung"
+            options={productGroups}
+            selectedValue={selectedGroupId}
+            onSelect={setSelectedGroupId}
           />
         </div>
       </div>
 
-      {/* Bảng danh sách dữ liệu */}
+      {/* Table Section */}
       <div className="table-card">
         <DataTable
           columns={columns}
-          data={requests}
+          data={products}
           keyExtractor={(row) => row.id}
-          onRowClick={(row) => navigate(`/approver/batch/${row.id}`)}
-          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy yêu cầu nào phù hợp."}
+          onRowClick={(row) => navigate(`/approver/products/single/${row.id}`)}
+          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy sản phẩm lẻ nào phù hợp."}
         />
       </div>
     </div>
   );
 };
 
-export default ApproverRequestListPage;
+export default ApproverProductSingleListPage;

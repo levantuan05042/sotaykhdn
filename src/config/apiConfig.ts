@@ -44,6 +44,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `${BASE_URL}/products/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/products/delete/${id}`,
     LIST: `${BASE_URL}/products`,
+    SINGLE_FOR_APPROVAL: `${BASE_URL}/products/single/for-approval`,
     LIST2: `${BASE_URL}/product-requests`,
     EXPORT: `${BASE_URL}/products/export`,
     IMPORT: `${BASE_URL}/products/import`,

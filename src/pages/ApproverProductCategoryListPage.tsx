@@ -6,6 +6,7 @@ import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdo
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverProductCategoryListPage.css';
 
 interface ProductCategoryItem {
@@ -63,6 +64,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
             keyword: searchTerm || undefined,
             status: selectedStatus || undefined,
             types: selectedGroupId || undefined,
+            forApproval: true,
           },
         });
 
@@ -121,7 +123,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     {
       key: 'approvedBy',
       header: 'Người kiểm duyệt',
-      render: (row) => row.approvedBy,
+      render: (row) => formatApprovedBy(row.approvedBy),
     },
     {
       key: 'action',

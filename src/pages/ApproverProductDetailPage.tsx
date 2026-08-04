@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverProductDetailPage.css';
 
+/*
 interface CommentItem {
   id: string;
   author: string;
@@ -12,7 +14,9 @@ interface CommentItem {
   date: string;
   content: string;
 }
+*/
 
+/*
 interface MockProductDetail {
   id: string;
   batch: string;
@@ -28,7 +32,9 @@ interface MockProductDetail {
   displayStatus: string;
   comments: CommentItem[];
 }
+*/
 
+/*
 const MOCK_DETAILS_MAP: Record<string, MockProductDetail> = {
   '1': {
     id: '1',
@@ -128,6 +134,7 @@ const getFallbackDetail = (id: string): MockProductDetail => ({
   displayStatus: 'Ẩn',
   comments: []
 });
+*/
 
 interface EditorBlockProps {
   label: string;
@@ -582,7 +589,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               </div>
               <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Người kiểm duyệt</span>
-                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{detail.approvedBy || '—'}</span>
+                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{formatApprovedBy(detail.approvedBy)}</span>
               </div>
               <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Thời gian tạo</span>

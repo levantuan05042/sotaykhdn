@@ -39,7 +39,7 @@ export const APPROVE_MENU_ITEMS: MenuItem[] = [
   {
     name: 'Phê duyệt sản phẩm',
     children: [
-      { name: 'Sản phẩm lẻ' },
+      { name: 'Sản phẩm lẻ', path: '/approver/products/single' },
       { name: 'Sản phẩm theo lô', path: '/approver/request-list' },
     ],
   },

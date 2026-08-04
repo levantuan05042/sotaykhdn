@@ -25,6 +25,8 @@ import ApproverProductGroupListPage from './pages/ApproverProductGroupListPage';
 import ApproverProductGroupDetailPage from './pages/ApproverProductGroupDetailPage';
 import ApproverProductCategoryListPage from './pages/ApproverProductCategoryListPage';
 import ApproverProductCategoryDetailPage from './pages/ApproverProductCategoryDetailPage';
+import ApproverProductSingleListPage from './pages/ApproverProductSingleListPage';
+import ApproverProductSingleDetailPage from './pages/ApproverProductSingleDetailPage';
 
 function App() {
   return (
@@ -70,6 +72,8 @@ function App() {
           <Route path="/approver/product-groups/:groupId" element={<ApproverProductGroupDetailPage />} />
           <Route path="/approver/product-category" element={<ApproverProductCategoryListPage />} />
           <Route path="/approver/product-category/:categoryId" element={<ApproverProductCategoryDetailPage />} />
+          <Route path="/approver/products/single" element={<ApproverProductSingleListPage />} />
+          <Route path="/approver/products/single/:productId" element={<ApproverProductSingleDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
