@@ -139,60 +139,16 @@ const getFallbackDetail = (id: string): MockProductDetail => ({
 interface EditorBlockProps {
   label: string;
   value: string;
-  onChange: (val: string) => void;
 }
 
-const EditorBlock: React.FC<EditorBlockProps> = ({ label, value, onChange }) => {
+const EditorBlock: React.FC<EditorBlockProps> = ({ label, value }) => {
   return (
     <div className="form-group">
       <label className="form-label">{label}</label>
-      <div className="editor-container">
-        <div className="editor-toolbar">
-          <div className="editor-tool-group">
-            <button type="button" className="btn-tool" style={{ fontWeight: 'bold' }}>B</button>
-            <button type="button" className="btn-tool" style={{ fontStyle: 'italic' }}>I</button>
-            <button type="button" className="btn-tool" style={{ textDecoration: 'underline' }}>U</button>
-          </div>
-          <div className="editor-tool-separator" />
-          <div className="editor-tool-group">
-            <button type="button" className="btn-tool">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="21" y1="10" x2="3" y2="10"></line>
-                <line x1="21" y1="6" x2="3" y2="6"></line>
-                <line x1="21" y1="14" x2="3" y2="14"></line>
-                <line x1="21" y1="18" x2="3" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-          <div className="editor-tool-separator" />
-          <div className="editor-tool-group">
-            <button type="button" className="btn-tool">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-            </button>
-            <button type="button" className="btn-tool">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="10" y1="6" x2="21" y2="6"></line>
-                <line x1="10" y1="12" x2="21" y2="12"></line>
-                <line x1="10" y1="18" x2="21" y2="18"></line>
-                <path d="M4 6h1v4"></path>
-                <path d="M4 10h2"></path>
-                <path d="M6 6H4"></path>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <textarea
-          className="editor-textarea"
-          rows={10}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+      <div className="editor-container disabled-editor">
+        <div 
+          className="editor-content-view"
+          dangerouslySetInnerHTML={{ __html: value }}
         />
       </div>
     </div>
@@ -291,18 +247,18 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     });
   };
 
-  const handleCriteriaChange = (criteriaId: string, value: string) => {
-    setDetail((prev: any) => {
-      if (!prev) return prev;
-      const updatedDetails = prev.details?.map((d: any) =>
-        d.id === criteriaId ? { ...d, noiDung: value } : d
-      );
-      return {
-        ...prev,
-        details: updatedDetails
-      };
-    });
-  };
+  // const handleCriteriaChange = (criteriaId: string, value: string) => {
+  //   setDetail((prev: any) => {
+  //     if (!prev) return prev;
+  //     const updatedDetails = prev.details?.map((d: any) =>
+  //       d.id === criteriaId ? { ...d, noiDung: value } : d
+  //     );
+  //     return {
+  //       ...prev,
+  //       details: updatedDetails
+  //     };
+  //   });
+  // };
 
   const handleBack = () => {
     if (onClose) {
@@ -316,8 +272,8 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   };
 
   const handleSaveReview = (notesVal: string) => {
-    const label = notesVal === '0' ? 'Yêu cầu chỉnh sửa' : 'Từ chối';
-    toast.success(`Đã chọn trạng thái: ${label} (Nhấn Duyệt / Lưu ở màn ngoài để lưu chính thức)`);
+    const label = notesVal === '0' ? 'Yêu cầu chỉnh sửa' : notesVal === '1' ? 'Từ chối' : 'Đồng ý/Duyệt';
+    toast.success(`Đã chọn trạng thái: ${label} (Nhấn Lưu ở màn ngoài để lưu chính thức)`);
 
     setDetail((prev: any) => {
       if (!prev) return prev;
@@ -399,22 +355,39 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               >
                 Từ chối
               </button>
-              <button 
-                className="btn-revision-request-yellow" 
-                onClick={() => handleSaveReview('0')} 
-                disabled={!newComment.trim()}
-                style={{ 
-                  backgroundColor: newComment.trim() ? '#FEF08A' : '#F5F5F5', 
-                  color: newComment.trim() ? '#854D0E' : '#BFBFBF', 
-                  border: newComment.trim() ? '1px solid #FEF08A' : '1px solid #D9D9D9', 
-                  padding: '8px 24px', 
-                  borderRadius: '6px', 
-                  cursor: newComment.trim() ? 'pointer' : 'not-allowed', 
-                  fontWeight: 600 
-                }}
-              >
-                Yêu cầu chỉnh sửa
-              </button>
+              {newComment.trim() !== '' ? (
+                <button 
+                  className="btn-revision-request-yellow" 
+                  onClick={() => handleSaveReview('0')} 
+                  style={{ 
+                    backgroundColor: '#FEF08A', 
+                    color: '#854D0E', 
+                    border: '1px solid #FEF08A', 
+                    padding: '8px 24px', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: 600 
+                  }}
+                >
+                  Yêu cầu chỉnh sửa
+                </button>
+              ) : (
+                <button 
+                  className="btn-action-approve" 
+                  onClick={() => handleSaveReview('2')} 
+                  style={{ 
+                    backgroundColor: '#047857', 
+                    color: '#ffffff', 
+                    border: 'none', 
+                    padding: '8px 24px', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: 600 
+                  }}
+                >
+                  Duyệt
+                </button>
+              )}
             </>
           )}
         </div>
@@ -508,7 +481,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               type="text"
               className="form-input"
               value={detail.name || ''}
-              onChange={(e) => handleFieldChange('name', e.target.value)}
+              readOnly
             />
           </div>
 
@@ -518,7 +491,6 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               key={item.criteriaId || index}
               label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
               value={item.noiDung || ''}
-              onChange={(val) => handleCriteriaChange(item.id || item.criteriaId, val)}
             />
           ))}
 
