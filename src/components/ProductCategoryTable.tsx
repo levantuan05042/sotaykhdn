@@ -8,7 +8,7 @@ interface ProductCategory {
   groupName: string;
   status: string;
   active?: boolean;
-  createdBy?: string | null;
+  createdByFullName?: string | null;
   approvedBy?: string | null;
   version?: number | null; 
 }
@@ -116,7 +116,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
           <tr>
             <th className="px-40 rounded-l-12 w-24">STT</th>
             <th>Tên danh mục sản phẩm</th>
-            <th>Nhóm sản phẩm</th> {/* Tiêu đề cột mới */}
+            <th>Nhóm sản phẩm</th> 
             <th>Trạng thái</th>
             <th>Hiệu lực</th>
             <th>Người tạo</th>
@@ -156,7 +156,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                     <span className="text-danger">Đã ẩn</span>
                   )}
                 </td>
-                <td>{item.createdBy || '---'}</td>
+                <td>{item.createdByFullName || '---'}</td>
                 <td>{item.approvedBy || '---'}</td>
                 <td style={{ 
                   color: '#053E2B', 

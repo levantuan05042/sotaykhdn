@@ -2,14 +2,18 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
 .product-table-container {
+  flex: 1;
   width: 100%;
+  overflow-y: auto;   /* Bật cuộn dọc nội trong bảng khi vượt quá chiều cao khung */
+  overflow-x: auto;   /* Bật cuộn ngang khi màn hình hẹp */
+  position: relative;
 }
 
 .product-table {
   width: 100%;
-  text-align: left;
-  border-separate: border-separate;
+  border-collapse: separate;
   border-spacing: 0;
+  min-width: 900px; /* Đảm bảo bảng có chiều rộng tối thiểu để kích hoạt cuộn ngang khi thu nhỏ màn hình */
 }
 
 /* Base Text Style */
@@ -172,6 +176,7 @@ display: inline-flex;
   display: flex;
   justify-content: center;
   margin-top: 24px;
+  margin-bottom: 100px;
 }
 
 /* Container */
@@ -235,16 +240,16 @@ display: inline-flex;
   font-size: 14px;
 }
 
-/* Container chính cho phép cuộn ngang */
-.product-table-container {
-  overflow-x: auto;
-  position: relative;
-  padding-bottom: 10px; /* Tránh bị cắt mất bóng đổ nếu có */
-}
-
 .product-table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   min-width: 800px; /* Đảm bảo bảng có chiều rộng tối thiểu để kích hoạt cuộn */
+}
+.product-table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f2eff3;
+  z-index: 10;
+  box-shadow: inset 0 -1px 0 #e3dfe6;
 }

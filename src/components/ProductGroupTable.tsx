@@ -7,7 +7,7 @@ interface ProductGroup {
   name: string;
   status: string;
   active?: boolean;
-  createdBy?: string | null;
+  createdByFullName?: string | null;
   approvedBy?: string | null;
   version?: number | null;  
 }
@@ -140,7 +140,7 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
                     <span className="text-danger">Đã ẩn</span>
                   )}
                 </td>
-                <td>{item.createdBy || '---'}</td>
+                <td>{item.createdByFullName || '---'}</td>
                 <td>{item.approvedBy || '---'}</td>
                 <td style={{ 
                   color: '#053E2B', 

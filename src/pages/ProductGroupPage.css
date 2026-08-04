@@ -3,14 +3,13 @@
   display: flex;
   flex-direction: column;
   background-color: #F9FAFB;
-  min-height: 100vh;
-  padding: 24px;
+  min-height: 100%;
+  padding: 20px;
   gap: 20px;
 }
 
 .content-wrapper,
-.filter-section,
-.table-placeholder {
+.filter-section {
   width: 100%;
   max-width: 1550px;
   margin: 0 auto;
@@ -216,11 +215,13 @@
   color: #AE1C3F;
 }
 
-/* --- TABLE SECTION --- */
 .table-placeholder {
+  flex: 1;            /* Tự động co giãn chiếm phần không gian còn lại */
   background-color: #ffffff;
   border-radius: 12px;
   border: 1px solid #E5E5E5;
-  min-height: 400px;
-  overflow: hidden; /* Đảm bảo table không tràn qua border-radius */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; 
+  min-height: 0;      /* Bắt buộc có trong Flexbox để tránh bị tràn */
 }

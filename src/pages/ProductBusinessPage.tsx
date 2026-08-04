@@ -71,7 +71,6 @@ const ProductBusinessPage: React.FC = () => {
     fetchCategoryOptions();
   }, []);
 
-  // Gọi API lấy danh sách Sản phẩm nghiệp vụ theo các bộ lọc
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -79,14 +78,12 @@ const ProductBusinessPage: React.FC = () => {
         params: {
           keyword: searchTerm.trim() || undefined,
           status: selectedStatus || undefined,
-          // Gửi danh sách ID danh mục lên bản Backend (Ví dụ param: categoryIds)
           categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined, 
         },
         paramsSerializer: (params) => {
           const searchParams = new URLSearchParams();
           Object.entries(params).forEach(([key, value]) => {
             if (Array.isArray(value)) {
-              // Biến mảng thành dạng: ?categoryIds=1&categoryIds=2 đúng chuẩn Spring Boot
               value.forEach(v => searchParams.append(key, v)); 
             } else if (value !== undefined) {
               searchParams.append(key, String(value));
@@ -97,7 +94,30 @@ const ProductBusinessPage: React.FC = () => {
       });
       
       const resultData = response.data?.content || response.data;
-      setData(Array.isArray(resultData) ? resultData : []);
+      const rawList = Array.isArray(resultData) ? resultData : [];
+
+      let userMap: Record<string, string> = {};
+      try {
+        const rawUsers = sessionStorage.getItem('beadminUsers') || sessionStorage.getItem('headminUsers');
+        if (rawUsers) {
+          const parsedUsers = JSON.parse(rawUsers);
+          const userList = parsedUsers.listUser || (Array.isArray(parsedUsers) ? parsedUsers : []);
+          
+          userList.forEach((user: any) => {
+            if (user.username) {
+              userMap[user.username] = user.fullname || user.fullName || user.username;
+            }
+          });
+        }
+      } catch (e) {}
+
+      const enrichedData = rawList.map((item: any) => ({
+        ...item,
+        createdByFullName: userMap[item.createdBy] || item.createdBy || null,
+        approvedBy: userMap[item.approvedBy] || item.approvedBy || null 
+      }));
+
+      setData(enrichedData);
 
     } catch (error) {
       console.error('Lỗi khi gọi API danh sách sản phẩm nghiệp vụ:', error);

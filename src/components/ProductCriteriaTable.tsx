@@ -21,7 +21,7 @@ interface ProductCriteria {
   createdAt: string;
   updatedAt: string;
   active?: boolean;
-  createdBy?: string | null;
+  createdByFullName?: string | null;
   approvedBy?: string | null;
   version?: number | null;  
 }
@@ -192,7 +192,7 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                       <span className="text-danger">Đã ẩn</span>
                     )}
                   </td>
-                  <td>{item.createdBy || '---'}</td>
+                  <td>{item.createdByFullName || '---'}</td>
                   <td>{item.approvedBy || '---'}</td>
 
                   <td className="px-40 text-right">

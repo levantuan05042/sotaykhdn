@@ -38,7 +38,6 @@ const ProductGroupPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   
-  // Đổi tên biến để phản ánh đúng bản chất lọc theo "Nhóm sản phẩm" gửi lên Backend
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -70,43 +69,71 @@ const ProductGroupPage: React.FC = () => {
     fetchGroupOptions();
   }, []);
 
-  // Gọi API lấy danh sách Danh mục theo các bộ lọc
-  const fetchData = async () => {
-    setLoading(true);
+  // Gọi API lấy danh sách Danh mục theo các bộ lọc và Map FullName
+const fetchData = async () => {
+  setLoading(true);
+  try {
+    const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
+      params: {
+        keyword: searchTerm.trim() || undefined,
+        status: selectedStatus || undefined,
+        types: selectedGroups.length > 0 ? selectedGroups : undefined, 
+      },
+      paramsSerializer: (params) => {
+        const searchParams = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+          if (Array.isArray(value)) {
+            value.forEach(v => searchParams.append(key, v)); 
+          } else if (value !== undefined) {
+            searchParams.append(key, String(value));
+          }
+        });
+        return searchParams.toString();
+      }
+    });
+    
+    const resultData = response.data?.content || response.data;
+    const rawList = Array.isArray(resultData) ? resultData : [];
+    let userMap: Record<string, string> = {};
     try {
-      const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
-        
-        params: {
-          keyword: searchTerm.trim() || undefined,
-          status: selectedStatus || undefined,
-          types: selectedGroups.length > 0 ? selectedGroups : undefined, // Khớp với `@RequestParam List<String> types` ở Java
-        },
-        paramsSerializer: (params) => {
-          const searchParams = new URLSearchParams();
-          Object.entries(params).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              // Biến mảng thành: ?types=id1&types=id2 theo đúng cấu trúc Spring Boot nhận
-              value.forEach(v => searchParams.append(key, v)); 
-            } else if (value !== undefined) {
-              searchParams.append(key, String(value));
-            }
-          });
-          return searchParams.toString();
-        }
-      });
+      const rawUsers = sessionStorage.getItem('beadminUsers');
+      console.log("1. Raw Users từ Storage:", rawUsers); 
       
-      const resultData = response.data?.content || response.data;
-      setData(Array.isArray(resultData) ? resultData : []);
-
-    } catch (error) {
-      console.error('Lỗi khi gọi API danh sách danh mục sản phẩm:', error);
-      setData([]);
-    } finally {
-      setLoading(false);
+      if (rawUsers) {
+        const parsedUsers = JSON.parse(rawUsers);
+        const userList = Array.isArray(parsedUsers) ? parsedUsers : [];
+      
+        userList.forEach((user: any) => {
+          if (user.username) {
+            userMap[user.username] = user.fullname; 
+          }
+        });
+        console.log("2. User Map sau khi tạo:", userMap); 
+      }
+    } catch (e) {
+      console.error('Lỗi khi đọc danh sách User từ sessionStorage:', e);
     }
-  };
+    console.log("3. Dữ liệu API gốc chưa Map:", rawList);
+    const enrichedData = rawList.map((item: any) => {
+      const creatorCode = item.createdBy || item.createdByFullName; 
+      const approverCode = item.approvedBy;
+      return {
+        ...item,
+        createdByFullName: userMap[creatorCode] || creatorCode || '---',
+        approvedBy: userMap[approverCode] || approverCode || '---' 
+      };
+    });
+    console.log("4. Dữ liệu sau khi Map xong:", enrichedData); 
+    setData(enrichedData);
+  } catch (error) {
+    console.error('Lỗi khi gọi API danh sách danh mục sản phẩm:', error);
+    setData([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Debounce tìm kiếm 500ms để tránh spam API liên tục khi gõ phím
+  // Debounce tìm kiếm 500ms
   useEffect(() => {
     const handler = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(handler);
@@ -143,7 +170,6 @@ const ProductGroupPage: React.FC = () => {
     }
   };
 
-  // Lọc danh sách nhóm hiển thị tại chỗ khi gõ ô tìm kiếm nội bộ Dropdown
   const filteredGroupOptions = groupOptions.filter(opt =>
     opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
   );
@@ -163,7 +189,6 @@ const ProductGroupPage: React.FC = () => {
 
       {/* FILTER SECTION */}
       <div className="filter-section">
-        {/* Ô tìm kiếm từ khóa */}
         <div className="search-container">
           <span className="search-icon">
             <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
@@ -244,7 +269,6 @@ const ProductGroupPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Thanh hiển thị các Tag điều kiện đã chọn */}
           <div className="selected-filters-row">
             {selectedStatus && (
               <FilterTag 
@@ -268,7 +292,6 @@ const ProductGroupPage: React.FC = () => {
         {loading ? (
           <div className="loading-spinner">Đang tải dữ liệu...</div>
         ) : data.length > 0 ? (
-          // Đã lược bỏ hoàn toàn cụm render Phân trang thừa tại đây
           <ProductCategoryTable data={data} />
         ) : (
           <div className="empty-state">Không tìm thấy kết quả phù hợp.</div>
