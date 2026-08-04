@@ -51,11 +51,9 @@ const EditorBlock: React.FC<EditorBlockProps> = ({ label, value }) => {
     <div className="form-group">
       <label className="form-label">{label}</label>
       <div className="editor-container disabled-editor">
-        <textarea
-          className="editor-textarea"
-          rows={6}
-          value={value}
-          readOnly
+        <div 
+          className="editor-content-view"
+          dangerouslySetInnerHTML={{ __html: value }}
         />
       </div>
     </div>
@@ -223,18 +221,21 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
               >
                 Từ chối
               </button>
-              <button 
-                className="btn-action-revision" 
-                onClick={() => handleReview('0')} 
-              >
-                Yêu cầu chỉnh sửa
-              </button>
-              <button 
-                className="btn-action-approve" 
-                onClick={() => handleReview('2')} 
-              >
-                Duyệt
-              </button>
+              {newComment.trim() !== '' ? (
+                <button 
+                  className="btn-action-revision" 
+                  onClick={() => handleReview('0')} 
+                >
+                  Yêu cầu chỉnh sửa
+                </button>
+              ) : (
+                <button 
+                  className="btn-action-approve" 
+                  onClick={() => handleReview('2')} 
+                >
+                  Duyệt
+                </button>
+              )}
             </>
           )}
         </div>

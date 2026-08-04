@@ -172,12 +172,21 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
               >
                 Từ chối
               </button>
-              <button 
-                className="btn-action-approve" 
-                onClick={() => handleSaveReview('ACTIVE', newComment || 'Đã phê duyệt')} 
-              >
-                Duyệt
-              </button>
+              {newComment.trim() !== '' ? (
+                <button 
+                  className="btn-action-revision" 
+                  onClick={() => handleSaveReview('NEEDS_REVISION', newComment)} 
+                >
+                  Yêu cầu chỉnh sửa
+                </button>
+              ) : (
+                <button 
+                  className="btn-action-approve" 
+                  onClick={() => handleSaveReview('ACTIVE', newComment || 'Đã phê duyệt')} 
+                >
+                  Duyệt
+                </button>
+              )}
             </>
           )}
         </div>
