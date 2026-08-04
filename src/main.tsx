@@ -8,6 +8,32 @@ import { AUTH_SERVICE_LOGIN_URL } from './config/apiConfig';
 // Configure Axios globally to send HttpOnly cookies in cross-origin requests
 axios.defaults.withCredentials = true;
 
+// Intercept native fetch to send cookies and handle 401 redirects
+const originalFetch = window.fetch;
+window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  const newInit = { ...init };
+  if (newInit.credentials === undefined) {
+    newInit.credentials = 'include';
+  }
+  
+  let request: RequestInfo | URL = input;
+  if (input instanceof Request) {
+    request = new Request(input, newInit);
+  }
+  
+  try {
+    const response = await originalFetch(request, newInit);
+    if (response.status === 401) {
+      const redirectUri = window.location.href;
+      window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      return new Promise<Response>(() => {});
+    }
+    return response;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Intercept 401 responses to automatically redirect the browser to the SSO Login portal
 axios.interceptors.response.use(
   (response) => response,
