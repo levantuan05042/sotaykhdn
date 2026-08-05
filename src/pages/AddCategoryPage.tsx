@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './DetailGroupPage.css'; // Dùng chung CSS để đồng bộ giao diện
+import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
+
 
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -19,6 +20,9 @@ const AddCategoryPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false); 
   const statusRef = useRef<HTMLDivElement>(null); 
   const [isActive, setIsActive] = useState<boolean>(true);
+
+  // Trạng thái Modal Phê duyệt
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   // Form Data
   const [formData, setFormData] = useState({
@@ -71,9 +75,7 @@ const AddCategoryPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-category');
 
-  // Gửi dữ liệu lên Server
   const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
-    // Chốt chặn cuối cùng kiểm tra tính hợp lệ của dữ liệu
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên danh mục sản phẩm", { position: 'top-center' });
       return;
@@ -88,7 +90,7 @@ const AddCategoryPage: React.FC = () => {
       await axios.post(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
         name: formData.name.trim(),
         groupId: formData.groupId,
-        active: isActive, // Bổ sung trường active từ trạng thái hiển thị
+        active: isActive,
         status
       });
 
@@ -123,11 +125,10 @@ const AddCategoryPage: React.FC = () => {
     ), { position: 'top-center' });
   };
 
-  // LOGIC SÁNG NÚT BẤM: Chỉ cần form phát sinh bất kỳ thay đổi nào so với mặc định ban đầu
   const isFormDirty = 
     formData.name.trim() !== '' || 
     formData.groupId !== '' || 
-    isActive !== true; // Mặc định hiển thị là true, nếu chọn Ẩn (false) sẽ tính là thay đổi
+    isActive !== true;
 
   const canSubmit = isFormDirty;
 

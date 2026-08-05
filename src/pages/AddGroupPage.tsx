@@ -1,6 +1,6 @@
-import React, { useState,useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './DetailGroupPage.css'; // Dùng chung CSS để đồng bộ giao diện
+import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -21,12 +21,14 @@ const AddProductPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false); 
   const statusRef = useRef<HTMLDivElement>(null); 
   const [isActive, setIsActive] = useState<boolean>(true);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-const handleGoBack = () => navigate('/product-groups');
-const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
+  const handleGoBack = () => navigate('/product-groups');
+
+  const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     if (!formData.name.trim()) {
         toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
         return;
@@ -41,7 +43,7 @@ const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
         await axios.post(API_ENDPOINTS.PRODUCT_GROUPS.LIST, { 
             ...formData, 
             active: isActive, 
-            status 
+            status
         });
 
         const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
@@ -50,7 +52,8 @@ const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     } catch (error: any) {
         toast.error(error.response?.data?.message || 'Có lỗi xảy ra', { position: 'top-center' });
     }
-};
+  };
+  
   const renderCustomToast = (message: string) => {
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
@@ -71,11 +74,10 @@ const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
       </div>
     ), { position: 'top-center' });
   };
-const isDirty = 
-  formData.name.trim() !== '' || 
-  formData.superGroup !== '' || 
-  isActive !== true; 
-const canSubmit = isDirty; 
+  
+  const isDirty = formData.name.trim() !== '' || formData.superGroup !== '' || isActive !== true; 
+  const canSubmit = isDirty; 
+
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
