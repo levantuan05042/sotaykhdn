@@ -10,7 +10,7 @@ interface ProductCategory {
   productGroupName: string | null;
   status: string;
   active?: boolean;       
-  createdBy?: string | null;
+  createdByFullName?: string | null;
   approvedBy?: string | null;
   version?: number | null;
 }
@@ -113,7 +113,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                     <span className="text-danger">Đã ẩn</span>
                   )}
                 </td>
-                <td>{item.createdBy || '---'}</td>
+                <td>{item.createdByFullName || '---'}</td>
                 <td>{item.approvedBy || '---'}</td>
                 <td style={{ fontWeight: 600 }}>
                   {item.version ? `Phiên bản ${item.version}` : 'Phiên bản 1'}
