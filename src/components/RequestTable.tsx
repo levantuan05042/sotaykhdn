@@ -10,7 +10,7 @@ export interface RequestItem {
   totalProducts: number;
   isBatch: boolean;      
   productId: string | null; 
-  createdBy?: string;    
+  createdByFullName?: string;    
   approvedBy?: string;   
 }
 
@@ -149,7 +149,7 @@ const RequestTable: React.FC<Props> = ({ data }) => {
 
                   {/* Render 2 thẻ td riêng biệt */}
                   <td style={{ color: '#4B5563' }}>
-                    {item.createdBy || 'Hệ thống'}
+                    {item.createdByFullName || '---'}
                   </td>
                   <td style={{ color: '#4B5563' }}>
                     {item.approvedBy || '---'}

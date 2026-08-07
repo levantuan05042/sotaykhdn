@@ -9,12 +9,12 @@
 }
 
 .pageWrapper {
-  display: flex;
-  justify-content: center;
-  background-color: #FCFCFC;
-  min-height: 100vh;
-  font-family: 'Inter', sans-serif;
-  padding: 24px 0;
+  min-height: 0;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 60px; /* Tạo khoảng trống ở đáy giúp cuộn thấy hoàn toàn nội dung cuối */
+  box-sizing: border-box;
 }
 
 .mainContainer {
@@ -624,4 +624,30 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+/* --- READ-ONLY & PERMISSION MODES --- */
+.readOnlyOverlay {
+  pointer-events: none;
+  background-color: #F9FAFB !important;
+  color: #6B7280 !important;
+}
+
+.permissionBanner {
+  width: 100%;
+  background-color: #FEF3C7;
+  border: 1px solid #F59E0B;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  box-sizing: border-box;
+}
+
+.permissionBannerText {
+  font-size: 14px;
+  color: #92400E;
+  fontWeight: 500;
 }

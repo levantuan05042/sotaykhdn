@@ -50,11 +50,13 @@ export const API_ENDPOINTS = {
     IMPORT: `${BASE_URL}/products/import`,
   },
   FILES: {
-    UPLOAD: `${BASE_URL}/api/v1/files/upload`,
+    UPLOAD: `${BASE_URL}/files/upload`,
   },
   PRODUCT_REQUESTS: {
       GET_DETAIL: (requestId: string) => `${BASE_URL}/product-requests/${requestId}`,
       UPDATE_STATUS: (requestId: string) => `${BASE_URL}/product-requests/${requestId}/status`,
+      UPDATE_STATUS2: (requestId: string) => `${BASE_URL}/product-requests/status/${requestId}`,
       PRODUCTS: (requestId: string) => `${BASE_URL}/product-requests/${requestId}/products`,
+      LIST: `${BASE_URL}/product-requests/all`,
   },
 };

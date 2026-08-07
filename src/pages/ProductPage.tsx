@@ -156,7 +156,7 @@ const ProductPage: React.FC = () => {
   const handleImportSuccess = () => {
     fetchData();
     setToast({ type: 'success', message: 'Nhập sản phẩm từ Excel thành công.' });
-    navigate('/products/requests');
+    navigate('/request-list');
   };
 
   const renderTable = () => {

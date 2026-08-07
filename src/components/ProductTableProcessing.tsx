@@ -9,6 +9,7 @@ interface ProductCategory {
   productCategoryName?: string | null;
   productGroupName?: string | null;
   requestName?: string | null; 
+  requestId?: string | null;     // <-- Thêm requestId vào interface
   notes?: string | null;       
   createdAt?: string | null;   
   status: string;
@@ -60,6 +61,13 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
 
   const handleViewDetail = (id: string) => {
     navigate(`/products/${id}`);
+  };
+
+  // Hàm xử lý chuyển hướng khi click vào Tên yêu cầu
+  const handleViewBatchDetail = (requestId?: string | null) => {
+    if (requestId) {
+      navigate(`/products/batch/${requestId}`);
+    }
   };
 
   const getStatusLabel = (status: string) => {
@@ -124,7 +132,16 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                 
                 {/* 5. Tên yêu cầu */}
                 <td className="col-highlight col-highlight-first">
-                  <span className="truncate-text" title={stripHtml(item.requestName) || ''}>
+                  <span 
+                    className="truncate-text" 
+                    title={stripHtml(item.requestName) || ''}
+                    onClick={() => handleViewBatchDetail(item.requestId)}
+                    style={{ 
+                      cursor: item.requestId ? 'pointer' : 'default', 
+                      color: item.requestId ? '#2563EB' : 'inherit',
+                      textDecoration: item.requestId ? 'underline' : 'none' 
+                    }}
+                  >
                     {stripHtml(item.requestName) || '---'}
                   </span>
                 </td>

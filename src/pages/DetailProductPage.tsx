@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
+import './DetailProductPage.css';
 import toast from 'react-hot-toast';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
-import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'
+import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 
 // ─────────────────────────────────────────────
 // Constants
@@ -62,6 +63,7 @@ const checkIsRequired = (item: any) => {
   const t2 = String(item.noiDung || item.value || '');
   return t1.includes('(*)') || t2.includes('(*)');
 };
+
 const toDisplayUrl = (raw: string) => {
   if (!raw) return '';
   if (raw.startsWith('http')) {
@@ -75,6 +77,7 @@ const toDisplayUrl = (raw: string) => {
     : `/files/products/${raw}`;
   return cleanPath; 
 };
+
 // ─────────────────────────────────────────────
 // Canvas crop → Blob
 // ─────────────────────────────────────────────
@@ -97,9 +100,7 @@ const getCroppedBlob = async (src: string, px: PixelCrop): Promise<Blob> => {
 };
 
 // ─────────────────────────────────────────────
-// ImageModal — 1 modal, 2 bước (drop → crop)
-// title thay đổi theo bước, "Chọn ảnh khác"
-// quay về bước drop trong cùng modal
+// ImageModal
 // ─────────────────────────────────────────────
 interface ImageModalProps {
   isOpen: boolean;
@@ -110,16 +111,14 @@ interface ImageModalProps {
 const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) => {
   const fileInputRef            = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging]   = useState(false);
-  // step: 'drop' | 'crop'
   const [step, setStep]               = useState<'drop' | 'crop'>('drop');
-  const [dataUrl, setDataUrl]         = useState('');        // base64 src cho Cropper
+  const [dataUrl, setDataUrl]         = useState('');        
   const [fileName, setFileName]       = useState('');
   const [crop, setCrop]               = useState({ x: 0, y: 0 });
   const [zoom, setZoom]               = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<PixelCrop | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // reset khi mở lại
   useEffect(() => {
     if (isOpen) {
       setStep('drop');
@@ -174,35 +173,26 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
     }
   };
 
-  const handleClose = () => {
-    onClose();
-  };
-
   if (!isOpen) return null;
 
   return (
     <div
       style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}
-      onClick={e => { if (e.target === e.currentTarget) handleClose(); }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{ backgroundColor: 'white', borderRadius: '12px', width: '600px', maxWidth: '95vw', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
-
-        {/* Header — title thay đổi theo step */}
         <div style={{ padding: '20px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#111827' }}>
             {step === 'crop' ? 'Căn chỉnh & Cắt ảnh (16:9)' : 'Thêm hình ảnh'}
           </h3>
-          <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px' }}>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6L6 18M6 6l12 12"/>
             </svg>
           </button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: '24px' }}>
-
-          {/* ── BƯỚC 1: Drop zone ── */}
           {step === 'drop' && (
             <div
               onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
@@ -224,10 +214,8 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
             </div>
           )}
 
-          {/* ── BƯỚC 2: Crop 16:9 ── */}
           {step === 'crop' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Vùng crop */}
               <div style={{ position: 'relative', width: '100%', height: '320px', backgroundColor: '#1a1a1a', borderRadius: '8px', overflow: 'hidden' }}>
                 <Cropper
                   image={dataUrl}
@@ -245,7 +233,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
                 />
               </div>
 
-              {/* Slider + Chọn ảnh khác */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '4px 0' }}>
                 <span style={{ fontSize: '14px', color: '#4B5563', fontWeight: 500, minWidth: '70px' }}>Thu phóng:</span>
                 <input
@@ -257,7 +244,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
                   onChange={e => setZoom(Number(e.target.value))}
                   style={{ flex: 1, accentColor: '#AE1C3F', cursor: 'pointer' }}
                 />
-                {/* "Chọn ảnh khác" → quay về step drop trong cùng modal */}
                 <button
                   type="button"
                   onClick={() => {
@@ -266,7 +252,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
                     setFileName('');
                     setCrop({ x: 0, y: 0 });
                     setZoom(1);
-                    // reset file input để có thể chọn lại cùng file
                     if (fileInputRef.current) fileInputRef.current.value = '';
                   }}
                   style={{ background: 'none', border: 'none', color: '#3B82F6', cursor: 'pointer', fontSize: '14px', fontWeight: 600, marginLeft: '8px', whiteSpace: 'nowrap' }}
@@ -278,11 +263,10 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ padding: '16px 24px', display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #E5E7EB' }}>
           <button
             type="button"
-            onClick={handleClose}
+            onClick={onClose}
             disabled={isProcessing}
             style={{ padding: '8px 24px', borderRadius: '6px', border: 'none', backgroundColor: '#E5E7EB', color: '#374151', fontWeight: 600, cursor: 'pointer', fontSize: '14px' }}
           >
@@ -299,7 +283,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
         </div>
       </div>
 
-      {/* Input file ẩn — dùng chung cho cả drop zone lẫn "Chọn ảnh khác" */}
       <input
         ref={fileInputRef}
         type="file"
@@ -312,6 +295,70 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
 };
 
 // ─────────────────────────────────────────────
+// BatchApprovalModal (Thông báo xác nhận gửi phê duyệt theo lô đúng chuẩn UI)
+// ─────────────────────────────────────────────
+interface BatchApprovalModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmitBatch: (requestId: string, status: string) => void;
+  requestId: string;
+  requestName: string;
+}
+
+const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose, onSubmitBatch, requestId , requestName }) => {
+  const [loading, setLoading] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      await onSubmitBatch(requestId, 'PENDING_APPROVAL');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, backdropFilter: 'blur(2px)' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '440px', maxWidth: '95vw', padding: '32px 24px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
+        
+        {/* Warning Icon */}
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#FEFCE8', border: '8px solid #FEFDE8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', boxShadow: '0 0 0 4px #FEF9C3' }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <p style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: 500, color: '#111827', textAlign: 'center', lineHeight: '1.5' }}>
+          Bạn muốn gửi Phê duyệt <span style={{ color: '#AE1C3F', fontWeight: 600 }}>{requestName || 'Tên yêu cầu'}</span>
+        </p>
+        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: '#F3F4F6', color: '#374151', fontWeight: 600, cursor: 'pointer', fontSize: '15px', transition: 'background-color 0.2s' }}
+          >
+            Hủy
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={loading}
+            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#AE1C3F', color: 'white', fontWeight: 600, fontSize: '15px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'opacity 0.2s' }}
+          >
+            {loading ? 'Đang xử lý...' : 'Phê duyệt'}
+          </button>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
 // QuillEditor
 // ─────────────────────────────────────────────
 interface QuillEditorProps {
@@ -319,9 +366,10 @@ interface QuillEditorProps {
   onChange: (content: string) => void;
   placeholder?: string;
   hasError?: boolean;
+  readOnly?: boolean;
 }
 
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError }) => {
+const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorRef  = useRef<HTMLDivElement>(null);
   const quillRef   = useRef<Quill | null>(null);
@@ -331,48 +379,55 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
     const quill = new Quill(editorRef.current, {
       theme: 'snow',
       placeholder: placeholder || 'Nhập nội dung chi tiết...',
-      modules: { toolbar: toolbarRef.current },
+      modules: { toolbar: readOnly ? false : toolbarRef.current },
+      readOnly: readOnly,
     });
     quillRef.current = quill;
     if (value) quill.clipboard.dangerouslyPasteHTML(value);
-    quill.on('text-change', () => {
-      const h = quill.root.innerHTML;
-      onChange(h === '<p><br></p>' ? '' : h);
-    });
+    
+    if (!readOnly) {
+      quill.on('text-change', () => {
+        const h = quill.root.innerHTML;
+        onChange(h === '<p><br></p>' ? '' : h);
+      });
+    }
     return () => { quillRef.current = null; };
-  }, []);
+  }, [readOnly]);
 
   useEffect(() => {
     if (!quillRef.current) return;
+    quillRef.current.enable(!readOnly);
     const cur = quillRef.current.root.innerHTML;
     if (value !== cur && !(value === '' && cur === '<p><br></p>'))
       quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
-  }, [value]);
+  }, [value, readOnly]);
 
   return (
     <div style={{ backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease' }}>
-      <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
-        <span className="ql-formats">
-          <button className="ql-bold"/><button className="ql-italic"/>
-          <button className="ql-underline"/><button className="ql-strike"/>
-        </span>
-        <span className="ql-formats">
-          <button className="ql-list" value="ordered"/>
-          <button className="ql-list" value="bullet"/>
-        </span>
-        <span className="ql-formats">
-          <button className="ql-script" value="sub"/>
-          <button className="ql-script" value="super"/>
-        </span>
-        <span className="ql-formats">
-          <button className="ql-indent" value="-1"/>
-          <button className="ql-indent" value="+1"/>
-        </span>
-        <span className="ql-formats"><select className="ql-color"/><select className="ql-background"/></span>
-        <span className="ql-formats"><select className="ql-align"/></span>
-        <span className="ql-formats"><button className="ql-clean"/></span>
-      </div>
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none' }}/>
+      {!readOnly && (
+        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
+          <span className="ql-formats">
+            <button className="ql-bold"/><button className="ql-italic"/>
+            <button className="ql-underline"/><button className="ql-strike"/>
+          </span>
+          <span className="ql-formats">
+            <button className="ql-list" value="ordered"/>
+            <button className="ql-list" value="bullet"/>
+          </span>
+          <span className="ql-formats">
+            <button className="ql-script" value="sub"/>
+            <button className="ql-script" value="super"/>
+          </span>
+          <span className="ql-formats">
+            <button className="ql-indent" value="-1"/>
+            <button className="ql-indent" value="+1"/>
+          </span>
+          <span className="ql-formats"><select className="ql-color"/><select className="ql-background"/></span>
+          <span className="ql-formats"><select className="ql-align"/></span>
+          <span className="ql-formats"><button className="ql-clean"/></span>
+        </div>
+      )}
+      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#F9FAFB' : '#FFF' }}/>
     </div>
   );
 };
@@ -410,9 +465,7 @@ const CriteriaModal: React.FC<{
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#F9FAFB', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
           <button onClick={onClose}
-            style={{ padding: '8px 20px', borderRadius: 6, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 14 }}
-            onMouseOver={e => e.currentTarget.style.backgroundColor = '#F3F4F6'}
-            onMouseOut={e => e.currentTarget.style.backgroundColor = 'white'}>
+            style={{ padding: '8px 20px', borderRadius: 6, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 14 }}>
             Đóng
           </button>
         </div>
@@ -432,6 +485,8 @@ const DetailProductPage: React.FC = () => {
   const categoryRef  = useRef<HTMLDivElement>(null);
   const operationRef = useRef<HTMLDivElement>(null);
   const statusRef    = useRef<HTMLDivElement>(null);
+  
+  const isInitialLoadRef = useRef(true);
 
   const [isGroupOpen,       setIsGroupOpen]       = useState(false);
   const [isCategoryOpen,    setIsCategoryOpen]    = useState(false);
@@ -439,6 +494,9 @@ const DetailProductPage: React.FC = () => {
   const [isStatusOpen,      setIsStatusOpen]      = useState(false);
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [showImageModal,    setShowImageModal]    = useState(false);
+  
+  // State quản lý Modal xác nhận gửi phê duyệt theo lô
+  const [showBatchModal,    setShowBatchModal]    = useState(false);
 
   const [groupOptions,     setGroupOptions]     = useState<{ label: string; value: string }[]>([]);
   const [categoryOptions,  setCategoryOptions]  = useState<{ label: string; value: string }[]>([]);
@@ -455,23 +513,60 @@ const DetailProductPage: React.FC = () => {
   const [criteria,         setCriteria]         = useState<Criterion[]>([]);
   const [originalCriteria, setOriginalCriteria] = useState<Criterion[]>([]);
 
-  // ── Image state ──────────────────────────────────────────────────────────
-  const [previewImage, setPreviewImage] = useState('');   // URL để render <img>
-  const [avatarFile,   setAvatarFile]   = useState<File | null>(null); // File đã crop
-  const [imageRemoved, setImageRemoved] = useState(false); // true → gửi null lên API
+  const [previewImage, setPreviewImage] = useState('');   
+  const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
+  const [imageRemoved, setImageRemoved] = useState(false); 
 
-  // Khởi tạo ảnh từ DB
+  // --- KIỂM TRA ĐĂNG NHẬP & QUYỀN SỞ HỮU ---
+  const getCurrentUsername = () => {
+    const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
+    for (const key of possibleKeys) {
+      const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (val) {
+        try {
+          const parsed = JSON.parse(val);
+          if (typeof parsed === 'object' && parsed !== null) {
+            const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode || parsed.id;
+            if (u) return String(u).trim().toLowerCase();
+          }
+        } catch {
+          return String(val).trim().toLowerCase();
+        }
+      }
+    }
+    return '';
+  };
+
+  const currentUsername = getCurrentUsername();
+  const isLoggedIn = Boolean(currentUsername);
+
+  const creatorField = productData?.createdBy || productData?.created_by || productData?.creator || productData?.user || productData?.userId;
+  let creatorUsername = '';
+  if (typeof creatorField === 'object' && creatorField !== null) {
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || creatorField.id || '').trim().toLowerCase();
+  } else if (creatorField !== undefined && creatorField !== null) {
+    creatorUsername = String(creatorField).trim().toLowerCase();
+  }
+
+  const isOwner = Boolean(
+    isLoggedIn && 
+    currentUsername && 
+    creatorUsername && 
+    currentUsername === creatorUsername
+  );
+
+  const isReadOnly = !isLoggedIn || !isOwner;
+
   useEffect(() => {
     if (productData?.imageUrl) setPreviewImage(toDisplayUrl(productData.imageUrl));
   }, [productData?.imageUrl]);
 
-  // Revoke blob khi unmount
   useEffect(() => {
     return () => { if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage); };
   }, [previewImage, avatarFile]);
 
-  // Nhận ảnh đã crop từ ImageModal
   const handleImageConfirm = (file: File, blobUrl: string) => {
+    if (isReadOnly) return;
     if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage);
     setAvatarFile(file);
     setPreviewImage(blobUrl);
@@ -480,26 +575,25 @@ const DetailProductPage: React.FC = () => {
   };
 
   const handleRemoveImage = () => {
+    if (isReadOnly) return;
     if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage);
     setAvatarFile(null);
     setPreviewImage('');
     setImageRemoved(true);
   };
 
-const uploadImage = async (file: File): Promise<string> => {
-  const fd = new FormData();
-  fd.append('file', file);
+  const uploadImage = async (file: File): Promise<string> => {
+    const fd = new FormData();
+    fd.append('file', file);
+    try {
+      const response = await axios.post(API_ENDPOINTS.FILES.UPLOAD, fd);
+      return response.data.url; 
+    } catch (error) {
+      console.error("Lỗi upload ảnh:", error);
+      throw new Error('Upload ảnh lên hệ thống thất bại');
+    }
+  };
 
-  try {
-    const response = await axios.post(API_ENDPOINTS.FILES.UPLOAD, fd);
-    return response.data.url; 
-  } catch (error) {
-    console.error("Lỗi upload ảnh:", error);
-    throw new Error('Upload ảnh lên hệ thống thất bại');
-  }
-};
-
-  // Close dropdowns on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (groupRef.current     && !groupRef.current.contains(e.target as Node))     setIsGroupOpen(false);
@@ -511,10 +605,11 @@ const uploadImage = async (file: File): Promise<string> => {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // Init page
+  // 1. Fetch dữ liệu sản phẩm chi tiết ban đầu
   useEffect(() => {
     const init = async () => {
       if (!id) return;
+      isInitialLoadRef.current = true;
       try {
         setLoading(true);
         const [pRes, gRes] = await Promise.all([
@@ -534,6 +629,7 @@ const uploadImage = async (file: File): Promise<string> => {
           const gd = await gRes.json();
           setGroupOptions(gd.map((g: any) => ({ label: g.name, value: g.id })));
         }
+
         const rawDetails = pData.details || [];
         if (rawDetails.length > 0) {
           const mapped: Criterion[] = rawDetails.map((item: any, i: number) => ({
@@ -544,16 +640,22 @@ const uploadImage = async (file: File): Promise<string> => {
             value:      item.noiDung || item.value || '',
           }));
           setOriginalCriteria(JSON.parse(JSON.stringify(mapped)));
+          setCriteria(mapped);
         }
       } catch (e) {
         console.error(e);
         toast.error('Không tìm thấy sản phẩm hoặc cấu trúc dữ liệu không khớp');
-      } finally { setLoading(false); }
+      } finally { 
+        setLoading(false); 
+        setTimeout(() => {
+          isInitialLoadRef.current = false;
+        }, 100);
+      }
     };
     init();
   }, [id]);
 
-  // Fetch by group
+  // 2. Xử lý khi productGroupId thay đổi
   useEffect(() => {
     if (!formData.productGroupId) { setCategoryOptions([]); setOperationOptions([]); return; }
 
@@ -573,50 +675,52 @@ const uploadImage = async (file: File): Promise<string> => {
         if (r.ok) { const d = await r.json(); setOperationOptions(d.map((b: any) => ({ label: b.name, value: b.id }))); }
       } catch (e) { console.error(e); } finally { setLoadingOperations(false); }
     })();
+    if (isInitialLoadRef.current) return;
 
     (async () => {
       try {
         const r = await fetch(`${API_ENDPOINTS.PRODUCT_CRITERIA.LIST}?types=${formData.productGroupId}&status=ACTIVE&active=true`);
         if (!r.ok) return;
         const data = await r.json();
-        const isOrig = productData && formData.productGroupId === productData.productGroupId;
-        setCriteria(
-          data.map((item: any) => {
-            const name  = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '');
+        
+        setCriteria(prevCriteria => {
+          return data.map((item: any) => {
+            const criterionId = String(item.id || item.criteriaId);
+            const name = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '');
             const isReq = checkIsRequired(item);
-            let isSelected = isReq, finalValue = '';
-            if (isOrig) {
-              const m = originalCriteria.find(o => o.name === name);
-              if (m) { isSelected = true; finalValue = m.value; }
-            }
-            return { id: String(item.id || item.criteriaId), name, isRequired: isReq, isSelected: isReq ? true : isSelected, value: finalValue };
-          }).sort((a: Criterion, b: Criterion) => Number(b.isRequired) - Number(a.isRequired))
-        );
+            const existing = prevCriteria.find(o => o.id === criterionId || o.name === name);
+            return {
+              id: criterionId,
+              name,
+              isRequired: isReq,
+              isSelected: isReq ? true : (existing ? existing.isSelected : true),
+              value: existing ? existing.value : ''
+            };
+          }).sort((a: Criterion, b: Criterion) => Number(b.isRequired) - Number(a.isRequired));
+        });
       } catch (e) { console.error(e); }
     })();
-  }, [formData.productGroupId, productData, originalCriteria]);
+  }, [formData.productGroupId]);
 
-  const handleCriterionValueChange = (id: string, v: string) =>
+  const handleCriterionValueChange = (id: string, v: string) => {
+    if (isReadOnly) return;
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, value: v } : c));
+  };
 
-  const toggleCriterionSelection = (id: string) =>
+  const toggleCriterionSelection = (id: string) => {
+    if (isReadOnly) return;
     setCriteria(prev => prev.map(c => c.id !== id ? c : (c.isRequired ? c : { ...c, isSelected: !c.isSelected })));
+  };
 
-  // isDirty
   const isFormDirty     = formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
-  const canSubmit       = isDirty && formData.productGroupId !== '';
+  const canSubmit       = !isReadOnly && isDirty && formData.productGroupId !== '';
 
-  // Update
-  const handleUpdateProduct = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
-    if (!id) return;
+  const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE') => {
+    if (isReadOnly || !id) return;
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
-      if (status !== 'DRAFT') {
-        const miss = criteria.find(c => c.isRequired && isHtmlEmpty(c.value));
-        if (miss) { toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${miss.name}`, { position: 'top-center' }); return; }
-      }
     }
     try {
       setLoading(true);
@@ -635,11 +739,19 @@ const uploadImage = async (file: File): Promise<string> => {
         status,
         criteria: criteria.filter(c => c.isSelected).map(c => ({ criteriaId: c.id, value: c.value.trim() })),
       };
-      const res = await fetch(API_ENDPOINTS.PRODUCT.UPDATE(id), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const res = await fetch(API_ENDPOINTS.PRODUCT.UPDATE(id), { 
+        method: 'POST', 
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }, 
+        body: JSON.stringify(payload) 
+      });
       if (res.ok) {
         const msgs: Record<string, string> = {
           DRAFT: 'Lưu nháp sản phẩm thành công', ARCHIVED: 'Lưu trữ sản phẩm thành công',
-          ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công', PENDING_APPROVAL: 'Gửi phê duyệt sản phẩm thành công',
+          ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công',
         };
         renderCustomToast(msgs[status] || 'Cập nhật sản phẩm thành công');
         setTimeout(() => navigate('/products/processing'), 2000);
@@ -651,9 +763,38 @@ const uploadImage = async (file: File): Promise<string> => {
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
   };
 
-  // Delete
+  const handleBatchStatusSubmit = async (requestId: string, status: string) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const targetRequestId = requestId || productData?.requestId || productData?.batchRequestId || id;
+      // Lấy tên lô từ productData, nếu không có thì fallback tạm về chuỗi mặc định
+      const targetRequestName = productData?.requestName || 'Tên yêu cầu'; 
+
+      const response = await axios.post(
+        `${BASE_URL}/product-requests/status/${targetRequestId}`,
+        { status },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          }
+        }
+      );
+
+      if (response.status === 200 || response.status === 204) {
+        // Sử dụng targetRequestName ở đây thay vì targetRequestId
+        toast.success(`Gửi phê duyệt lô ${targetRequestName} thành công!`, { position: 'top-center' });
+        setShowBatchModal(false);
+        setTimeout(() => navigate('/products/processing'), 1500);
+      }
+    } catch (error: any) {
+      console.error('Lỗi gửi phê duyệt theo lô:', error);
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi phê duyệt theo lô', { position: 'top-center' });
+    }
+  };
+
   const handleDeleteProduct = () => {
-    if (!id) return;
+    if (isReadOnly || !id) return;
     toast.custom(t => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
         <div className="confirm-toast-body">
@@ -676,10 +817,16 @@ const uploadImage = async (file: File): Promise<string> => {
   };
 
   const executeDelete = async () => {
-    if (!id) return;
+    if (isReadOnly || !id) return;
     try {
       setLoading(true);
-      const res = await fetch(API_ENDPOINTS.PRODUCT.DELETE(id), { method: 'POST' });
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const res = await fetch(API_ENDPOINTS.PRODUCT.DELETE(id), { 
+        method: 'POST',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
       if (res.ok) { renderCustomToast('Xóa sản phẩm thành công'); setTimeout(() => navigate('/products/processing'), 2000); }
       else { const e = await res.json(); toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' }); setLoading(false); }
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
@@ -712,6 +859,8 @@ const uploadImage = async (file: File): Promise<string> => {
 
   const currentStatus        = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
   const productNameBreadcrumb = getCleanProductName(productData.name);
+  const activeRequestId = productData?.requestId || productData?.batchRequestId || 'Lô ABC';
+  const requestName = productData?.requestName || 'Tên yêu cầu';
 
   return (
     <div className="pageWrapper">
@@ -741,28 +890,36 @@ const uploadImage = async (file: File): Promise<string> => {
             </div>
           </div>
 
-          <div className="headerRight">
-            {productData.status === 'DRAFT' && (<>
-              <button className="btnDraft" onClick={handleDeleteProduct} style={{ display: 'flex', padding: '8px 14px', alignItems: 'center', gap: 6, borderRadius: 8, background: '#E3DFE6', border: 'none', cursor: 'pointer', color: '#AE1C3F', fontSize: 14, fontWeight: 600 }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="17" viewBox="0 0 17 19" fill="none">
-                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Xóa
-              </button>
-              <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-              <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateProduct('PENDING_APPROVAL')}>Gửi phê duyệt</button>
-            </>)}
-            {productData.status === 'ACTIVE' && (<>
-              <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-              <button className="btnDraft" onClick={() => handleUpdateProduct('ARCHIVED')}>Lưu trữ</button>
-              <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateProduct('PENDING_APPROVAL')}>Gửi phê duyệt</button>
-            </>)}
-            {productData.status === 'NEEDS_REVISION' && (<>
-              <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-              <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateProduct('PENDING_APPROVAL')}>Gửi phê duyệt</button>
-            </>)}
-            {productData.status === 'ARCHIVED' && (
-              <button className="btnRestore active" onClick={() => handleUpdateProduct('ACTIVE')}>Hoạt động trở lại</button>
+          <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {isReadOnly ? (
+              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
+                Chỉ xem thông tin
+              </span>
+            ) : (
+              <>
+                {productData.status === 'DRAFT' && (<>
+                  <button className="btnDraft" onClick={handleDeleteProduct} style={{ display: 'flex', padding: '8px 14px', alignItems: 'center', gap: 6, borderRadius: 8, background: '#E3DFE6', border: 'none', cursor: 'pointer', color: '#AE1C3F', fontSize: 14, fontWeight: 600 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="17" viewBox="0 0 17 19" fill="none">
+                      <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Xóa
+                  </button>
+                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className="btnSubmit active" onClick={() => setShowBatchModal(true)}>Gửi phê duyệt</button>
+                </>)}
+                {productData.status === 'ACTIVE' && (<>
+                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className="btnDraft" onClick={() => handleUpdateProduct('ARCHIVED')}>Lưu trữ</button>
+                  <button className="btnSubmit active" onClick={() => setShowBatchModal(true)}>Gửi phê duyệt</button>
+                </>)}
+                {productData.status === 'NEEDS_REVISION' && (<>
+                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className="btnSubmit active" onClick={() => setShowBatchModal(true)}>Gửi phê duyệt</button>
+                </>)}
+                {productData.status === 'ARCHIVED' && (
+                  <button className="btnRestore active" onClick={() => handleUpdateProduct('ACTIVE')}>Hoạt động trở lại</button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -778,10 +935,14 @@ const uploadImage = async (file: File): Promise<string> => {
               <div className="formGroup" style={{ marginBottom: 16 }}>
                 <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nhóm sản phẩm (*)</label>
                 <div className="custom-select-container" ref={groupRef}>
-                  <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(v => !v)}>
+                  <div 
+                    className={`select-custom ${isGroupOpen ? 'open' : ''}`} 
+                    onClick={() => !isReadOnly && setIsGroupOpen(v => !v)}
+                    style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
+                  >
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || 'Chọn nhóm'}</span>
                   </div>
-                  {isGroupOpen && (
+                  {!isReadOnly && isGroupOpen && (
                     <div className="custom-options-list">
                       {groupOptions.map(o => (
                         <div key={o.value} className={`custom-option ${formData.productGroupId === o.value ? 'selected' : ''}`}
@@ -798,10 +959,14 @@ const uploadImage = async (file: File): Promise<string> => {
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
-                    <div className={`select-custom ${isCategoryOpen ? 'open' : ''}`} onClick={() => setIsCategoryOpen(v => !v)} >
+                    <div 
+                      className={`select-custom ${isCategoryOpen ? 'open' : ''}`} 
+                      onClick={() => !isReadOnly && setIsCategoryOpen(v => !v)}
+                      style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
+                    >
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục')}</span>
                     </div>
-                    {isCategoryOpen && (
+                    {!isReadOnly && isCategoryOpen && (
                       <div className="custom-options-list">
                         <div className="custom-option" onClick={() => { setFormData({ ...formData, productCategoryId: '', businessId: '' }); setIsCategoryOpen(false); }}><i>-- Bỏ chọn --</i></div>
                         {categoryOptions.map(o => (
@@ -815,10 +980,14 @@ const uploadImage = async (file: File): Promise<string> => {
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
-                    <div className={`select-custom ${isOperationOpen ? 'open' : ''}`} onClick={() => setIsOperationOpen(v => !v)}>
+                    <div 
+                      className={`select-custom ${isOperationOpen ? 'open' : ''}`} 
+                      onClick={() => !isReadOnly && setIsOperationOpen(v => !v)}
+                      style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
+                    >
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn nghiệp vụ')}</span>
                     </div>
-                    {isOperationOpen && (
+                    {!isReadOnly && isOperationOpen && (
                       <div className="custom-options-list">
                         <div className="custom-option" onClick={() => { setFormData({ ...formData, businessId: '' }); setIsOperationOpen(false); }}><i>-- Bỏ chọn --</i></div>
                         {operationOptions.map(o => (
@@ -832,11 +1001,11 @@ const uploadImage = async (file: File): Promise<string> => {
               </div>
 
               {criteria.filter(c => c.isSelected).map(criterion => {
-                const hasErr = criterion.isRequired && isHtmlEmpty(criterion.value);
+                const hasErr = !isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value);
                 return (
                   <div key={criterion.id} className="formGroup" style={{ marginTop: 24, marginBottom: 24 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      {!criterion.isRequired && (
+                      {!isReadOnly && !criterion.isRequired && (
                         <button type="button" onClick={() => toggleCriterionSelection(criterion.id)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#9CA3AF', transition: 'color 0.2s' }}
                           onMouseOver={e => e.currentTarget.style.color = '#EF4444'}
@@ -857,6 +1026,7 @@ const uploadImage = async (file: File): Promise<string> => {
                       value={criterion.value}
                       placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
                       hasError={hasErr}
+                      readOnly={isReadOnly}
                       onChange={v => handleCriterionValueChange(criterion.id, v)}
                     />
                     {hasErr && <span style={{ color: '#EF4444', fontSize: 13, marginTop: 6, display: 'block', fontWeight: 500 }}>⚠️ Trường bắt buộc, vui lòng nhập nội dung.</span>}
@@ -864,7 +1034,7 @@ const uploadImage = async (file: File): Promise<string> => {
                 );
               })}
 
-              {formData.productGroupId && (
+              {!isReadOnly && formData.productGroupId && (
                 <div style={{ textAlign: 'left', marginTop: 16 }}>
                   <button onClick={() => setShowCriteriaModal(true)} style={{ color: '#10B981', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
                     + Thêm tiêu chí
@@ -884,44 +1054,48 @@ const uploadImage = async (file: File): Promise<string> => {
                     className="product-image"
                     style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 12, border: '1px solid #E5E7EB', display: 'block' }}
                   />
-                  <div className="image-overlay" style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
-                    <button type="button" className="overlay-btn"  onClick={() => setShowImageModal(true)}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  {!isReadOnly && (
+                    <div className="image-overlay" style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
+                      <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
-                    </button>
-                    <button type="button" className="overlay-btn"  onClick={handleRemoveImage}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      </button>
+                      <button type="button" className="overlay-btn" onClick={handleRemoveImage}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                           <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         </svg>
-                    </button>
-                  </div>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
-                /* Chưa có ảnh — placeholder */
-                <button type="button" onClick={() => setShowImageModal(true)}
-                  className="upload-placeholder"
-                  style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s' }}
-                  onMouseOver={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.background = '#F0FDF4'; }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = 'transparent'; }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                  </div>
-                  <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
-                  <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
-                  <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
-                </button>
+                !isReadOnly && (
+                  <button type="button" onClick={() => setShowImageModal(true)}
+                    className="upload-placeholder"
+                    style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s' }}
+                    onMouseOver={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.background = '#F0FDF4'; }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = 'transparent'; }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                    </div>
+                    <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
+                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
+                    <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
+                  </button>
+                )
               )}
             </div>
           </div>
 
-          <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB' }}>
+          {/* ── RIGHT (Sticky Scrollable Sidebar) ── */}
+          <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '123px', height: 'fit-content' }}>
+            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -929,14 +1103,19 @@ const uploadImage = async (file: File): Promise<string> => {
                 </svg>
               </div>
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
-                <div className={`select-custom ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: 'pointer', width: '100%', boxSizing: 'border-box' }}>
+                <div 
+                  className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                  onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'default' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                    <path d="M5 7.5L10 12.5L15 7.5"/>
-                  </svg>
+                  {!isReadOnly && (
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                      <path d="M5 7.5L10 12.5L15 7.5"/>
+                    </svg>
+                  )}
                 </div>
-                {isStatusOpen && (
+                {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
                     <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
                     <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
@@ -992,6 +1171,15 @@ const uploadImage = async (file: File): Promise<string> => {
         isOpen={showImageModal}
         onClose={() => setShowImageModal(false)}
         onConfirm={handleImageConfirm}
+      />
+
+      {/* Modal xác nhận gửi phê duyệt theo lô đúng chuẩn UI */}
+      <BatchApprovalModal
+        isOpen={showBatchModal}
+        onClose={() => setShowBatchModal(false)}
+        onSubmitBatch={handleBatchStatusSubmit}
+        requestId={activeRequestId}
+        requestName={requestName}
       />
 
     </div>

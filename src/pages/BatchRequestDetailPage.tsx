@@ -100,10 +100,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, plac
           justifyContent: 'space-between', 
           alignItems: 'center',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: disabled ? '#F3F4F6' : '#FFFFFF',
+          backgroundColor: disabled ? '#F9FAFB' : '#FFFFFF',
           borderColor: isOpen ? '#AE1C3F' : '#D1D5DB',
           boxShadow: isOpen ? '0 0 0 3px rgba(174, 28, 63, 0.12)' : 'none',
-          opacity: disabled ? 0.7 : 1
+          opacity: disabled ? 0.8 : 1,
+          backgroundImage: disabled ? 'none' : undefined
         }}
       >
         <span style={{ color: selectedOption ? '#111827' : '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -361,14 +362,18 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
   );
 };
 
+/* =========================================
+   QUILL EDITOR COMPONENT
+========================================= */
 interface QuillEditorProps {
   value: string;
   onChange: (content: string) => void;
   placeholder?: string;
   hasError?: boolean;
+  readOnly?: boolean; 
 }
 
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError }) => {
+const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly = false }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -379,6 +384,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
       theme: 'snow',
       placeholder: placeholder || 'Nhập nội dung chi tiết...',
       modules: { toolbar: toolbarRef.current },
+      readOnly: readOnly,
     });
     quillRef.current = quill;
     if (value) quill.clipboard.dangerouslyPasteHTML(value);
@@ -398,16 +404,31 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
       quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
   }, [value]);
 
+  useEffect(() => {
+    if (quillRef.current) {
+      quillRef.current.enable(!readOnly);
+    }
+  }, [readOnly]);
+
   return (
     <div
       style={{
-        backgroundColor: '#fff', borderRadius: '6px', overflow: 'hidden',
+        backgroundColor: readOnly ? '#F9FAFB' : '#fff', borderRadius: '6px', overflow: 'hidden',
         border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB',
         boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none',
         transition: 'all 0.2s ease',
       }}
     >
-      <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '6px 10px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
+      <div 
+        ref={toolbarRef} 
+        className="ql-toolbar ql-snow" 
+        style={{ 
+          borderTop: 'none', borderLeft: 'none', borderRight: 'none', 
+          padding: '6px 10px', 
+          backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB',
+          display: readOnly ? 'none' : 'block'
+        }}
+      >
         <span className="ql-formats">
           <button className="ql-bold" />
           <button className="ql-italic" />
@@ -418,16 +439,63 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
           <button className="ql-list" value="bullet" />
         </span>
       </div>
-      <div ref={editorRef} style={{ minHeight: '140px', fontSize: '13px', border: 'none' }} />
+      <div ref={editorRef} style={{ minHeight: '140px', fontSize: '13px', border: 'none', color: readOnly ? '#374151' : 'inherit' }} />
     </div>
   );
 };
 
+/* =========================================
+   MAIN BATCH DETAIL PAGE COMPONENT
+========================================= */
 const BatchRequestDetailPage: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
 
+  // =========================================
+  // LOGIC PHÂN QUYỀN (Áp dụng từ DetailGroupPage)
+  // =========================================
+  const getCurrentUsername = () => {
+    const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
+    for (const key of possibleKeys) {
+      const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+      if (val) {
+        try {
+          const parsed = JSON.parse(val);
+          if (typeof parsed === 'object' && parsed !== null) {
+            const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
+            if (u) return String(u).trim().toLowerCase();
+          }
+        } catch {
+          return String(val).trim().toLowerCase();
+        }
+      }
+    }
+    return '';
+  };
+
+  const currentUsername = getCurrentUsername();
+  const isLoggedIn = Boolean(currentUsername);
+
   const [products, setProducts] = useState<any[]>([]);
+  
+  // Xác định người tạo từ thuộc tính 'createdBy' của sản phẩm (nếu có)
+  const firstProduct = products.length > 0 ? products[0] : null;
+  const creatorField = firstProduct?.createdBy || firstProduct?.created_by || firstProduct?.creator;
+  let creatorUsername = '';
+  
+  if (typeof creatorField === 'object' && creatorField !== null) {
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+  } else if (creatorField !== undefined && creatorField !== null) {
+    creatorUsername = String(creatorField).trim().toLowerCase();
+  }
+
+  const isOwner = Boolean(
+    isLoggedIn && 
+    currentUsername && 
+    creatorUsername && 
+    currentUsername === creatorUsername
+  );
+
   const [loading, setLoading] = useState(false);
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
@@ -481,13 +549,26 @@ const BatchRequestDetailPage: React.FC = () => {
   const normalizedBatchStatus = (batchStatus || 'DRAFT').toString().toUpperCase();
   const isEditableStatus = normalizedBatchStatus === 'DRAFT' || normalizedBatchStatus === 'NEEDS_REVISION';
 
+  // Chế độ Edit/Read-only
+  const canEdit = isEditableStatus && isOwner;
+  const isReadOnly = !canEdit;
+
   const getStatusUI = (status: string) => {
     switch (status) {
-      case 'PENDING_APPROVAL': return { label: 'Chờ duyệt', bg: '#FEF9C3', text: '#CA8A04' };
-      case 'REJECTED': return { label: 'Từ chối', bg: '#FEE2E2', text: '#DC2626' };
-      case 'NEEDS_REVISION': return { label: 'Yêu cầu sửa', bg: '#FFEDD5', text: '#EA580C' };
-      case 'DRAFT': return { label: 'Lưu nháp', bg: '#E0F2FE', text: '#0369A1' };
-      default: return { label: status || 'Lưu nháp', bg: '#E0F2FE', text: '#0369A1' };
+      case 'ACTIVE':
+        return { label: 'Đang hoạt động', bg: '#E0F9EC', text: '#14532D', dot: '#12B76A' };
+      case 'DRAFT':
+        return { label: 'Lưu nháp', bg: '#FEF9C3', text: '#713F12', dot: '#CA8A04' };
+      case 'NEEDS_REVISION':
+        return { label: 'Yêu cầu chỉnh sửa', bg: '#FECACA', text: '#7F1D1D', dot: '#EF4444' };
+      case 'PENDING_APPROVAL':
+        return { label: 'Chờ phê duyệt', bg: '#FED7AA', text: '#7C2D12', dot: '#F97316' };
+      case 'REJECTED':
+        return { label: 'Từ chối', bg: '#EAE7EC', text: '#65636D', dot: '#65636D' };
+      case 'ARCHIVED':
+        return { label: 'Lưu trữ', bg: '#BAE6FD', text: '#0C4A6E', dot: '#0EA5E9' };
+      default:
+        return { label: status || 'Không xác định', bg: '#F3F4F6', text: '#374151', dot: '#9CA3AF' };
     }
   };
   const statusUI = getStatusUI(normalizedBatchStatus);
@@ -824,7 +905,7 @@ const BatchRequestDetailPage: React.FC = () => {
         await Promise.all(promises);
       }
 
-      await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId), { status: 'PENDING_APPROVAL' });
+      await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS2(requestId), { status: 'PENDING_APPROVAL' });
       
       setPendingUpdates({});
       setHasFormChanges(false);
@@ -857,7 +938,7 @@ const BatchRequestDetailPage: React.FC = () => {
         <label className="batch-form-label" style={{ marginBottom: 0 }}>
           {criterion.tieuChi} {criterion.required && <span style={{ color: '#EF4444', marginLeft: '4px' }}>(*)</span>}
         </label>
-        {isOptional && onRemove && (
+        {isOptional && onRemove && canEdit && (
           <button
             type="button"
             onClick={onRemove}
@@ -889,12 +970,13 @@ const BatchRequestDetailPage: React.FC = () => {
         value={criterion.noiDung}
         hasError={criterion.required && isHtmlEmpty(criterion.noiDung)}
         onChange={(value) => handleDetailsChange(criterion.id, value)}
+        readOnly={!canEdit}
       />
     </div>
   );
 
   return (
-    <div className="batch-detail-overlay">
+    <div className="batch-detail-container">
       <Toaster position="top-right" reverseOrder={false} />
       
       {/* HEADER */}
@@ -920,27 +1002,30 @@ const BatchRequestDetailPage: React.FC = () => {
           
           <div className="batch-header-divider"></div>
 
-          <div className="batch-actions-group">
-            {isEditableStatus && (
-              <>
-                <button 
-                  disabled={!hasGlobalChanges || isUpdating} 
-                  onClick={handleSaveDraftToDB}
-                  className="btn-secondary-action"
-                >
-                  Lưu nháp
-                </button>
+          {/* Gắn Tag Chỉ Xem hoặc Nút Lưu/Gửi theo Quyền */}
+          {isReadOnly ? (
+             <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
+               Chỉ được xem
+             </span>
+          ) : (
+            <div className="batch-actions-group">
+              <button 
+                disabled={!hasGlobalChanges || isUpdating} 
+                onClick={handleSaveDraftToDB}
+                className="btn-secondary-action"
+              >
+                Lưu nháp
+              </button>
 
-                <button 
-                  disabled={isUpdating} 
-                  onClick={handleSend}
-                  className="btn-primary-action"
-                >
-                  Gửi
-                </button>
-              </>
-            )}
-          </div>
+              <button 
+                disabled={isUpdating} 
+                onClick={handleSend}
+                className="btn-primary-action"
+              >
+                Gửi
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1079,6 +1164,7 @@ const BatchRequestDetailPage: React.FC = () => {
                   value={formData.productGroupId}
                   options={groupOptions}
                   placeholder="Chọn nhóm"
+                  disabled={!canEdit}
                   onChange={(val) => {
                     isUserActionRef.current = true;
                     handleFormChange({ productGroupId: val, productCategoryId: '', businessId: '' });
@@ -1099,6 +1185,7 @@ const BatchRequestDetailPage: React.FC = () => {
                          value={formData.productCategoryId}
                          options={categoryOptions}
                          placeholder="-- Chọn danh mục --"
+                         disabled={!canEdit}
                          onChange={(val) => {
                            isUserActionRef.current = true;
                            handleFormChange({ productCategoryId: val });
@@ -1111,6 +1198,7 @@ const BatchRequestDetailPage: React.FC = () => {
                          value={formData.businessId}
                          options={operationOptions}
                          placeholder="-- Chọn nghiệp vụ --"
+                         disabled={!canEdit}
                          onChange={(val) => handleFormChange({ businessId: val })}
                        />
                      </div>
@@ -1148,41 +1236,45 @@ const BatchRequestDetailPage: React.FC = () => {
                         alt="Product"
                         className="product-image"
                       />
-                      <div className="image-overlay">
-  {/* Nút sửa ảnh */}
-  <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)} title="Đổi ảnh">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-    </svg>
-  </button>
-
-  {/* Nút xóa ảnh (nếu vẫn muốn giữ màu đỏ cảnh báo) */}
-  <button type="button" className="overlay-btn btn-delete" onClick={handleRemoveImage} title="Xóa ảnh">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-    </svg>
-  </button>
-</div>
+                      {canEdit && (
+                        <div className="image-overlay">
+                          <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)} title="Đổi ảnh">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                          </button>
+                          <button type="button" className="overlay-btn btn-delete" onClick={handleRemoveImage} title="Xóa ảnh">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <button type="button" onClick={() => setShowImageModal(true)}
-                      className="upload-placeholder">
-                      <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                          <circle cx="8.5" cy="8.5" r="1.5"/>
-                          <polyline points="21 15 16 10 5 21"/>
-                        </svg>
+                    !canEdit ? (
+                      <div className="upload-placeholder disabled">
+                         <span style={{ fontSize: 14, color: '#9CA3AF' }}>Không có ảnh mô tả</span>
                       </div>
-                      <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
-                      <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
-                      <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
-                    </button>
+                    ) : (
+                      <button type="button" onClick={() => setShowImageModal(true)} className="upload-placeholder">
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <circle cx="8.5" cy="8.5" r="1.5"/>
+                            <polyline points="21 15 16 10 5 21"/>
+                          </svg>
+                        </div>
+                        <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
+                        <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
+                        <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
+                      </button>
+                    )
                   )}
                 </div>
 
-                {hiddenOptionalCriteria.length > 0 && (
+                {hiddenOptionalCriteria.length > 0 && canEdit && (
                   <div style={{ position: 'relative', marginTop: '16px' }}>
                     <button
                       type="button"
@@ -1270,16 +1362,18 @@ const BatchRequestDetailPage: React.FC = () => {
                   }}
                 />
               </div>
-
-              <div className="batch-card-box" style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', marginBottom: 0 }}>
-                <button 
-                  onClick={handleLocalSave}
-                  disabled={!hasFormChanges || isUpdating}
-                  className="btn-primary-action"
-                >
-                  Lưu
-                </button>
-              </div>
+              
+              {canEdit && (
+                <div className="batch-card-box" style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', marginBottom: 0 }}>
+                  <button 
+                    onClick={handleLocalSave}
+                    disabled={!hasFormChanges || isUpdating}
+                    className="btn-primary-action"
+                  >
+                    Lưu
+                  </button>
+                </div>
+              )}
             </div>
 
           </div>

@@ -102,6 +102,26 @@ const getCroppedBlob = async (src: string, px: PixelCrop): Promise<Blob> => {
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92));
 };
 
+// Hàm lấy thông tin username hiện tại từ kho lưu trữ (tương tự DetailGroupPage)[cite: 24]
+const getCurrentUsername = (): string => {
+  const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
+  for (const key of possibleKeys) {
+    const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+    if (val) {
+      try {
+        const parsed = JSON.parse(val);
+        if (typeof parsed === 'object' && parsed !== null) {
+          const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode || parsed.fullName;
+          if (u) return String(u).trim().toLowerCase();
+        }
+      } catch {
+        return String(val).trim().toLowerCase();
+      }
+    }
+  }
+  return '';
+};
+
 // ─────────────────────────────────────────────
 // ImageModal Component
 // ─────────────────────────────────────────────
@@ -112,13 +132,13 @@ interface ImageModalProps {
 }
 
 const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) => {
-  const fileInputRef              = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging]     = useState(false);
-  const [step, setStep]                 = useState<'drop' | 'crop'>('drop');
-  const [dataUrl, setDataUrl]           = useState('');        
-  const [fileName, setFileName]         = useState('');
-  const [crop, setCrop]                 = useState({ x: 0, y: 0 });
-  const [zoom, setZoom]                 = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [step, setStep] = useState<'drop' | 'crop'>('drop');
+  const [dataUrl, setDataUrl] = useState('');        
+  const [fileName, setFileName] = useState('');
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<PixelCrop | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -297,16 +317,17 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
 };
 
 // ─────────────────────────────────────────────
-// QuillEditor Component
+// QuillEditor Component (Hỗ trợ chế độ ReadOnly)
 // ─────────────────────────────────────────────
 interface QuillEditorProps {
   value: string;
   onChange: (content: string) => void;
   placeholder?: string;
   hasError?: boolean;
+  readOnly?: boolean;
 }
 
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError }) => {
+const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorRef  = useRef<HTMLDivElement>(null);
   const quillRef   = useRef<Quill | null>(null);
@@ -315,49 +336,56 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
     if (!editorRef.current || !toolbarRef.current || quillRef.current) return;
     const quill = new Quill(editorRef.current, {
       theme: 'snow',
+      readOnly: !!readOnly,
       placeholder: placeholder || 'Nhập nội dung chi tiết...',
-      modules: { toolbar: toolbarRef.current },
+      modules: { toolbar: readOnly ? false : toolbarRef.current },
     });
     quillRef.current = quill;
     if (value) quill.clipboard.dangerouslyPasteHTML(value);
-    quill.on('text-change', () => {
-      const h = quill.root.innerHTML;
-      onChange(h === '<p><br></p>' ? '' : h);
-    });
+    
+    if (!readOnly) {
+      quill.on('text-change', () => {
+        const h = quill.root.innerHTML;
+        onChange(h === '<p><br></p>' ? '' : h);
+      });
+    }
     return () => { quillRef.current = null; };
-  }, []);
+  }, [readOnly]);
 
   useEffect(() => {
     if (!quillRef.current) return;
+    quillRef.current.enable(!readOnly);
     const cur = quillRef.current.root.innerHTML;
     if (value !== cur && !(value === '' && cur === '<p><br></p>'))
       quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
-  }, [value]);
+  }, [value, readOnly]);
 
   return (
-    <div style={{ backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease' }}>
-      <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
-        <span className="ql-formats">
-          <button className="ql-bold"/><button className="ql-italic"/>
-          <button className="ql-underline"/><button className="ql-strike"/>
-        </span>
-        <span className="ql-formats">
-          <button className="ql-list" value="ordered"/>
-          <button className="ql-list" value="bullet"/>
-        </span>
-        <span className="ql-formats">
-          <button className="ql-script" value="sub"/>
-          <button className="ql-script" value="super"/>
-        </span>
-        <span className="ql-formats">
-          <button className="ql-indent" value="-1"/>
-          <button className="ql-indent" value="+1"/>
-        </span>
-        <span className="ql-formats"><select className="ql-color"/><select className="ql-background"/></span>
-        <span className="ql-formats"><select className="ql-align"/></span>
-        <span className="ql-formats"><button className="ql-clean"/></span>
-      </div>
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none' }}/>
+    <div style={{ backgroundColor: readOnly ? '#F9FAFB' : '#fff', borderRadius: 8, overflow: 'hidden', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease' }}>
+      {!readOnly && (
+        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
+          <span className="ql-formats">
+            <button className="ql-bold"/><button className="ql-italic"/>
+            <button className="ql-underline"/><button className="ql-strike"/>
+          </span>
+          <span className="ql-formats">
+            <button className="ql-list" value="ordered"/>
+            <button className="ql-list" value="bullet"/>
+          </span>
+          <span className="ql-formats">
+            <button className="ql-script" value="sub"/>
+            <button className="ql-script" value="super"/>
+          </span>
+          <span className="ql-formats">
+            <button className="ql-indent" value="-1"/>
+            <button className="ql-indent" value="+1"/>
+          </span>
+          <span className="ql-formats"><select className="ql-color"/><select className="ql-background"/></span>
+          <span className="ql-formats"><select className="ql-align"/></span>
+          <span className="ql-formats"><button className="ql-clean"/></span>
+        </div>
+      )}
+      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#FAFAFA' : 'transparent' }}/>
     </div>
   );
 };
@@ -443,6 +471,29 @@ const DetailProductPage: React.FC = () => {
   const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
 
+  // --- LOGIC PHÂN QUYỀN (CHECK NGƯỜI TẠO) ---
+  const currentUsername = getCurrentUsername();
+  const isLoggedIn = Boolean(currentUsername);
+
+  const creatorField = productData?.createdBy || productData?.created_by || productData?.creator;
+  let creatorUsername = '';
+  if (typeof creatorField === 'object' && creatorField !== null) {
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+  } else if (creatorField !== undefined && creatorField !== null) {
+    creatorUsername = String(creatorField).trim().toLowerCase();
+  }
+
+  // So sánh exact match giữa username hiện tại và người tạo sản phẩm
+  const isOwner = Boolean(
+    isLoggedIn && 
+    currentUsername && 
+    creatorUsername && 
+    currentUsername === creatorUsername
+  );
+
+  // Nếu không đăng nhập hoặc không phải người tạo -> Chế độ chỉ đọc (Read-only)
+  const isReadOnly = !isLoggedIn || !isOwner;
+
   useEffect(() => {
     if (productData?.imageUrl) setPreviewImage(toDisplayUrl(productData.imageUrl));
   }, [productData?.imageUrl]);
@@ -452,6 +503,7 @@ const DetailProductPage: React.FC = () => {
   }, [previewImage, avatarFile]);
 
   const handleImageConfirm = (file: File, blobUrl: string) => {
+    if (isReadOnly) return;
     if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage);
     setAvatarFile(file);
     setPreviewImage(blobUrl);
@@ -460,6 +512,7 @@ const DetailProductPage: React.FC = () => {
   };
 
   const handleRemoveImage = () => {
+    if (isReadOnly) return;
     if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage);
     setAvatarFile(null);
     setPreviewImage('');
@@ -512,13 +565,13 @@ const DetailProductPage: React.FC = () => {
           productCategoryId: pData.productCategoryId || '',
           businessId:        pData.businessId        || '',
         });
+
         if (gRes.ok) {
           const gd = await gRes.json();
           setGroupOptions(gd.map((g: any) => ({ label: g.name, value: g.id })));
         }
 
         const rawDetails = pData.details || [];
-
         if (rawDetails.length > 0) {
           const mapped: Criterion[] = rawDetails.map((item: any, i: number) => ({
             id:         String(item.id || item.criteriaId || item.stt || i),
@@ -581,18 +634,26 @@ const DetailProductPage: React.FC = () => {
     })();
   }, [formData.productGroupId, productData, originalCriteria]);
 
-  const handleCriterionValueChange = (id: string, v: string) =>
+  const handleCriterionValueChange = (id: string, v: string) => {
+    if (isReadOnly) return;
     setCriteria(prev => prev.map(c => c.id === id ? { ...c, value: v } : c));
+  };
 
-  const toggleCriterionSelection = (id: string) =>
+  const toggleCriterionSelection = (id: string) => {
+    if (isReadOnly) return;
     setCriteria(prev => prev.map(c => c.id !== id ? c : (c.isRequired ? c : { ...c, isSelected: !c.isSelected })));
+  };
 
   // Form dirty states
   const isFormDirty     = productName !== (productData?.name || '') || formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
-  const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
+  const isDirty         = !isReadOnly && (isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true));
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+    if (isReadOnly) {
+      toast.error('Bạn không có quyền chỉnh sửa sản phẩm này do không phải là người tạo.', { position: 'top-center' });
+      return;
+    }
     if (!id) return;
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
@@ -663,7 +724,7 @@ const DetailProductPage: React.FC = () => {
     return (
       <div key={criterion.id} className="formGroup" style={{ marginTop: 24, marginBottom: 24 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          {!criterion.isRequired && (
+          {!criterion.isRequired && !isReadOnly && (
             <button type="button" onClick={() => toggleCriterionSelection(criterion.id)}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#9CA3AF', transition: 'color 0.2s' }}
               onMouseOver={e => e.currentTarget.style.color = '#EF4444'}
@@ -684,9 +745,10 @@ const DetailProductPage: React.FC = () => {
           value={criterion.value}
           placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
           hasError={hasErr}
+          readOnly={isReadOnly}
           onChange={v => handleCriterionValueChange(criterion.id, v)}
         />
-        {hasErr && <span style={{ color: '#EF4444', fontSize: 13, marginTop: 6, display: 'block', fontWeight: 500 }}>⚠️ Trường bắt buộc, vui lòng nhập nội dung.</span>}
+        {hasErr && !isReadOnly && <span style={{ color: '#EF4444', fontSize: 13, marginTop: 6, display: 'block', fontWeight: 500 }}>⚠️ Trường bắt buộc, vui lòng nhập nội dung.</span>}
       </div>
     );
   };
@@ -698,6 +760,16 @@ const DetailProductPage: React.FC = () => {
       <style>{`.ql-editor{word-break:break-word!important;overflow-wrap:break-word!important;white-space:pre-wrap!important;}`}</style>
 
       <div className="mainContainer">
+
+        {/* ══ Cảnh báo chế độ chỉ xem nếu không phải người tạo ══ */}
+        {isReadOnly && (
+          <div className="permissionBanner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="permissionBannerText">
+              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+            </span>
+          </div>
+        )}
 
         {/* ══ Header ══ */}
         <div className="header">
@@ -715,12 +787,7 @@ const DetailProductPage: React.FC = () => {
                 const operationLabel = operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName;
                 const currentProductName = productName.trim() || productData?.name;
 
-                const breadcrumbItems = [
-                  groupLabel,
-                  categoryLabel,
-                  operationLabel,
-                  currentProductName
-                ].filter(Boolean); // Lọc bỏ các giá trị null, undefined hoặc chuỗi rỗng
+                const breadcrumbItems = [groupLabel, categoryLabel, operationLabel, currentProductName].filter(Boolean);
 
                 return breadcrumbItems.map((item, index) => {
                   const isLast = index === breadcrumbItems.length - 1;
@@ -733,10 +800,7 @@ const DetailProductPage: React.FC = () => {
                           </svg>
                         </div>
                       )}
-                      <span 
-                        className={isLast ? "breadcrumbActive breadcrumb-truncate" : "breadcrumbGroup breadcrumb-truncate"}
-                        title={String(item)}
-                      >
+                      <span className={isLast ? "breadcrumbActive breadcrumb-truncate" : "breadcrumbGroup breadcrumb-truncate"} title={String(item)}>
                         {item}
                       </span>
                     </React.Fragment>
@@ -754,24 +818,26 @@ const DetailProductPage: React.FC = () => {
               </span>
             </div>
 
-            <button 
-              className="btnSubmit" 
-              disabled={!isDirty || productData?.status === 'PENDING_APPROVAL'} 
-              onClick={() => handleUpdateProduct(productData?.status || 'ACTIVE')}
-              style={{
-                padding: '8px 24px',
-                borderRadius: '8px',
-                backgroundColor: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? '#AE1C3F' : '#E3DFE6',
-                color: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? '#FFF' : '#9CA3AF',
-                border: 'none',
-                fontWeight: 600,
-                fontSize: '14px',
-                cursor: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? 'pointer' : 'not-allowed',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              Lưu
-            </button>
+            {!isReadOnly && (
+              <button 
+                className="btnSubmit" 
+                disabled={!isDirty || productData?.status === 'PENDING_APPROVAL'} 
+                onClick={() => handleUpdateProduct(productData?.status || 'ACTIVE')}
+                style={{
+                  padding: '8px 24px',
+                  borderRadius: '8px',
+                  backgroundColor: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? '#AE1C3F' : '#E3DFE6',
+                  color: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? '#FFF' : '#9CA3AF',
+                  border: 'none',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  cursor: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Lưu
+              </button>
+            )}
           </div>
         </div>
 
@@ -782,21 +848,21 @@ const DetailProductPage: React.FC = () => {
               <div className="formGroup" style={{ marginBottom: 16 }}>
                 <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nhóm sản phẩm (*)</label>
                 <div className="custom-select-container" ref={groupRef}>
-                  <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(v => !v)} style={{ backgroundColor: 'white' }}>
+                  <div 
+                    className={`select-custom ${isGroupOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                    onClick={() => { if (!isReadOnly) setIsGroupOpen(v => !v); }} 
+                    style={{ backgroundColor: isReadOnly ? '#F9FAFB' : 'white', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                  >
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || productData?.productGroupName || 'Chọn nhóm'}</span>
                   </div>
-                  {isGroupOpen && (
+                  {isGroupOpen && !isReadOnly && (
                     <div className="custom-options-list">
                       {groupOptions.map(o => (
                         <div 
                           key={o.value} 
                           className={`custom-option ${formData.productGroupId === o.value ? 'selected' : ''}`}
                           onClick={() => { 
-                            setFormData({ 
-                              productGroupId: o.value, 
-                              productCategoryId: '', 
-                              businessId: '' 
-                            }); 
+                            setFormData({ productGroupId: o.value, productCategoryId: '', businessId: '' }); 
                             setIsGroupOpen(false); 
                           }}
                         >
@@ -812,10 +878,14 @@ const DetailProductPage: React.FC = () => {
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
-                    <div className={`select-custom ${isCategoryOpen ? 'open' : ''}`} onClick={() => setIsCategoryOpen(v => !v)} style={{ backgroundColor: 'white' }}>
+                    <div 
+                      className={`select-custom ${isCategoryOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                      onClick={() => { if (!isReadOnly) setIsCategoryOpen(v => !v); }} 
+                      style={{ backgroundColor: isReadOnly ? '#F9FAFB' : 'white', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    >
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục')}</span>
                     </div>
-                    {isCategoryOpen && (
+                    {isCategoryOpen && !isReadOnly && (
                       <div className="custom-options-list">
                         <div className="custom-option" onClick={() => { setFormData({ ...formData, productCategoryId: '', businessId: '' }); setIsCategoryOpen(false); }}><i>-- Bỏ chọn --</i></div>
                         {categoryOptions.map(o => (
@@ -829,10 +899,14 @@ const DetailProductPage: React.FC = () => {
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
-                    <div className={`select-custom ${isOperationOpen ? 'open' : ''}`} onClick={() => setIsOperationOpen(v => !v)} style={{ backgroundColor: 'white' }}>
+                    <div 
+                      className={`select-custom ${isOperationOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                      onClick={() => { if (!isReadOnly) setIsOperationOpen(v => !v); }} 
+                      style={{ backgroundColor: isReadOnly ? '#F9FAFB' : 'white', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    >
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn nghiệp vụ')}</span>
                     </div>
-                    {isOperationOpen && (
+                    {isOperationOpen && !isReadOnly && (
                       <div className="custom-options-list">
                         <div className="custom-option" onClick={() => { setFormData({ ...formData, businessId: '' }); setIsOperationOpen(false); }}><i>-- Bỏ chọn --</i></div>
                         {operationOptions.map(o => (
@@ -851,16 +925,18 @@ const DetailProductPage: React.FC = () => {
             {formData.productGroupId && (
               <div className="formCard" style={{ background: '#FFFFFF' }}>
                 {optionalCriteria.map(renderCriterionField)}
-                <div style={{ textAlign: 'left', marginTop: optionalCriteria.length ? 8 : 0 }}>
-                  <button type="button" onClick={() => setShowCriteriaModal(true)} className="btnAddCriteria">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/>
-                      <line x1="12" y1="8" x2="12" y2="16"/>
-                      <line x1="8" y1="12" x2="16" y2="12"/>
-                    </svg>
-                    Thêm tiêu chí
-                  </button>
-                </div>
+                {!isReadOnly && (
+                  <div style={{ textAlign: 'left', marginTop: optionalCriteria.length ? 8 : 0 }}>
+                    <button type="button" onClick={() => setShowCriteriaModal(true)} className="btnAddCriteria">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="16"/>
+                        <line x1="8" y1="12" x2="16" y2="12"/>
+                      </svg>
+                      Thêm tiêu chí
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -875,37 +951,43 @@ const DetailProductPage: React.FC = () => {
                     className="product-image"
                     style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 12, border: '1px solid #E5E7EB', display: 'block' }}
                   />
-                  <div className="image-overlay" style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
-                    <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                      </svg>
-                    </button>
-                    <button type="button" className="overlay-btn" onClick={handleRemoveImage}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                      </svg>
-                    </button>
-                  </div>
+                  {!isReadOnly && (
+                    <div className="image-overlay" style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
+                      <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                        </svg>
+                      </button>
+                      <button type="button" className="overlay-btn" onClick={handleRemoveImage}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <button type="button" onClick={() => setShowImageModal(true)}
-                  className="upload-placeholder"
-                  style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s' }}
-                  onMouseOver={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.background = '#F0FDF4'; }}
-                  onMouseOut={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = 'transparent'; }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                  </div>
-                  <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
-                  <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
-                  <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
-                </button>
+                !isReadOnly ? (
+                  <button type="button" onClick={() => setShowImageModal(true)}
+                    className="upload-placeholder"
+                    style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s' }}
+                    onMouseOver={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.background = '#F0FDF4'; }}
+                    onMouseOut={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = 'transparent'; }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                    </div>
+                    <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
+                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
+                    <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
+                  </button>
+                ) : (
+                  <div style={{ color: '#6B7280', fontStyle: 'italic', fontSize: '14px' }}>Không có ảnh mô tả.</div>
+                )
               )}
             </div>
           </div>
@@ -932,14 +1014,17 @@ const DetailProductPage: React.FC = () => {
                   </svg>
                 </div>
                 <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
-                  <div className={`select-custom ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(v => !v)}
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: 'pointer', width: '100%', boxSizing: 'border-box' }}>
+                  <div className={`select-custom ${isStatusOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                    onClick={() => { if (!isReadOnly) setIsStatusOpen(v => !v); }}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}>
                     <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                      <path d="M5 7.5L10 12.5L15 7.5"/>
-                    </svg>
+                    {!isReadOnly && (
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                        <path d="M5 7.5L10 12.5L15 7.5"/>
+                      </svg>
+                    )}
                   </div>
-                  {isStatusOpen && (
+                  {isStatusOpen && !isReadOnly && (
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
                       <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
                       <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
