@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
+import LoadingOverlay from '../components/ui/LoadingOverlay';
 import './ApproverProductDetailPage.css';
 
 /*
@@ -285,13 +286,16 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   };
 
   if (loading || !detail) {
-    return (
-      <div className={`single-product-detail-page ${isModal ? 'is-modal' : ''}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
-        <div className="quickview-loading-card">
-          Đang tải chi tiết sản phẩm...
+    if (isModal) {
+      return (
+        <div className={`single-product-detail-page is-modal`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
+          <div className="quickview-loading-card">
+            Đang tải chi tiết sản phẩm...
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    return <LoadingOverlay />;
   }
 
   return (

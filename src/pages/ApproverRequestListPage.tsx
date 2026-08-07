@@ -188,7 +188,8 @@ const ApproverRequestListPage: React.FC = () => {
           data={requests}
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/batch/${row.id}`)}
-          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy yêu cầu nào phù hợp."}
+          loading={loading}
+          emptyText="Không tìm thấy yêu cầu nào phù hợp."
         />
       </div>
     </div>

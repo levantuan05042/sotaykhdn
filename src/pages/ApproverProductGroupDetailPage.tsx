@@ -4,6 +4,7 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
+import LoadingOverlay from '../components/ui/LoadingOverlay';
 
 interface CommentItem {
   id: string;
@@ -104,11 +105,7 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
   };
 
   if (loading && !detail) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="loading-text">Đang tải chi tiết nhóm sản phẩm...</p>
-      </div>
-    );
+    return <LoadingOverlay />;
   }
 
   if (!detail) {

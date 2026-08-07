@@ -8,6 +8,7 @@ import ApproverProductDetailPage from './ApproverProductDetailPage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ApproveConfirmPopup from '../components/ApproveConfirmPopup';
+import LoadingOverlay from '../components/ui/LoadingOverlay';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
@@ -32,12 +33,12 @@ const ApproverBatchDetailPage: React.FC = () => {
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
 
-  // const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!requestId) return;
     const fetchBatchAndProducts = async () => {
-      // setLoading(true);
+      setLoading(true);
       try {
         // Fetch batch request metadata
         const batchRes = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.GET_DETAIL(requestId));
@@ -63,7 +64,7 @@ const ApproverBatchDetailPage: React.FC = () => {
         console.error("Error fetching batch request detail:", error);
         toast.error("Không thể tải thông tin yêu cầu!");
       } finally {
-        // setLoading(false);
+        setLoading(false);
       }
     };
 
@@ -191,6 +192,10 @@ const ApproverBatchDetailPage: React.FC = () => {
         break;
     }
   };
+
+  if (loading && !batchRequest) {
+    return <LoadingOverlay />;
+  }
 
   return (
     <div className="batch-list-layout">

@@ -227,7 +227,8 @@ export const ApproverBusinessListPage: React.FC = () => {
           data={filteredBusinesses as any}
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/business/${row.id}`)}
-          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy nghiệp vụ nào phù hợp."}
+          loading={loading}
+          emptyText="Không tìm thấy nghiệp vụ nào phù hợp."
         />
       </div>
     </div>

@@ -189,7 +189,8 @@ export const ApproverProductGroupListPage: React.FC = () => {
           data={productGroups as any}
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/product-groups/${row.id}`)}
-          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy nhóm sản phẩm nào phù hợp."}
+          loading={loading}
+          emptyText="Không tìm thấy nhóm sản phẩm nào phù hợp."
         />
       </div>
     </div>

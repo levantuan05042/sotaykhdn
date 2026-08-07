@@ -16,6 +16,7 @@ interface DataTableProps<T> {
   emptyText?: string;
   className?: string;
   onRowClick?: (row: T) => void;
+  loading?: boolean;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -25,6 +26,7 @@ export function DataTable<T extends Record<string, any>>({
   emptyText = 'Không tìm thấy kết quả phù hợp',
   className = '',
   onRowClick,
+  loading = false,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -89,7 +91,37 @@ export function DataTable<T extends Record<string, any>>({
             </tr>
           </thead>
           <tbody>
-            {paginatedData.length > 0 ? (
+            {loading ? (
+              <>
+                <tr className="table-loading-bar-row">
+                  <td colSpan={columns.length}>
+                    <div className="table-loading-bar">
+                      <div className="loading-dots-pulse">
+                        <span className="loading-dot-pulse-item"></span>
+                        <span className="loading-dot-pulse-item"></span>
+                        <span className="loading-dot-pulse-item"></span>
+                      </div>
+                      <strong>Đang tải dữ liệu...</strong>
+                      <span style={{ fontSize: 'inherit', color: 'inherit' }}>Vui lòng chờ trong giây lát</span>
+                    </div>
+                  </td>
+                </tr>
+                {Array.from({ length: 6 }).map((_, rowIndex) => (
+                  <tr key={`skeleton-row-${rowIndex}`}>
+                    {columns.map((col, colIdx) => (
+                      <td key={`skeleton-cell-${colIdx}`} style={{ textAlign: col.align || 'left' }}>
+                        <div
+                          className="table-skeleton-bar"
+                          style={{
+                            width: col.key === 'stt' ? '24px' : col.key === 'actions' ? '40px' : `${Math.max(40, 80 + (colIdx % 3) * 30)}px`
+                          }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </>
+            ) : paginatedData.length > 0 ? (
               paginatedData.map((row, index) => {
                 const actualIndex = startIndex + index;
                 const key = keyExtractor ? keyExtractor(row, actualIndex) : actualIndex;

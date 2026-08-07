@@ -200,7 +200,8 @@ export const ApproverProductSingleListPage: React.FC = () => {
           data={products}
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/products/single/${row.id}`)}
-          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy sản phẩm lẻ nào phù hợp."}
+          loading={loading}
+          emptyText="Không tìm thấy sản phẩm lẻ nào phù hợp."
         />
       </div>
     </div>

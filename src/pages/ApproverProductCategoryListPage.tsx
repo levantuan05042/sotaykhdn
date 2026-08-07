@@ -207,7 +207,8 @@ export const ApproverProductCategoryListPage: React.FC = () => {
           data={categories as any}
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/product-category/${row.id}`)}
-          emptyText={loading ? "Đang tải dữ liệu..." : "Không tìm thấy danh mục sản phẩm nào phù hợp."}
+          loading={loading}
+          emptyText="Không tìm thấy danh mục sản phẩm nào phù hợp."
         />
       </div>
     </div>
