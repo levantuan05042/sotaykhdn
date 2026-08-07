@@ -1,0 +1,7 @@
+.pageWrapper {
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 60px; /* Tạo khoảng trống ở đáy giúp cuộn thấy hoàn toàn nội dung cuối */
+  box-sizing: border-box;
+}

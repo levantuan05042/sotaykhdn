@@ -49,7 +49,6 @@ const ProductGroupPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Thay thế endpoint cứng bằng API_ENDPOINTS.PRODUCT_GROUPS.LIST
       const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
         params: {
           keyword: searchTerm.trim() || undefined,
@@ -71,11 +70,36 @@ const ProductGroupPage: React.FC = () => {
         }
       });
       
-      // Giả sử API trả về { content: [], totalPages: 10 }
-      setData(response.data.content || response.data); 
-      setTotalPages(response.data.totalPages || 1);
+      const resultData = response.data?.content || response.data;
+      const rawList = Array.isArray(resultData) ? resultData : [];
+
+      let userMap: Record<string, string> = {};
+      try {
+        const rawUsers = sessionStorage.getItem('beadminUsers') || sessionStorage.getItem('headminUsers');
+        if (rawUsers) {
+          const parsedUsers = JSON.parse(rawUsers);
+          const userList = parsedUsers.listUser || (Array.isArray(parsedUsers) ? parsedUsers : []);
+          
+          userList.forEach((user: any) => {
+            if (user.username) {
+              userMap[user.username] = user.fullname || user.fullName || user.username;
+            }
+          });
+        }
+      } catch (e) {}
+
+      const enrichedData = rawList.map((item: any) => ({
+        ...item,
+        createdByFullName: userMap[item.createdBy] || item.createdBy || null,
+        approvedBy: userMap[item.approvedBy] || item.approvedBy || null 
+      }));
+
+      setData(enrichedData);
+      setTotalPages(response.data?.totalPages || 1);
+
     } catch (error) {
       console.error('Lỗi khi gọi API:', error);
+      setData([]);
     } finally {
       setLoading(false);
     }

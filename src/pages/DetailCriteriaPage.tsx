@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import './DetailGroupPage.css'; // Giữ nguyên file CSS của bạn
+import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 
-// Import cấu hình API tập trung
 import { API_ENDPOINTS } from '../config/apiConfig';
 
-// --- CẤU HÌNH TRẠNG THÁI (STATUS MAPPING) ---
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
   DRAFT: { label: 'Lưu nháp', className: 'status-draft' },
@@ -16,7 +14,6 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ARCHIVED: { label: 'Lưu trữ', className: 'status-archived' },
 };
 
-// --- HELPER: ĐỊNH DẠNG NGÀY GIỜ ---
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
   const date = new Date(dateString);
@@ -24,6 +21,25 @@ const formatDateTime = (dateString: string) => {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+};
+
+const getCurrentUsername = () => {
+  const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
+  for (const key of possibleKeys) {
+    const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+    if (val) {
+      try {
+        const parsed = JSON.parse(val);
+        if (typeof parsed === 'object' && parsed !== null) {
+          const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
+          if (u) return String(u).trim().toLowerCase();
+        }
+      } catch {
+        return String(val).trim().toLowerCase();
+      }
+    }
+  }
+  return '';
 };
 
 const DetailCriteriaPage: React.FC = () => {
@@ -36,14 +52,12 @@ const DetailCriteriaPage: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   
-  const [isActive, setIsActive] = useState(true); // Trạng thái hiển thị (Hiệu lực)
+  const [isActive, setIsActive] = useState(true);
   const [criteriaData, setCriteriaData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // State lưu danh sách options đa lựa chọn (Multi-select) cho Nhóm sản phẩm
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
 
-  // Thêm thuộc tính isRequired vào formData
   const [formData, setFormData] = useState<{ code: string; name: string; groupIds: string[]; isRequired: boolean }>({
     code: '',
     name: '',
@@ -51,7 +65,26 @@ const DetailCriteriaPage: React.FC = () => {
     isRequired: false
   });
 
-  // Tự động đóng cả 2 dropdown khi click ra ngoài vùng select
+  const currentUsername = getCurrentUsername();
+  const isLoggedIn = Boolean(currentUsername);
+
+  const creatorField = criteriaData?.createdBy || criteriaData?.created_by || criteriaData?.creator;
+  let creatorUsername = '';
+  if (typeof creatorField === 'object' && creatorField !== null) {
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+  } else if (creatorField !== undefined && creatorField !== null) {
+    creatorUsername = String(creatorField).trim().toLowerCase();
+  }
+
+  const isOwner = Boolean(
+    isLoggedIn && 
+    currentUsername && 
+    creatorUsername && 
+    currentUsername === creatorUsername
+  );
+
+  const isReadOnly = !isLoggedIn || !isOwner;
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -65,7 +98,6 @@ const DetailCriteriaPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 1. Fetch thông tin chi tiết Tiêu chí & Toàn bộ danh sách Nhóm sản phẩm ACTIVE
   useEffect(() => {
     let isMounted = true;
     const initPageData = async () => {
@@ -73,7 +105,6 @@ const DetailCriteriaPage: React.FC = () => {
       try {
         setLoading(true);
 
-        // Gọi đồng thời API lấy Chi tiết Tiêu chí và Danh sách Nhóm sản phẩm ACTIVE
         const [detailRes, groupsRes] = await Promise.all([
           fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DETAIL(id)),
           fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.LIST}?status=ACTIVE&active=true`)
@@ -86,7 +117,6 @@ const DetailCriteriaPage: React.FC = () => {
         if (!isMounted) return;
         setCriteriaData(detailData);
 
-        // Lấy danh sách ID từ mảng đối tượng productGroups trả về từ backend
         const initialGroupIds = detailData.productGroups 
           ? detailData.productGroups.map((g: any) => g.id) 
           : [];
@@ -95,13 +125,11 @@ const DetailCriteriaPage: React.FC = () => {
           code: detailData.code || '',
           name: detailData.name || '',
           groupIds: initialGroupIds,
-          isRequired: detailData.isRequired ?? false // Gán giá trị mặc định từ Backend, fallback là false
+          isRequired: detailData.isRequired ?? false 
         });
 
-        // 👉 ĐỒNG BỘ: Cập nhật trạng thái hiển thị (active) từ Backend đổ về hệ thống
         setIsActive(detailData.active ?? true);
 
-        // Đổ dữ liệu Nhóm sản phẩm vào Dropdown bộ lọc
         if (groupsRes.ok) {
           const groupsData = await groupsRes.json();
           const options = groupsData.map((g: any) => ({
@@ -110,7 +138,6 @@ const DetailCriteriaPage: React.FC = () => {
           }));
           setGroupOptions(options);
         } else {
-          // Fallback nếu API lấy nhóm bị lỗi: Giữ lại các nhóm hiện tại đang có để hiển thị giao diện
           const fallbackOptions = detailData.productGroups
             ? detailData.productGroups.map((g: any) => ({ label: g.name, value: g.id }))
             : [];
@@ -130,23 +157,24 @@ const DetailCriteriaPage: React.FC = () => {
   }, [id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return;
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Hàm handle riêng cho checkbox Bắt buộc
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isReadOnly) return;
     const { name, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  // Click chọn/bỏ chọn item đối với dropdown đa chọn (Multi-select)
   const handleToggleGroup = (value: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Ngăn sự kiện click làm đóng/mở dropdown không mong muốn
+    if (isReadOnly) return;
+    e.stopPropagation(); 
     setFormData(prev => {
       const isSelected = prev.groupIds.includes(value);
       const updatedGroupIds = isSelected
-        ? prev.groupIds.filter(id => id !== value)
+        ? prev.groupIds.filter(item => item !== value)
         : [...prev.groupIds, value];
       return { ...prev, groupIds: updatedGroupIds };
     });
@@ -154,43 +182,50 @@ const DetailCriteriaPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/criteria-management');
 
-  // 2. Hàm cập nhật thông tin và cập nhật trạng thái Tiêu chí
-  const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
-    if (!id) return;
+  const validateFormBeforeSubmit = () => {
+    if (isReadOnly) return false;
+    if (!formData.code.trim()) {
+      toast.error("Vui lòng nhập mã tiêu chí sản phẩm", { position: 'top-center' });
+      return false;
+    }
+    if (!formData.name.trim()) {
+      toast.error("Vui lòng nhập tên tiêu chí sản phẩm", { position: 'top-center' });
+      return false;
+    }
+    if (formData.groupIds.length === 0) {
+      toast.error("Vui lòng chọn ít nhất một nhóm sản phẩm", { position: 'top-center' });
+      setIsOpen(true);
+      return false;
+    }
+    return true;
+  };
 
-    // Validation khi bấm các nút xử lý (Ngoại trừ Lưu trữ & Hoạt động lại không cần kiểm tra)
+  const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+    if (isReadOnly || !id) return;
+
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
-      if (!formData.code.trim()) {
-        toast.error("Vui lòng nhập mã tiêu chí sản phẩm", { position: 'top-center' });
-        return;
-      }
-      if (!formData.name.trim()) {
-        toast.error("Vui lòng nhập tên tiêu chí sản phẩm", { position: 'top-center' });
-        return;
-      }
-      if (formData.groupIds.length === 0) {
-        toast.error("Vui lòng chọn ít nhất một nhóm sản phẩm", { position: 'top-center' });
-        setIsOpen(true);
-        return;
-      }
+      if (!validateFormBeforeSubmit()) return;
     }
 
     try {
       setLoading(true);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.UPDATE(id), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({
           code: formData.code.trim() || criteriaData.code,
           name: formData.name.trim() || criteriaData.name,
-          groupIds: formData.groupIds, // Truyền mảng danh sách ID nhóm lên cho Backend
-          isRequired: formData.isRequired, // Đưa thông tin bắt buộc lên API backend
-          active: isActive, // 👉 ĐỒNG BỘ: Đưa trạng thái Ẩn/Hiện mới cập nhật lên Backend
+          groupIds: formData.groupIds, 
+          isRequired: formData.isRequired, 
+          active: isActive, 
           status
         }),
       });
 
-      // Bắt lỗi trùng lặp dữ liệu (Thông thường Backend trả về HTTP Status 409 Conflict hoặc 400 kèm message)
       if (response.status === 409) {
         toast.error("Mã tiêu chí này đã tồn tại trên hệ thống. Vui lòng kiểm tra lại!", { position: 'top-center' });
         setLoading(false);
@@ -211,24 +246,18 @@ const DetailCriteriaPage: React.FC = () => {
         setTimeout(() => navigate('/criteria-management'), 1500);
       } else {
         const errorData = await response.json();
-        // Kiểm tra xem backend có gửi text báo trùng mã cụ thể hay không
-        if (errorData.message && (errorData.message.includes('trùng') || errorData.message.includes('exist'))) {
-          toast.error("Mã tiêu chí đã tồn tại, không thể trùng lặp!", { position: 'top-center' });
-        } else {
-          toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
-        }
+        toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
-      toast.error('Lỗi kết nối máy chủ hoặc kiểm tra trùng lặp thất bại', { position: 'top-center' });
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
   };
 
-  // 3. Hàm kích hoạt xác nhận Xóa tiêu chí
   const handleDeleteCriteria = () => {
-    if (!id) return;
+    if (isReadOnly || !id) return;
 
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
@@ -262,12 +291,16 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (!id) return;
+    if (isReadOnly || !id) return;
     try {
       setLoading(true);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DELETE(id), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
 
       if (response.ok) {
@@ -311,28 +344,28 @@ const DetailCriteriaPage: React.FC = () => {
 
   const currentStatus = STATUS_MAP[criteriaData.status] || { label: criteriaData.status, className: '' };
   
-  // So sánh dữ liệu cũ và mới để kiểm tra trạng thái thay đổi
   const initialGroupIds = criteriaData.productGroups ? criteriaData.productGroups.map((g: any) => g.id) : [];
   const isGroupsChanged = JSON.stringify([...formData.groupIds].sort()) !== JSON.stringify([...initialGroupIds].sort());
   
-  // 👉 ĐỒNG BỘ: Bổ sung so sánh `isActive` vào trong kiểm tra isDirty
   const isDirty = formData.name !== (criteriaData.name || '') || 
                   formData.code !== (criteriaData.code || '') || 
                   formData.isRequired !== (criteriaData.isRequired || false) ||
                   isActive !== (criteriaData.active ?? true) ||
                   isGroupsChanged;
 
-  // Điều kiện để kích hoạt nút gửi duyệt
-  const canSubmit = isDirty && 
+  const canSubmit = !isReadOnly && isDirty && 
                     formData.code.trim() !== '' && 
                     formData.name.trim() !== '' && 
                     formData.groupIds.length > 0;
 
-  // Render text hiển thị các nhóm sản phẩm đã chọn
-  const selectedGroupsText = groupOptions
-    .filter(o => formData.groupIds.includes(o.value))
-    .map(o => o.label)
-    .join(', ') || "Chọn nhóm sản phẩm";
+  const selectedGroupsText = formData.groupIds.length === groupOptions.length && groupOptions.length > 0
+    ? "Tất cả nhóm sản phẩm"
+    : formData.groupIds.length > 0
+      ? groupOptions
+          .filter(o => formData.groupIds.includes(o.value))
+          .map(o => o.label)
+          .join(', ')
+      : "Chọn nhóm sản phẩm";
 
   return (
     <div className="pageWrapper">
@@ -368,66 +401,55 @@ const DetailCriteriaPage: React.FC = () => {
 
           {/* ACTIONS CONTROLLER */}
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            
-            {/* TRẠNG THÁI: DRAFT */}
-            {criteriaData.status === 'DRAFT' && (
+            {isReadOnly ? (
+              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
+                Chỉ được xem
+              </span>
+            ) : (
               <>
-                <button className="btnDraft" onClick={handleDeleteCriteria} style={{ display: 'flex', padding: '8px 14px', justifyContent: 'center', alignItems: 'center', gap: '6px', borderRadius: '8px', background: '#E3DFE6', border: 'none', cursor: 'pointer', color: '#AE1C3F', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '600', lineHeight: '20px' }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="15" height="16.667" viewBox="0 0 17 19" fill="none">
-                    <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Xóa
-                </button>
-                <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                  Lưu nháp
-                </button>
-                <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Gửi phê duyệt
-                </button>
+                {criteriaData.status === 'DRAFT' && (
+                  <>
+                    <button className="btnDraft" onClick={handleDeleteCriteria} style={{ display: 'flex', padding: '8px 14px', justifyContent: 'center', alignItems: 'center', gap: '6px', borderRadius: '8px', background: '#E3DFE6', border: 'none', cursor: 'pointer', color: '#AE1C3F', fontFamily: 'Inter, sans-serif', fontSize: '14px', fontWeight: '600', lineHeight: '20px' }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="16.667" viewBox="0 0 17 19" fill="none">
+                        <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      Xóa
+                    </button>
+                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                      Lưu nháp
+                    </button>
+                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      Gửi phê duyệt
+                    </button>
+                  </>
+                )}
+
+                {(criteriaData.status === 'ACTIVE' || criteriaData.status === 'NEEDS_REVISION') && (
+                  <>
+                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                      Lưu nháp
+                    </button>
+                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      Gửi phê duyệt
+                    </button>
+                  </>
+                )}
+
+                {criteriaData.status === 'ARCHIVED' && (
+                  <button className="btnRestore active" onClick={() => handleUpdateCriteria('ACTIVE')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#115e59', color: '#ffffff', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="23 4 23 10 17 10"></polyline>
+                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+                    </svg>
+                    Hoạt động trở lại
+                  </button>
+                )}
               </>
             )}
-
-            {/* TRẠNG THÁI: ACTIVE */}
-            {criteriaData.status === 'ACTIVE' && (
-              <>
-                <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                  Lưu nháp
-                </button>
-                <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Gửi phê duyệt
-                </button>
-              </>
-            )}
-
-            {/* TRẠNG THÁI: NEEDS_REVISION */}
-            {criteriaData.status === 'NEEDS_REVISION' && (
-              <>
-                <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                  Lưu nháp
-                </button>
-                <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  Gửi phê duyệt
-                </button>
-              </>
-            )}
-
-            {/* TRẠNG THÁI: ARCHIVED */}
-            {criteriaData.status === 'ARCHIVED' && (
-              <button className="btnRestore active" onClick={() => handleUpdateCriteria('ACTIVE')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#115e59', color: '#ffffff', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="23 4 23 10 17 10"></polyline>
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                </svg>
-                Hoạt động trở lại
-              </button>
-            )}
-
           </div>
         </div>
 
@@ -443,6 +465,9 @@ const DetailCriteriaPage: React.FC = () => {
                   className="input" 
                   value={formData.code} 
                   onChange={handleInputChange} 
+                  readOnly={isReadOnly}
+                  disabled={isReadOnly}
+                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập mã tiêu chí"
                 />
               </div>
@@ -454,6 +479,9 @@ const DetailCriteriaPage: React.FC = () => {
                   className="input" 
                   value={formData.name} 
                   onChange={handleInputChange} 
+                  readOnly={isReadOnly}
+                  disabled={isReadOnly}
+                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập tên tiêu chí"
                 />
               </div>
@@ -461,21 +489,26 @@ const DetailCriteriaPage: React.FC = () => {
               <div className="formGroup" ref={dropdownRef}>
                 <label className="label">Nhóm sản phẩm *</label>
                 <div className="custom-select-container">
-                  <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
-                    <span className="truncate-text" style={{ maxWidth: '90%' }} title={selectedGroupsText}>
+                  <div 
+                    className={`select-custom ${isOpen ? 'open' : ''}`} 
+                    onClick={() => !isReadOnly && setIsOpen(!isOpen)}
+                    style={{ opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                  >
+                    <span className="truncate-text" title={selectedGroupsText}>
                       {selectedGroupsText}
                     </span>
-                    <svg 
-                      width="10" height="6" viewBox="0 0 10 6" fill="none" 
-                      className={`arrow-icon ${isOpen ? 'up' : ''}`}
-                    >
-                      <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                    {!isReadOnly && (
+                      <svg 
+                        width="10" height="6" viewBox="0 0 10 6" fill="none" 
+                        className={`arrow-icon ${isOpen ? 'up' : ''}`}
+                      >
+                        <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
                   </div>
 
-                  {isOpen && (
+                  {!isReadOnly && isOpen && (
                     <div className="custom-options-list">
-                      {/* --- OPTION: CHỌN TẤT CẢ --- */}
                       {groupOptions.length > 0 && (
                         <div 
                           className={`custom-option select-all-option ${formData.groupIds.length === groupOptions.length ? 'selected' : ''}`}
@@ -507,7 +540,6 @@ const DetailCriteriaPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* --- DANH SÁCH OPTIONS CON --- */}
                       {groupOptions.map((opt) => {
                         const isChecked = formData.groupIds.includes(opt.value);
                         return (
@@ -532,17 +564,18 @@ const DetailCriteriaPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* --- THÊM Ô CHECKBOX BẮT BUỘC --- */}
-              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px', cursor: 'pointer' }}>
+              {/* CHECKBOX BẮT BUỘC */}
+              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
                 <input 
                   type="checkbox" 
                   id="isRequired"
                   name="isRequired"
                   checked={formData.isRequired} 
                   onChange={handleCheckboxChange}
-                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  disabled={isReadOnly}
+                  style={{ width: '18px', height: '18px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
                 />
-                <label htmlFor="isRequired" style={{ fontSize: '14px', fontWeight: '500', color: '#3C393F', cursor: 'pointer', userSelect: 'none' }}>
+                <label htmlFor="isRequired" style={{ fontSize: '14px', fontWeight: '500', color: '#3C393F', cursor: isReadOnly ? 'not-allowed' : 'pointer', userSelect: 'none' }}>
                   Đây là tiêu chí bắt buộc
                 </label>
               </div>
@@ -550,7 +583,7 @@ const DetailCriteriaPage: React.FC = () => {
             </div>
           </div>
 
-          {/* CỘT PHẢI: BÌNH LUẬN PHẢN HỒI */}
+          {/* CỘT PHẢI */}
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -560,14 +593,19 @@ const DetailCriteriaPage: React.FC = () => {
                 </svg>
               </div>
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
-                <div className={`select-custom ${isStatusOpen ? 'open' : ''}`} onClick={() => setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: 'pointer', width: '100%', boxSizing: 'border-box' }}>
+                <div 
+                  className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                  onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                    <path d="M5 7.5L10 12.5L15 7.5"/>
-                  </svg>
+                  {!isReadOnly && (
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                      <path d="M5 7.5L10 12.5L15 7.5"/>
+                    </svg>
+                  )}
                 </div>
-                {isStatusOpen && (
+                {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
                     <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
                     <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
@@ -575,7 +613,8 @@ const DetailCriteriaPage: React.FC = () => {
                 )}
               </div>
             </div>
-             <div className="commentCard">
+
+            <div className="commentCard">
                 <div className="commentHeader">
                   <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
                     <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -605,7 +644,7 @@ const DetailCriteriaPage: React.FC = () => {
                     <div className="no-comments">Chưa có bình luận hay phản hồi nào cho tiêu chí này.</div>
                   )}
                 </div>
-             </div>
+            </div>
           </div>
         </div>
 

@@ -51,7 +51,7 @@
 // export default MainLayout;
 
 import React, { useEffect } from 'react';
-import { Outlet, useLocation, matchPath } from 'react-router-dom'; // 1. Thêm matchPath
+import { Outlet } from 'react-router-dom';
 import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
 import './MainLayout.css';
@@ -80,8 +80,6 @@ const MainLayout: React.FC = () => {
           window.dispatchEvent(new Event('userRoleChanged'));
           window.dispatchEvent(new Event('currentUserChanged'));
 
-          // console.log(`username: ${username}, branchCode: ${branchCode}`);
-
           // Gọi BEAdmin API với actionType=4 lấy danh sách user và lưu sessionStorage
           axios.get(`http://localhost:8080/api/v1/branches/users-from-beadmin?username=${encodeURIComponent(username)}&branchCode=${encodeURIComponent(branchCode)}`)
             .then(usersRes => {
@@ -100,23 +98,6 @@ const MainLayout: React.FC = () => {
         console.error("Failed to fetch user info", err);
       });
   }, []);
-  const location = useLocation();
-  const isBatchPage = location.pathname.startsWith('/products/batch');
-  const isDetailPage = matchPath({ path: '/product/:id' }, location.pathname);
-  const isExcluded = location.pathname.includes('/products/create') || 
-                     location.pathname.includes('/products/list');
-  const isFullScreenPage = isBatchPage || (isDetailPage && !isExcluded);
-
-  if (isFullScreenPage) {
-    return (
-      <div className="fullscreen-layout-wrapper" style={{ width: '100vw', height: '100vh', overflowY: 'auto' }}>
-        <Toaster position="top-right" reverseOrder={false} />
-        <main style={{ width: '100%', minHeight: '100%', backgroundColor: '#f9fafb' }}>
-          <Outlet />
-        </main>
-      </div>
-    );
-  }
 
   return (
     <div className="main-layout">

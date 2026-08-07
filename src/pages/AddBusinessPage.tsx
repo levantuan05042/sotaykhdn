@@ -11,7 +11,7 @@ const AddBusinessPage: React.FC = () => {
   
   // Trạng thái Dropdown Danh mục sản phẩm
   const [isOpen, setIsOpen] = useState(false); 
-  const categoryRef = useRef<HTMLDivElement>(null); // Bổ sung ref để xử lý click outside
+  const categoryRef = useRef<HTMLDivElement>(null); 
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   
@@ -88,7 +88,7 @@ const AddBusinessPage: React.FC = () => {
         name: formData.name.trim(),
         productCategoryId: formData.productCategoryId,
         status,
-        active: isActive 
+        active: isActive
       });
 
       const message = status === 'DRAFT' ? "Lưu nháp nghiệp vụ thành công" : "Gửi phê duyệt nghiệp vụ thành công";
@@ -99,7 +99,7 @@ const AddBusinessPage: React.FC = () => {
       const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi tạo nghiệp vụ';
       toast.error(errorMessage, { position: 'top-center' });
     } finally {
-      setIsSubmitting(false); // Reset trạng thái khi xong (hoặc lỗi)
+      setIsSubmitting(false);
     }
   };
 
@@ -130,7 +130,6 @@ const AddBusinessPage: React.FC = () => {
     formData.productCategoryId !== '' || 
     isActive !== true;
 
-  // Nút sẽ sáng nếu form đã thay đổi VÀ không ở trạng thái đang submit
   const canSubmit = isFormDirty && !isSubmitting; 
 
   return (

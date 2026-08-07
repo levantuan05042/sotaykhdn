@@ -33,7 +33,7 @@ const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, o
   </div>
 );
 
-const ProductGroupPage: React.FC = () => {
+const ProductPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -87,7 +87,7 @@ const ProductGroupPage: React.FC = () => {
     fetchGroupOptions();
   }, []);
 
-  // Gọi API lấy danh sách sản phẩm
+  // Gọi API lấy danh sách sản phẩm (đã tích hợp map tên người tạo / kiểm duyệt từ sessionStorage)
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -109,8 +109,36 @@ const ProductGroupPage: React.FC = () => {
           return searchParams.toString();
         },
       });
+
       const resultData = response.data?.content || response.data;
-      setData(Array.isArray(resultData) ? resultData : []);
+      const rawList = Array.isArray(resultData) ? resultData : [];
+
+      // 1. Tạo bản đồ tra cứu (userMap) từ sessionStorage
+      let userMap: Record<string, string> = {};
+      try {
+        const rawUsers = sessionStorage.getItem('beadminUsers') || sessionStorage.getItem('headminUsers');
+        if (rawUsers) {
+          const parsedUsers = JSON.parse(rawUsers);
+          const userList = parsedUsers.listUser || (Array.isArray(parsedUsers) ? parsedUsers : []);
+          
+          userList.forEach((user: any) => {
+            if (user.username) {
+              userMap[user.username] = user.fullname || user.fullName || user.username;
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Lỗi đọc user từ sessionStorage:', e);
+      }
+
+      // 2. Map lại dữ liệu sản phẩm để gán tên đầy đủ cho createdByFullName và approvedBy
+      const enrichedData = rawList.map((item: any) => ({
+        ...item,
+        createdByFullName: userMap[item.createdBy] || item.createdBy || null,
+        approvedBy: userMap[item.approvedBy] || item.approvedBy || null 
+      }));
+
+      setData(enrichedData);
     } catch (error) {
       console.error('Lỗi khi gọi API danh sách sản phẩm:', error);
       setData([]);
@@ -128,7 +156,7 @@ const ProductGroupPage: React.FC = () => {
   const handleImportSuccess = () => {
     fetchData();
     setToast({ type: 'success', message: 'Nhập sản phẩm từ Excel thành công.' });
-    navigate('/products/requests');
+    navigate('/request-list');
   };
 
   const renderTable = () => {
@@ -472,4 +500,4 @@ const ProductGroupPage: React.FC = () => {
   );
 };
 
-export default ProductGroupPage;
+export default ProductPage;

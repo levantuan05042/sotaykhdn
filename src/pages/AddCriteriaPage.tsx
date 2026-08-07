@@ -12,18 +12,22 @@ const AddCriteriaPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false); 
   const statusRef = useRef<HTMLDivElement>(null); 
   const [isActive, setIsActive] = useState<boolean>(true);
+  
   // --- STATES ---
   const [isOpen, setIsOpen] = useState(false); 
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // State lưu từ khóa tìm kiếm nhóm
 
+  // --- STATES CHO MODAL PHÊ DUYỆT ---
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+
   const [formData, setFormData] = useState({
     code: '',
     name: '',
     groupIds: [] as string[],
     required: false,
-    active: true // Đưa vào đây
+    active: true
   });
 
   // --- EFFECT: ĐÓNG DROPDOWN KHI BẤM RA NGOÀI ---
@@ -44,11 +48,11 @@ const AddCriteriaPage: React.FC = () => {
     }
   }, [isOpen]);
 
+  // --- FETCH NHÓM SẢN PHẨM ---
   useEffect(() => {
     const fetchActiveGroups = async () => {
       try {
         setLoadingGroups(true);
-        // Sử dụng axios.get với params
         const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
           params: { status: 'ACTIVE', active: true }
         });
@@ -69,19 +73,16 @@ const AddCriteriaPage: React.FC = () => {
     fetchActiveGroups();
   }, []);
 
-  // --- XỬ LÝ SỰ KIỆN BIẾN ĐỔI INPUT (TÊN & MÃ) ---
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // 2. THÊM HÀM XỬ LÝ SỰ KIỆN TOGGLE CHECKBOX REQUIRED
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  // Toggle chọn hoặc bỏ chọn MỘT nhóm sản phẩm
   const handleToggleGroup = (id: string) => {
     setFormData(prev => {
       const isExist = prev.groupIds.includes(id);
@@ -92,7 +93,6 @@ const AddCriteriaPage: React.FC = () => {
     });
   };
 
-  // Xử lý click chọn TẤT CẢ hoặc BỎ CHỌN TẤT CẢ
   const handleToggleSelectAll = () => {
     setFormData(prev => {
       if (prev.groupIds.length === groupOptions.length) {
@@ -106,7 +106,6 @@ const AddCriteriaPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/criteria-management');
 
-  // --- HÀM HIỂN THỊ LABELS NHÓM ĐÃ CHỌN ---
   const getSelectedGroupsLabel = () => {
     if (loadingGroups) return "Đang tải nhóm sản phẩm...";
     if (formData.groupIds.length === 0) return "Chọn nhóm sản phẩm áp dụng";
@@ -125,40 +124,55 @@ const AddCriteriaPage: React.FC = () => {
     return `${firstThree} và ${remainingCount} nhóm khác`;
   };
 
-  // --- HÀM TẠO MỚI TIÊU CHÍ (VALIDATE + API CALL) ---
-  const handleCreateCriteria = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
-    // Validate
+  // --- VALIDATE FORM TRƯỚC KHI LƯU NHÁP HOẶC MỞ MODAL DUYỆT ---
+  const validateForm = () => {
     if (!formData.code.trim()) {
       toast.error("Vui lòng nhập mã tiêu chí", { position: 'top-center' });
-      return;
+      return false;
     }
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên tiêu chí", { position: 'top-center' });
-      return;
+      return false;
     }
     if (formData.groupIds.length === 0) {
       toast.error("Vui lòng chọn ít nhất một nhóm sản phẩm áp dụng", { position: 'top-center' });
-      return;
+      return false;
     }
+    return true;
+  };
 
+  // Xử lý Lưu nháp
+  const handleSaveDraft = async () => {
+    if (!validateForm()) return;
+    await submitCriteriaData('DRAFT');
+  };
+
+  // Khi bấm Gửi phê duyệt -> Mở Modal chọn người kiểm duyệt[cite: 11]
+  const handleOpenApprovalModal = () => {
+    if (!validateForm()) return;
+    setIsApprovalModalOpen(true);
+  };
+
+  // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
+  const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
     try {
-      // Gọi API qua Axios
       await axios.post(API_ENDPOINTS.PRODUCT_CRITERIA.LIST, {
         code: formData.code.trim(),
         name: formData.name.trim(),
         groupIds: formData.groupIds,
         status,
         required: formData.required,
-        active: isActive
+        active: isActive,
+        approvedBy: approvedBy || null // Gửi kèm username người kiểm duyệt nếu có
       });
 
       const message = status === 'DRAFT' ? "Lưu nháp tiêu chí thành công" : "Gửi phê duyệt tiêu chí thành công";
       renderCustomToast(message);
+      setIsApprovalModalOpen(false);
       setTimeout(() => navigate('/criteria-management'), 2000);
 
     } catch (error: any) {
       console.error("Lỗi API:", error);
-      // Lấy thông báo lỗi từ backend nếu có
       const errorMessage = error.response?.data?.message || 'Mã hoặc tên tiêu chí đã tồn tại trên hệ thống';
       toast.error(errorMessage, { position: 'top-center' });
     }
@@ -185,7 +199,6 @@ const AddCriteriaPage: React.FC = () => {
     ), { position: 'top-center' });
   };
 
-  // Nút sẽ sáng nếu BẤT KỲ TRƯỜNG NÀO CÓ DỮ LIỆU
   const isFormValid = 
       formData.code.trim() !== '' || 
       formData.name.trim() !== '' || 
@@ -193,12 +206,10 @@ const AddCriteriaPage: React.FC = () => {
       formData.required !== false || 
       formData.active !== true;      
 
-  // Lọc mảng option dựa trên từ khóa search nhập vào công cụ lọc
   const filteredOptions = groupOptions.filter(opt => 
     opt.label.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Xác định trạng thái checkbox "Tất cả" dựa trên tổng số lượng options
   const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
 
   return (
@@ -211,9 +222,6 @@ const AddCriteriaPage: React.FC = () => {
             <button className="btnBack" onClick={handleGoBack}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M12.6667 6.83333H1M6.83333 1L1 6.83333L6.83333 12.6667" stroke="#3C393F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14.379" height="14.375" viewBox="0 0 16 16" fill="none">
-                <path d="M11.3789 4.5H11.3714M1.18641 9.3075L6.56391 14.685C6.70322 14.8245 6.86865 14.9351 7.05075 15.0106C7.23284 15.0106 7.42803 15.1249 7.62516 15.1249C7.82228 15.1249 8.01747 15.0861 8.19957 15.0106C8.38166 14.9351 8.5471 14.8245 8.68641 14.685L15.1289 8.25V0.75H7.62891L1.18641 7.1925C0.90703 7.47354 0.750217 7.85372 0.750217 8.25C0.750217 8.64628 0.90703 9.02646 1.18641 9.3075Z" stroke="#171717" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               <span className="breadcrumbText">Tiêu chí sản phẩm</span>
             </button>
@@ -232,7 +240,7 @@ const AddCriteriaPage: React.FC = () => {
             <button 
               className={`btnDraft ${isFormValid ? 'active' : 'disabled'}`} 
               disabled={!isFormValid} 
-              onClick={() => handleCreateCriteria('DRAFT')}
+              onClick={handleSaveDraft}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -243,7 +251,11 @@ const AddCriteriaPage: React.FC = () => {
             <button 
               className={`btnSubmit ${isFormValid ? 'active' : 'disabled'}`} 
               disabled={!isFormValid} 
-              onClick={() => handleCreateCriteria('PENDING_APPROVAL')}
+              onClick={() => {
+                if (validateForm()) {
+                  submitCriteriaData('PENDING_APPROVAL');
+                }
+              }}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -259,7 +271,7 @@ const AddCriteriaPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
 
-              {/* INPUT MÃ TIÊU CHÍ (CODE) */}
+              {/* INPUT MÃ TIÊU CHÍ */}
               <div className="formGroup">
                 <label className="label">Mã tiêu chí *</label>
                 <input 
@@ -300,8 +312,6 @@ const AddCriteriaPage: React.FC = () => {
 
                   {isOpen && (
                     <div className="custom-options-list" style={{ padding: 0 }}>
-                      
-                      {/* 1. THANH TÌM KIẾM TRONG DROPDOWN */}
                       <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
                         <input
                           type="text"
@@ -313,7 +323,6 @@ const AddCriteriaPage: React.FC = () => {
                         />
                       </div>
 
-                      {/* 2. CHECKBOX TẤT CẢ */}
                       {groupOptions.length > 0 && !searchTerm && (
                         <div 
                           className="custom-option select-all-option"
@@ -330,7 +339,6 @@ const AddCriteriaPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* 3. VÙNG CUỘN HIỂN THỊ OPTIONS */}
                       <div className="options-scroll-area" style={{ maxHeight: '200px', overflowY: 'auto' }}>
                         {filteredOptions.length === 0 ? (
                           <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
@@ -358,13 +366,12 @@ const AddCriteriaPage: React.FC = () => {
                           })
                         )}
                       </div>
-
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* 4. THÊM Ô CHECKBOX "BẮT BUỘC" VÀO ĐÂY */}
+              {/* CHECKBOX BẮT BUỘC */}
               <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '15px', cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
@@ -398,16 +405,7 @@ const AddCriteriaPage: React.FC = () => {
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span 
-                    style={{ 
-                      color: 'var(--Token-Text-body-emphasis-color, #1A191B)',
-                      fontFamily: 'var(--Font-family-font-family-body, Inter)',
-                      fontSize: 'var(--Font-size-text-md, 16px)',
-                      fontStyle: 'normal',
-                      fontWeight: 500,
-                      lineHeight: 'var(--Line-height-text-md, 24px)'
-                    }}
-                  >
+                  <span style={{ color: 'var(--Token-Text-body-emphasis-color, #1A191B)', fontSize: '16px', fontWeight: 500, lineHeight: '24px' }}>
                     Trạng thái hiển thị
                   </span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -422,25 +420,14 @@ const AddCriteriaPage: React.FC = () => {
                     className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
                     onClick={() => setIsStatusOpen(!isStatusOpen)} 
                     style={{ 
-                      display: 'flex',
-                      padding: 'var(--spacing-md, 8px) var(--spacing-lg, 12px)',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: 'var(--spacing-md, 8px)',
-                      alignSelf: 'stretch',
-                      borderRadius: 'var(--radius-md, 8px)',
-                      border: '1px solid var(--Colors-Border-border-primary, #D5D7DA)',
-                      background: 'var(--Colors-Background-bg-primary, #FFF)',
-                      boxShadow: '0 1px 2px 0 var(--Colors-Effects-Shadows-shadow-xs, rgba(10, 13, 18, 0.05))',
-                      cursor: 'pointer',
-                      boxSizing: 'border-box',
-                      width: '100%'
+                      display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch',
+                      borderRadius: '8px', border: '1px solid #D5D7DA', background: '#FFF', boxShadow: '0 1px 2px rgba(10, 13, 18, 0.05)',
+                      cursor: 'pointer', boxSizing: 'border-box', width: '100%'
                     }}
                   >
                     <span style={{ color: '#1A191B', fontWeight: 500 }}>
                       {isActive === false ? 'Ẩn' : 'Hiển thị'}
                     </span>
-                    
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
                       <path d="M5 7.5L10 12.5L15 7.5" />
                     </svg>
@@ -448,22 +435,17 @@ const AddCriteriaPage: React.FC = () => {
                   
                   {isStatusOpen && (
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
-                      <div 
-                        className={`custom-option ${isActive === false ? 'selected' : ''}`} 
-                        onClick={() => { setIsActive(false); setIsStatusOpen(false); }}
-                      >
+                      <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>
                         Ẩn
                       </div>
-                      <div 
-                        className={`custom-option ${isActive === true ? 'selected' : ''}`} 
-                        onClick={() => { setIsActive(true); setIsStatusOpen(false); }}
-                      >
+                      <div className={`custom-option ${isActive === true ? 'selected' : ''}`} onClick={() => { setIsActive(true); setIsStatusOpen(false); }}>
                         Hiển thị
                       </div>
                     </div>
                   )}
                 </div>
               </div>
+
              <div className="commentCard emptyComment">
                 <div className="commentHeader">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none">

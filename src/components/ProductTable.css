@@ -1,10 +1,14 @@
 .table-wrapper {
+  width: 100%;
+  max-width: 100%; /* Ép không cho vượt quá khung chứa bên ngoài */
   background: white;
   border-radius: 8px;
-  overflow-x: auto; /* KÍCH HOẠT SCROLL NGANG CHO CẢ BẢNG */
+  max-height: 560px;
+  overflow-y: auto;
+  overflow-x: auto; /* Kích hoạt cuộn ngang[cite: 30] */
+  position: relative;
   border: 1px solid #E5E7EB;
 }
-
 .custom-table {
   width: 100%;
   border-collapse: separate;
@@ -12,6 +16,7 @@
   min-width: 1300px; 
 }
 
+/* --- TIÊU ĐỀ CỐ ĐỊNH KHI CUỘN DỌC --- */
 .custom-table th {
   background: #F9FAFB;
   padding: 14px 16px;
@@ -23,7 +28,8 @@
   white-space: nowrap;
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 10;             /* Đảm bảo header nổi lên trên khi cuộn dọc */
+  box-shadow: inset 0 -1px 0 #E5E7EB;
 }
 
 .custom-table td {
@@ -33,11 +39,13 @@
   white-space: nowrap; 
 }
 
+/* --- CỐ ĐỊNH CỘT KHI CUỘN NGANG --- */
+/* Cột 1: STT */
 .custom-table th:nth-child(1),
 .custom-table td:nth-child(1) {
   position: sticky;
   left: 0;
-  z-index: 3;
+  z-index: 11;             /* Cao hơn header để không bị đè ở góc giao nhau */
   width: 65px;
   min-width: 65px;
   text-align: center;
@@ -45,11 +53,12 @@
 .custom-table th:nth-child(1) { background: #F9FAFB; }
 .custom-table td:nth-child(1) { background: white; }
 
+/* Cột 2: Sản phẩm */
 .custom-table th:nth-child(2),
 .custom-table td:nth-child(2) {
   position: sticky;
   left: 65px; 
-  z-index: 3;
+  z-index: 11;
   width: 260px;
   min-width: 260px;
   box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.08); 
@@ -57,26 +66,24 @@
 .custom-table th:nth-child(2) { background: #F9FAFB; }
 .custom-table td:nth-child(2) { background: white; }
 
+/* Cột cuối: Thao tác */
 .custom-table th:last-child,
 .custom-table td:last-child {
   position: sticky;
   right: 0;
-  z-index: 3;
+  z-index: 11;
   width: 60px;
   min-width: 60px;
-  background: white; /* Màu nền cho td */
-  box-shadow: -4px 0 8px -4px rgba(0, 0, 0, 0.08); /* Bóng đổ ngăn cách */
+  box-shadow: -4px 0 8px -4px rgba(0, 0, 0, 0.08); 
 }
-
-.custom-table th:last-child {
-  background: #F9FAFB;
-}
+.custom-table th:last-child { background: #F9FAFB; }
+.custom-table td:last-child { background: white; }
 
 .col-group { min-width: 180px; }
 .col-category { min-width: 180px; }
 .col-business { min-width: 200px; }
 
-/* Badge trạng thái */
+/* --- TRẠNG THÁI & GIAO DIỆN KHÁC --- */
 .status-badge-custom {
   display: inline-flex;
   align-items: center;
@@ -87,26 +94,21 @@
 }
 
 .status-active { background: #E1F7E3; color: #22C55E; }
-.status-active .dot { width: 6px; height: 6px; background: #22C55E; border-radius: 50%; margin-right: 8px; }
-
 .status-draft { background: #F3F4F6; color: #6B7280; }
-.status-draft .dot { display: none; }
+.status-pending { background: #FEF3C7; color: #92400E; }
+.status-rejected { background: #FDE8E8; color: #9B1C1C; }
 
 .text-success {
-  color: #14532D; /* Màu mới từ Figma: --Green-900 */
+  color: #14532D; 
   font-family: 'Inter', sans-serif;
   font-size: 16px;
-  font-style: normal;
   font-weight: 600;
-  line-height: 24px;
 }
 .text-danger { 
   color: #EF4444; 
   font-family: 'Inter', sans-serif;
   font-size: 16px;
-  font-style: normal;
   font-weight: 600;
-  line-height: 24px;
 }
 
 .btn-action-view {
@@ -123,15 +125,17 @@
 
 .btn-action-view:hover {
    color: #AE1C3F;
-  }
+}
 
-/* Phân trang */
+/* --- PHÂN TRANG --- */
 .pagination-box {
   display: flex;
   justify-content: center;
   align-items: center;
   padding: 24px;
   gap: 12px;
+  background: white;
+  border-top: 1px solid #F3F4F6;
 }
 
 .p-item {
@@ -166,6 +170,7 @@
 .p-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .pagination-dots { color: #9CA3AF; }
 
+/* --- THANH CUỘN (SCROLLBAR) --- */
 .table-wrapper::-webkit-scrollbar {
   width: 6px;   
   height: 6px;   
@@ -178,37 +183,35 @@
 .table-wrapper::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.15); 
   border-radius: 10px;                   
-  border: 1px solid transparent;         
 }
 
 .table-wrapper::-webkit-scrollbar-thumb:hover {
   background-color: rgba(0, 0, 0, 0.3);  
 }
 
-.table-wrapper {
-  scrollbar-width: thin;          
-  scrollbar-color: rgba(0, 0, 0, 0.15) transparent; 
-}
-
-
 .col-highlight {
   background-color: #F2FCF7 !important;
   border-bottom: 1px solid #E5E7EB;     
-  border-left: none;
-  border-right: none;
 }
 
 .col-highlight-first {
-  border-left: 1px solid #63B693 !important; /* Green-8 */
+  border-left: 1px solid #63B693 !important; 
 }
 
 .col-highlight-last {
-  border-right: 1px solid #63B693 !important; /* Green-8 */
+  border-right: 1px solid #63B693 !important; 
 }
 
-/* 4. Padding giống Figma */
 .col-highlight-content {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.truncate-text {
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;     
+  overflow: hidden;         
+  text-overflow: ellipsis;  
 }

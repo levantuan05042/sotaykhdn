@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ProductTable.css'; 
 
-// Bổ sung các trường dữ liệu còn thiếu từ API/JSON
 interface ProductCategory {
   id: string;
   name: string;
@@ -10,11 +9,12 @@ interface ProductCategory {
   productCategoryName?: string | null;
   productGroupName?: string | null;
   requestName?: string | null; 
+  requestId?: string | null;     // <-- Thêm requestId vào interface
   notes?: string | null;       
   createdAt?: string | null;   
   status: string;
   active?: boolean;       
-  createdBy?: string | null;
+  createdByFullName?: string | null;
   approvedBy?: string | null;
   version?: number | null;
 }
@@ -62,13 +62,21 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
   const handleViewDetail = (id: string) => {
     navigate(`/products/${id}`);
   };
+
+  // Hàm xử lý chuyển hướng khi click vào Tên yêu cầu
+  const handleViewBatchDetail = (requestId?: string | null) => {
+    if (requestId) {
+      navigate(`/products/batch/${requestId}`);
+    }
+  };
+
   const getStatusLabel = (status: string) => {
-  switch (status?.toUpperCase()) {
-    case 'DRAFT': return { label: 'Lưu nháp', className: 'status-draft' };
-    case 'PENDING_APPROVAL': return { label: 'Chờ duyệt', className: 'status-pending' };
-    default: return { label: status, className: 'status-default' };
-  }
-};
+    switch (status?.toUpperCase()) {
+      case 'DRAFT': return { label: 'Lưu nháp', className: 'status-draft' };
+      case 'PENDING_APPROVAL': return { label: 'Chờ duyệt', className: 'status-pending' };
+      default: return { label: status, className: 'status-draft' };
+    }
+  };
 
   return (
     <div className="table-wrapper">
@@ -110,7 +118,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   </span>
                 </td>
                 
-                {/* 4. Trạng thái (Kết hợp badge status và thuộc tính active) */}
+                {/* 4. Trạng thái */}
                 <td>
                   {(() => {
                     const statusInfo = getStatusLabel(item.status);
@@ -124,17 +132,26 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                 
                 {/* 5. Tên yêu cầu */}
                 <td className="col-highlight col-highlight-first">
-                  <span title={stripHtml(item.requestName)}>
+                  <span 
+                    className="truncate-text" 
+                    title={stripHtml(item.requestName) || ''}
+                    onClick={() => handleViewBatchDetail(item.requestId)}
+                    style={{ 
+                      cursor: item.requestId ? 'pointer' : 'default', 
+                      color: item.requestId ? '#2563EB' : 'inherit',
+                      textDecoration: item.requestId ? 'underline' : 'none' 
+                    }}
+                  >
                     {stripHtml(item.requestName) || '---'}
                   </span>
                 </td>
                 
                 {/* 6. Ghi chú */}
-                <td  className="col-highlight">
+                <td className="col-highlight">
                   <div className="col-highlight-content">
-                  <span title={item.notes || ''}>
-                    {item.notes || '---'}
-                  </span>
+                    <span className="truncate-text" title={item.notes || ''}>
+                      {item.notes || '---'}
+                    </span>
                   </div>
                 </td>
 
@@ -142,7 +159,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                 <td className="col-highlight col-highlight-last">{formatDate(item.createdAt)}</td>
                 
                 {/* 8. Người tạo */}
-                <td>{item.createdBy || '---'}</td>
+                <td>{item.createdByFullName || '---'}</td>
                 
                 {/* 9. Người kiểm duyệt */}
                 <td>{item.approvedBy || '---'}</td>
@@ -169,7 +186,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
             ))
           ) : (
             <tr>
-              <td colSpan={11} className="text-center" style={{ padding: '30px', color: '#9CA3AF' }}>
+              <td colSpan={11} className="text-center" style={{ padding: '30px', color: '#9CA3AF', textAlign: 'center' }}>
                 Không có dữ liệu hiển thị
               </td>
             </tr>
@@ -177,10 +194,49 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
         </tbody>
       </table>
       
-      {/* Khối Pagination giữ nguyên như cũ... */}
+      {/* Khối Phân trang đầy đủ logic */}
       {totalPages > 1 && (
         <div className="pagination-box">
-          {/* ... (Phần UI phân trang của bạn) ... */}
+          <button
+            className="p-nav-btn"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((prev) => prev - 1)}
+          >
+            ←
+          </button>
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((page) => {
+              return (
+                page === 1 ||
+                page === totalPages ||
+                (page >= currentPage - 1 && page <= currentPage + 1)
+              );
+            })
+            .map((page, index, arr) => {
+              const prevPage = arr[index - 1];
+              return (
+                <React.Fragment key={page}>
+                  {prevPage && page - prevPage > 1 && (
+                    <span className="pagination-dots">...</span>
+                  )}
+                  <button
+                    className={`p-item ${currentPage === page ? 'active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                </React.Fragment>
+              );
+            })}
+
+          <button
+            className="p-nav-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((prev) => prev + 1)}
+          >
+            →
+          </button>
         </div>
       )}
     </div>

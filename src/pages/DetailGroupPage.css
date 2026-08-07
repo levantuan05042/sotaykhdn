@@ -71,6 +71,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0; 
 }
 
 .separatorWrapper {
@@ -88,6 +89,16 @@
   font-weight: 600;
 }
 
+.breadcrumb-truncate {
+  display: inline-block;
+  max-width: 111px; 
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  cursor: default;
+}
+
 /* --- 4. STATUS BADGE --- */
 .statusBadge {
   display: flex;
@@ -99,6 +110,8 @@
   background: #E0F9EC;
   margin-left: 12px;
   flex-shrink: 0;
+  height: 32px;
+  box-sizing: border-box;
 }
 
 .dot {
@@ -117,12 +130,36 @@
   line-height: 24px;
 }
 
+/* --- CÁC BIẾN THỂ MÀU SẮC --- */
+.status-active { background-color: #E0F9EC; }
+.status-active .statusText { color: #14532D; }
+.status-active .dot { background-color: #12B76A; }
+
+.status-draft { background-color: #FEF9C3; }
+.status-draft .statusText { color: #713F12; }
+.status-draft .dot { background-color: #CA8A04; }
+
+.status-rejected { background-color: #EAE7EC; }
+.status-rejected .statusText { color: #65636D; }
+.status-rejected .dot { background-color: #65636D; }
+
+.status-revision { background-color: #FECACA; }
+.status-revision .statusText { color: #7F1D1D; }
+.status-revision .dot { background-color: #EF4444; }
+
+.status-pending { background-color: #FED7AA; }
+.status-pending .statusText { color: #7C2D12; }
+.status-pending .dot { background-color: #F97316; }
+
+.status-archived { background-color: #BAE6FD; }
+.status-archived .statusText { color: #0C4A6E; }
+.status-archived .dot { background-color: #0EA5E9; }
+
 /* --- 5. ACTION BUTTONS --- */
-/* --- Nút Lưu nháp --- */
 .btnDraft {
   padding: 8px 14px;
   border-radius: 8px;
-  background: #E3DFE6; /* Màu nền xám mặc định */
+  background: #E3DFE6; 
   border: none;
   color: #1A191B;
   font-size: 14px;
@@ -132,22 +169,19 @@
   transition: all 0.2s ease;
 }
 
-/* Khi không có thay đổi: Làm mờ và đổi chuột */
 .btnDraft:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Khi có thay đổi: Hover cho sáng lên chút */
 .btnDraft:not(:disabled):hover {
   background: #d4cfd8; 
 }
 
-/* --- Nút Gửi phê duyệt --- */
 .btnSubmit {
   padding: 8px 14px;
   border-radius: 8px;
-  background: #AE1C3F; /* Màu đỏ thương hiệu */
+  background: #AE1C3F; 
   border: none;
   color: #FFFFFF;
   font-size: 14px;
@@ -157,14 +191,12 @@
   transition: all 0.2s ease;
 }
 
-/* Khi không có thay đổi: Tối màu đi */
 .btnSubmit:disabled {
-  background: #cc8d9c; /* Màu đỏ nhạt/tối hơn */
+  background: #cc8d9c; 
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Khi có thay đổi: Hiệu ứng hover cho nút đỏ */
 .btnSubmit:not(:disabled):hover {
   background: #8e1734;
 }
@@ -207,17 +239,13 @@
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
-
-  
 }
 
-/* Container bọc ngoài */
 .custom-select-container {
   position: relative;
   width: 100%;
 }
 
-/* Ô select chính */
 .select-custom {
   background-color: #ffffff;
   border: 1px solid #E3DFE6;
@@ -233,13 +261,35 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   background-image: none !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .select-custom.open {
-  border-color: #AE1C3F; /* Đỏ Agribank */
+  border-color: #AE1C3F;
 }
 
-/* Danh sách option */
+/* CSS xử lý cắt ngắn chữ (Truncate Text) */
+.truncate-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  margin-right: 12px;
+  color: #1A191B;
+}
+
+/* Icon mũi tên */
+.arrow-icon {
+  transition: transform 0.3s ease;
+  flex-shrink: 0;
+}
+
+.arrow-icon.up {
+  transform: rotate(180deg);
+}
+
 .custom-options-list {
   position: absolute;
   top: 105%;
@@ -253,14 +303,8 @@
   overflow: hidden;
 }
 
-/* --- HIỆU ỨNG SO LE 1 TRẮNG 1 XÁM --- */
-.custom-option:nth-child(odd) {
-  background-color: #ffffff;
-}
-
-.custom-option:nth-child(even) {
-  background-color: #F8F8F9; /* Màu xám nhạt */
-}
+.custom-option:nth-child(odd) { background-color: #ffffff; }
+.custom-option:nth-child(even) { background-color: #F8F8F9; }
 
 .custom-option {
   display: flex;
@@ -272,10 +316,9 @@
 }
 
 .custom-option:hover {
-  background-color: #FFF0F0 !important; /* Hồng nhạt khi hover */
+  background-color: #FFF0F0 !important; 
 }
 
-/* --- THAY MÀU XANH THÀNH TÍCH CHỌN ĐỎ --- */
 .check-box {
   width: 18px;
   height: 18px;
@@ -290,7 +333,6 @@
   background-color: #fff;
 }
 
-/* Khi option được chọn */
 .custom-option.selected {
   background-color: #FFF0F0 !important;
 }
@@ -298,13 +340,9 @@
 .custom-option.selected .check-box {
   border-color: #AE1C3F;
   background-color: #FFF0F0;
-  color: #AE1C3F; /* Hiện dấu tích màu đỏ */
+  color: #AE1C3F; 
   font-weight: bold;
 }
-
-/* Mũi tên xoay */
-.arrow { transition: transform 0.3s; }
-.arrow.up { transform: rotate(180deg); }
 
 /* --- 7. COMMENT SECTION (RIGHT COLUMN) --- */
 .rightCol {
@@ -315,6 +353,7 @@
   top: 123px; 
   height: fit-content; 
 }
+
 .commentCard {
   display: flex;
   padding: 24px;
@@ -384,114 +423,13 @@
   line-height: 18px;
 }
 
-.activeDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #22C55E;
-  margin-top: 6px;
-}
-
 .commentDivider {
   border: 0;
   border-top: 1px solid #D4D4D8;
   margin: 16px 0;
 }
 
-/* Badge nền tảng */
-.statusBadge {
-  display: flex;
-  padding: 8px 20px;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  border-radius: 100px;
-  flex-shrink: 0;
-  height: 32px;
-  box-sizing: border-box;
-}
-
-.statusText {
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-/* --- CÁC BIẾN THỂ MÀU SẮC --- */
-
-/* Đang hoạt động - Xanh lá */
-.status-active {
-  background-color: #E0F9EC;
-}
-.status-active .statusText { color: #14532D; }
-.status-active .dot { background-color: #12B76A; }
-
-/* Lưu nháp - Vàng */
-.status-draft {
-  background-color: #FEF9C3;
-}
-.status-draft .statusText { color: #713F12; }
-.status-draft .dot { background-color: #CA8A04; }
-
-/* Từ chối - Xám */
-.status-rejected {
-  background-color: #EAE7EC;
-}
-.status-rejected .statusText { color: #65636D; }
-.status-rejected .dot { background-color: #65636D; }
-
-/* Yêu cầu chỉnh sửa - Đỏ hồng */
-.status-revision {
-  background-color: #FECACA;
-}
-.status-revision .statusText { color: #7F1D1D; }
-.status-revision .dot { background-color: #EF4444; }
-
-/* Chờ duyệt - Cam */
-.status-pending {
-  background-color: #FED7AA;
-}
-.status-pending .statusText { color: #7C2D12; }
-.status-pending .dot { background-color: #F97316; }
-
-/* Lưu trữ - Xanh dương */
-.status-archived {
-  background-color: #BAE6FD;
-}
-.status-archived .statusText { color: #0C4A6E; }
-.status-archived .dot { background-color: #0EA5E9; }
-
-
-.breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px; 
-  min-width: 0; 
-}
-
-.breadcrumb-truncate {
-  display: inline-block;
-  max-width: 111px; 
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle;
-  cursor: default;
-}
-
-.statusBadge {
-  flex-shrink: 0; 
-}
-
-/* Container chính của Toast dạng viên thuốc */
+/* --- TOAST COMPONENTS & OTHERS --- */
 .toast-pill-container {
   display: flex;
   align-items: center;
@@ -512,7 +450,6 @@
   gap: 12px;
 }
 
-/* Vòng tròn xanh bao quanh icon tích */
 .toast-pill-icon {
   background: #ecfdf5;
   color: #10b981;
@@ -548,7 +485,6 @@
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-
 
 .product-image-wrapper {
   position: relative;
@@ -621,6 +557,7 @@
   color: #3B82F6;
   background: #EFF6FF;
 }
+
 .product-image-placeholder {
   transition: opacity 0.2s;
   border: 1px solid #E5E7EB;
@@ -629,4 +566,3 @@
 .product-image-placeholder:hover {
   opacity: 0.9;
 }
-
