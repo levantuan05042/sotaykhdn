@@ -27,6 +27,10 @@ import ApproverProductCategoryListPage from './pages/ApproverProductCategoryList
 import ApproverProductCategoryDetailPage from './pages/ApproverProductCategoryDetailPage';
 import ApproverProductSingleListPage from './pages/ApproverProductSingleListPage';
 import ApproverProductSingleDetailPage from './pages/ApproverProductSingleDetailPage';
+import ApproverBusinessListPage from './pages/ApproverBusinessListPage';
+import ApproverBusinessDetailPage from './pages/ApproverBusinessDetailPage';
+import ApproverCriteriaListPage from './pages/ApproverCriteriaListPage';
+import ApproverCriteriaDetailPage from './pages/ApproverCriteriaDetailPage';
 
 function App() {
   return (
@@ -74,6 +78,10 @@ function App() {
           <Route path="/approver/product-category/:categoryId" element={<ApproverProductCategoryDetailPage />} />
           <Route path="/approver/products/single" element={<ApproverProductSingleListPage />} />
           <Route path="/approver/products/single/:productId" element={<ApproverProductSingleDetailPage />} />
+          <Route path="/approver/business" element={<ApproverBusinessListPage />} />
+          <Route path="/approver/business/:businessId" element={<ApproverBusinessDetailPage />} />
+          <Route path="/approver/criteria" element={<ApproverCriteriaListPage />} />
+          <Route path="/approver/criteria/:criteriaId" element={<ApproverCriteriaDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

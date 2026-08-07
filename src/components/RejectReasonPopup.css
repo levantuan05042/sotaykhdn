@@ -1,0 +1,147 @@
+.custom-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.custom-popup-card {
+  background: #ffffff;
+  width: 460px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: popupFadeIn 0.25s ease-out;
+}
+
+.custom-popup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-popup-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.custom-popup-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.custom-popup-close-btn:hover {
+  color: #4b5563;
+}
+
+.custom-popup-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.custom-popup-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  text-align: left;
+}
+
+.custom-popup-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1f2937;
+  resize: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.custom-popup-textarea:focus {
+  outline: none;
+  border-color: #AE1C3F;
+  box-shadow: 0 0 0 3px rgba(174, 28, 63, 0.1);
+}
+
+.custom-popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  background-color: #f9fafb;
+  border-top: 1px solid #f0f0f0;
+}
+
+.custom-popup-btn-cancel {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.custom-popup-btn-cancel:hover {
+  background: #f3f4f6;
+  border-color: #c5c7cb;
+}
+
+.custom-popup-btn-submit {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.custom-popup-btn-submit.active {
+  background: #AE1C3F;
+}
+
+.custom-popup-btn-submit.active:hover {
+  background: #951633;
+}
+
+.custom-popup-btn-submit.disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+@keyframes popupFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -146,7 +146,7 @@ const EditorBlock: React.FC<EditorBlockProps> = ({ label, value }) => {
     <div className="form-group">
       <label className="form-label">{label}</label>
       <div className="editor-container disabled-editor">
-        <div 
+        <div
           className="editor-content-view"
           dangerouslySetInnerHTML={{ __html: value }}
         />
@@ -181,7 +181,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     const fetchDetail = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(activeRequestId));
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(activeRequestId));
         const data = response.data;
         if (initialNotes !== undefined) {
           data.notes = initialNotes;
@@ -203,7 +203,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST);
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST);
         setCategories(response.data);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -211,7 +211,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     };
     const fetchProductGroups = async () => {
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST);
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST);
         setProductGroups(response.data);
       } catch (error) {
         console.error("Error fetching product groups:", error);
@@ -228,7 +228,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     }
     const fetchBusinesses = async () => {
       try {
-        const response = await axios.get(`${API_ENDPOINTS.PRODUCT_BUSINESS.LIST}?categoryIds=${detail.productCategoryId}`);
+        const response = await axios.get(`${API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.LIST}?categoryIds=${detail.productCategoryId}`);
         setBusinesses(response.data);
       } catch (error) {
         console.error("Error fetching businesses:", error);
@@ -299,90 +299,96 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
       <Toaster position="top-right" />
 
       {/* HEADER BAR */}
-      <header className="detail-header shadow-sm">
-        <div className="header-left">
-          <button className="btn-back" onClick={handleBack}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <header className="detail-header shadow-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px' }}>
+        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button className="btn-back-only" onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
               <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
-            <span>Quay lại</span>
           </button>
-          <div className="header-separator" />
-          <h2 className="breadcrumb-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#595959' }}>Lô {detail.requestName || '1250384'}</span>
-            <span style={{ color: '#8c8c8c', fontSize: '14px' }}>&rsaquo;</span>
-            <span className="breadcrumb-active" style={{ fontWeight: 600 }}>{detail.name}</span>
-          </h2>
-        </div>
 
-        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span className="header-notes-label" style={{ fontSize: '13px', color: '#595959', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>Trạng thái:</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8C8C8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}>
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px' }}>
+            <span style={{ color: '#8C8C8C', fontWeight: 500 }}>Lô {detail.requestName || '1250384'}</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C8C8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+            <span style={{ color: '#171717', fontWeight: 600 }}>{detail.name}</span>
+          </div>
+
+          <span style={{ marginLeft: '12px', display: 'flex', alignItems: 'center' }}>
             {detail.notes === '0' && (
               <span className="note-badge note-badge--revision" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
                 </svg>
                 Yêu cầu chỉnh sửa
               </span>
             )}
             {detail.notes === '1' && (
               <span className="note-badge note-badge--rejected" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
                 </svg>
                 Từ chối
               </span>
             )}
             {detail.notes === '2' && (
               <span className="note-badge note-badge--approved" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                  <polyline points="20 6 9 17 4 12"/>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+                  <polyline points="20 6 9 17 4 12" />
                 </svg>
                 Đã duyệt
               </span>
             )}
             {!['0', '1', '2'].includes(detail.notes) && '—'}
           </span>
+        </div>
+
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {(detail.status === 'PENDING_APPROVAL' || detail.requestStatus === 'PENDING_APPROVAL') && (
             <>
-              <button 
-                className="btn-reject" 
-                onClick={() => handleSaveReview('1')} 
+              <button
+                className="btn-reject"
+                onClick={() => handleSaveReview('1')}
                 style={{ backgroundColor: '#ffffff', color: '#262626', border: '1px solid #d9d9d9', padding: '8px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
               >
                 Từ chối
               </button>
               {newComment.trim() !== '' ? (
-                <button 
-                  className="btn-revision-request-yellow" 
-                  onClick={() => handleSaveReview('0')} 
-                  style={{ 
-                    backgroundColor: '#FEF08A', 
-                    color: '#854D0E', 
-                    border: '1px solid #FEF08A', 
-                    padding: '8px 24px', 
-                    borderRadius: '6px', 
-                    cursor: 'pointer', 
-                    fontWeight: 600 
+                <button
+                  className="btn-revision-request-yellow"
+                  onClick={() => handleSaveReview('0')}
+                  style={{
+                    backgroundColor: '#FEF08A',
+                    color: '#854D0E',
+                    border: '1px solid #FEF08A',
+                    padding: '8px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600
                   }}
                 >
                   Yêu cầu chỉnh sửa
                 </button>
               ) : (
-                <button 
-                  className="btn-action-approve" 
-                  onClick={() => handleSaveReview('2')} 
-                  style={{ 
-                    backgroundColor: '#047857', 
-                    color: '#ffffff', 
-                    border: 'none', 
-                    padding: '8px 24px', 
-                    borderRadius: '6px', 
-                    cursor: 'pointer', 
-                    fontWeight: 600 
+                <button
+                  className="btn-action-approve"
+                  onClick={() => handleSaveReview('2')}
+                  style={{
+                    backgroundColor: '#047857',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '8px 24px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600
                   }}
                 >
                   Duyệt
@@ -393,11 +399,11 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         </div>
       </header>
 
-      {/* MAIN CONTAINER */}
-      <main className="detail-main-container">
-        
-        {/* LEFT COLUMN: FORM */}
-        <section className="detail-left-panel">
+  {/* MAIN CONTAINER */ }
+  < main className = "detail-main-container" >
+
+    {/* LEFT COLUMN: FORM */ }
+    < section className = "detail-left-panel" >
           
           <div className="form-group">
             <label className="form-label">
@@ -485,39 +491,43 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
             />
           </div>
 
-          {/* Dynamic Criteria Fields */}
-          {detail.details?.map((item: any, index: number) => (
-            <EditorBlock
-              key={item.criteriaId || index}
-              label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
-              value={item.noiDung || ''}
-            />
-          ))}
+{/* Dynamic Criteria Fields */ }
+{
+  detail.details?.map((item: any, index: number) => (
+    <EditorBlock
+      key={item.criteriaId || index}
+      label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
+      value={item.noiDung || ''}
+    />
+  ))
+}
 
-          {/* Last Field: Product Image */}
-          {detail.imageUrl && (
-            <div className="form-group">
-              <label className="form-label">Ảnh sản phẩm</label>
-              <div className="quickview-image-container" style={{ width: '100%', boxSizing: 'border-box' }}>
-                <img 
-                  src={new URL(`../assets/${detail.imageUrl}`, import.meta.url).href}
-                  alt="Ảnh sản phẩm" 
-                  className="quickview-product-img"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-            </div>
-          )}
+{/* Last Field: Product Image */ }
+{
+  detail.imageUrl && (
+    <div className="form-group">
+      <label className="form-label">Ảnh sản phẩm</label>
+      <div className="quickview-image-container" style={{ width: '100%', boxSizing: 'border-box' }}>
+        <img
+          src={new URL(`../assets/${detail.imageUrl}`, import.meta.url).href}
+          alt="Ảnh sản phẩm"
+          className="quickview-product-img"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      </div>
+    </div>
+  )
+}
 
-        </section>
+        </section >
 
-        {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
-        <section className="detail-right-panel">
-          
-          {/* Trạng thái hiển thị */}
-          <div className="right-card shadow-sm">
+  {/* RIGHT COLUMN: INFO PANEL & COMMENTS */ }
+  < section className = "detail-right-panel" >
+
+    {/* Trạng thái hiển thị */ }
+    < div className = "right-card shadow-sm" >
             <h3 className="right-card-title">
               Trạng thái hiển thị
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -535,10 +545,10 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               <option value="Ẩn">Ẩn</option>
               <option value="Hiển thị">Hiển thị</option>
             </select>
-          </div>
+          </div >
 
-          {/* Thông tin sản phẩm */}
-          <div className="right-card shadow-sm" style={{ marginTop: '16px' }}>
+  {/* Thông tin sản phẩm */ }
+  < div className = "right-card shadow-sm" style = {{ marginTop: '16px' }}>
             <h3 className="right-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Thông tin sản phẩm</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -583,10 +593,10 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                 }}>Phiên bản {detail.version || 1}</span>
               </div>
             </div>
-          </div>
+          </div >
 
-          {/* Bình luận */}
-          <div className="comments-container shadow-sm" style={{ marginTop: '16px' }}>
+  {/* Bình luận */ }
+  < div className = "comments-container shadow-sm" style = {{ marginTop: '16px' }}>
             <h2 className="comments-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
@@ -626,12 +636,12 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                 onChange={(e) => setNewComment(e.target.value)}
               />
             </div>
-          </div>
+          </div >
 
-        </section>
+        </section >
 
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
 

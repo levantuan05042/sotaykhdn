@@ -49,7 +49,7 @@ const ApproverRequestListPage: React.FC = () => {
     const fetchRequests = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT.LIST2, {
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST, {
           params: {
             keyword: searchTerm || undefined,
             status: selectedStatus || undefined,
@@ -129,18 +129,19 @@ const ApproverRequestListPage: React.FC = () => {
     {
       key: 'action',
       header: '',
-      width: '60px',
+      width: '80px',
       align: 'center',
       render: (row) => (
         <button
-          className="btn-icon-action"
+          className="btn-eye-view-red"
           title="Xem chi tiết"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/approver/batch/${row.id}`);
           }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B42318', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
@@ -151,7 +152,7 @@ const ApproverRequestListPage: React.FC = () => {
 
   return (
     <div className="request-list-page">
-      <h1 className="request-page-title">Danh sách yêu cầu</h1>
+      <h1 className="request-page-title">Phê duyệt lô sản phẩm</h1>
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">

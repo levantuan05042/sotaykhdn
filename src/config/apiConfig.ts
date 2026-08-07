@@ -29,6 +29,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `${BASE_URL}/criteria/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/criteria/delete/${id}`,
     LIST: `${BASE_URL}/criteria`,
+    REVIEW: (id: string | number) => `${BASE_URL}/criteria/review/${id}`,
   },
 
     PRODUCT_BUSINESS: {
@@ -36,6 +37,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `${BASE_URL}/business/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/business/delete/${id}`,
     LIST: `${BASE_URL}/business`,
+    REVIEW: (id: string | number) => `${BASE_URL}/business/review/${id}`,
   },
 
     PRODUCT: {
@@ -57,4 +59,37 @@ export const API_ENDPOINTS = {
       UPDATE_STATUS: (requestId: string) => `${BASE_URL}/product-requests/${requestId}/status`,
       PRODUCTS: (requestId: string) => `${BASE_URL}/product-requests/${requestId}/products`,
   },
+  APPROVER: {
+    PRODUCT_GROUPS: {
+      LIST: `${BASE_URL}/approver/product-groups`,
+      DETAIL: (id: string | number) => `${BASE_URL}/approver/product-groups/${id}`,
+      REVIEW: (id: string | number) => `${BASE_URL}/approver/product-groups/review/${id}`,
+    },
+    PRODUCT_CATEGORY: {
+      LIST: `${BASE_URL}/approver/product-category`,
+      DETAIL: (id: string | number) => `${BASE_URL}/approver/product-category/${id}`,
+      REVIEW: (id: string | number) => `${BASE_URL}/approver/product-category/review/${id}`,
+    },
+    PRODUCT_CRITERIA: {
+      LIST: `${BASE_URL}/approver/criteria`,
+      DETAIL: (id: string | number) => `${BASE_URL}/approver/criteria/${id}`,
+      REVIEW: (id: string | number) => `${BASE_URL}/approver/criteria/review/${id}`,
+    },
+    PRODUCT_BUSINESS: {
+      LIST: `${BASE_URL}/approver/business`,
+      DETAIL: (id: string | number) => `${BASE_URL}/approver/business/${id}`,
+      REVIEW: (id: string | number) => `${BASE_URL}/approver/business/review/${id}`,
+    },
+    PRODUCT: {
+      SINGLE_FOR_APPROVAL: `${BASE_URL}/approver/products/single/for-approval`,
+      DETAIL: (id: string | number) => `${BASE_URL}/approver/products/detail/${id}`,
+      REVIEW: (id: string | number) => `${BASE_URL}/approver/products/review/${id}`,
+    },
+    PRODUCT_REQUESTS: {
+      LIST: `${BASE_URL}/approver/product-requests`,
+      GET_DETAIL: (requestId: string) => `${BASE_URL}/approver/product-requests/${requestId}`,
+      PRODUCTS: (requestId: string) => `${BASE_URL}/approver/product-requests/${requestId}/products`,
+      UPDATE_STATUS: (requestId: string) => `${BASE_URL}/approver/product-requests/${requestId}/status`,
+    }
+  }
 };

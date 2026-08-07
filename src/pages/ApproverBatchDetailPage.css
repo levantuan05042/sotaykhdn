@@ -833,7 +833,7 @@
 
 .formGroup {
   margin-bottom: 20px;
-  margin-top: 16px;
+  /* margin-top: 16px; */
 }
 
 .batch-form-select {

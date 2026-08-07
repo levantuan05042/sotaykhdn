@@ -10,14 +10,14 @@ interface CommentItem {
   createdBy: string;
   createdAt: string;
   content: string;
-  comment?: string;
 }
 
-interface ProductGroupDetail {
+interface BusinessDetail {
   id: string;
   name: string;
   status: string;
-  superGroup: string;
+  categoryName: string;
+  groupName: string;
   createdBy: string;
   approvedBy: string;
   createdAt: string;
@@ -26,40 +26,36 @@ interface ProductGroupDetail {
   comments: CommentItem[];
 }
 
-const SUPER_GROUP_LABELS: Record<string, string> = {
-  SERVICE: 'Chương trình dịch vụ',
-  INSURANCE: 'Bảo hiểm',
-  PROGRAM: 'Chương trình ưu đãi',
-};
-
-export const ApproverProductGroupDetailPage: React.FC = () => {
-  const { groupId } = useParams<{ groupId: string }>();
+export const ApproverBusinessDetailPage: React.FC = () => {
+  const { businessId } = useParams<{ businessId: string }>();
   const navigate = useNavigate();
 
-  const [detail, setDetail] = useState<ProductGroupDetail | null>(null);
+  const [detail, setDetail] = useState<BusinessDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchDetail = async () => {
-    if (!groupId) return;
+    if (!businessId) return;
     setLoading(true);
     try {
-      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.DETAIL(groupId));
-      const groupData = response.data;
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.DETAIL(businessId));
+      const busData = response.data;
+      
       setDetail({
-        id: groupData.id,
-        name: groupData.name,
-        status: groupData.status,
-        superGroup: groupData.superGroup,
-        createdBy: groupData.createdBy,
-        approvedBy: groupData.approvedBy,
-        createdAt: groupData.createdAt,
-        version: groupData.version,
-        active: groupData.active,
-        comments: groupData.comments || [],
+        id: busData.id,
+        name: busData.name,
+        status: busData.status,
+        categoryName: busData.categoryName || '---',
+        groupName: busData.groupName || '---',
+        createdBy: busData.createdBy,
+        approvedBy: busData.approvedBy,
+        createdAt: busData.createdAt,
+        version: busData.version,
+        active: busData.active,
+        comments: busData.comments || [],
       });
     } catch (error) {
-      console.error('Error loading product group details:', error);
-      toast.error('Lỗi khi tải chi tiết nhóm sản phẩm');
+      console.error('Error loading business details:', error);
+      toast.error('Lỗi khi tải chi tiết nghiệp vụ sản phẩm');
     } finally {
       setLoading(false);
     }
@@ -67,14 +63,14 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
 
   useEffect(() => {
     fetchDetail();
-  }, [groupId]);
+  }, [businessId]);
 
   const handleBack = () => {
-    navigate('/approver/product-groups');
+    navigate('/approver/business');
   };
 
   const handleSaveReview = async (statusVal: string, commentVal: string) => {
-    if (!groupId || !detail) return;
+    if (!businessId || !detail) return;
     
     if ((statusVal === 'REJECTED' || statusVal === 'NEEDS_REVISION') && !commentVal.trim()) {
       toast.error('Vui lòng nhập nội dung góp ý / lý do chỉnh sửa!');
@@ -87,16 +83,16 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
 
     try {
       setLoading(true);
-      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.REVIEW(groupId), {
+      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.REVIEW(businessId), {
         status: statusVal,
         comment: commentVal,
         approvedBy: approvedByStr,
       });
 
-      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt nhóm sản phẩm thành công!' : 'Đã phản hồi ý kiến đánh giá!');
+      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt nghiệp vụ thành công!' : 'Đã phản hồi ý kiến đánh giá!');
       fetchDetail();
     } catch (error: any) {
-      console.error('Lỗi khi lưu phê duyệt nhóm sản phẩm:', error);
+      console.error('Lỗi khi lưu phê duyệt nghiệp vụ:', error);
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật phê duyệt');
     } finally {
       setLoading(false);
@@ -106,7 +102,7 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
   if (loading && !detail) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="loading-text">Đang tải chi tiết nhóm sản phẩm...</p>
+        <p className="loading-text">Đang tải chi tiết nghiệp vụ...</p>
       </div>
     );
   }
@@ -114,14 +110,14 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="error-text">Không tìm thấy thông tin nhóm sản phẩm</p>
+        <p className="error-text">Không tìm thấy thông tin nghiệp vụ</p>
       </div>
     );
   }
 
   return (
     <ApproverDetailWrapper
-      moduleName="nhóm sản phẩm"
+      moduleName="nghiệp vụ"
       itemName={detail.name}
       status={detail.status}
       createdBy={detail.createdBy}
@@ -135,17 +131,27 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
       onSaveReview={handleSaveReview}
     >
       <div className="formGroup">
-        <label className="formLabel">Thuộc nhóm <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Nhóm sản phẩm <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 
-          value={SUPER_GROUP_LABELS[detail.superGroup] || detail.superGroup} 
+          value={detail.groupName} 
           readOnly 
         />
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Nhóm sản phẩm</label>
+        <label className="formLabel">Danh mục sản phẩm <span className="required-asterisk">(*)</span></label>
+        <input 
+          type="text" 
+          className="formInput readonly" 
+          value={detail.categoryName} 
+          readOnly 
+        />
+      </div>
+
+      <div className="formGroup">
+        <label className="formLabel">Tên nghiệp vụ sản phẩm <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 
@@ -157,4 +163,4 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
   );
 };
 
-export default ApproverProductGroupDetailPage;
+export default ApproverBusinessDetailPage;

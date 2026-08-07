@@ -35,7 +35,7 @@ export const EDIT_MENU_ITEMS: MenuItem[] = [
 export const APPROVE_MENU_ITEMS: MenuItem[] = [
   { name: 'Phê duyệt nhóm sản phẩm', path: '/approver/product-groups' },
   { name: 'Phê duyệt danh mục sản phẩm', path: '/approver/product-category' },
-  { name: 'Phê duyệt nghiệp vụ' },
+  { name: 'Phê duyệt nghiệp vụ', path: '/approver/business' },
   {
     name: 'Phê duyệt sản phẩm',
     children: [
@@ -43,7 +43,7 @@ export const APPROVE_MENU_ITEMS: MenuItem[] = [
       { name: 'Sản phẩm theo lô', path: '/approver/request-list' },
     ],
   },
-  { name: 'Phê duyệt tiêu chí' },
+  { name: 'Phê duyệt tiêu chí', path: '/approver/criteria' },
 ];
 // 3. Menu Quyền Tra cứu (VIEWER)
 export const VIEWER_MENU_ITEMS: MenuItem[] = [

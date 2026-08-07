@@ -6,6 +6,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import StatusBadge from '../components/ui/StatusBadge';
 import ApproverProductDetailPage from './ApproverProductDetailPage';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import RejectReasonPopup from '../components/RejectReasonPopup';
+import ApproveConfirmPopup from '../components/ApproveConfirmPopup';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
@@ -27,6 +29,8 @@ const ApproverBatchDetailPage: React.FC = () => {
   const [quickViewProduct, setQuickViewProduct] = useState<ProductItem | null>(null);
   const [selectedDetailProductId, setSelectedDetailProductId] = useState<string | null>(null);
   const [batchRequest, setBatchRequest] = useState<any>(null);
+  const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+  const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
 
   // const [loading, setLoading] = useState(false);
 
@@ -36,11 +40,11 @@ const ApproverBatchDetailPage: React.FC = () => {
       // setLoading(true);
       try {
         // Fetch batch request metadata
-        const batchRes = await axios.get(API_ENDPOINTS.PRODUCT_REQUESTS.GET_DETAIL(requestId));
+        const batchRes = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.GET_DETAIL(requestId));
         setBatchRequest(batchRes.data);
 
         // Fetch products
-        const response = await axios.get(API_ENDPOINTS.PRODUCT_REQUESTS.PRODUCTS(requestId));
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.PRODUCTS(requestId));
         const mapped: ProductItem[] = response.data.map((item: any) => {
           const characItem = item.details?.find((d: any) => d.tieuChi?.toLowerCase().includes('đặc tính'));
           return {
@@ -78,7 +82,7 @@ const ApproverBatchDetailPage: React.FC = () => {
       setQuickViewProduct(p);
       setLoadingQuickView(true);
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(p.id));
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(p.id));
         setQuickViewDetails(response.data);
       } catch (error) {
         console.error("Error fetching product detail for quick view:", error);
@@ -102,19 +106,12 @@ const ApproverBatchDetailPage: React.FC = () => {
     };
   }, []);
 
-  const handleRejectBatch = async () => {
-    const commentText = window.prompt("Nhập lý do từ chối toàn bộ lô sản phẩm (bắt buộc):");
-    if (commentText === null) return;
-    if (!commentText.trim()) {
-      toast.error("Lý do từ chối không được để trống!");
-      return;
-    }
-
+  const handleRejectBatchSubmit = async (commentText: string) => {
     try {
       const username = localStorage.getItem('currentUserUsername') || '';
       const branchCode = localStorage.getItem('currentUserBranchCode') || '';
       const approvedByStr = username ? `${username}_${branchCode}` : '';
-      await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
+      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: 'REJECTED',
         approvedBy: approvedByStr,
         productReviews: products.map(p => ({
@@ -131,25 +128,26 @@ const ApproverBatchDetailPage: React.FC = () => {
     }
   };
 
-  const handleApproveBatch = async () => {
-    // Determine status: if there's any product with notes === '0', it's NEEDS_REVISION, otherwise ACTIVE
-    const hasRevision = products.some(p => p.notes === '0');
-    const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'ACTIVE';
-    
+  const triggerApproveBatch = () => {
     // Check if revision comments are filled:
     const missingComment = products.find(p => p.notes === '0' && !p.feedback?.trim());
     if (missingComment) {
       toast.error(`Sản phẩm "${missingComment.name}" yêu cầu chỉnh sửa bắt buộc phải nhập nội dung góp ý!`);
       return;
     }
+    setIsApproveConfirmOpen(true);
+  };
 
-    if (!window.confirm(`Bạn có chắc chắn muốn phê duyệt lưu lô sản phẩm này với trạng thái "${hasRevision ? 'Gửi lại chỉnh sửa' : 'Hoàn thành'}" không?`)) return;
+  const handleApproveBatchSubmit = async () => {
+    // Determine status: if there's any product with notes === '0', it's NEEDS_REVISION, otherwise ACTIVE
+    const hasRevision = products.some(p => p.notes === '0');
+    const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'ACTIVE';
 
     try {
       const username = localStorage.getItem('currentUserUsername') || '';
       const branchCode = localStorage.getItem('currentUserBranchCode') || '';
       const approvedByStr = username ? `${username}_${branchCode}` : '';
-      await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
+      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: targetStatus,
         approvedBy: approvedByStr,
         productReviews: products.map(p => ({
@@ -223,14 +221,14 @@ const ApproverBatchDetailPage: React.FC = () => {
               <>
                 <button 
                   className="btn-draft-action" 
-                  onClick={handleRejectBatch}
+                  onClick={() => setIsRejectReasonOpen(true)}
                   style={{ backgroundColor: '#ffffff', color: '#dc2626', border: '1px solid #fca5a5' }}
                 >
                   Từ chối toàn bộ lô
                 </button>
                 <button 
                   className="btn-send-action" 
-                  onClick={handleApproveBatch}
+                  onClick={triggerApproveBatch}
                   style={{ backgroundColor: '#AE1C3F', color: '#ffffff' }}
                 >
                   Gửi
@@ -505,6 +503,24 @@ const ApproverBatchDetailPage: React.FC = () => {
         })(),
         document.body
       )}
+      <ApproveConfirmPopup
+        isOpen={isApproveConfirmOpen}
+        onClose={() => setIsApproveConfirmOpen(false)}
+        onConfirm={() => {
+          setIsApproveConfirmOpen(false);
+          handleApproveBatchSubmit();
+        }}
+        itemName={batchRequest?.name || 'Lô sản phẩm'}
+      />
+
+      <RejectReasonPopup
+        isOpen={isRejectReasonOpen}
+        onClose={() => setIsRejectReasonOpen(false)}
+        onSubmit={(reason) => {
+          setIsRejectReasonOpen(false);
+          handleRejectBatchSubmit(reason);
+        }}
+      />
     </div>
   );
 };

@@ -15,6 +15,8 @@ interface ProductGroupItem {
   status: string;
   createdBy: string;
   approvedBy: string;
+  active?: boolean;
+  version?: number;
 }
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
@@ -47,7 +49,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
     const fetchProductGroups = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST, {
           params: {
             keyword: searchTerm || undefined,
             status: selectedStatus || undefined,
@@ -64,6 +66,8 @@ export const ApproverProductGroupListPage: React.FC = () => {
             status: item.status || 'DRAFT',
             createdBy: item.createdBy || '---',
             approvedBy: item.approvedBy || '---',
+            active: item.active !== false,
+            version: item.version,
           };
         });
 
@@ -98,14 +102,32 @@ export const ApproverProductGroupListPage: React.FC = () => {
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
+      key: 'active',
+      header: 'Hiệu lực',
+      render: (row) => (
+        <span style={{ color: row.active ? '#065F46' : '#6B7280', fontWeight: 600 }}>
+          {row.active ? 'Đang hiển thị' : 'Đang ẩn'}
+        </span>
+      ),
+    },
+    {
       key: 'createdBy',
       header: 'Người tạo',
       render: (row) => row.createdBy,
     },
     {
       key: 'approvedBy',
-      header: 'Người kiểm duyệt',
+      header: 'Người Phê duyệt',
       render: (row) => formatApprovedBy(row.approvedBy),
+    },
+    {
+      key: 'version',
+      header: 'Phiên bản',
+      render: (row) => (
+        <span style={{ fontWeight: 600, color: '#171717' }}>
+          {row.version ? `Phiên bản ${row.version}` : '--'}
+        </span>
+      ),
     },
     {
       key: 'action',
@@ -114,14 +136,15 @@ export const ApproverProductGroupListPage: React.FC = () => {
       align: 'center',
       render: (row) => (
         <button
-          className="btn-eye-view-green"
+          className="btn-eye-view-red"
           title="Xem chi tiết"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/approver/product-groups/${row.id}`);
           }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B42318', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>

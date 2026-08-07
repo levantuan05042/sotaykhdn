@@ -1,0 +1,56 @@
+.custom-popup-confirm-card {
+  background: #ffffff;
+  width: 400px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: popupFadeIn 0.25s ease-out;
+}
+
+.custom-confirm-body {
+  padding: 30px 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.custom-confirm-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.custom-confirm-highlight {
+  font-weight: 700;
+  color: #AE1C3F; /* Crimson/dark red color from Agribank brand */
+}
+
+.custom-confirm-footer {
+  display: flex;
+  justify-content: right;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: #f9fafb;
+  border-top: 1px solid #f0f0f0;
+}
+
+.custom-popup-btn-approve {
+  background: #AE1C3F;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.custom-popup-btn-approve:hover {
+  background: #951633;
+}

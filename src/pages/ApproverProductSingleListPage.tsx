@@ -41,7 +41,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST);
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST);
         const mapped: FilterOption[] = [
           { label: 'Tất cả loại nội dung', value: '' },
           ...response.data.map((g: any) => ({
@@ -62,7 +62,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(API_ENDPOINTS.PRODUCT.SINGLE_FOR_APPROVAL, {
+        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.SINGLE_FOR_APPROVAL, {
           params: {
             keyword: searchTerm || undefined,
             status: selectedStatus || undefined,
@@ -113,30 +113,31 @@ export const ApproverProductSingleListPage: React.FC = () => {
     {
       key: 'name',
       header: 'Tên nội dung',
+      width: '30%',
       render: (row) => <span className="product-item-title-text">{row.name}</span>,
     },
     {
       key: 'createdBy',
       header: 'Người tạo',
-      width: '180px',
+      // width: '180px',
       render: (row) => row.createdBy,
     },
     {
       key: 'approvedBy',
       header: 'Người Phê duyệt',
-      width: '180px',
+      // width: '180px',
       render: (row) => formatApprovedBy(row.approvedBy),
     },
     {
       key: 'status',
       header: 'Trạng thái',
-      width: '180px',
+      // width: '180px',
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'createdAt',
       header: 'Thời gian',
-      width: '130px',
+      // width: '130px',
       render: (row) => row.createdAt,
     },
     {
@@ -146,14 +147,15 @@ export const ApproverProductSingleListPage: React.FC = () => {
       align: 'center',
       render: (row) => (
         <button
-          className="btn-eye-view-green"
+          className="btn-eye-view-red"
           title="Xem chi tiết phê duyệt"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/approver/products/single/${row.id}`);
           }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B42318', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>

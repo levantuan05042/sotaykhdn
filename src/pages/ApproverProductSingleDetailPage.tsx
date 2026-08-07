@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import { formatApprovedBy } from '../utils/formatUtils';
-import './ApproverProductSingleDetailPage.css';
+import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 
 interface CommentItem {
   id: string;
@@ -48,11 +47,12 @@ interface EditorBlockProps {
 
 const EditorBlock: React.FC<EditorBlockProps> = ({ label, value }) => {
   return (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      <div className="editor-container disabled-editor">
+    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <label className="form-label" style={{ fontSize: '13px', fontWeight: 700, color: '#1A191B', textAlign: 'left' }}>{label}</label>
+      <div className="editor-container disabled-editor" style={{ border: '1px solid #D1D5DB', borderRadius: '12px', padding: '12px 20px', backgroundColor: '#ffffff', minHeight: '48px', boxSizing: 'border-box' }}>
         <div 
           className="editor-content-view"
+          style={{ fontSize: '14px', color: '#1A191B', textAlign: 'left', lineHeight: '1.5' }}
           dangerouslySetInnerHTML={{ __html: value }}
         />
       </div>
@@ -66,7 +66,6 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
 
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
-  const [newComment, setNewComment] = useState('');
 
   const [categories, setCategories] = useState<any[]>([]);
   const [productGroups, setProductGroups] = useState<any[]>([]);
@@ -76,7 +75,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
     if (!productId) return;
     setLoading(true);
     try {
-      const response = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(productId));
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(productId));
       setDetail(response.data);
     } catch (error) {
       console.error("Error fetching single product detail:", error);
@@ -95,8 +94,8 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
     const fetchMetadata = async () => {
       try {
         const [groupsRes, categoriesRes] = await Promise.all([
-          axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST),
-          axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST)
+          axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST),
+          axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST)
         ]);
         setProductGroups(groupsRes.data);
         setCategories(categoriesRes.data);
@@ -115,7 +114,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
     }
     const fetchBusinesses = async () => {
       try {
-        const response = await axios.get(`${API_ENDPOINTS.PRODUCT_BUSINESS.LIST}?categoryIds=${detail.productCategoryId}`);
+        const response = await axios.get(`${API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.LIST}?categoryIds=${detail.productCategoryId}`);
         setBusinesses(response.data);
       } catch (error) {
         console.error("Error fetching businesses:", error);
@@ -128,25 +127,31 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
     navigate('/approver/products/single');
   };
 
-  const handleReview = async (notesVal: string) => {
+  const handleSaveReview = async (statusVal: string, commentVal: string) => {
     if (!productId || !detail) return;
 
-    // Yêu cầu nhập lý do góp ý khi từ chối hoặc cần chỉnh sửa
-    if ((notesVal === '0' || notesVal === '1') && !newComment.trim()) {
+    let notesVal = '2'; // Default ACTIVE
+    if (statusVal === 'REJECTED') {
+      notesVal = '1';
+    } else if (statusVal === 'NEEDS_REVISION') {
+      notesVal = '0';
+    }
+
+    if ((notesVal === '0' || notesVal === '1') && !commentVal.trim()) {
       toast.error("Vui lòng điền nội dung góp ý / lý do chỉnh sửa vào ô bình luận!");
       return;
     }
 
     const username = localStorage.getItem('currentUserUsername') || '';
     const branchCode = localStorage.getItem('currentUserBranchCode') || '';
-    const approvedBy = username ? `${username}_${branchCode}` : '';
+    const approvedByStr = username ? `${username}_${branchCode}` : '';
 
     try {
       setLoading(true);
-      await axios.post(API_ENDPOINTS.PRODUCT.REVIEW(productId), {
+      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT.REVIEW(productId), {
         notes: notesVal,
-        comment: newComment.trim(),
-        approvedBy: approvedBy
+        comment: commentVal,
+        approvedBy: approvedByStr
       });
 
       toast.success(
@@ -156,7 +161,6 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
             ? "Đã gửi yêu cầu chỉnh sửa sản phẩm!"
             : "Đã từ chối sản phẩm thành công!"
       );
-      setNewComment('');
       fetchDetail();
     } catch (error: any) {
       console.error("Error submitting review:", error);
@@ -168,7 +172,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
 
   if (loading && !detail) {
     return (
-      <div className="product-single-detail-page flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <p className="loading-text">Đang tải chi tiết sản phẩm lẻ...</p>
       </div>
     );
@@ -176,254 +180,104 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
 
   if (!detail) {
     return (
-      <div className="product-single-detail-page flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px]">
         <p className="error-text">Không tìm thấy thông tin sản phẩm lẻ</p>
       </div>
     );
   }
 
-  const isPending = detail.status === 'PENDING_APPROVAL';
-
   return (
-    <div className="product-single-detail-page">
-      <Toaster position="top-right" />
-
-      {/* HEADER BAR */}
-      <header className="detail-header shadow-sm">
-        <div className="header-left">
-          <button className="btn-back" onClick={handleBack}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-            <span>Quay lại</span>
-          </button>
-          <div className="header-separator" />
-          <h2 className="breadcrumb-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ color: '#595959' }}>Nhóm sản phẩm</span>
-            <span style={{ color: '#8c8c8c', fontSize: '14px' }}>&rsaquo;</span>
-            <span className="breadcrumb-active" style={{ fontWeight: 600 }}>{detail.name}</span>
-          </h2>
-          <span className="status-header-badge note-badge" style={{ marginLeft: '12px' }}>
-            {detail.status === 'PENDING_APPROVAL' && <span className="status-label status-pending">Chờ duyệt</span>}
-            {detail.status === 'ACTIVE' && <span className="status-label status-active">Đã duyệt</span>}
-            {detail.status === 'REJECTED' && <span className="status-label status-rejected">Từ chối</span>}
-            {detail.status === 'NEEDS_REVISION' && <span className="status-label status-revision">Cần chỉnh sửa</span>}
-          </span>
-        </div>
-
-        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {isPending && (
-            <>
-              <button 
-                className="btn-action-reject" 
-                onClick={() => handleReview('1')} 
-              >
-                Từ chối
-              </button>
-              {newComment.trim() !== '' ? (
-                <button 
-                  className="btn-action-revision" 
-                  onClick={() => handleReview('0')} 
-                >
-                  Yêu cầu chỉnh sửa
-                </button>
-              ) : (
-                <button 
-                  className="btn-action-approve" 
-                  onClick={() => handleReview('2')} 
-                >
-                  Duyệt
-                </button>
-              )}
-            </>
-          )}
-        </div>
-      </header>
-
-      {/* MAIN CONTAINER */}
-      <main className="detail-main-container">
-        
-        {/* LEFT COLUMN: FORM */}
-        <section className="detail-left-panel">
-          
-          <div className="form-group">
-            <label className="form-label">
-              Nhóm sản phẩm <span className="form-label-required">(*)</span>
-            </label>
-            <select
-              className="form-select"
-              value={detail.productGroupId || ''}
-              disabled
-            >
-              <option value="">Chọn nhóm sản phẩm</option>
-              {productGroups.map((g: any) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group-row">
-            <div className="form-group">
-              <label className="form-label">Danh mục sản phẩm</label>
-              <select
-                className="form-select"
-                value={detail.productCategoryId || ''}
-                disabled
-              >
-                <option value="">Chọn danh mục sản phẩm</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Nghiệp vụ</label>
-              <select
-                className="form-select"
-                value={detail.businessId || ''}
-                disabled
-              >
-                <option value="">Chọn nghiệp vụ</option>
-                {businesses.map((b: any) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              value={detail.name || ''}
-              readOnly
-            />
-          </div>
-
-          {/* Dynamic Criteria Fields */}
-          {detail.details?.map((item: any, index: number) => (
-            <EditorBlock
-              key={item.criteriaId || index}
-              label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
-              value={item.noiDung || ''}
-            />
+    <ApproverDetailWrapper
+      moduleName="sản phẩm"
+      itemName={detail.name}
+      status={detail.status}
+      createdBy={detail.createdBy}
+      approvedBy={detail.approvedBy}
+      createdAt={detail.createdAt}
+      version={detail.version}
+      comments={detail.comments}
+      isPending={detail.status === 'PENDING_APPROVAL'}
+      loading={loading}
+      onBack={handleBack}
+      onSaveReview={handleSaveReview}
+    >
+      <div className="formGroup">
+        <label className="formLabel">Nhóm sản phẩm <span className="required-asterisk">(*)</span></label>
+        <select
+          className="formSelect"
+          value={detail.productGroupId || ''}
+          disabled
+        >
+          <option value="">Chọn nhóm sản phẩm</option>
+          {productGroups.map((g: any) => (
+            <option key={g.id} value={g.id}>{g.name}</option>
           ))}
+        </select>
+      </div>
 
-          {/* Last Field: Product Image */}
-          {detail.imageUrl && (
-            <div className="form-group">
-              <label className="form-label">Ảnh sản phẩm</label>
-              <div className="quickview-image-container" style={{ width: '100%', boxSizing: 'border-box' }}>
-                <img 
-                  src={new URL(`../assets/${detail.imageUrl}`, import.meta.url).href}
-                  alt="Ảnh sản phẩm" 
-                  className="quickview-product-img"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
-              </div>
-            </div>
-          )}
+      <div style={{ display: 'flex', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
+        <div className="formGroup" style={{ flex: 1 }}>
+          <label className="formLabel">Danh mục sản phẩm</label>
+          <select
+            className="formSelect"
+            value={detail.productCategoryId || ''}
+            disabled
+          >
+            <option value="">Chọn danh mục sản phẩm</option>
+            {categories.map((c: any) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="formGroup" style={{ flex: 1 }}>
+          <label className="formLabel">Nghiệp vụ</label>
+          <select
+            className="formSelect"
+            value={detail.businessId || ''}
+            disabled
+          >
+            <option value="">Chọn nghiệp vụ</option>
+            {businesses.map((b: any) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-        </section>
+      <div className="formGroup">
+        <label className="formLabel">Tên sản phẩm dịch vụ <span className="required-asterisk">(*)</span></label>
+        <input
+          type="text"
+          className="formInput readonly"
+          value={detail.name || ''}
+          readOnly
+        />
+      </div>
 
-        {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
-        <section className="detail-right-panel">
-          
-          {/* Trạng thái hiển thị */}
-          <div className="right-card shadow-sm">
-            <h3 className="right-card-title">
-              Trạng thái hiển thị
-            </h3>
-            <select
-              className="form-select"
-              value={detail.active ? 'Hiển thị' : 'Ẩn'}
-              disabled
-            >
-              <option value="Ẩn">Ẩn</option>
-              <option value="Hiển thị">Hiển thị</option>
-            </select>
+      {detail.details?.map((item: any, index: number) => (
+        <EditorBlock
+          key={item.criteriaId || index}
+          label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
+          value={item.noiDung || ''}
+        />
+      ))}
+
+      {detail.imageUrl && (
+        <div className="formGroup">
+          <label className="formLabel">Ảnh sản phẩm</label>
+          <div className="quickview-image-container" style={{ width: '100%', display: 'flex', boxSizing: 'border-box', marginTop: '4px' }}>
+            <img 
+              src={new URL(`../assets/${detail.imageUrl}`, import.meta.url).href}
+              alt="Ảnh sản phẩm" 
+              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '12px', border: '1px solid #E5E7EB', objectFit: 'contain' }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
           </div>
-
-          {/* Thông tin sản phẩm */}
-          <div className="right-card shadow-sm" style={{ marginTop: '16px' }}>
-            <h3 className="right-card-title">
-              <span>Thông tin sản phẩm</span>
-            </h3>
-            <div className="product-meta-grid">
-              <div className="meta-item">
-                <span className="meta-label">Người tạo</span>
-                <span className="meta-value">{detail.createdBy || '—'}</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Người kiểm duyệt</span>
-                <span className="meta-value">{formatApprovedBy(detail.approvedBy)}</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Thời gian tạo</span>
-                <span className="meta-value">
-                  {detail.createdAt ? new Date(detail.createdAt).toLocaleDateString('vi-VN') : '—'}
-                </span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Phiên bản</span>
-                <span className="version-tag">Phiên bản {detail.version || 1}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bình luận */}
-          <div className="comments-container shadow-sm" style={{ marginTop: '16px' }}>
-            <h2 className="comments-header">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-              <span>Bình luận</span>
-            </h2>
-
-            <div className="comments-list">
-              {detail.comments && detail.comments.map((comment: any) => {
-                const dateStr = comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('vi-VN') : '—';
-                return (
-                  <div className="comment-item" key={comment.id}>
-                    <div className="comment-meta">
-                      <div className="comment-avatar">
-                        <img src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92" alt="Avatar" />
-                      </div>
-                      <div className="comment-author-info">
-                        <span className="comment-author">{comment.createdBy || 'Cán bộ duyệt'}</span>
-                        <span className="comment-date">{dateStr}</span>
-                      </div>
-                    </div>
-                    <div className="comment-body">
-                      {comment.comment}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="comment-input-area">
-              <textarea
-                className="comment-textarea"
-                rows={4}
-                placeholder="Điền nội dung chỉnh sửa"
-                value={newComment}
-                disabled={!isPending}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-            </div>
-          </div>
-
-        </section>
-
-      </main>
-    </div>
+        </div>
+      )}
+    </ApproverDetailWrapper>
   );
 };
 
