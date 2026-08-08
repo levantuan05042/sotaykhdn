@@ -4,6 +4,7 @@ import axios from 'axios';
 import './ProductCategoryPage.css';
 import ProductCategoryTable from '../components/ProductCategoryTable';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
+import { getUserMap, getFullName } from '../utils/userUtils'; // IMPORT TỪ UTILS
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -70,68 +71,55 @@ const ProductGroupPage: React.FC = () => {
   }, []);
 
   // Gọi API lấy danh sách Danh mục theo các bộ lọc và Map FullName
-const fetchData = async () => {
-  setLoading(true);
-  try {
-    const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
-      params: {
-        keyword: searchTerm.trim() || undefined,
-        status: selectedStatus || undefined,
-        types: selectedGroups.length > 0 ? selectedGroups : undefined, 
-      },
-      paramsSerializer: (params) => {
-        const searchParams = new URLSearchParams();
-        Object.entries(params).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            value.forEach(v => searchParams.append(key, v)); 
-          } else if (value !== undefined) {
-            searchParams.append(key, String(value));
-          }
-        });
-        return searchParams.toString();
-      }
-    });
-    
-    const resultData = response.data?.content || response.data;
-    const rawList = Array.isArray(resultData) ? resultData : [];
-    let userMap: Record<string, string> = {};
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      const rawUsers = sessionStorage.getItem('beadminUsers');
-      console.log("1. Raw Users từ Storage:", rawUsers); 
+      const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
+        params: {
+          keyword: searchTerm.trim() || undefined,
+          status: selectedStatus || undefined,
+          types: selectedGroups.length > 0 ? selectedGroups : undefined, 
+        },
+        paramsSerializer: (params) => {
+          const searchParams = new URLSearchParams();
+          Object.entries(params).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach(v => searchParams.append(key, v)); 
+            } else if (value !== undefined) {
+              searchParams.append(key, String(value));
+            }
+          });
+          return searchParams.toString();
+        }
+      });
       
-      if (rawUsers) {
-        const parsedUsers = JSON.parse(rawUsers);
-        const userList = Array.isArray(parsedUsers) ? parsedUsers : [];
-      
-        userList.forEach((user: any) => {
-          if (user.username) {
-            userMap[user.username] = user.fullname; 
-          }
-        });
-        console.log("2. User Map sau khi tạo:", userMap); 
-      }
-    } catch (e) {
-      console.error('Lỗi khi đọc danh sách User từ sessionStorage:', e);
+      const resultData = response.data?.content || response.data;
+      const rawList = Array.isArray(resultData) ? resultData : [];
+
+      // SỬ DỤNG HÀM TỪ UTILS: Lấy map user 1 lần duy nhất
+      const userMap = getUserMap();
+
+      // Sử dụng hàm getFullName để tách chuỗi và lấy tên hiển thị
+      const enrichedData = rawList.map((item: any) => {
+        // Fallback giữa createdBy và createdByFullName từ API trả về
+        const creatorCode = item.createdBy || item.createdByFullName; 
+        const approverCode = item.approvedBy;
+
+        return {
+          ...item,
+          createdByFullName: getFullName(creatorCode, userMap) || '---',
+          approvedBy: getFullName(approverCode, userMap) || '---' 
+        };
+      });
+
+      setData(enrichedData);
+    } catch (error) {
+      console.error('Lỗi khi gọi API danh sách danh mục sản phẩm:', error);
+      setData([]);
+    } finally {
+      setLoading(false);
     }
-    console.log("3. Dữ liệu API gốc chưa Map:", rawList);
-    const enrichedData = rawList.map((item: any) => {
-      const creatorCode = item.createdBy || item.createdByFullName; 
-      const approverCode = item.approvedBy;
-      return {
-        ...item,
-        createdByFullName: userMap[creatorCode] || creatorCode || '---',
-        approvedBy: userMap[approverCode] || approverCode || '---' 
-      };
-    });
-    console.log("4. Dữ liệu sau khi Map xong:", enrichedData); 
-    setData(enrichedData);
-  } catch (error) {
-    console.error('Lỗi khi gọi API danh sách danh mục sản phẩm:', error);
-    setData([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   // Debounce tìm kiếm 500ms
   useEffect(() => {

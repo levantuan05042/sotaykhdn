@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ProductGroupPage.css';
 import ProductGroupTable from '../components/ProductGroupTable';
-import { API_ENDPOINTS } from '../config/apiConfig'; // <-- IMPORT FILE CẤU HÌNH TẬP TRUNG
+import { API_ENDPOINTS } from '../config/apiConfig'; 
+import { getUserMap, getFullName } from '../utils/userUtils';
 
 // --- MAPPING DATA ---
 const STATUS_OPTIONS = [
@@ -73,25 +74,14 @@ const ProductGroupPage: React.FC = () => {
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
 
-      let userMap: Record<string, string> = {};
-      try {
-        const rawUsers = sessionStorage.getItem('beadminUsers') || sessionStorage.getItem('headminUsers');
-        if (rawUsers) {
-          const parsedUsers = JSON.parse(rawUsers);
-          const userList = parsedUsers.listUser || (Array.isArray(parsedUsers) ? parsedUsers : []);
-          
-          userList.forEach((user: any) => {
-            if (user.username) {
-              userMap[user.username] = user.fullname || user.fullName || user.username;
-            }
-          });
-        }
-      } catch (e) {}
+      // Lấy danh sách user map 1 lần duy nhất từ utils
+      const userMap = getUserMap();
 
+      // Sử dụng hàm getFullName để tách chuỗi và lấy tên
       const enrichedData = rawList.map((item: any) => ({
         ...item,
-        createdByFullName: userMap[item.createdBy] || item.createdBy || null,
-        approvedBy: userMap[item.approvedBy] || item.approvedBy || null 
+        createdByFullName: getFullName(item.createdBy, userMap),
+        approvedBy: getFullName(item.approvedBy, userMap) 
       }));
 
       setData(enrichedData);

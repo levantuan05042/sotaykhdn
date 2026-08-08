@@ -162,26 +162,27 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                   </td>
 
                   <td className="product-name-cell">
-                    <span className="truncate-text" title={item.code}>
+                    <div className="truncate-text" style={{ maxWidth: '150px' }} title={item.code}>
                       {item.code}
-                    </span>
+                    </div>
                   </td>
 
                   <td className="product-name-cell">
                     {/* Cập nhật cả title khi hover chuột vào nếu có dấu * */}
-                    <span className="truncate-text" title={item.isRequired ? `${item.name} *` : item.name}>
+                    <div className="truncate-text" style={{ maxWidth: '200px' }} title={item.isRequired ? `${item.name} *` : item.name}>
                       {item.name}
                       {/* Thêm điều kiện render dấu * màu đỏ (hoặc isRequired tuỳ biến của bạn) */}
                       {item.isRequired && (
                         <span className="text-red-500 ml-1" style={{ color: 'red' }}>*</span>
                       )}
-                    </span>
+                    </div>
                   </td>
                   
-                  <td>
-                    <span className="truncate-text" title={groupNamesText}>
+                  {/* ====== Đã fix class và đổi thẻ span thành div ====== */}
+                  <td className="product-group-cell">
+                    <div className="truncate-text" title={groupNamesText}>
                       {groupNamesText}
-                    </span>
+                    </div>
                   </td>
 
                   <td>{renderStatus(item.status)}</td>
@@ -222,7 +223,7 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
             })
           ) : (
             <tr>
-              <td colSpan={5} className="text-center py-20 text-gray-400">
+              <td colSpan={10} className="text-center py-20 text-gray-400">
                 Không có dữ liệu hiển thị
               </td>
             </tr>

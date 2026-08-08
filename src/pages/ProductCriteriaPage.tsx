@@ -4,6 +4,7 @@ import axios from 'axios';
 import './ProductCriteriaPage.css';
 import ProductCriteriaTable from '../components/ProductCriteriaTable';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
+import { getUserMap, getFullName } from '../utils/userUtils'; // IMPORT TỪ UTILS
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -93,26 +94,20 @@ const ProductCriteriaPage: React.FC = () => {
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
 
-      let userMap: Record<string, string> = {};
-      try {
-        const rawUsers = sessionStorage.getItem('beadminUsers') || sessionStorage.getItem('headminUsers');
-        if (rawUsers) {
-          const parsedUsers = JSON.parse(rawUsers);
-          const userList = parsedUsers.listUser || (Array.isArray(parsedUsers) ? parsedUsers : []);
-          
-          userList.forEach((user: any) => {
-            if (user.username) {
-              userMap[user.username] = user.fullname || user.fullName || user.username;
-            }
-          });
-        }
-      } catch (e) {}
+      // SỬ DỤNG HÀM TỪ UTILS: Lấy map user 1 lần duy nhất
+      const userMap = getUserMap();
 
-      const enrichedData = rawList.map((item: any) => ({
-        ...item,
-        createdByFullName: userMap[item.createdBy] || item.createdBy || null,
-        approvedBy: userMap[item.approvedBy] || item.approvedBy || null 
-      }));
+      // Sử dụng hàm getFullName để tách chuỗi và lấy tên hiển thị
+      const enrichedData = rawList.map((item: any) => {
+        const creatorCode = item.createdBy || item.createdByFullName; 
+        const approverCode = item.approvedBy;
+
+        return {
+          ...item,
+          createdByFullName: getFullName(creatorCode, userMap) || '---',
+          approvedBy: getFullName(approverCode, userMap) || '---' 
+        };
+      });
 
       setData(enrichedData);
 
