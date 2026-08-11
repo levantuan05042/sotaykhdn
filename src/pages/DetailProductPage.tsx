@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import './DetailProductPage.css';
@@ -8,6 +8,9 @@ import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
+
+// LƯU Ý: Đảm bảo đường dẫn import này khớp với cấu trúc thư mục của bạn
+import { getUserMap, getFullName } from '../utils/userUtils'; 
 
 // ─────────────────────────────────────────────
 // Constants
@@ -481,6 +484,9 @@ const DetailProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  // Khởi tạo userMap ngay khi vào component, chỉ chạy 1 lần
+  const userMap = useMemo(() => getUserMap(), []);
+
   const groupRef     = useRef<HTMLDivElement>(null);
   const categoryRef  = useRef<HTMLDivElement>(null);
   const operationRef = useRef<HTMLDivElement>(null);
@@ -537,16 +543,21 @@ const DetailProductPage: React.FC = () => {
     return '';
   };
 
-  const currentUsername = getCurrentUsername();
+  // CẬP NHẬT CHÍNH: Tách xử lý baseUsername để xác nhận cho phép chỉnh sửa
+  let rawCurrentUsername = getCurrentUsername();
+  const currentUsername = rawCurrentUsername ? rawCurrentUsername.split('_')[0].toLowerCase() : '';
   const isLoggedIn = Boolean(currentUsername);
 
   const creatorField = productData?.createdBy || productData?.created_by || productData?.creator || productData?.user || productData?.userId;
-  let creatorUsername = '';
+  let rawCreatorUsername = '';
   if (typeof creatorField === 'object' && creatorField !== null) {
-    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || creatorField.id || '').trim().toLowerCase();
+    rawCreatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || creatorField.id || '').trim().toLowerCase();
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = String(creatorField).trim().toLowerCase();
+    rawCreatorUsername = String(creatorField).trim().toLowerCase();
   }
+  
+  // Tách lấy base username từ API trả về (VD: "37ETN082_10500037" -> "37etn082")
+  const creatorUsername = rawCreatorUsername ? rawCreatorUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
     isLoggedIn && 
@@ -867,6 +878,14 @@ const DetailProductPage: React.FC = () => {
       <style>{`.ql-editor{word-break:break-word!important;overflow-wrap:break-word!important;white-space:pre-wrap!important;}`}</style>
 
       <div className="mainContainer">
+        {isReadOnly && (
+          <div className="permissionBanner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="permissionBannerText">
+              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+            </span>
+          </div>
+        )}
 
         {/* ══ Header ══ */}
         <div className="header">
@@ -892,8 +911,7 @@ const DetailProductPage: React.FC = () => {
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isReadOnly ? (
-              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
-                Chỉ xem thông tin
+              <span style={{}}>
               </span>
             ) : (
               <>
@@ -1140,7 +1158,8 @@ const DetailProductPage: React.FC = () => {
                           <img src={c.avatarUrl || 'https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png'} className="avatar" alt="avatar"/>
                           <div style={{ flex: 1 }}>
                             <div className="userHeader">
-                              <span className="userName">{c.createdBy || 'Người kiểm duyệt'}</span>
+                              {/* CẬP NHẬT CHÍNH: Sử dụng getFullName để hiển thị tên đẹp hơn ở phần comment */}
+                              <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
                               <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                             </div>
                             <p className="commentText">{c.comment}</p>
