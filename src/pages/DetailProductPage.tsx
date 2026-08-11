@@ -715,7 +715,6 @@ const DetailProductPage: React.FC = () => {
   const isFormDirty     = formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
-  const canSubmit       = !isReadOnly && isDirty && formData.productGroupId !== '';
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE') => {
     if (isReadOnly || !id) return;

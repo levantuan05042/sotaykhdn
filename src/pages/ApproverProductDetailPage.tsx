@@ -183,7 +183,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
       setLoading(true);
       try {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(activeRequestId));
-        const data = response.data;
+        const data = Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : response.data;
         if (initialNotes !== undefined) {
           data.notes = initialNotes;
         }

@@ -211,18 +211,18 @@ export const ApproverCriteriaListPage: React.FC = () => {
           </div>
           <div className="filter-cell">
             <FilterDropdown
+              label="Lọc theo trạng thái"
               options={STATUS_FILTER_OPTIONS}
-              value={selectedStatus}
-              onChange={setSelectedStatus}
-              placeholder="Lọc theo trạng thái"
+              selectedValue={selectedStatus}
+              onSelect={setSelectedStatus}
             />
           </div>
           <div className="filter-cell">
             <FilterDropdown
+              label="Lọc theo nhóm sản phẩm"
               options={productGroups}
-              value={selectedGroupId}
-              onChange={setSelectedGroupId}
-              placeholder="Lọc theo nhóm sản phẩm"
+              selectedValue={selectedGroupId}
+              onSelect={setSelectedGroupId}
             />
           </div>
         </div>

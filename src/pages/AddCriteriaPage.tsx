@@ -19,8 +19,7 @@ const AddCriteriaPage: React.FC = () => {
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // State lưu từ khóa tìm kiếm nhóm
 
-  // --- STATES CHO MODAL PHÊ DUYỆT ---
-  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  // --- STATES CHO FORM ---
 
   const [formData, setFormData] = useState({
     code: '',
@@ -147,11 +146,7 @@ const AddCriteriaPage: React.FC = () => {
     await submitCriteriaData('DRAFT');
   };
 
-  // Khi bấm Gửi phê duyệt -> Mở Modal chọn người kiểm duyệt[cite: 11]
-  const handleOpenApprovalModal = () => {
-    if (!validateForm()) return;
-    setIsApprovalModalOpen(true);
-  };
+  // Gửi phê duyệt trực tiếp
 
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
@@ -168,7 +163,6 @@ const AddCriteriaPage: React.FC = () => {
 
       const message = status === 'DRAFT' ? "Lưu nháp tiêu chí thành công" : "Gửi phê duyệt tiêu chí thành công";
       renderCustomToast(message);
-      setIsApprovalModalOpen(false);
       setTimeout(() => navigate('/criteria-management'), 2000);
 
     } catch (error: any) {

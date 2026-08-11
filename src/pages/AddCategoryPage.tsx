@@ -21,9 +21,6 @@ const AddCategoryPage: React.FC = () => {
   const statusRef = useRef<HTMLDivElement>(null); 
   const [isActive, setIsActive] = useState<boolean>(true);
 
-  // Trạng thái Modal Phê duyệt
-  const [showApprovalModal, setShowApprovalModal] = useState(false);
-
   // Form Data
   const [formData, setFormData] = useState({
     name: '',

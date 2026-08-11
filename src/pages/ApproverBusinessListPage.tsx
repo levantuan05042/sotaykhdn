@@ -90,11 +90,6 @@ export const ApproverBusinessListPage: React.FC = () => {
 
     fetchBusinesses();
   }, []);
-
-  const username = localStorage.getItem('currentUserUsername') || '';
-  const branchCode = localStorage.getItem('currentUserBranchCode') || '';
-  const currentUserPattern = username ? `${username}_${branchCode}` : '';
-
   // Apply filters client-side for immediate responsiveness
   const filteredBusinesses = businesses.filter((item) => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());

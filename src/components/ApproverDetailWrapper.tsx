@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
-import StatusBadge from './ui/StatusBadge';
 import RejectReasonPopup from './RejectReasonPopup';
 import ApproveConfirmPopup from './ApproveConfirmPopup';
 import { formatApprovedBy } from '../utils/formatUtils';

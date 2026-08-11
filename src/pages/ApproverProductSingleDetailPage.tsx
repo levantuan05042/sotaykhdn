@@ -77,7 +77,8 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
     setLoading(true);
     try {
       const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(productId));
-      setDetail(response.data);
+      const responseData = Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : response.data;
+      setDetail(responseData);
     } catch (error) {
       console.error("Error fetching single product detail:", error);
       toast.error("Không thể tải chi tiết sản phẩm!");

@@ -84,7 +84,8 @@ const ApproverBatchDetailPage: React.FC = () => {
       setLoadingQuickView(true);
       try {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(p.id));
-        setQuickViewDetails(response.data);
+        const data = Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : response.data;
+        setQuickViewDetails(data);
       } catch (error) {
         console.error("Error fetching product detail for quick view:", error);
         toast.error("Không thể tải chi tiết sản phẩm!");
