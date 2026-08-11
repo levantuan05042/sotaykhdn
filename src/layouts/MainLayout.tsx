@@ -57,10 +57,11 @@ import Sidebar from '../components/Sidebar';
 import './MainLayout.css';
 import { Toaster } from 'react-hot-toast';
 import axios from 'axios';
+import { AUTH_ME_URL, BEADMIN_USERS_URL } from '../config/apiConfig';
 
 const MainLayout: React.FC = () => {
   useEffect(() => {
-    axios.get('http://localhost:8082/api/v1/auth/me', { withCredentials: true })
+    axios.get(AUTH_ME_URL, { withCredentials: true })
       .then(res => {
         if (res.data) {
           const user = res.data;
@@ -81,7 +82,7 @@ const MainLayout: React.FC = () => {
           window.dispatchEvent(new Event('currentUserChanged'));
 
           // Gọi BEAdmin API với actionType=4 lấy danh sách user và lưu sessionStorage
-          axios.get(`http://localhost:8080/api/v1/branches/users-from-beadmin?username=${encodeURIComponent(username)}&branchCode=${encodeURIComponent(branchCode)}`)
+          axios.get(BEADMIN_USERS_URL(username, branchCode))
             .then(usersRes => {
               if (usersRes.data) {
                 const rawData = typeof usersRes.data === 'string' ? usersRes.data : JSON.stringify(usersRes.data);

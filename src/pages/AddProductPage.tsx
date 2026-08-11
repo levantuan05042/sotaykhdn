@@ -376,7 +376,7 @@ const AddProductPage: React.FC = () => {
       const uploadData = new FormData();
       uploadData.append('file', croppedFile);
 
-      const response = await fetch('/api/v1/files/upload', { 
+      const response = await fetch(API_ENDPOINTS.FILES.UPLOAD, { 
         method: 'POST',
         body: uploadData,
       });

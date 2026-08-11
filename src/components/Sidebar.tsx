@@ -4,6 +4,7 @@ import axios from 'axios';
 import './Sidebar.css';
 import { type MenuItem, type UserRole, getMenuItemsByRole } from '../config/menuConfig';
 import { CountBadge } from './ui/StatusBadge';
+import { API_ENDPOINTS } from '../config/apiConfig';
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -19,7 +20,10 @@ const Sidebar: React.FC = () => {
   useEffect(() => {
     const fetchCount = async () => {
       try {
-        const response = await axios.get('http://localhost:8082/api/v1/product-requests');
+        const url = userRole === 'ETK08' 
+          ? API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST 
+          : API_ENDPOINTS.PRODUCT.LIST2;
+        const response = await axios.get(url);
         setRequestCount(response.data.length);
       } catch (err) {
         console.error("Error loading requests count for sidebar badge:", err);
