@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
+// Import thêm 2 hàm utils của bạn (hãy điều chỉnh đường dẫn '../utils/userUtils' cho khớp với project)
+import { getUserMap, getFullName } from '../utils/userUtils'; 
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
@@ -53,6 +55,10 @@ const DetailCategoryPage: React.FC = () => {
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
   
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  
+  // 1. Khởi tạo userMap 1 lần duy nhất bằng useMemo để tối ưu hiệu suất
+  const userMap = useMemo(() => getUserMap(), []);
+
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
@@ -64,11 +70,16 @@ const DetailCategoryPage: React.FC = () => {
     creatorUsername = String(creatorField).trim().toLowerCase();
   }
 
+  // 2. XỬ LÝ TÁCH LẤY USERNAME CHÍNH XÁC (VD: "37ETN082_10500037" -> "37etn082")
+  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
+  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
+
+  // 3. SO SÁNH QUYỀN SỞ HỮU DỰA TRÊN BASE USERNAME
   const isOwner = Boolean(
     isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
+    baseCurrentUsername && 
+    baseCreatorUsername && 
+    baseCurrentUsername === baseCreatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -276,6 +287,14 @@ const DetailCategoryPage: React.FC = () => {
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
+        {isReadOnly && (
+          <div className="permissionBanner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="permissionBannerText">
+              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+            </span>
+          </div>
+        )}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={handleGoBack}>
@@ -305,8 +324,7 @@ const DetailCategoryPage: React.FC = () => {
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isReadOnly ? (
-              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
-                Chỉ được xem
+              <span style={{}}>
               </span>
             ) : (
               <>
@@ -450,7 +468,8 @@ const DetailCategoryPage: React.FC = () => {
                             <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
-                                <span className="userName">{c.createdBy || 'Người kiểm duyệt'}</span>
+                                {/* 4. SỬ DỤNG HÀM getFullName ĐỂ HIỂN THỊ TÊN ĐẸP CHO NGƯỜI BÌNH LUẬN */}
+                                <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
                                 <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                               </div>
                               <p className="commentText">{c.comment}</p>

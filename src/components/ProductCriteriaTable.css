@@ -88,10 +88,15 @@
 
 .p-nav-btn:disabled { opacity: 0.3; }
 
+/* ======== CẬP NHẬT TRUNCATE CHO TABLE ======== */
+.product-group-cell {
+  max-width: 280px; /* Giới hạn độ rộng tối đa của cột Nhóm sản phẩm */
+}
+
 .truncate-text {
   display: block;        
   white-space: nowrap;  
   overflow: hidden;      
   text-overflow: ellipsis; 
-  max-width: 200px;      
+  width: 100%; /* Cập nhật để thẻ con linh hoạt theo max-width của td */
 }

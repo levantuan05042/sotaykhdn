@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
+// Import tiện ích xử lý User từ utils
+import { getUserMap, getFullName } from '../utils/userUtils';
 
 // --- CẤU HÌNH OPTIONS ---
 const GROUP_OPTIONS = [
@@ -44,6 +46,16 @@ const DetailGroupPage: React.FC = () => {
 
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
+  // Khởi tạo userMap một lần duy nhất để tối ưu hiệu suất
+  const userMap = useMemo(() => getUserMap(), []);
+
+  // --- HELPER TÁCH ID (Hỗ trợ cả '_' và '-') ---
+  const extractBaseId = (rawString: string) => {
+    if (!rawString) return '';
+    // Tách chuỗi theo dấu '_' hoặc '-' và lấy phần đầu tiên
+    return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
+  };
+
   // --- KIỂM TRA ĐĂNG NHẬP & QUYỀN SỞ HỮU CHÍNH XÁC ---
   const getCurrentUsername = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
@@ -54,10 +66,10 @@ const DetailGroupPage: React.FC = () => {
           const parsed = JSON.parse(val);
           if (typeof parsed === 'object' && parsed !== null) {
             const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-            if (u) return String(u).trim().toLowerCase();
+            if (u) return extractBaseId(u);
           }
         } catch {
-          return String(val).trim().toLowerCase();
+          return extractBaseId(val);
         }
       }
     }
@@ -65,17 +77,17 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const currentUsername = getCurrentUsername();
-  
-  // Coi như đã đăng nhập nếu tìm thấy username trong kho lưu trữ
   const isLoggedIn = Boolean(currentUsername);
 
   // Trích xuất thông tin người tạo từ API data
   const creatorField = productData?.createdBy || productData?.created_by || productData?.creator;
   let creatorUsername = '';
+  
   if (typeof creatorField === 'object' && creatorField !== null) {
-    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+    const rawObjUsername = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
+    creatorUsername = extractBaseId(rawObjUsername);
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = String(creatorField).trim().toLowerCase();
+    creatorUsername = extractBaseId(creatorField);
   }
 
   // So sánh exact match giữa username hiện tại và người tạo
@@ -279,6 +291,14 @@ const DetailGroupPage: React.FC = () => {
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
+        {isReadOnly && (
+          <div className="permissionBanner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="permissionBannerText">
+              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+            </span>
+          </div>
+        )}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={handleGoBack}>
@@ -308,8 +328,7 @@ const DetailGroupPage: React.FC = () => {
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isReadOnly ? (
-              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
-                Chỉ được xem
+              <span style={{}}>
               </span>
             ) : (
               <>
@@ -466,7 +485,10 @@ const DetailGroupPage: React.FC = () => {
                             <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
-                                <span className="userName">{c.createdBy || 'Người kiểm duyệt'}</span>
+                                {/* ÁP DỤNG HÀM getFullName TẠI ĐÂY */}
+                                <span className="userName">
+                                  {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}
+                                </span>
                                 <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                               </div>
                               <p className="commentText">{c.comment}</p>

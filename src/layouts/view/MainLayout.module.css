@@ -1,0 +1,142 @@
+
+.main-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.grid-header {
+  min-height: 80px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #E5E5E5;
+  padding: 0 40px;
+  display: flex;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 500; 
+}
+
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  flex: 1;
+  position: relative; 
+}
+
+.grid-sidebar {
+  grid-column: span 2; 
+  background-color: #AE1C3F;
+  min-height: calc(100vh - 80px);
+  position: sticky;
+  top: 80px;
+  z-index: 400;
+}
+
+.grid-content {
+  grid-column: span 10; 
+  background-color: #F8F9FA;
+  min-height: calc(100vh - 80px);
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+.grid-footer {
+  grid-column: span 12; 
+  background-color: #ffffff;
+  border-top: 1px solid #E5E5E5;
+  padding: 20px 40px;
+  color: #666;
+  font-size: 13px;
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between; 
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+
+.footer-right {
+  text-align: right;
+}
+
+@media (max-width: 1024px) {
+  .grid-header {
+    padding: 0 20px;
+  }
+
+  .grid-container {
+    display: block; 
+  }
+
+  .grid-sidebar {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 300px;
+    height: 100vh;
+    transform: translateX(-100%); 
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .grid-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(17, 24, 39, 0.45);
+    z-index: 900;
+    animation: sidebarOverlayFadeIn 0.2s ease;
+  }
+
+  .grid-content {
+    padding: 20px;
+    grid-column: auto
+  }
+}
+
+@keyframes sidebarOverlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ============================================================
+   RESPONSIVE — MOBILE (≤640px)
+   ============================================================ */
+@media (max-width: 640px) {
+  .grid-header {
+    padding: 0 16px;
+    min-height: 64px;
+  }
+
+  .grid-content {
+    padding: 16px;
+  }
+
+  .grid-sidebar {
+    width: 84vw;
+  }
+
+  .grid-footer {
+    padding: 16px 20px;
+    font-size: 12px;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .footer-right {
+    text-align: left;
+  }
+}

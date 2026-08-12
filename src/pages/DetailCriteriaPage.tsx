@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
@@ -65,6 +66,8 @@ const DetailCriteriaPage: React.FC = () => {
     isRequired: false
   });
 
+  const userMap = useMemo(() => getUserMap(), []);
+
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
@@ -76,11 +79,14 @@ const DetailCriteriaPage: React.FC = () => {
     creatorUsername = String(creatorField).trim().toLowerCase();
   }
 
+  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
+  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
+
   const isOwner = Boolean(
     isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
+    baseCurrentUsername && 
+    baseCreatorUsername && 
+    baseCurrentUsername === baseCreatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -117,8 +123,9 @@ const DetailCriteriaPage: React.FC = () => {
         if (!isMounted) return;
         setCriteriaData(detailData);
 
+        // Đã FIX: Ép kiểu toàn bộ ID thành String ngay từ đầu
         const initialGroupIds = detailData.productGroups 
-          ? detailData.productGroups.map((g: any) => g.id) 
+          ? detailData.productGroups.map((g: any) => String(g.id)) 
           : [];
 
         setFormData({
@@ -134,12 +141,12 @@ const DetailCriteriaPage: React.FC = () => {
           const groupsData = await groupsRes.json();
           const options = groupsData.map((g: any) => ({
             label: g.name,
-            value: g.id
+            value: String(g.id) // Đã FIX: Ép kiểu thành String
           }));
           setGroupOptions(options);
         } else {
           const fallbackOptions = detailData.productGroups
-            ? detailData.productGroups.map((g: any) => ({ label: g.name, value: g.id }))
+            ? detailData.productGroups.map((g: any) => ({ label: g.name, value: String(g.id) }))
             : [];
           setGroupOptions(fallbackOptions);
         }
@@ -344,7 +351,7 @@ const DetailCriteriaPage: React.FC = () => {
 
   const currentStatus = STATUS_MAP[criteriaData.status] || { label: criteriaData.status, className: '' };
   
-  const initialGroupIds = criteriaData.productGroups ? criteriaData.productGroups.map((g: any) => g.id) : [];
+  const initialGroupIds = criteriaData.productGroups ? criteriaData.productGroups.map((g: any) => String(g.id)) : [];
   const isGroupsChanged = JSON.stringify([...formData.groupIds].sort()) !== JSON.stringify([...initialGroupIds].sort());
   
   const isDirty = formData.name !== (criteriaData.name || '') || 
@@ -358,18 +365,33 @@ const DetailCriteriaPage: React.FC = () => {
                     formData.name.trim() !== '' && 
                     formData.groupIds.length > 0;
 
-  const selectedGroupsText = formData.groupIds.length === groupOptions.length && groupOptions.length > 0
-    ? "Tất cả nhóm sản phẩm"
-    : formData.groupIds.length > 0
-      ? groupOptions
-          .filter(o => formData.groupIds.includes(o.value))
-          .map(o => o.label)
-          .join(', ')
-      : "Chọn nhóm sản phẩm";
+  // Logic hiển thị Text ở Dropdown
+  const selectedCount = formData.groupIds.length;
+  const totalCount = groupOptions.length;
+  let selectedGroupsText = "Chọn nhóm sản phẩm";
+
+  if (selectedCount > 0) {
+    if (selectedCount === totalCount && totalCount > 0) {
+      selectedGroupsText = "Tất cả nhóm sản phẩm";
+    } else {
+      selectedGroupsText = groupOptions
+        .filter(o => formData.groupIds.includes(o.value))
+        .map(o => o.label)
+        .join(', ');
+    }
+  }
 
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
+        {isReadOnly && (
+          <div className="permissionBanner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="permissionBannerText">
+              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+            </span>
+          </div>
+        )}
         
         {/* HEADER & BREADCRUMB */}
         <div className="header">
@@ -402,8 +424,7 @@ const DetailCriteriaPage: React.FC = () => {
           {/* ACTIONS CONTROLLER */}
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isReadOnly ? (
-              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
-                Chỉ được xem
+              <span style={{}}>
               </span>
             ) : (
               <>
@@ -488,13 +509,33 @@ const DetailCriteriaPage: React.FC = () => {
 
               <div className="formGroup" ref={dropdownRef}>
                 <label className="label">Nhóm sản phẩm *</label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" style={{ width: '100%', position: 'relative' }}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
                     onClick={() => !isReadOnly && setIsOpen(!isOpen)}
-                    style={{ opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    style={{ 
+                      opacity: isReadOnly ? 0.7 : 1, 
+                      cursor: isReadOnly ? 'not-allowed' : 'pointer',
+                      // DÙNG GRID THAY VÌ FLEX ĐỂ TRỊ DỨT ĐIỂM LỖI TRÀN CHỮ
+                      display: 'grid', 
+                      gridTemplateColumns: '1fr auto', // Cột 1 (chữ) tự động chiếm phần còn lại, cột 2 (icon) ôm sát
+                      alignItems: 'center', 
+                      gap: '8px', // Khoảng cách giữa chữ và icon
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
                   >
-                    <span className="truncate-text" title={selectedGroupsText}>
+                    <span 
+                      className="truncate-text" 
+                      title={selectedGroupsText}
+                      style={{ 
+                        display: 'block',
+                        width: '100%',
+                        whiteSpace: 'nowrap', 
+                        overflow: 'hidden', 
+                        textOverflow: 'ellipsis'
+                      }}
+                    >
                       {selectedGroupsText}
                     </span>
                     {!isReadOnly && (
@@ -507,54 +548,54 @@ const DetailCriteriaPage: React.FC = () => {
                     )}
                   </div>
 
+                  {/* KHỐI DROPDOWN OPTIONS GIỮ NGUYÊN NHƯ CŨ */}
                   {!isReadOnly && isOpen && (
                     <div className="custom-options-list">
-                      {groupOptions.length > 0 && (
-                        <div 
-                          className={`custom-option select-all-option ${formData.groupIds.length === groupOptions.length ? 'selected' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const isAllSelected = formData.groupIds.length === groupOptions.length;
-                            setFormData(prev => ({
-                              ...prev,
-                              groupIds: isAllSelected ? [] : groupOptions.map(opt => opt.value)
-                            }));
-                          }}
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '10px',
-                            borderBottom: '1px solid #E3DFE6', 
-                            paddingBottom: '8px',
-                            marginBottom: '4px',
-                            fontWeight: '600' 
-                          }}
-                        >
-                          <input 
-                            type="checkbox" 
-                            checked={groupOptions.length > 0 && formData.groupIds.length === groupOptions.length} 
-                            onChange={() => {}} 
-                            style={{ pointerEvents: 'none' }}
-                          />
-                          <span>Tất cả nhóm sản phẩm</span>
-                        </div>
-                      )}
+                      
+                      {/* OPTION: CHỌN TẤT CẢ */}
+                      {groupOptions.length > 0 && (() => {
+                        const isAllSelected = formData.groupIds.length === groupOptions.length;
+                        return (
+                          <div 
+                            className={`custom-option select-all-option ${isAllSelected ? 'selected' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFormData(prev => ({
+                                ...prev,
+                                groupIds: isAllSelected ? [] : groupOptions.map(opt => String(opt.value))
+                              }));
+                            }}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '10px',
+                              borderBottom: '1px solid #E3DFE6', 
+                              paddingBottom: '8px',
+                              marginBottom: '4px',
+                              fontWeight: '600' 
+                            }}
+                          >
+                            <div className="check-box" style={{ color: isAllSelected ? '#AE1C3F' : 'transparent', fontWeight: 'bold' }}>
+                              ✓
+                            </div>
+                            <span>Tất cả nhóm sản phẩm</span>
+                          </div>
+                        );
+                      })()}
 
+                      {/* OPTION: CÁC NHÓM LẺ */}
                       {groupOptions.map((opt) => {
-                        const isChecked = formData.groupIds.includes(opt.value);
+                        const isChecked = formData.groupIds.includes(String(opt.value));
                         return (
                           <div 
                             key={opt.value} 
                             className={`custom-option ${isChecked ? 'selected' : ''}`}
-                            onClick={(e) => handleToggleGroup(opt.value, e)}
+                            onClick={(e) => handleToggleGroup(String(opt.value), e)}
                             style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
                           >
-                            <input 
-                              type="checkbox" 
-                              checked={isChecked} 
-                              onChange={() => {}} 
-                              style={{ pointerEvents: 'none' }}
-                            />
+                            <div className="check-box" style={{ color: isChecked ? '#AE1C3F' : 'transparent', fontWeight: 'bold' }}>
+                              ✓
+                            </div>
                             <span>{opt.label}</span>
                           </div>
                         );
@@ -630,7 +671,7 @@ const DetailCriteriaPage: React.FC = () => {
                             <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
-                                <span className="userName">{c.createdBy || 'Người kiểm duyệt'}</span>
+                                <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
                                 <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                               </div>
                               <p className="commentText">{c.comment}</p>

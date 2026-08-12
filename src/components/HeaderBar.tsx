@@ -1,5 +1,5 @@
-
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // THÊM DÒNG NÀY: Import hook điều hướng
 import logoAgribank from '../assets/logo-agribank.png';
 import './HeaderBar.css';
 import { type UserRole } from '../config/menuConfig';
@@ -12,6 +12,8 @@ const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 const HeaderBar: React.FC = () => {
+  const navigate = useNavigate(); // THÊM DÒNG NÀY: Khởi tạo navigate
+
   const [role, setRole] = useState<UserRole>(() => {
     return (localStorage.getItem('userRole') as UserRole) || 'ETN08';
   });
@@ -26,6 +28,13 @@ const HeaderBar: React.FC = () => {
     localStorage.setItem('userRole', newRole);
     window.dispatchEvent(new Event('userRoleChanged'));
     setIsDropdownOpen(false);
+
+    // THÊM ĐOẠN NÀY: Xử lý chuyển hướng dựa trên Role
+    if (newRole === 'VIEWER') {
+      navigate('/view'); // Chuyển sang luồng giao diện View
+    } else {
+      navigate('/'); // Trở về luồng Admin (sẽ tự động Navigate sang /product-groups như đã cấu hình)
+    }
   };
 
   useEffect(() => {
