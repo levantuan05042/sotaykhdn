@@ -195,6 +195,16 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                   </td>
                   <td>{item.createdByFullName || '---'}</td>
                   <td>{item.approvedBy || '---'}</td>
+                  <td style={{ 
+                    color: '#053E2B', 
+                    fontFamily: 'Inter, sans-serif', 
+                    fontSize: '16px', 
+                    fontWeight: 600, 
+                    lineHeight: '24px', 
+                    flex: '1 0 0' 
+                  }}>
+                    {item.version ? `Phiên bản ${item.version}` : 'new'}
+                  </td>
 
                   <td className="px-40 text-right">
                     <button

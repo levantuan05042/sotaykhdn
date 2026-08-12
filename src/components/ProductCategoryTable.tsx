@@ -166,7 +166,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   lineHeight: '24px', 
                   flex: '1 0 0' 
                 }}>
-                  {item.version ? `Phiên bản ${item.version}` : 'Phiên bản 1'}
+                  {item.version ? `Phiên bản ${item.version}` : 'new'}
                 </td>
 
                 <td className="px-40 text-right">

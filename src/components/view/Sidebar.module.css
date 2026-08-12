@@ -1,0 +1,178 @@
+:root {
+  --Token-Bg-body-bg: #FDFCFD;
+  --sm-font-family: 'Inter', sans-serif;
+  --sm-size: 16px;
+  --sm-line-height: 24px;
+}
+
+/* --- Layout chính --- */
+.sidebar-aside {
+  width: 100%;
+  max-width: 322px;
+  min-height: 100%;
+  padding-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  background-color: #AE1C3F;
+  box-sizing: border-box;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+/* --- Thành phần trong Sidebar --- */
+.sidebar-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #ffffff;
+}
+
+.sidebar-content {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: stretch;
+  padding: 16px;
+  flex: 1 0 0;
+  box-sizing: border-box;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-text {
+  font-family: var(--sm-font-family);
+  font-size: var(--sm-size);
+  font-weight: 400;
+  line-height: var(--sm-line-height);
+  text-align: left;
+  color: #ffffff;
+  transition: all 0.2s ease;
+}
+
+/* --- Trạng thái Hover & Active --- */
+.sidebar-btn:hover:not(.active) .sidebar-content {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-btn.active .sidebar-content {
+  background-color: #F8EAEC;
+}
+
+.sidebar-btn.active .sidebar-text {
+  color: #AE1C3F;
+  font-weight: 600;
+}
+
+/* --- Tiêu đề danh mục & Trạng thái trống --- */
+.sidebar-divider {
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 16px 24px 8px 24px;
+  width: 100%;
+  box-sizing: border-box;
+  text-transform: uppercase;
+}
+
+.sidebar-empty {
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 8px 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* --- Mở rộng & Cấu trúc con --- */
+.sidebar-item-group,
+.sidebar-submenu {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.level-2 .sidebar-content { padding-left: 32px; }
+.level-3 .sidebar-content { padding-left: 48px; }
+
+.level-2 .sidebar-text,
+.level-3 .sidebar-text { font-size: 14px; }
+
+/* --- Các thành phần phụ (Caret, Badge, Indicator) --- */
+.sidebar-indicator { display: none; }
+
+.sidebar-caret {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+  color: inherit;
+}
+.sidebar-caret.open { transform: rotate(180deg); }
+
+.sidebar-count-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  margin-left: auto;
+}
+
+.sidebar-btn.active .sidebar-count-tag {
+  background-color: rgba(174, 28, 63, 0.1);
+  color: #AE1C3F;
+  font-weight: 600;
+}
+/* ============================================================
+   NÚT ĐÓNG MENU (chỉ dùng khi Sidebar hiển thị dạng drawer)
+   ============================================================ */
+.sidebar-close-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-end;
+  width: 32px;
+  height: 32px;
+  margin: 0 16px 12px 0;
+  border: none;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.22);
+}
+
+/* ============================================================
+   RESPONSIVE — TABLET/MOBILE (≤1024px)
+   Sidebar hoạt động như menu trượt (drawer): hiện nút đóng,
+   thu nhỏ khoảng đệm đôi chút cho vừa màn hình hẹp.
+   ============================================================ */
+@media (max-width: 1024px) {
+  .sidebar-close-btn {
+    display: flex;
+  }
+
+  .sidebar-aside {
+    padding-top: 12px;
+  }
+}
