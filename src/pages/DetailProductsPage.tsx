@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailProductsPage.css';
 import toast from 'react-hot-toast';
@@ -102,7 +102,28 @@ const getCroppedBlob = async (src: string, px: PixelCrop): Promise<Blob> => {
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92));
 };
 
-// Hàm lấy thông tin username hiện tại từ kho lưu trữ (tương tự DetailGroupPage)[cite: 24]
+// 1. Hàm tách và chuẩn hóa Username từ chuỗi hoặc Object
+const extractUsername = (rawUser: any): string => {
+  if (!rawUser) return '';
+  
+  let strVal = '';
+  if (typeof rawUser === 'object' && rawUser !== null) {
+    strVal = rawUser.username || rawUser.userName || rawUser.code || rawUser.userCode || rawUser.sub || rawUser.fullName || rawUser.name || '';
+  } else {
+    strVal = String(rawUser);
+  }
+
+  strVal = strVal.trim().toLowerCase();
+
+  // Bỏ phần email nếu có (vd: user@agribank.com.vn -> user)
+  if (strVal.includes('@')) {
+    strVal = strVal.split('@')[0];
+  }
+
+  return strVal;
+};
+
+// 2. Hàm lấy username người dùng hiện tại từ Storage
 const getCurrentUsername = (): string => {
   const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
   for (const key of possibleKeys) {
@@ -110,12 +131,11 @@ const getCurrentUsername = (): string => {
     if (val) {
       try {
         const parsed = JSON.parse(val);
-        if (typeof parsed === 'object' && parsed !== null) {
-          const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode || parsed.fullName;
-          if (u) return String(u).trim().toLowerCase();
-        }
+        const extracted = extractUsername(parsed);
+        if (extracted) return extracted;
       } catch {
-        return String(val).trim().toLowerCase();
+        const extracted = extractUsername(val);
+        if (extracted) return extracted;
       }
     }
   }
@@ -471,25 +491,25 @@ const DetailProductPage: React.FC = () => {
   const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
 
-  // --- LOGIC PHÂN QUYỀN (CHECK NGƯỜI TẠO) ---
+  // --- LOGIC PHÂN QUYỀN (CHECK NGƯỜI TẠO TƯƠNG TỰ DETAILGROUPPAGE) ---
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
-  const creatorField = productData?.createdBy || productData?.created_by || productData?.creator;
-  let creatorUsername = '';
-  if (typeof creatorField === 'object' && creatorField !== null) {
-    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
-  } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = String(creatorField).trim().toLowerCase();
-  }
+  // Tách Username người tạo từ dữ liệu sản phẩm
+  const rawCreator = productData?.createdBy || productData?.created_by || productData?.creator;
+  const creatorUsername = extractUsername(rawCreator);
 
-  // So sánh exact match giữa username hiện tại và người tạo sản phẩm
-  const isOwner = Boolean(
-    isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
-  );
+  // So sánh khớp username chính xác hoặc phần mã NV trước ký tự '_' (ví dụ: 37ETN082 khớp 37ETN082_10500037)
+  const isOwner = useMemo(() => {
+    if (!isLoggedIn || !currentUsername || !creatorUsername) return false;
+    
+    if (currentUsername === creatorUsername) return true;
+
+    const currentBase = currentUsername.split('_')[0];
+    const creatorBase = creatorUsername.split('_')[0];
+    
+    return currentBase === creatorBase && currentBase.length > 0;
+  }, [isLoggedIn, currentUsername, creatorUsername]);
 
   // Nếu không đăng nhập hoặc không phải người tạo -> Chế độ chỉ đọc (Read-only)
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -761,7 +781,7 @@ const DetailProductPage: React.FC = () => {
 
       <div className="mainContainer">
 
-        {/* ══ Cảnh báo chế độ chỉ xem nếu không phải người tạo ══ */}
+        {/* Cảnh báo chế độ chỉ xem nếu không phải người tạo */}
         {isReadOnly && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -771,7 +791,7 @@ const DetailProductPage: React.FC = () => {
           </div>
         )}
 
-        {/* ══ Header ══ */}
+        {/* Header */}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={() => navigate(-1)}>
@@ -841,7 +861,7 @@ const DetailProductPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ══ Content Grid ══ */}
+        {/* Content Grid */}
         <div className="contentGrid">
           <div className="leftCol">
             <div className="formCard">

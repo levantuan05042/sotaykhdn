@@ -126,7 +126,8 @@ const ProductCard = ({ product, tagLabel, onClick }: { product: ProductInfo; tag
 
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/product-detail/${product.id}`;
+    // Đã thêm /view vào đường dẫn copy
+    const url = `${window.location.origin}/view/product-detail/${product.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 123);
@@ -317,7 +318,8 @@ const GroupView: React.FC = () => {
                   key={prod.id} 
                   product={prod} 
                   tagLabel={getTagLabel(prod)} 
-                  onClick={() => navigate(`/product-detail/${prod.id}`)} 
+                  // Đã thêm /view
+                  onClick={() => navigate(`/view/product-detail/${prod.id}`)} 
                 />
               ))}
             </div>
@@ -336,7 +338,8 @@ const GroupView: React.FC = () => {
                   key={prod.id} 
                   product={prod} 
                   tagLabel={getTagLabel(prod)} 
-                  onClick={() => navigate(`/product-detail/${prod.id}`)} 
+                  // Đã thêm /view
+                  onClick={() => navigate(`/view/product-detail/${prod.id}`)} 
                 />
               ))}
             </div>
@@ -383,7 +386,8 @@ const GroupView: React.FC = () => {
                                 key={prod.id} 
                                 product={prod} 
                                 tagLabel={getTagLabel(prod)} 
-                                onClick={() => navigate(`/product-detail/${prod.id}`)} 
+                                // Đã thêm /view
+                                onClick={() => navigate(`/view/product-detail/${prod.id}`)} 
                               />
                             ))}
                           </div>
@@ -402,7 +406,8 @@ const GroupView: React.FC = () => {
                         key={prod.id}
                         product={prod}
                         tagLabel={getTagLabel(prod)}
-                        onClick={() => navigate(`/product-detail/${prod.id}`)}
+                        // Đã thêm /view
+                        onClick={() => navigate(`/view/product-detail/${prod.id}`)}
                       />
                     ))}
                   </div>
