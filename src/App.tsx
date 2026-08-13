@@ -45,6 +45,17 @@ import GroupView from './pages/view/GroupView';
 import ProductDetailView from './pages/view/ProductDetailView';
 import { SearchResultsPage } from './pages/view/SearchResultsPage';
 
+const IndexRedirect = () => {
+  const currentMode = localStorage.getItem('userRole') || 'ETN08';
+  if (currentMode === 'ETK08') {
+    return <Navigate to="/approver/product-groups" replace />;
+  } else if (currentMode === 'VIEWER') {
+    return <Navigate to="/view" replace />;
+  } else {
+    return <Navigate to="/product-groups" replace />;
+  }
+};
+
 function App() {
   return (
     <BrowserRouter>
@@ -55,7 +66,7 @@ function App() {
             URL bắt đầu bằng /
             ========================================= */}
         <Route path="/" element={<MainLayout />}>
-          <Route index element={<Navigate to="/product-groups" replace />} />
+          <Route index element={<IndexRedirect />} />
 
           {/* Quản lý Nhóm sản phẩm */}
           <Route path="product-groups" element={<ProductGroupPage />} />

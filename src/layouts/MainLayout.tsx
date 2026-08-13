@@ -50,17 +50,36 @@
 
 // export default MainLayout;
 
-import React, { useEffect } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
 import './MainLayout.css';
-import { Toaster } from 'react-hot-toast';
+import { Toaster, toast } from 'react-hot-toast';
 import axios from 'axios';
 import { AUTH_ME_URL, BEADMIN_USERS_URL } from '../config/apiConfig';
+import { getAllowedModesForRole } from '../config/menuConfig';
 
 const MainLayout: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(() => {
+    return localStorage.getItem('currentUserRole');
+  });
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
+    const handleRoleChange = () => {
+      setCurrentUserRole(localStorage.getItem('currentUserRole'));
+    };
+    window.addEventListener('userRoleChanged', handleRoleChange);
+    return () => {
+      window.removeEventListener('userRoleChanged', handleRoleChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
     axios.get(AUTH_ME_URL, { withCredentials: true })
       .then(res => {
         if (res.data) {
@@ -75,7 +94,15 @@ const MainLayout: React.FC = () => {
           localStorage.setItem('currentUserUsername', username);
           localStorage.setItem('currentUserFullName', fullName);
           localStorage.setItem('currentUserBranchCode', branchCode);
-          localStorage.setItem('userRole', role);
+          localStorage.setItem('currentUserRole', role);
+
+          // Reset userRole/Mode if current mode is not allowed for the user's role
+          const allowedModes = getAllowedModesForRole(role);
+          let currentMode = localStorage.getItem('userRole') as any;
+          if (!currentMode || !allowedModes.includes(currentMode)) {
+            currentMode = allowedModes[0];
+            localStorage.setItem('userRole', currentMode);
+          }
 
           // Dispatch event so other components (like HeaderBar) update
           window.dispatchEvent(new Event('userRoleChanged'));
@@ -94,11 +121,51 @@ const MainLayout: React.FC = () => {
               console.error("Failed to fetch users from BEAdmin", e);
             });
         }
+        setLoading(false);
       })
       .catch(err => {
         console.error("Failed to fetch user info", err);
+        setLoading(false);
       });
   }, []);
+
+  // ROUTE GUARD: Chặn truy cập trái phép trực tiếp qua URL
+  useEffect(() => {
+    if (!currentUserRole) return;
+
+    const path = location.pathname;
+    const isApproverPath = path.startsWith('/approver');
+
+    if (isApproverPath) {
+      // Chỉ ESA08 và ETK08 được vào các màn approver
+      if (currentUserRole !== 'ESA08' && currentUserRole !== 'ETK08') {
+        toast.error("Bạn không có quyền truy cập vào chức năng kiểm duyệt!");
+        navigate('/view'); // Chuyển về màn hình tra cứu sản phẩm
+      }
+    } else {
+      // Các màn hình quản trị khác thuộc MainLayout (như quản lý nhóm, quản lý tiêu chí...)
+      // Chỉ ESA08 và ETN08 được vào các màn này
+      if (currentUserRole !== 'ESA08' && currentUserRole !== 'ETN08') {
+        toast.error("Bạn không có quyền truy cập vào chức năng quản lý!");
+        navigate('/view'); // Chuyển về màn hình tra cứu sản phẩm
+      }
+    }
+  }, [location.pathname, currentUserRole, navigate]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px', background: '#f5f5f5', fontFamily: 'sans-serif' }}>
+        <div className="spinner" style={{ width: '40px', height: '40px', border: '4px solid #ddd', borderTopColor: '#005f57', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+        <div style={{ color: '#555', fontSize: '15px', fontWeight: 500 }}>Đang tải thông tin người dùng...</div>
+        <style>{`
+          @keyframes spin {
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
 
   return (
     <div className="main-layout">

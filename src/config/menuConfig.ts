@@ -4,12 +4,29 @@ export interface MenuItem {
   count?: number;
   children?: MenuItem[];
 }
-export type UserRole = 'ETN08' | 'ETK08' | 'VIEWER';
+export type UserRole = 'ESA08' | 'ECV08' | 'ETK08' | 'ETN08' | 'VIEWER';
+
 export const USER_ROLES: { code: UserRole; name: string }[] = [
-  { code: 'ETN08', name: 'Biên tập viên (ETN08)' },
+  { code: 'ESA08', name: 'Ban Ngân hàng số (ESA08)' },
+  { code: 'ECV08', name: 'Cán bộ tra cứu (ECV08)' },
   { code: 'ETK08', name: 'Kiểm duyệt viên (ETK08)' },
-  { code: 'VIEWER', name: 'Cán bộ tra cứu (VIEWER)' },
+  { code: 'ETN08', name: 'Quản lý nội dung (ETN08)' },
 ];
+
+export const getAllowedModesForRole = (role: string): ('VIEWER' | 'ETN08' | 'ETK08')[] => {
+  switch (role) {
+    case 'ESA08':
+      return ['ETN08', 'ETK08', 'VIEWER'];
+    case 'ETK08':
+      return ['ETK08', 'VIEWER'];
+    case 'ETN08':
+      return ['ETN08', 'VIEWER'];
+    case 'ECV08':
+    default:
+      return ['VIEWER'];
+  }
+};
+
 // 1. Menu Quyền Biên tập (ETN08)
 export const EDIT_MENU_ITEMS: MenuItem[] = [
   { name: 'Quản lý nhóm sản phẩm', path: '/product-groups' },

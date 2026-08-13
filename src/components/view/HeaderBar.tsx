@@ -5,9 +5,16 @@ import toast from 'react-hot-toast';
 import logoAgribank from '../../assets/logo-agribank.png';
 import styles from './HeaderBar.module.css';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
+import { AUTH_SERVICE_LOGOUT_URL } from '../../config/apiConfig';
+import { type UserRole } from '../../config/menuConfig';
 
-const USER_NAME = 'Phạm Thùy Linh';
-const USER_ROLE = 'Quản trị nội dung';
+const ROLE_LABELS: Record<string, string> = {
+  ESA08: 'Ban Ngân hàng số',
+  ECV08: 'Cán bộ tra cứu',
+  ETN08: 'Quản lý nội dung',
+  ETK08: 'Kiểm duyệt nội dung',
+  VIEWER: 'Tra cứu sản phẩm',
+};
 
 const getInitials = (fullName: string) => {
   const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -42,6 +49,33 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const [role, setRole] = useState<UserRole>(() => {
+    return (localStorage.getItem('userRole') as UserRole) || 'VIEWER';
+  });
+  const [currentUserRole, setCurrentUserRole] = useState<UserRole>(() => {
+    return (localStorage.getItem('currentUserRole') as UserRole) || 'VIEWER';
+  });
+  const [displayName, setDisplayName] = useState<string>(() => {
+    return localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh';
+  });
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleRoleSelect = (newRole: UserRole) => {
+    setRole(newRole);
+    localStorage.setItem('userRole', newRole);
+    window.dispatchEvent(new Event('userRoleChanged'));
+    setIsDropdownOpen(false);
+
+    if (newRole === 'VIEWER') {
+      navigate('/view');
+    } else if (newRole === 'ETK08') {
+      navigate('/approver/product-groups');
+    } else {
+      navigate('/product-groups');
+    }
+  };
 
   const saveRecentSearch = (keyword: string) => {
     if (!keyword.trim()) return;
@@ -122,9 +156,28 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleRoleChange = () => {
+      setRole((localStorage.getItem('userRole') as UserRole) || 'VIEWER');
+      setCurrentUserRole((localStorage.getItem('currentUserRole') as UserRole) || 'VIEWER');
+    };
+    const handleUserChange = () => {
+      setDisplayName(localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh');
+    };
+    window.addEventListener('userRoleChanged', handleRoleChange);
+    window.addEventListener('currentUserChanged', handleUserChange);
+    return () => {
+      window.removeEventListener('userRoleChanged', handleRoleChange);
+      window.removeEventListener('currentUserChanged', handleUserChange);
+    };
   }, []);
 
   return (
@@ -307,14 +360,84 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
           </svg>
         </button>
 
-        <div className={styles['user-info']}>
-          <div className={styles['user-text']}>
-            <p className={styles['user-name']}>{USER_NAME}</p>
-            <p className={styles['user-role']}>{USER_ROLE}</p>
+        <div className={styles['user-profile-container']} ref={userMenuRef}>
+          <div 
+            className="flex items-center space-x-4 cursor-pointer"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            style={{ display: 'flex', alignItems: 'center', gap: '16px' }}
+          >
+            <div className={styles['user-text']}>
+              <p className={styles['user-name']}>{displayName}</p>
+              <p className={styles['user-role']}>{ROLE_LABELS[role] || 'Tra cứu sản phẩm'}</p>
+            </div>
+            <div className={styles['avatar-container']}>
+              {getInitials(displayName)}
+            </div>
           </div>
-          <div className={styles['avatar-container']}>
-            {getInitials(USER_NAME)}
-          </div>
+
+          {/* Menu Popup chuẩn theo thiết kế */}
+          {isDropdownOpen && (
+            <div className={styles['user-dropdown-menu']}>
+              <button 
+                className={`${styles['dropdown-item']} ${role === 'VIEWER' ? styles.active : ''}`}
+                onClick={() => handleRoleSelect('VIEWER')}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>Tra cứu sản phẩm</span>
+              </button>
+
+              {(currentUserRole === 'ESA08' || currentUserRole === 'ETN08') && (
+                <button 
+                  className={`${styles['dropdown-item']} ${role === 'ETN08' ? styles.active : ''}`}
+                  onClick={() => handleRoleSelect('ETN08')}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span>Quản lý nội dung</span>
+                </button>
+              )}
+
+              {(currentUserRole === 'ESA08' || currentUserRole === 'ETK08') && (
+                <button 
+                  className={`${styles['dropdown-item']} ${role === 'ETK08' ? styles.active : ''}`}
+                  onClick={() => handleRoleSelect('ETK08')}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span>Kiểm duyệt nội dung</span>
+                </button>
+              )}
+
+              <div className={styles['dropdown-divider']} />
+
+              <button 
+                className={styles['dropdown-item']}
+                onClick={() => {
+                  setIsDropdownOpen(false);
+                  localStorage.removeItem('userRole'); // Clear user info cache from localStorage
+                  window.location.href = AUTH_SERVICE_LOGOUT_URL;
+                }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+                <span>Đăng xuất</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

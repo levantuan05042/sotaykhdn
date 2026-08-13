@@ -6,6 +6,8 @@ import { type UserRole } from '../config/menuConfig';
 import { AUTH_SERVICE_LOGOUT_URL } from '../config/apiConfig';
 
 const ROLE_LABELS: Record<UserRole, string> = {
+  ESA08: 'Ban Ngân hàng số',
+  ECV08: 'Cán bộ tra cứu',
   ETN08: 'Quản lý nội dung',
   ETK08: 'Kiểm duyệt nội dung',
   VIEWER: 'Tra cứu sản phẩm',
@@ -16,6 +18,9 @@ const HeaderBar: React.FC = () => {
 
   const [role, setRole] = useState<UserRole>(() => {
     return (localStorage.getItem('userRole') as UserRole) || 'ETN08';
+  });
+  const [currentUserRole, setCurrentUserRole] = useState<string>(() => {
+    return localStorage.getItem('currentUserRole') || 'ETN08';
   });
   const [displayName, setDisplayName] = useState<string>(() => {
     return localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh';
@@ -29,11 +34,12 @@ const HeaderBar: React.FC = () => {
     window.dispatchEvent(new Event('userRoleChanged'));
     setIsDropdownOpen(false);
 
-    // THÊM ĐOẠN NÀY: Xử lý chuyển hướng dựa trên Role
     if (newRole === 'VIEWER') {
-      navigate('/view'); // Chuyển sang luồng giao diện View
+      navigate('/view');
+    } else if (newRole === 'ETK08') {
+      navigate('/approver/product-groups');
     } else {
-      navigate('/'); // Trở về luồng Admin (sẽ tự động Navigate sang /product-groups như đã cấu hình)
+      navigate('/product-groups');
     }
   };
 
@@ -46,6 +52,7 @@ const HeaderBar: React.FC = () => {
     
     const handleRoleChange = () => {
       setRole((localStorage.getItem('userRole') as UserRole) || 'ETN08');
+      setCurrentUserRole(localStorage.getItem('currentUserRole') || 'ETN08');
     };
     
     const handleUserChange = () => {
@@ -124,31 +131,35 @@ const HeaderBar: React.FC = () => {
                 <span>Tra cứu sản phẩm</span>
               </button>
 
-              <button 
-                className={`dropdown-item ${role === 'ETN08' ? 'active' : ''}`}
-                onClick={() => handleRoleSelect('ETN08')}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <span>Quản lý nội dung</span>
-              </button>
+              {(currentUserRole === 'ESA08' || currentUserRole === 'ETN08') && (
+                <button 
+                  className={`dropdown-item ${role === 'ETN08' ? 'active' : ''}`}
+                  onClick={() => handleRoleSelect('ETN08')}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span>Quản lý nội dung</span>
+                </button>
+              )}
 
-              <button 
-                className={`dropdown-item ${role === 'ETK08' ? 'active' : ''}`}
-                onClick={() => handleRoleSelect('ETK08')}
-              >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                <span>Kiểm duyệt nội dung</span>
-              </button>
+              {(currentUserRole === 'ESA08' || currentUserRole === 'ETK08') && (
+                <button 
+                  className={`dropdown-item ${role === 'ETK08' ? 'active' : ''}`}
+                  onClick={() => handleRoleSelect('ETK08')}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                  <span>Kiểm duyệt nội dung</span>
+                </button>
+              )}
 
               <div className="dropdown-divider" />
 
