@@ -110,11 +110,11 @@ export const SearchResultsPage = () => {
     }
   };
 
-  const handleNavigateToProduct = (id: string) => navigate(`/product-detail/${id}`);
+  const handleNavigateToProduct = (id: string) => navigate(`/view/product-detail/${id}`);
 
   const handleCopyLink = (e: React.MouseEvent, productId: string) => {
     e.stopPropagation(); 
-    const link = `${window.location.origin}/product-detail/${productId}`;
+    const link = `${window.location.origin}/view/product-detail/${productId}`;
     navigator.clipboard.writeText(link)
       .then(() => toast.success('Đã sao chép liên kết!'))
       .catch(() => toast.error('Lỗi khi sao chép liên kết!'));

@@ -3,23 +3,27 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './GroupView.css'; 
 import { BASE_URL } from '../../config/view/apiConfig';
 
+// --- Helpers ---
 const toDisplayUrl = (raw?: string | null) => {
   if (!raw) return '';
   if (raw.startsWith('http')) {
     return raw;
   }
-  const path = raw.startsWith('/')
-    ? raw
-    : `/${raw}`;
+  const path = raw.startsWith('/') ? raw : `/${raw}`;
   return `${BASE_URL}${path}`;
 };
-
 
 const getColorFromText = (text: string) => {
   const colors = ['#AE1C3F', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DC2626', '#0891B2', '#4F46E5', '#9333EA', '#EA580C'];
   let hash = 0;
   for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];
+};
+
+// HÀM KIỂM TRA ĐĂNG NHẬP: Lấy thông tin thực tế từ Local Storage của dự án
+const checkIsLoggedIn = () => {
+  const username = localStorage.getItem('currentUserUsername');
+  return !!username; // Trả về true nếu có dữ liệu, false nếu không
 };
 
 // --- Interface ---
@@ -37,19 +41,80 @@ interface Product {
 const ProductCard = ({ product, tagLabel, onClick }: { product: Product; tagLabel: string; onClick: () => void }) => {
   const [imgError, setImgError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const imagePath = product.imageUrl || product.image_url || '';
   const imageUrl = toDisplayUrl(imagePath);
   const firstLetter = product.name?.trim()?.charAt(0)?.toUpperCase() || '?';
   const bgColor = getColorFromText(product.name || '');
 
+  // 1. Kiểm tra trạng thái lưu
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      const isLoggedIn = checkIsLoggedIn();
+      // Nếu chưa có thông tin user, bỏ qua việc gọi API
+      if (!isLoggedIn) return;
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${product.id}`, {
+          method: 'GET',
+          // Gửi kèm Cookie/Session lên Spring Security
+          credentials: 'include', 
+        });
+
+        if (response.ok) {
+          const status = await response.json();
+          setIsSaved(status); 
+        }
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái lưu:", error);
+      }
+    };
+
+    if (product.id) {
+      checkSavedStatus();
+    }
+  }, [product.id]);
+
+  // 2. Xử lý sự kiện sao chép link
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/product-detail/${product.id}`;
+    const url = `${window.location.origin}/view/product-detail/${product.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 123);
+      setTimeout(() => setIsCopied(false), 2000);
     });
+  };
+
+  // 3. Xử lý sự kiện khi nhấn nút Lưu / Bỏ lưu
+  const handleToggleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation(); 
+    
+    const isLoggedIn = checkIsLoggedIn();
+    if (!isLoggedIn) {
+      alert("Vui lòng đăng nhập để lưu sản phẩm!"); 
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/saved-products/toggle?productId=${product.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Gửi kèm Cookie/Session lên Spring Security
+        credentials: 'include', 
+      });
+
+      if (response.ok) {
+        const result = await response.json(); 
+        setIsSaved(result); 
+      } else {
+        console.error("Xử lý lưu thất bại. Mã lỗi:", response.status);
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối khi lưu:", error);
+    }
   };
 
   return (
@@ -90,8 +155,19 @@ const ProductCard = ({ product, tagLabel, onClick }: { product: Product; tagLabe
               {isCopied && <span className="product-copied-tip">Đã sao chép liên kết</span>}
             </div>
 
-            <button className="product-action-btn" title="Lưu">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <button 
+              className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} 
+              title={isSaved ? "Bỏ lưu" : "Lưu"}
+              onClick={handleToggleSave}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                fill={isSaved ? "#2563EB" : "none"} 
+                stroke={isSaved ? "#2563EB" : "currentColor"} 
+                strokeWidth="2" 
+                viewBox="0 0 24 24"
+              >
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
               </svg>
             </button>
@@ -135,31 +211,10 @@ const HomePage: React.FC = () => {
       {recentProducts.length > 0 && (
         <div className="px-8 -mt-12 mb-12 relative z-10">
           <div className="flex items-center space-x-2 mb-6 text-gray-700 font-semibold text-lg">
-             <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16.5"
-              height="13.5"
-              viewBox="0 0 18 15"
-              fill="none"
-            >
-              <path
-                d="M5.25 5.99823H0.75V1.49823M0.75 5.99823L4.23 2.72823C5.03606 1.92176 6.03328 1.33263 7.12861 1.01581C8.22393 0.698982 9.38167 0.664789 10.4938 0.916419C11.6059 1.16805 12.6361 1.6973 13.4884 2.45479C14.3407 3.21228 14.9871 4.17331 15.3675 5.24823M12.75 8.99823H17.25V13.4982M17.25 8.99823L13.77 12.2682C12.9639 13.0747 11.9667 13.6638 10.8714 13.9806C9.77607 14.2975 8.61833 14.3317 7.50621 14.08C6.3941 13.8284 5.36385 13.2991 4.5116 12.5417C3.65935 11.7842 3.01288 10.8231 2.6325 9.74823"
-                stroke="#3C393F"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+             <svg xmlns="http://www.w3.org/2000/svg" width="16.5" height="13.5" viewBox="0 0 18 15" fill="none">
+              <path d="M5.25 5.99823H0.75V1.49823M0.75 5.99823L4.23 2.72823C5.03606 1.92176 6.03328 1.33263 7.12861 1.01581C8.22393 0.698982 9.38167 0.664789 10.4938 0.916419C11.6059 1.16805 12.6361 1.6973 13.4884 2.45479C14.3407 3.21228 14.9871 4.17331 15.3675 5.24823M12.75 8.99823H17.25V13.4982M17.25 8.99823L13.77 12.2682C12.9639 13.0747 11.9667 13.6638 10.8714 13.9806C9.77607 14.2975 8.61833 14.3317 7.50621 14.08C6.3941 13.8284 5.36385 13.2991 4.5116 12.5417C3.65935 11.7842 3.01288 10.8231 2.6325 9.74823" stroke="#3C393F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <h2
-              style={{
-                color: "#3C393F",
-                fontFamily: "Inter",
-                fontSize: "20px",
-                fontStyle: "normal",
-                fontWeight: 600,
-                lineHeight: "30px",
-              }}
-            >
+            <h2 style={{ color: "#3C393F", fontFamily: "Inter", fontSize: "20px", fontWeight: 600, lineHeight: "30px" }}>
               Đã xem gần đây
             </h2>
           </div>
@@ -170,7 +225,7 @@ const HomePage: React.FC = () => {
                 key={product.id} 
                 product={product} 
                 tagLabel={product.categoryName || 'Sản phẩm'}
-                onClick={() => navigate(`/product-detail/${product.id}`)} 
+                onClick={() => navigate(`/view/product-detail/${product.id}`)} 
               />
             ))}
           </div>
