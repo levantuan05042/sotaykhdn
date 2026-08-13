@@ -98,5 +98,11 @@ export const API_ENDPOINTS = {
       PRODUCTS: (requestId: string) => `${BASE_URL}/approver/product-requests/${requestId}/products`,
       UPDATE_STATUS: (requestId: string) => `${BASE_URL}/approver/product-requests/${requestId}/status`,
     }
+  },
+  NOTIFICATIONS: {
+    LIST: `${BASE_URL}/notifications`,
+    UNREAD_COUNT: `${BASE_URL}/notifications/unread-count`,
+    MARK_READ: (groupId: string) => `${BASE_URL}/notifications/${groupId}/read`,
+    MARK_ALL_READ: `${BASE_URL}/notifications/mark-all-read`,
   }
 };
