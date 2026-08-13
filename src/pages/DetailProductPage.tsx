@@ -542,6 +542,17 @@ const DetailProductPage: React.FC = () => {
     }
     return '';
   };
+  
+  const handleApproveClick = () => {
+    const isBatch = productData?.requestId || productData?.batchRequestId;
+    
+    if (isBatch) {
+      setShowBatchModal(true);
+    } else {
+      // Gọi cập nhật trạng thái kèm nội dung nháp trước đó (cho sản phẩm lẻ)
+      handleUpdateProduct('PENDING_APPROVAL');
+    }
+  };
 
   // CẬP NHẬT CHÍNH: Tách xử lý baseUsername để xác nhận cho phép chỉnh sửa
   let rawCurrentUsername = getCurrentUsername();
@@ -565,6 +576,7 @@ const DetailProductPage: React.FC = () => {
     creatorUsername && 
     currentUsername === creatorUsername
   );
+  
 
   const isReadOnly = !isLoggedIn || !isOwner;
 
@@ -627,7 +639,7 @@ const DetailProductPage: React.FC = () => {
           fetch(API_ENDPOINTS.PRODUCT.DETAIL(id)),
           fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.LIST}?status=ACTIVE&active=true`),
         ]);
-        if (!pRes.ok) throw new Error('Không thể tải thông tin sản phẩm');
+        if (!pRes.ok) throw new Error('Không thể tải thông vị sản phẩm');
         const pData = await pRes.json();
         setProductData(pData);
         setIsActive(pData.active ?? true);
@@ -665,52 +677,79 @@ const DetailProductPage: React.FC = () => {
     };
     init();
   }, [id]);
-
-  // 2. Xử lý khi productGroupId thay đổi
   useEffect(() => {
-    if (!formData.productGroupId) { setCategoryOptions([]); setOperationOptions([]); return; }
-
+    if (!formData.productGroupId) { 
+      setCategoryOptions([]); 
+      setOperationOptions([]); 
+      setCriteria([]);
+      return; 
+    }
     (async () => {
       try {
         setLoadingCategories(true);
         const r = await fetch(`${API_ENDPOINTS.PRODUCT_CATEGORY.LIST}?status=ACTIVE&types=${formData.productGroupId}&active=true`);
-        if (r.ok) { const d = await r.json(); setCategoryOptions(d.map((c: any) => ({ label: c.name, value: c.id }))); }
+        if (r.ok) { 
+          const d = await r.json(); 
+          setCategoryOptions(d.map((c: any) => ({ label: c.name, value: c.id }))); 
+        }
       } catch (e) { console.error(e); } finally { setLoadingCategories(false); }
     })();
-
     (async () => {
       try {
         setLoadingOperations(true);
         const ep = API_ENDPOINTS.PRODUCT_BUSINESS?.LIST || API_ENDPOINTS.PRODUCT_GROUPS.LIST.replace('product-groups', 'business');
-        const r  = await fetch(`${ep}?status=ACTIVE&types=${formData.productGroupId}&active=true`);
-        if (r.ok) { const d = await r.json(); setOperationOptions(d.map((b: any) => ({ label: b.name, value: b.id }))); }
+        const r = await fetch(`${ep}?status=ACTIVE&types=${formData.productGroupId}&active=true`);
+        if (r.ok) { 
+          const d = await r.json(); 
+          setOperationOptions(d.map((b: any) => ({ label: b.name, value: b.id }))); 
+        }
       } catch (e) { console.error(e); } finally { setLoadingOperations(false); }
     })();
-    if (isInitialLoadRef.current) return;
-
     (async () => {
       try {
-        const r = await fetch(`${API_ENDPOINTS.PRODUCT_CRITERIA.LIST}?types=${formData.productGroupId}&status=ACTIVE&active=true`);
+        const url = `${API_ENDPOINTS.PRODUCT_CRITERIA.LIST}?types=${formData.productGroupId}&status=ACTIVE&active=true`;
+        const r = await fetch(url);
         if (!r.ok) return;
-        const data = await r.json();
         
+        const resData = await r.json();
+        const data = Array.isArray(resData) ? resData : (resData?.content || resData?.data || []);
+
         setCriteria(prevCriteria => {
           return data.map((item: any) => {
             const criterionId = String(item.id || item.criteriaId);
-            const name = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '');
+            const name = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '').trim();
             const isReq = checkIsRequired(item);
-            const existing = prevCriteria.find(o => o.id === criterionId || o.name === name);
+            const existing = prevCriteria.find(o => 
+              String(o.id) === criterionId || 
+              String((o as any).criteriaId) === criterionId ||
+              o.name.trim().toLowerCase() === name.toLowerCase()
+            );
+            let isSelected = false;
+            if (isReq) {
+              isSelected = true; 
+            } else if (existing) {
+              isSelected = existing.isSelected !== undefined ? existing.isSelected : true;
+            } else {
+              isSelected = false; 
+            }
+
             return {
               id: criterionId,
               name,
               isRequired: isReq,
-              isSelected: isReq ? true : (existing ? existing.isSelected : true),
+              isSelected: isSelected,
               value: existing ? existing.value : ''
             };
           }).sort((a: Criterion, b: Criterion) => Number(b.isRequired) - Number(a.isRequired));
         });
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+        console.error('Lỗi tải danh sách tiêu chí:', e); 
+      }
     })();
+    if (isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+    }
+
   }, [formData.productGroupId]);
 
   const handleCriterionValueChange = (id: string, v: string) => {
@@ -727,7 +766,8 @@ const DetailProductPage: React.FC = () => {
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
 
-  const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE') => {
+  // THÊM PENDING_APPROVAL VÀO ĐÂY
+  const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
     if (isReadOnly || !id) return;
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
@@ -759,9 +799,12 @@ const DetailProductPage: React.FC = () => {
         body: JSON.stringify(payload) 
       });
       if (res.ok) {
+        // CẬP NHẬT THÊM CÂU THÔNG BÁO PENDING_APPROVAL
         const msgs: Record<string, string> = {
-          DRAFT: 'Lưu nháp sản phẩm thành công', ARCHIVED: 'Lưu trữ sản phẩm thành công',
+          DRAFT: 'Lưu nháp sản phẩm thành công', 
+          ARCHIVED: 'Lưu trữ sản phẩm thành công',
           ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công',
+          PENDING_APPROVAL: 'Gửi phê duyệt sản phẩm thành công',
         };
         renderCustomToast(msgs[status] || 'Cập nhật sản phẩm thành công');
         setTimeout(() => navigate('/products/processing'), 2000);
@@ -773,11 +816,19 @@ const DetailProductPage: React.FC = () => {
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
   };
 
+  // CẬP NHẬT LẠI HÀM NÀY: CHỈ XỬ LÝ LÔ
   const handleBatchStatusSubmit = async (requestId: string, status: string) => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const targetRequestId = requestId || productData?.requestId || productData?.batchRequestId || id;
-      // Lấy tên lô từ productData, nếu không có thì fallback tạm về chuỗi mặc định
+      
+      // Bỏ '|| id' đi vì hàm này không dùng để submit lẻ nữa
+      const targetRequestId = requestId || productData?.requestId || productData?.batchRequestId;
+      
+      if (!targetRequestId) {
+          toast.error('Không tìm thấy thông tin lô!', { position: 'top-center' });
+          return;
+      }
+
       const targetRequestName = productData?.requestName || 'Tên yêu cầu'; 
 
       const response = await axios.post(
@@ -792,7 +843,6 @@ const DetailProductPage: React.FC = () => {
       );
 
       if (response.status === 200 || response.status === 204) {
-        // Sử dụng targetRequestName ở đây thay vì targetRequestId
         toast.success(`Gửi phê duyệt lô ${targetRequestName} thành công!`, { position: 'top-center' });
         setShowBatchModal(false);
         setTimeout(() => navigate('/products/processing'), 1500);
@@ -922,16 +972,16 @@ const DetailProductPage: React.FC = () => {
                     Xóa
                   </button>
                   <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-                  <button className="btnSubmit active" onClick={() => setShowBatchModal(true)}>Gửi phê duyệt</button>
+                  <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'ACTIVE' && (<>
                   <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
                   <button className="btnDraft" onClick={() => handleUpdateProduct('ARCHIVED')}>Lưu trữ</button>
-                  <button className="btnSubmit active" onClick={() => setShowBatchModal(true)}>Gửi phê duyệt</button>
+                  <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'NEEDS_REVISION' && (<>
                   <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-                  <button className="btnSubmit active" onClick={() => setShowBatchModal(true)}>Gửi phê duyệt</button>
+                  <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'ARCHIVED' && (
                   <button className="btnRestore active" onClick={() => handleUpdateProduct('ACTIVE')}>Hoạt động trở lại</button>

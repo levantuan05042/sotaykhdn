@@ -9,6 +9,12 @@ import 'react-easy-crop/react-easy-crop.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import './BatchRequestDetailPage.css';
 
+// Hàm hỗ trợ tách lấy username từ chuỗi raw (VD: "37ETN082_10500037" -> "37etn082")
+const extractUsername = (rawName: string | null | undefined): string => {
+  if (!rawName) return '';
+  return String(rawName).split('_')[0].trim().toLowerCase();
+};
+
 const stripHtml = (htmlString: string) => {
   if (!htmlString) return '';
   return htmlString.replace(/<\/?[^>]+(>|$)/g, '');
@@ -452,9 +458,9 @@ const BatchRequestDetailPage: React.FC = () => {
   const navigate = useNavigate();
 
   // =========================================
-  // LOGIC PHÂN QUYỀN (Áp dụng từ DetailGroupPage)
+  // LOGIC PHÂN QUYỀN VÀ TÁCH USERNAME
   // =========================================
-  const getCurrentUsername = () => {
+  const getCurrentUsernameRaw = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
     for (const key of possibleKeys) {
       const val = localStorage.getItem(key) || sessionStorage.getItem(key);
@@ -463,32 +469,36 @@ const BatchRequestDetailPage: React.FC = () => {
           const parsed = JSON.parse(val);
           if (typeof parsed === 'object' && parsed !== null) {
             const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-            if (u) return String(u).trim().toLowerCase();
+            if (u) return String(u);
           }
         } catch {
-          return String(val).trim().toLowerCase();
+          return String(val);
         }
       }
     }
     return '';
   };
 
-  const currentUsername = getCurrentUsername();
+  // Tách username người đang đăng nhập (loại bỏ phần _machinhanh nếu có)
+  const currentUsername = extractUsername(getCurrentUsernameRaw());
   const isLoggedIn = Boolean(currentUsername);
 
   const [products, setProducts] = useState<any[]>([]);
   
-  // Xác định người tạo từ thuộc tính 'createdBy' của sản phẩm (nếu có)
+  // Tách username người tạo sản phẩm từ thuộc tính 'createdBy' (loại bỏ phần _machinhanh nếu có)
   const firstProduct = products.length > 0 ? products[0] : null;
   const creatorField = firstProduct?.createdBy || firstProduct?.created_by || firstProduct?.creator;
-  let creatorUsername = '';
+  let rawCreatorName = '';
   
   if (typeof creatorField === 'object' && creatorField !== null) {
-    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+    rawCreatorName = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = String(creatorField).trim().toLowerCase();
+    rawCreatorName = String(creatorField);
   }
 
+  const creatorUsername = extractUsername(rawCreatorName);
+
+  // So sánh username gốc để xác định quyền sở hữu
   const isOwner = Boolean(
     isLoggedIn && 
     currentUsername && 
