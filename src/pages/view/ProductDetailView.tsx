@@ -24,7 +24,6 @@ const stringToColor = (string: string) => {
   return color;
 };
 
-// Hàm convert date-time chuẩn định dạng DD/MM/YYYY HH:mm:ss giống thiết kế
 const formatDateTime = (dateStr?: string) => {
   if (!dateStr) return '---';
   try {
@@ -35,6 +34,12 @@ const formatDateTime = (dateStr?: string) => {
   } catch (e) {
     return '---';
   }
+};
+
+// Hàm kiểm tra đăng nhập
+const checkIsLoggedIn = () => {
+  const username = localStorage.getItem('currentUserUsername');
+  return !!username; 
 };
 
 // --- INTERFACES ---
@@ -87,7 +92,6 @@ const ProductDetailView: React.FC = () => {
     const saved = localStorage.getItem('recentlyViewed');
     let history: any[] = saved ? JSON.parse(saved) : [];
     
-    // Remove if already exists to move it to the top
     history = history.filter((item) => item.id !== prod.id);
     
     history.unshift({
@@ -99,11 +103,11 @@ const ProductDetailView: React.FC = () => {
       createdAt: prod.createdAt,
     });
     
-    // Keep only the latest 6 items
     const newHistory = history.slice(0, 6);
     localStorage.setItem('recentlyViewed', JSON.stringify(newHistory));
   };
 
+  // 1. Fetch thông tin sản phẩm
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
@@ -122,13 +126,66 @@ const ProductDetailView: React.FC = () => {
     fetchProduct();
   }, [id]);
 
+  // 2. Fetch trạng thái đã lưu qua API
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      if (!id) return;
+      const isLoggedIn = checkIsLoggedIn();
+      if (!isLoggedIn) return;
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${id}`, {
+          method: 'GET',
+          credentials: 'include', 
+        });
+
+        if (response.ok) {
+          const status = await response.json();
+          setIsSaved(status); 
+        }
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái lưu:", error);
+      }
+    };
+    
+    checkSavedStatus();
+  }, [id]);
+
   useEffect(() => {
     return () => {
       if (shareTimeoutRef.current) window.clearTimeout(shareTimeoutRef.current);
     };
   }, []);
 
-  const handleToggleSave = () => setIsSaved((prev) => !prev);
+  // 3. Xử lý Toggle Save/Unsave qua API
+  const handleToggleSave = async () => {
+    if (!product) return;
+
+    const isLoggedIn = checkIsLoggedIn();
+    if (!isLoggedIn) {
+      alert("Vui lòng đăng nhập để lưu sản phẩm!");
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/saved-products/toggle?productId=${product.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', 
+      });
+
+      if (response.ok) {
+        const result = await response.json(); 
+        setIsSaved(result); 
+      } else {
+        console.error("Xử lý lưu thất bại. Mã lỗi:", response.status);
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối khi lưu:", error);
+    }
+  };
 
   const handleShare = async () => {
     try {
@@ -160,7 +217,6 @@ const ProductDetailView: React.FC = () => {
   const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
   const sortedDetails = [...(product.details || [])].sort((a, b) => a.stt - b.stt);
 
-  // Tạo cấu trúc Breadcrumb linh hoạt từ groupName -> categoryName -> businessName
   const breadcrumbItems = [
     {
       name: product.productGroupName || product.groupName,
@@ -177,12 +233,11 @@ const ProductDetailView: React.FC = () => {
       id: product.businessId,
       type: 'business',
     },
-  ].filter((item) => item.name); // Giữ lại những mục có giá trị name hợp lệ
+  ].filter((item) => item.name); 
 
   return (
     <div className="dp-container">
       <div className="dp-top-row">
-        {/* Breadcrumb động */}
         <div className="dp-breadcrumb">
           {breadcrumbItems.map((item, index) => (
             <React.Fragment key={`${item.type}-${item.id || index}`}>
@@ -204,7 +259,6 @@ const ProductDetailView: React.FC = () => {
           )}
         </div>
 
-        {/* Nút hành động */}
         <div className="dp-actions">
           <button
             className={`dp-action-btn ${isSaved ? 'is-active' : ''}`}
@@ -231,7 +285,6 @@ const ProductDetailView: React.FC = () => {
             {shareCopied && <span className="dp-copied-tip">Đã sao chép liên kết</span>}
           </div>
 
-          {/* Nút bật thông tin mở rộng (Drawer) */}
           <button className="dp-icon-btn" onClick={() => setIsMoreDrawerOpen(true)} aria-label="Thêm tùy chọn">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <circle cx="12" cy="5" r="1.8" />
@@ -242,7 +295,6 @@ const ProductDetailView: React.FC = () => {
         </div>
       </div>
 
-      {/* ══ Tiêu đề sản phẩm ══ */}
       <h1 className="dp-product-title">{product.name}</h1>
 
       <div className="dp-main-content">
@@ -293,7 +345,6 @@ const ProductDetailView: React.FC = () => {
           )}
         </div>
 
-        {/* Bảng Chi Tiết Tiêu Chí */}
         <div className="dp-criteria-section">
           {sortedDetails.length > 0 ? (
             sortedDetails.map((d) => (
@@ -310,7 +361,6 @@ const ProductDetailView: React.FC = () => {
         </div>
       </div>
 
-      {/* ══ Drawer Thông Tin Mở Rộng ══ */}
       {isMoreDrawerOpen && (
         <>
           <div className="dp-drawer-overlay" onClick={() => setIsMoreDrawerOpen(false)} />

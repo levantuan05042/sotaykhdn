@@ -79,6 +79,12 @@ const getColorFromText = (text: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+// HÀM KIỂM TRA ĐĂNG NHẬP: Lấy thông tin thực tế từ Local Storage
+const checkIsLoggedIn = () => {
+  const username = localStorage.getItem('currentUserUsername');
+  return !!username; 
+};
+
 // --- Components ---
 const GridIcon = () => (
   <span className="group-title-icon">
@@ -118,20 +124,77 @@ const ChevronIcon = ({ expanded }: { expanded: boolean }) => (
 const ProductCard = ({ product, tagLabel, onClick }: { product: ProductInfo; tagLabel: string; onClick: () => void }) => {
   const [imgError, setImgError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
 
   const imagePath = product.imageUrl || product.image_url || '';
   const imageUrl = toDisplayUrl(imagePath);
   const firstLetter = product.name?.trim()?.charAt(0)?.toUpperCase() || '?';
   const bgColor = getColorFromText(product.name || '');
 
+  // 1. Kiểm tra trạng thái lưu
+  useEffect(() => {
+    const checkSavedStatus = async () => {
+      const isLoggedIn = checkIsLoggedIn();
+      if (!isLoggedIn) return;
+
+      try {
+        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${product.id}`, {
+          method: 'GET',
+          credentials: 'include', 
+        });
+
+        if (response.ok) {
+          const status = await response.json();
+          setIsSaved(status); 
+        }
+      } catch (error) {
+        console.error("Lỗi khi kiểm tra trạng thái lưu:", error);
+      }
+    };
+
+    if (product.id) {
+      checkSavedStatus();
+    }
+  }, [product.id]);
+
+  // 2. Xử lý sự kiện sao chép link
   const handleCopyLink = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Đã thêm /view vào đường dẫn copy
     const url = `${window.location.origin}/view/product-detail/${product.id}`;
     navigator.clipboard.writeText(url).then(() => {
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 123);
+      setTimeout(() => setIsCopied(false), 2000); // Sửa lại thành 2000ms cho mượt
     });
+  };
+
+  // 3. Xử lý sự kiện khi nhấn nút Lưu / Bỏ lưu
+  const handleToggleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation(); 
+    
+    const isLoggedIn = checkIsLoggedIn();
+    if (!isLoggedIn) {
+      alert("Vui lòng đăng nhập để lưu sản phẩm!"); 
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/saved-products/toggle?productId=${product.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include', 
+      });
+
+      if (response.ok) {
+        const result = await response.json(); 
+        setIsSaved(result); 
+      } else {
+        console.error("Xử lý lưu thất bại. Mã lỗi:", response.status);
+      }
+    } catch (error) {
+      console.error("Lỗi kết nối khi lưu:", error);
+    }
   };
 
   return (
@@ -171,8 +234,19 @@ const ProductCard = ({ product, tagLabel, onClick }: { product: ProductInfo; tag
               {isCopied && <span className="product-copied-tip">Đã sao chép liên kết</span>}
             </div>
 
-            <button className="product-action-btn" title="Lưu">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <button 
+              className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} 
+              title={isSaved ? "Bỏ lưu" : "Lưu"}
+              onClick={handleToggleSave}
+            >
+              <svg 
+                width="16" 
+                height="16" 
+                fill={isSaved ? "#2563EB" : "none"} 
+                stroke={isSaved ? "#2563EB" : "currentColor"} 
+                strokeWidth="2" 
+                viewBox="0 0 24 24"
+              >
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
               </svg>
             </button>
