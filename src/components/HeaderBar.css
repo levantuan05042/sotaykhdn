@@ -64,9 +64,9 @@
   position: absolute;
   top: calc(100% + 12px);
   right: -20px;
-  width: 45vw;
+  width: 35vw;
   min-width: 500px;
-  max-width: 700px;
+  max-width: 45vw;
   max-height: 640px;
   background-color: #ffffff;
   border-radius: 20px;
@@ -97,7 +97,7 @@
 
 .notification-header-title {
   font-family: 'Inter', sans-serif;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   color: #171717;
 }
@@ -107,7 +107,7 @@
   border: none;
   color: #AE1C3F;
   font-family: 'Inter', sans-serif;
-  font-size: 13px;
+  font-size: 18px;
   font-weight: 500;
   cursor: pointer;
   transition: opacity 0.15s;
@@ -190,7 +190,7 @@
 
 .item-title {
   font-family: 'Inter', sans-serif;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   color: #171717;
   line-height: 1.35;
@@ -215,7 +215,7 @@
 
 .item-content {
   font-family: 'Inter', sans-serif;
-  font-size: 13.5px;
+  font-size: 14px;
   color: #434343;
   line-height: 1.45;
   font-weight: 400;
