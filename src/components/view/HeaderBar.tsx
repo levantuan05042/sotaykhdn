@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import toast from 'react-hot-toast';
 import logoAgribank from '../../assets/logo-agribank.png';
 import styles from './HeaderBar.module.css';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
@@ -14,13 +13,6 @@ const ROLE_LABELS: Record<string, string> = {
   ETN08: 'Quản trị nội dung',
   ETK08: 'Kiểm duyệt nội dung',
   VIEWER: 'Tra cứu sản phẩm',
-};
-
-const getInitials = (fullName: string) => {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 };
 
 interface SearchItem {

@@ -120,6 +120,7 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
     <ApproverDetailWrapper
       moduleName="nhóm sản phẩm"
       itemName={detail.name}
+      objectCode={detail.id}
       status={detail.status}
       createdBy={detail.createdBy}
       approvedBy={detail.approvedBy}

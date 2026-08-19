@@ -116,6 +116,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
     <ApproverDetailWrapper
       moduleName="nghiệp vụ"
       itemName={detail.name}
+      objectCode={detail.id}
       status={detail.status}
       createdBy={detail.createdBy}
       approvedBy={detail.approvedBy}

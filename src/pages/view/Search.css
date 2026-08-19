@@ -221,10 +221,10 @@
 .card-title {
   font-size: 15px;
   color: #0f172a;
-  margin: 0 0 20px 0;
+  /* margin: 0 0 20px 0; */
   font-weight: 600;
   line-height: 1.4;
-  height: 42px;
+  /* height: 42px; */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

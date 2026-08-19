@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import RejectReasonPopup from './RejectReasonPopup';
 import ApproveConfirmPopup from './ApproveConfirmPopup';
+import AuditLogTimeline from './AuditLogTimeline';
 import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverDetailWrapper.css';
 
@@ -16,6 +17,7 @@ interface CommentItem {
 interface ApproverDetailWrapperProps {
   moduleName: string;
   itemName: string;
+  objectCode?: string;
   status: string;
   createdBy: string;
   approvedBy: string;
@@ -50,6 +52,7 @@ const mapModuleBreadcrumb = (name: string) => {
 export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
   moduleName,
   itemName,
+  objectCode,
   status,
   createdBy,
   approvedBy,
@@ -146,6 +149,9 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
           <div className="detail-form-card shadow-sm">
             {children}
           </div>
+
+          {/* Audit Log Timeline Card */}
+          <AuditLogTimeline objectCode={objectCode} />
         </section>
 
         {/* Right Column: Metadata & Comments */}

@@ -124,6 +124,7 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
     <ApproverDetailWrapper
       moduleName="tiêu chí"
       itemName={detail.name}
+      objectCode={detail.id}
       status={detail.status}
       createdBy={detail.createdBy}
       approvedBy={detail.approvedBy}

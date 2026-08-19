@@ -104,5 +104,8 @@ export const API_ENDPOINTS = {
     UNREAD_COUNT: `${BASE_URL}/notifications/unread-count`,
     MARK_READ: (groupId: string) => `${BASE_URL}/notifications/${groupId}/read`,
     MARK_ALL_READ: `${BASE_URL}/notifications/mark-all-read`,
+  },
+  LOGS: {
+    GET_BY_OBJECT: (objectCode: string) => `${BASE_URL}/logs?objectCode=${encodeURIComponent(objectCode)}`,
   }
 };

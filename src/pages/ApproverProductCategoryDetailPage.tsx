@@ -114,6 +114,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
     <ApproverDetailWrapper
       moduleName="danh mục sản phẩm"
       itemName={detail.name}
+      objectCode={detail.id}
       status={detail.status}
       createdBy={detail.createdBy}
       approvedBy={detail.approvedBy}

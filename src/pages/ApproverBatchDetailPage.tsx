@@ -9,6 +9,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ApproveConfirmPopup from '../components/ApproveConfirmPopup';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import AuditLogTimeline from '../components/AuditLogTimeline';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
@@ -462,6 +463,9 @@ const ApproverBatchDetailPage: React.FC = () => {
                     }}
                   />
                 </div>
+
+                {/* Audit Log Timeline for product */}
+                <AuditLogTimeline objectCode={quickViewProduct.id} />
               </>
             )}
 

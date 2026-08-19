@@ -119,16 +119,16 @@ export const ApproverCriteriaListPage: React.FC = () => {
       header: 'Tên tiêu chí',
       render: (row) => row.name,
     },
-    {
-      key: 'businessName',
-      header: 'Nghiệp vụ sản phẩm',
-      render: (row) => row.businessName,
-    },
-    {
-      key: 'categoryName',
-      header: 'Danh mục sản phẩm',
-      render: (row) => row.categoryName,
-    },
+    // {
+    //   key: 'businessName',
+    //   header: 'Nghiệp vụ sản phẩm',
+    //   render: (row) => row.businessName,
+    // },
+    // {
+    //   key: 'categoryName',
+    //   header: 'Danh mục sản phẩm',
+    //   render: (row) => row.categoryName,
+    // },
     {
       key: 'groupName',
       header: 'Nhóm sản phẩm',
