@@ -79,7 +79,6 @@
   text-overflow: ellipsis;
 }
 
-/* Hàng thông tin ngày tạo & lượt xem */
 .product-meta-row {
   display: flex;
   align-items: center;
@@ -90,7 +89,7 @@
 }
 
 .product-date {
-  margin: 0; /* Bỏ margin-bottom thừa */
+  margin: 0; 
   width: 100%;
 }
 

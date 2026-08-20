@@ -201,12 +201,11 @@ const HomePage: React.FC = () => {
   
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 10);
 
-  // Mảng từ khóa mặc định nếu chưa có lịch sử tìm kiếm
   const defaultSearches = ['SP vay vốn', 'thanh toán', 'xuất khẩu'];
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
   return (
-    <div className="homepage bg-[#f8f9fa] min-h-screen font-sans">
+    <div className="homepage min-h-screen font-sans">
       <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
         <h1 className="hero-title text-4xl font-bold text-gray-800 mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
