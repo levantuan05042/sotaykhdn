@@ -135,10 +135,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   const handleNavigate = (type: string, id: string) => {
     setShowDropdown(false);
     switch (type) {
-      case 'group': navigate(`/groups/${id}`); break;
-      case 'category': navigate(`/category/${id}`); break;
-      case 'business': navigate(`/business/${id}`); break;
-      case 'product': navigate(`/product-detail/${id}`); break;
+      case 'group': navigate(`/view/groups/${id}`); break;
+      case 'category': navigate(`/view/category/${id}`); break;
+      case 'business': navigate(`/view/business/${id}`); break;
+      case 'product': navigate(`/view/product-detail/${id}`); break;
       default: break;
     }
   };
@@ -261,16 +261,29 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                         Xóa tất cả
                       </button>
                     </div>
-                    {recentSearches.map(keyword => (
-                      <div 
-                        key={keyword} 
-                        className={`${styles['search-item']} ${styles['recent-item']}`} 
-                        onClick={() => setSearchQuery(keyword)}
-                      >
-                        <span className={styles['history-icon']}>🕒</span>
-                        <span className={styles['history-text']}>{keyword}</span>
-                      </div>
-                    ))}
+                    <div className={styles['recent-searches-container']}>
+                      {recentSearches.map(keyword => (
+                        <div 
+                          key={keyword} 
+                          className={styles['recent-item']} 
+                          onClick={() => setSearchQuery(keyword)}
+                        >
+                          <svg 
+                            className={styles['recent-item-icon']} 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          >
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                          </svg>
+                          <span className={styles['history-text']}>{keyword}</span>
+                        </div>
+                      ))}
+                    </div>
                   </>
                 )}
 

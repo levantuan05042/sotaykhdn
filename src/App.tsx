@@ -44,6 +44,9 @@ import HomePage from './pages/view/HomePage';
 import GroupView from './pages/view/GroupView';
 import ProductDetailView from './pages/view/ProductDetailView';
 import { SearchResultsPage } from './pages/view/SearchResultsPage';
+import CategoryView from './pages/view/CategoryView';
+import BusinessView from './pages/view/BusinessView';
+import SavedProductsView from './pages/view/SavedProductsView';
 
 const IndexRedirect = () => {
   const currentMode = localStorage.getItem('userRole') || 'ETN08';
@@ -125,6 +128,9 @@ function App() {
           <Route path="groups/:groupId" element={<GroupView />} />
           <Route path="product-detail/:id" element={<ProductDetailView />} />
           <Route path="search" element={<SearchResultsPage />} />
+          <Route path="category/:categoryId" element={<CategoryView />} />
+          <Route path="business/:businessId" element={<BusinessView />} />
+          <Route path="saved-products" element={<SavedProductsView />} />
         </Route>
 
         {/* =========================================

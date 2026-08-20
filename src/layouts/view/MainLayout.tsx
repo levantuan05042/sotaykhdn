@@ -28,7 +28,6 @@ const MainLayout: React.FC = () => {
   }, [isSidebarOpen]);
 
   return (
-    // 2. CẬP NHẬT CÁCH GỌI CLASS TỪ OBJECT 'styles'
     <div className={styles['main-layout']}>
       <Toaster position="top-right" reverseOrder={false} />
 
@@ -50,31 +49,34 @@ const MainLayout: React.FC = () => {
           />
         )}
 
-        {/* Xử lý class động cho Sidebar */}
+        {/* Sidebar Menu bên trái */}
         <aside className={`${styles['grid-sidebar']} ${isSidebarOpen ? styles.open : ''}`}>
           <Sidebar onClose={() => setIsSidebarOpen(false)} />
         </aside>
 
-        <main className={styles['grid-content']}>
-          <div className="page-body">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+        {/* Cột bên phải: Gồm Nội dung chính + Footer gom chung */}
+        <div className={styles['grid-main-wrapper']}>
+          <main className={styles['grid-content']}>
+            <div className="page-body">
+              <Outlet />
+            </div>
+          </main>
 
-      {/* Footer */}
-      <footer className={styles['grid-footer']}>
-        <div className={styles['footer-content']}>
-          <div>
-            © Bản quyền thuộc Agribank <br />
-            Phiên bản 1.0 cập nhật 04/2026
-          </div>
-          <div className={styles['footer-right']}>
-            ✉ bannganhangso@agribank.com.vn <br />
-            📞 0123456789 - Văn thư Ban NHS
-          </div>
+          {/* Footer nằm trọn bên phải */}
+          <footer className={styles['grid-footer']}>
+            <div className={styles['footer-content']}>
+              <div>
+                © Bản quyền thuộc Agribank <br />
+                Phiên bản 1.0 cập nhật 04/2026
+              </div>
+              <div className={styles['footer-right']}>
+                ✉ bannganhangso@agribank.com.vn <br />
+                📞 0123456789 - Văn thư Ban NHS
+              </div>
+            </div>
+          </footer>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };

@@ -1,8 +1,8 @@
 :root {
   --Token-Bg-body-bg: #FDFCFD;
   --sm-font-family: 'Inter', sans-serif;
-  --sm-size: 16px;
-  --sm-line-height: 24px;
+  --sm-size: 14px; /* Figma thường dùng size 14px cho sub-menu */
+  --sm-line-height: 20px;
 }
 
 /* --- Layout chính --- */
@@ -43,13 +43,23 @@
 .sidebar-content {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 12px; /* Tăng khoảng cách giữa icon và chữ cho thoáng giống Figma */
   align-self: stretch;
-  padding: 16px;
+  padding: 12px 16px; /* Giảm padding dọc một chút để menu gọn hơn */
   flex: 1 0 0;
   box-sizing: border-box;
   border-radius: 12px;
   transition: background-color 0.2s ease;
+}
+
+/* Thêm class cho Icon */
+.sidebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: inherit;
 }
 
 .sidebar-text {
@@ -69,25 +79,53 @@
 
 .sidebar-btn.active .sidebar-content {
   background-color: #F8EAEC;
+  color: #AE1C3F; /* Đổi màu tổng thể content để icon ăn theo currentColor */
 }
 
-.sidebar-btn.active .sidebar-text {
+.sidebar-btn.active .sidebar-text,
+.sidebar-btn.active .sidebar-icon {
   color: #AE1C3F;
-  font-weight: 600;
+  font-weight: 500; /* In đậm chữ khi active */
 }
 
-/* --- Tiêu đề danh mục & Trạng thái trống --- */
+/* --- Tiêu đề danh mục (Group Header) --- */
+.sidebar-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-group-items {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 4px;
+  padding-top: 4px; /* Cách header một chút */
+}
+
 .sidebar-divider {
-  color: rgba(255, 255, 255, 0.6);
-  font-family: 'Inter', sans-serif;
+  color: rgba(255, 255, 255, 0.9); /* Làm sáng hơn một chút để dễ đọc */
+  font-family: var(--sm-font-family);
   font-size: 13px;
   font-weight: 400;
   padding: 16px 24px 8px 24px;
   width: 100%;
   box-sizing: border-box;
-  text-transform: uppercase;
+  
+  /* Các thuộc tính mới phục vụ Collapse/Expand */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s ease;
 }
 
+.sidebar-divider:hover {
+  color: #ffffff;
+}
+
+/* --- Trạng thái trống --- */
 .sidebar-empty {
   color: rgba(255, 255, 255, 0.6);
   font-family: 'Inter', sans-serif;
@@ -98,47 +136,7 @@
   box-sizing: border-box;
 }
 
-/* --- Mở rộng & Cấu trúc con --- */
-.sidebar-item-group,
-.sidebar-submenu {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
 
-.level-2 .sidebar-content { padding-left: 32px; }
-.level-3 .sidebar-content { padding-left: 48px; }
-
-.level-2 .sidebar-text,
-.level-3 .sidebar-text { font-size: 14px; }
-
-/* --- Các thành phần phụ (Caret, Badge, Indicator) --- */
-.sidebar-indicator { display: none; }
-
-.sidebar-caret {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.2s ease;
-  color: inherit;
-}
-.sidebar-caret.open { transform: rotate(180deg); }
-
-.sidebar-count-tag {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 12px;
-  background-color: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.9);
-  margin-left: auto;
-}
-
-.sidebar-btn.active .sidebar-count-tag {
-  background-color: rgba(174, 28, 63, 0.1);
-  color: #AE1C3F;
-  font-weight: 600;
-}
 /* ============================================================
    NÚT ĐÓNG MENU (chỉ dùng khi Sidebar hiển thị dạng drawer)
    ============================================================ */
@@ -164,8 +162,6 @@
 
 /* ============================================================
    RESPONSIVE — TABLET/MOBILE (≤1024px)
-   Sidebar hoạt động như menu trượt (drawer): hiện nút đóng,
-   thu nhỏ khoảng đệm đôi chút cho vừa màn hình hẹp.
    ============================================================ */
 @media (max-width: 1024px) {
   .sidebar-close-btn {

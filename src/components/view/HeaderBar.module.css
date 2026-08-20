@@ -259,9 +259,15 @@
 .search-title:first-child { margin-top: 0; }
 .search-item { padding: 10px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; font-size: 14px;}
 .search-item:hover { background-color: #f5f5f5; }
-.search-history-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600; }
+
+/* Các style mới cho lịch sử tìm kiếm */
+.search-history-header { display: flex; justify-content: space-between; align-items: center; font-size: 14px; color: #666; font-weight: 500; margin-bottom: 8px; }
 .clear-history-btn { background: none; border: none; color: #A31720; font-size: 12px; cursor: pointer; padding: 4px; }
-.history-icon { margin-right: 12px; opacity: 0.5; }
+.recent-searches-container { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.recent-item { display: inline-flex; align-items: center; padding: 8px 16px; background-color: #F4F4F6; border-radius: 999px; cursor: pointer; font-size: 14px; color: #333; transition: all 0.2s ease; }
+.recent-item:hover { background-color: #E5E5E7; }
+.recent-item-icon { margin-right: 8px; width: 16px; height: 16px; color: #555; flex-shrink: 0; }
+
 .search-empty, .search-loading { padding: 24px; text-align: center; color: #666; font-size: 14px; }
 .search-view-all { padding: 12px 16px; border-top: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; cursor: pointer; color: #A31720; font-size: 14px; font-weight: 500; justify-content: center; background-color: #fdf2f3; }
 .search-view-all:hover { background-color: #fae6e8; }

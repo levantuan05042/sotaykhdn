@@ -48,7 +48,7 @@ const AddProductPage: React.FC = () => {
 
         const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
         renderCustomToast(message);
-        setTimeout(() => navigate('/product-groups'), 2000);
+        setTimeout(() => navigate('/product-groups'), 250);
     } catch (error: any) {
         toast.error(error.response?.data?.message || 'Có lỗi xảy ra', { position: 'top-center' });
     }

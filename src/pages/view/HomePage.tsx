@@ -1,236 +1,427 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import './GroupView.css'; 
+import './HomePage.css';
 import { BASE_URL } from '../../config/view/apiConfig';
+import ProductCard from './common/ProductCard';
+import type { ProductInfo } from './common/ProductCard';
 
-// --- Helpers ---
-const toDisplayUrl = (raw?: string | null) => {
-  if (!raw) return '';
-  if (raw.startsWith('http')) {
-    return raw;
-  }
-  const path = raw.startsWith('/') ? raw : `/${raw}`;
-  return `${BASE_URL}${path}`;
+const getCategoryStyle = (index: number) => {
+  const styles = [
+    { iconColor: 'text-pink-500', bgColor: 'bg-pink-50', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9' },
+    { iconColor: 'text-teal-500', bgColor: 'bg-teal-50', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+    { iconColor: 'text-orange-500', bgColor: 'bg-orange-50', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { iconColor: 'text-green-500', bgColor: 'bg-green-50', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
+    { iconColor: 'text-yellow-500', bgColor: 'bg-yellow-50', icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
+    { iconColor: 'text-indigo-500', bgColor: 'bg-indigo-50', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
+    { iconColor: 'text-purple-500', bgColor: 'bg-purple-50', icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z' },
+    { iconColor: 'text-cyan-500', bgColor: 'bg-cyan-50', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { iconColor: 'text-red-500', bgColor: 'bg-red-50', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
+  ];
+  return styles[index % styles.length];
 };
 
-const getColorFromText = (text: string) => {
-  const colors = ['#AE1C3F', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DC2626', '#0891B2', '#4F46E5', '#9333EA', '#EA580C'];
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-};
-
-// HÀM KIỂM TRA ĐĂNG NHẬP: Lấy thông tin thực tế từ Local Storage của dự án
-const checkIsLoggedIn = () => {
-  const username = localStorage.getItem('currentUserUsername');
-  return !!username; // Trả về true nếu có dữ liệu, false nếu không
-};
-
-// --- Interface ---
-interface Product {
-  id: string;
-  name: string;
-  imageUrl?: string | null;
-  image_url?: string | null;
-  categoryName?: string;
-  views?: number;
-  createdAt?: string | null;
-  [key: string]: any;
+interface Category { id: string | number; name: string; [key: string]: any; }
+interface SearchItem { id: string; name: string; }
+interface SearchResponse {
+  groups: SearchItem[]; 
+  categories: SearchItem[]; 
+  businesses: SearchItem[]; 
+  products: SearchItem[];
 }
 
-const ProductCard = ({ product, tagLabel, onClick }: { product: Product; tagLabel: string; onClick: () => void }) => {
-  const [imgError, setImgError] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
-
-  const imagePath = product.imageUrl || product.image_url || '';
-  const imageUrl = toDisplayUrl(imagePath);
-  const firstLetter = product.name?.trim()?.charAt(0)?.toUpperCase() || '?';
-  const bgColor = getColorFromText(product.name || '');
-
-  // 1. Kiểm tra trạng thái lưu
-  useEffect(() => {
-    const checkSavedStatus = async () => {
-      const isLoggedIn = checkIsLoggedIn();
-      // Nếu chưa có thông tin user, bỏ qua việc gọi API
-      if (!isLoggedIn) return;
-
-      try {
-        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${product.id}`, {
-          method: 'GET',
-          // Gửi kèm Cookie/Session lên Spring Security
-          credentials: 'include', 
-        });
-
-        if (response.ok) {
-          const status = await response.json();
-          setIsSaved(status); 
-        }
-      } catch (error) {
-        console.error("Lỗi khi kiểm tra trạng thái lưu:", error);
-      }
-    };
-
-    if (product.id) {
-      checkSavedStatus();
-    }
-  }, [product.id]);
-
-  // 2. Xử lý sự kiện sao chép link
-  const handleCopyLink = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const url = `${window.location.origin}/view/product-detail/${product.id}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    });
-  };
-
-  // 3. Xử lý sự kiện khi nhấn nút Lưu / Bỏ lưu
-  const handleToggleSave = async (e: React.MouseEvent) => {
-    e.stopPropagation(); 
-    
-    const isLoggedIn = checkIsLoggedIn();
-    if (!isLoggedIn) {
-      alert("Vui lòng đăng nhập để lưu sản phẩm!"); 
-      return;
-    }
-
-    try {
-      const response = await fetch(`${BASE_URL}/api/saved-products/toggle?productId=${product.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Gửi kèm Cookie/Session lên Spring Security
-        credentials: 'include', 
-      });
-
-      if (response.ok) {
-        const result = await response.json(); 
-        setIsSaved(result); 
-      } else {
-        console.error("Xử lý lưu thất bại. Mã lỗi:", response.status);
-      }
-    } catch (error) {
-      console.error("Lỗi kết nối khi lưu:", error);
-    }
-  };
-
-  return (
-    <div className="product-card glass-card" onClick={onClick}>
-      <div className="product-img-wrapper">
-        {imageUrl && !imgError ? (
-          <img src={imageUrl} alt={product.name} loading="lazy" onError={() => setImgError(true)} />
-        ) : (
-          <div className="product-placeholder" style={{ backgroundColor: bgColor }}>{firstLetter}</div>
-        )}
-      </div>
-      <div className="product-info">
-        <span className="product-tag">{tagLabel}</span>
-        <h4 className="product-title">{product.name}</h4>
-        
-        <div className="product-footer">
-          <div className="product-meta">
-            <span className="meta-item">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-              {product.views ?? 0}
-            </span>
-            <span className="meta-item">
-              <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              {product.createdAt ? new Date(product.createdAt).toLocaleDateString('vi-VN') : '---'}
-            </span>
-          </div>
-          <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-            <div className="product-share-wrapper">
-              <button className="product-action-btn" title="Chia sẻ" onClick={handleCopyLink}>
-                <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                  <circle cx="18" cy="5" r="3"/>
-                  <circle cx="6" cy="12" r="3"/>
-                  <circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-              </button>
-              {isCopied && <span className="product-copied-tip">Đã sao chép liên kết</span>}
-            </div>
-
-            <button 
-              className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} 
-              title={isSaved ? "Bỏ lưu" : "Lưu"}
-              onClick={handleToggleSave}
-            >
-              <svg 
-                width="16" 
-                height="16" 
-                fill={isSaved ? "#2563EB" : "none"} 
-                stroke={isSaved ? "#2563EB" : "currentColor"} 
-                strokeWidth="2" 
-                viewBox="0 0 24 24"
-              >
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- Main Component ---
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [recentProducts, setRecentProducts] = useState<Product[]>([]);
+
+  const [recentProducts, setRecentProducts] = useState<ProductInfo[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const [groupProductCounts, setGroupProductCounts] = useState<Record<string, number>>({});
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [loadingSearch, setLoadingSearch] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const loadRecentViewed = () => {
+    try {
+      const saved = localStorage.getItem('recentlyViewed');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setRecentProducts(parsed.slice(0, 6));
+      }
+    } catch (error) { 
+      console.error('Lỗi khi đọc lịch sử:', error); 
+    }
+
+    const storedSearches = localStorage.getItem('recentSearches');
+    if (storedSearches) {
+      setRecentSearches(JSON.parse(storedSearches));
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
       try {
-        const saved = localStorage.getItem('recentlyViewed');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          setRecentProducts(parsed.slice(0, 6)); 
+        const response = await fetch(`${BASE_URL}/api/v1/product-groups?status=ACTIVE&active=true`); 
+        if (response.ok) {
+          const data = await response.json();
+          setCategories(data);
         }
-      } catch (error) {
-        console.error("Lỗi khi đọc lịch sử:", error);
+      } catch (error) { 
+        console.error("Lỗi khi fetch categories:", error); 
       }
     };
+    fetchCategories();
+  }, []);
 
-    loadRecentViewed();
-  }, [location]); 
+  useEffect(() => {
+    const fetchAndCountProducts = async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/api/v1/products`);
+        if (response.ok) {
+          const data = await response.json();
+          const products = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
+          const counts: Record<string, number> = {};
+          
+          products.forEach((product: any) => {
+            const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
+            const isActive = product.isactive === true || product.isActive === true || product.active === true;
+            const isBusinessNull = product.businessId === null && product.businessName === null;
+            const isCategoryNull = product.productCategoryId === null && product.productCategoryName === null;
+            
+            if (isStatusActive && isActive && isBusinessNull && isCategoryNull) {
+              const groupId = product.productGroupId || product.groupId || product.product_group_id;
+              if (groupId) {
+                counts[groupId] = (counts[groupId] || 0) + 1;
+              }
+            }
+          });
+          setGroupProductCounts(counts);
+        }
+      } catch (error) { 
+        console.error("Lỗi khi fetch sản phẩm để đếm:", error); 
+      }
+    };
+    fetchAndCountProducts();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const keyword = searchQuery.trim();
+    if (!keyword) { 
+      setSearchResult(null); 
+      return; 
+    }
+
+    const timeout = setTimeout(async () => {
+      try {
+        setLoadingSearch(true);
+        const response = await fetch(`${BASE_URL}/api/v1/search?keyword=${encodeURIComponent(keyword)}`);
+        if (response.ok) {
+          const data = await response.json();
+          setSearchResult(data);
+          setShowDropdown(true);
+        }
+      } catch (error) { 
+        console.error('Lỗi khi tìm kiếm nhanh:', error); 
+      } finally { 
+        setLoadingSearch(false); 
+      }
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
+  const hasResult = searchResult && (
+    searchResult.groups.length > 0 || 
+    searchResult.categories.length > 0 || 
+    searchResult.businesses.length > 0 || 
+    searchResult.products.length > 0
+  );
+
+  const saveRecentSearch = (keyword: string) => {
+    const trimmedKeyword = keyword.trim();
+    if (!trimmedKeyword) return;
+    
+    const stored = localStorage.getItem('recentSearches');
+    let searches: string[] = stored ? JSON.parse(stored) : [];
+    searches = searches.filter(item => item.toLowerCase() !== trimmedKeyword.toLowerCase());
+    searches.unshift(trimmedKeyword);
+    searches = searches.slice(0, 10);
+    
+    localStorage.setItem('recentSearches', JSON.stringify(searches));
+    setRecentSearches(searches); 
+  };
+
+  const handleSearchSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const keyword = searchQuery.trim();
+    if (keyword) {
+      saveRecentSearch(keyword);
+      setShowDropdown(false);
+      navigate(`/view/search?q=${encodeURIComponent(keyword)}`);
+    }
+  };
+
+  const handleTagClick = (tag: string) => {
+    setSearchQuery(tag);
+    saveRecentSearch(tag);
+    setShowDropdown(false);
+    navigate(`/view/search?q=${encodeURIComponent(tag)}`);
+  };
+
+  const handleNavigateFromDropdown = (type: string, id: string) => {
+    setShowDropdown(false);
+    saveRecentSearch(searchQuery);
+    switch (type) {
+      case 'group': navigate(`/view/groups/${id}`); break;
+      case 'category': navigate(`/view/category/${id}`); break;
+      case 'business': navigate(`/view/business/${id}`); break;
+      case 'product': navigate(`/view/product-detail/${id}`); break;
+      default: break;
+    }
+  };
+
+  const handleCategoryClick = (categoryId: string | number) => {
+    navigate(`/view/groups/${categoryId}`);
+  };
+  
+  const displayedCategories = showAllCategories ? categories : categories.slice(0, 10);
+
+  // Mảng từ khóa mặc định nếu chưa có lịch sử tìm kiếm
+  const defaultSearches = ['SP vay vốn', 'thanh toán', 'xuất khẩu'];
+  const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
   return (
-    <div className="homepage">
-      <div className="hero-section">
-        <h1 className="hero-title">
+    <div className="homepage bg-[#f8f9fa] min-h-screen font-sans">
+      <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
+        <h1 className="hero-title text-4xl font-bold text-gray-800 mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
         </h1>
-        <p className="hero-subtitle">dành cho khách hàng doanh nghiệp</p>
-      </div>
-      {recentProducts.length > 0 && (
-        <div className="px-8 -mt-12 mb-12 relative z-10">
-          <div className="flex items-center space-x-2 mb-6 text-gray-700 font-semibold text-lg">
-             <svg xmlns="http://www.w3.org/2000/svg" width="16.5" height="13.5" viewBox="0 0 18 15" fill="none">
-              <path d="M5.25 5.99823H0.75V1.49823M0.75 5.99823L4.23 2.72823C5.03606 1.92176 6.03328 1.33263 7.12861 1.01581C8.22393 0.698982 9.38167 0.664789 10.4938 0.916419C11.6059 1.16805 12.6361 1.6973 13.4884 2.45479C14.3407 3.21228 14.9871 4.17331 15.3675 5.24823M12.75 8.99823H17.25V13.4982M17.25 8.99823L13.77 12.2682C12.9639 13.0747 11.9667 13.6638 10.8714 13.9806C9.77607 14.2975 8.61833 14.3317 7.50621 14.08C6.3941 13.8284 5.36385 13.2991 4.5116 12.5417C3.65935 11.7842 3.01288 10.8231 2.6325 9.74823" stroke="#3C393F" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <h2 style={{ color: "#3C393F", fontFamily: "Inter", fontSize: "20px", fontWeight: 600, lineHeight: "30px" }}>
-              Đã xem gần đây
-            </h2>
-          </div>
+        
+        <div className="w-full max-w-3xl relative" ref={dropdownRef}>
+          <form onSubmit={handleSearchSubmit} className="relative flex items-center z-20">
+            <input 
+              type="text" 
+              placeholder="Thanh toán" 
+              value={searchQuery} 
+              onFocus={() => setShowDropdown(true)} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              className="w-full pl-6 pr-16 py-4 rounded-full border border-gray-200 shadow-md text-lg focus:outline-none focus:ring-2 focus:ring-[#AE1C3F] focus:border-transparent text-gray-700 placeholder-gray-400 bg-white" 
+            />
+            <button 
+              type="submit" 
+              disabled={!searchQuery.trim()} 
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#AE1C3F] hover:bg-rose-800 text-white p-3 rounded-full transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </form>
 
-          <div className="products-grid">
-            {recentProducts.map((product) => (
-              <ProductCard 
-                key={product.id} 
-                product={product} 
-                tagLabel={product.categoryName || 'Sản phẩm'}
-                onClick={() => navigate(`/view/product-detail/${product.id}`)} 
-              />
-            ))}
-          </div>
+          {showDropdown && searchQuery.trim() && (
+            <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-gray-100 max-h-[400px] overflow-y-auto z-50">
+              <div className="p-4 text-left">
+                {loadingSearch && (
+                  <div className="p-6 text-center text-gray-500 text-sm">
+                    Đang tìm kiếm dữ liệu...
+                  </div>
+                )}
+                
+                {!loadingSearch && !hasResult && (
+                  <div className="p-6 text-center text-gray-500 text-sm">
+                    Không tìm thấy dữ liệu phù hợp
+                  </div>
+                )}
+                
+                {!loadingSearch && hasResult && (
+                  <>
+                    {searchResult?.groups && searchResult.groups.length > 0 && (
+                      <>
+                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Nhóm sản phẩm</div>
+                        {searchResult.groups.map(item => (
+                          <div 
+                            key={item.id} 
+                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
+                            onClick={() => handleNavigateFromDropdown('group', item.id)}
+                          >
+                            {item.name}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {searchResult?.categories && searchResult.categories.length > 0 && (
+                      <>
+                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Danh mục</div>
+                        {searchResult.categories.map(item => (
+                          <div 
+                            key={item.id} 
+                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
+                            onClick={() => handleNavigateFromDropdown('category', item.id)}
+                          >
+                            {item.name}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {searchResult?.businesses && searchResult.businesses.length > 0 && (
+                      <>
+                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Loại hình Doanh nghiệp</div>
+                        {searchResult.businesses.map(item => (
+                          <div 
+                            key={item.id} 
+                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
+                            onClick={() => handleNavigateFromDropdown('business', item.id)}
+                          >
+                            {item.name}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {searchResult?.products && searchResult.products.length > 0 && (
+                      <>
+                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Sản phẩm</div>
+                        {searchResult.products.map(item => (
+                          <div 
+                            key={item.id} 
+                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
+                            onClick={() => handleNavigateFromDropdown('product', item.id)}
+                          >
+                            {item.name}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+              
+              {!loadingSearch && (
+                <div 
+                  className="px-4 py-3 border-t border-gray-100 flex items-center justify-center gap-2 cursor-pointer text-[#A31720] text-sm font-medium bg-[#fdf2f3] hover:bg-[#fae6e8] transition-colors" 
+                  onClick={handleSearchSubmit}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <span>Xem tất cả kết quả cho "<strong>{searchQuery}</strong>"</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      )}
+
+        <div className="flex flex-wrap justify-center gap-3 mt-6">
+          {searchTags.map((tag, index) => (
+            <button 
+              key={index} 
+              onClick={() => handleTagClick(tag)} 
+              className="bg-white/80 hover:bg-white text-gray-600 px-5 py-2 rounded-full shadow-sm text-sm font-medium flex items-center transition-colors border border-white"
+            >
+              <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              {tag}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="container mx-auto max-w-6xl px-4 py-12">
+        {categories.length > 0 && (
+          <div className="mb-16">
+            <div className="flex items-center space-x-3 mb-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 6h16M4 12h16M4 18h16" />
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                <line x1="3" y1="9" x2="21" y2="9"/>
+                <line x1="9" y1="21" x2="9" y2="9"/>
+              </svg>
+              <h2 className="text-2xl font-bold text-gray-800">Danh mục nhóm sản phẩm</h2>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {displayedCategories.map((cat, index) => {
+                const style = getCategoryStyle(index); 
+                const count = groupProductCounts[cat.id] || 0;
+                return (
+                  <div 
+                    key={cat.id} 
+                    onClick={() => handleCategoryClick(cat.id)} 
+                    className="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-start gap-4"
+                  >
+                    <div 
+                      className={`rounded-xl flex items-center justify-center ${style.bgColor} ${style.iconColor}`} 
+                      style={{ width: '48px', height: '48px' }}
+                    >
+                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
+                        <path d={style.icon} />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-[15px] text-gray-800 leading-tight mb-1">{cat.name}</h3>
+                      <p className="text-[13px] text-gray-500 font-medium">{count} sản phẩm</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {categories.length > 10 && (
+              <div className="flex justify-center mt-8">
+                <button 
+                  onClick={() => setShowAllCategories(!showAllCategories)} 
+                  className="flex items-center px-6 py-2 border border-gray-200 rounded-full text-sm font-medium text-[#AE1C3F] hover:bg-rose-50 transition-colors bg-white"
+                >
+                  {showAllCategories ? 'Ẩn bớt' : 'Xem tất cả'}
+                  <svg className={`w-4 h-4 ml-2 transition-transform duration-300 ${showAllCategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {recentProducts.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center space-x-3 mb-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 2v6h-6"/>
+                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                <path d="M3 22v-6h6"/>
+                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+              </svg>
+              <h2 className="text-2xl font-bold text-gray-800">Đã xem gần đây</h2>
+            </div>
+            
+            <div className="products-grid">
+              {recentProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  onClick={() => navigate(`/view/product-detail/${product.id}`)} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
