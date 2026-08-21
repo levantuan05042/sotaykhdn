@@ -116,7 +116,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                 <td>{item.createdByFullName || '---'}</td>
                 <td>{item.approvedBy || '---'}</td>
                 <td style={{ fontWeight: 600 }}>
-                  {item.version ? `Phiên bản ${item.version}` : 'Phiên bản 1'}
+                  {item.version ? `Phiên bản ${item.version}` : '---'}
                 </td>
 
                 <td>

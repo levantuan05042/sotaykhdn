@@ -203,7 +203,7 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                     lineHeight: '24px', 
                     flex: '1 0 0' 
                   }}>
-                    {item.version ? `Phiên bản ${item.version}` : 'new'}
+                    {item.version ? `Phiên bản ${item.version}` : '---'}
                   </td>
 
                   <td className="px-40 text-right">
