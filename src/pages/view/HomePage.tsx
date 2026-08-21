@@ -34,11 +34,12 @@ const HomePage: React.FC = () => {
   const location = useLocation();
 
   const [recentProducts, setRecentProducts] = useState<ProductInfo[]>([]);
+  // THÊM STATE CHO SẢN PHẨM MỚI TẠO (Version = 1)
+  const [newlyCreatedProducts, setNewlyCreatedProducts] = useState<ProductInfo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [groupProductCounts, setGroupProductCounts] = useState<Record<string, number>>({});
   
-  // State mới cho phần Mới cập nhật
   const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -105,15 +106,26 @@ const HomePage: React.FC = () => {
           });
           setGroupProductCounts(counts);
 
-          // === LOGIC MỚI: Trích xuất danh sách "Mới cập nhật" ===
-          const sortedByDate = [...products].sort((a: any, b: any) => {
+          // Lọc danh sách SP active để xử lý các khối hiển thị
+          const activeProductsForUpdate = products.filter((product: any) => {
+            const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
+            const isActive = product.isactive === true || product.isActive === true || product.active === true;
+            return isStatusActive && isActive;
+          });
+
+          // Sắp xếp theo ngày mới nhất
+          const sortedByDate = activeProductsForUpdate.sort((a: any, b: any) => {
             const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-            return dateB - dateA; // Sắp xếp giảm dần (mới nhất lên đầu)
+            return dateB - dateA; 
           });
-          
-          // Lấy 4 sản phẩm mới nhất để hiển thị
+
+          // 1. SET STATE CHO KHỐI MỚI CẬP NHẬT
           setRecentUpdates(sortedByDate.slice(0, 4));
+
+          // 2. SET STATE CHO KHỐI SẢN PHẨM MỚI TẠO (Lọc version === 1, lấy 6 item)
+          const newProducts = sortedByDate.filter((p: any) => (p.version ?? 1) === 1);
+          setNewlyCreatedProducts(newProducts.slice(0, 6));
         }
       } catch (error) { 
         console.error("Lỗi khi fetch sản phẩm:", error); 
@@ -212,7 +224,6 @@ const HomePage: React.FC = () => {
     navigate(`/view/groups/${categoryId}`);
   };
 
-  // Hàm format ngày tháng theo chuẩn Việt Nam (VD: 16/06/2023)
   const formatDate = (dateString: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -229,7 +240,6 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="homepage min-h-screen font-sans">
-      {/* ... Phần hero-section giữ nguyên ... */}
       <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
         <h1 className="hero-title text-4xl font-bold text-gray-800 mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
@@ -366,66 +376,6 @@ const HomePage: React.FC = () => {
       </div>
 
       <div className="container mx-auto max-w-6xl px-4 py-12">
-        {/* --- PHẦN MỚI CẬP NHẬT (Render ngay trên Danh mục) --- */}
-        {recentUpdates.length > 0 && (
-          <div className="mb-16">
-            <div className="flex items-center space-x-3 mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h2 className="text-2xl font-bold text-gray-800">Mới cập nhật</h2>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              {recentUpdates.map((product) => {
-                // Xác định Tạo mới hay Sửa đổi dựa trên updatedAt khác createdAt
-                const isUpdated = product.updatedAt && product.updatedAt !== product.createdAt;
-                const badgeLabel = isUpdated ? 'Sửa đổi' : 'Tạo mới';
-                const badgeClass = isUpdated 
-                  ? 'bg-rose-100 text-rose-700' 
-                  : 'bg-emerald-100 text-emerald-700';
-
-                const displayDate = formatDate(product.updatedAt || product.createdAt);
-                const categoryText = product.productGroupName || product.productCategoryName || 'Sản phẩm';
-
-                return (
-                  <div 
-                    key={product.id}
-                    onClick={() => navigate(`/view/product-detail/${product.id}`)}
-                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-                  >
-                    <div className="flex items-center gap-4">
-                      {/* Badge Tạo mới / Sửa đổi */}
-                      <span className={`px-4 py-1.5 text-xs font-semibold rounded-full w-[80px] text-center whitespace-nowrap ${badgeClass}`}>
-                        {badgeLabel}
-                      </span>
-                      
-                      {/* Thông tin sản phẩm */}
-                      <div className="flex flex-col">
-                        <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
-                          {product.name}
-                        </h3>
-                        <p className="text-[13px] text-gray-500 mt-1">
-                          {categoryText} • {displayDate}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Nút Xem chi tiết */}
-                    <div className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-800 transition-colors">
-                      Xem chi tiết
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M9 18l6-6-6-6" />
-                      </svg>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ... Danh mục nhóm sản phẩm ... */}
         {categories.length > 0 && (
           <div className="mb-16">
             <div className="flex items-center space-x-3 mb-6">
@@ -481,7 +431,28 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {/* ... Đã xem gần đây ... */}
+        {/* THÊM MỚI: KHỐI SẢN PHẨM MỚI TẠO DÙNG PRODUCT CARD */}
+        {newlyCreatedProducts.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center space-x-3 mb-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
+              </svg>
+              <h2 className="text-2xl font-bold text-gray-800">Sản phẩm mới tạo</h2>
+            </div>
+            
+            <div className="products-grid">
+              {newlyCreatedProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  onClick={() => navigate(`/view/product-detail/${product.id}`)} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {recentProducts.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-6">
@@ -502,6 +473,60 @@ const HomePage: React.FC = () => {
                   onClick={() => navigate(`/view/product-detail/${product.id}`)} 
                 />
               ))}
+            </div>
+          </div>
+        )}
+
+        {recentUpdates.length > 0 && (
+          <div className="mb-16">
+            <div className="flex items-center space-x-3 mb-6">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h2 className="text-2xl font-bold text-gray-800">Mới cập nhật</h2>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              {recentUpdates.map((product) => {
+                const isUpdated = (product.version ?? 1) > 1;
+                const badgeLabel = isUpdated ? 'Sửa đổi' : 'Tạo mới';
+                const badgeClass = isUpdated 
+                  ? 'bg-rose-100 text-rose-700' 
+                  : 'bg-emerald-100 text-emerald-700';
+
+                const displayDate = formatDate(product.updatedAt || product.createdAt);
+                const categoryText = product.productGroupName || product.productCategoryName || 'Sản phẩm';
+
+                return (
+                  <div 
+                    key={product.id}
+                    onClick={() => navigate(`/view/product-detail/${product.id}`)}
+                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <span className={`px-4 py-1.5 text-xs font-semibold rounded-full w-[80px] text-center whitespace-nowrap ${badgeClass}`}>
+                        {badgeLabel}
+                      </span>
+                      
+                      <div className="flex flex-col">
+                        <h3 className="text-[15px] font-bold text-gray-900 leading-tight">
+                          {product.name}
+                        </h3>
+                        <p className="text-[13px] text-gray-500 mt-1">
+                          {categoryText} • {displayDate}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 text-[13px] text-gray-400 hover:text-gray-800 transition-colors">
+                      Xem chi tiết
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

@@ -28,6 +28,32 @@ export interface CategoryDetailData {
   products?: ProductInfo[];
 }
 
+// --- HELPER FUNCTIONS KIỂM TRA DỮ LIỆU ĐA CẤP ---
+const checkHasBusiness = (prod: any): boolean => {
+  return !!(
+    prod.businessId || 
+    prod.productBusinessId || 
+    prod.business || 
+    prod.productBusiness || 
+    prod.businessName || 
+    prod.productBusinessName
+  );
+};
+
+const checkHasCategory = (prod: any): boolean => {
+  return !!(
+    prod.categoryId || 
+    prod.productCategoryId || 
+    prod.category || 
+    prod.productCategory || 
+    prod.categoryName || 
+    prod.productCategoryName
+  );
+};
+
+// --------------------------------------------------------
+// 1. COMPONENT CẤP NGHIỆP VỤ (BUSINESS - CẤP 3)
+// --------------------------------------------------------
 const BusinessSection = ({ business, onNavigate }: { business: BusinessItem; onNavigate: (id: string) => void }) => {
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,7 +63,11 @@ const BusinessSection = ({ business, onNavigate }: { business: BusinessItem; onN
       try {
         const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(business.id));
         setProducts(res.data || []);
-      } catch (error) { console.error(error); } finally { setLoading(false); }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchProducts();
   }, [business.id]);
@@ -56,6 +86,9 @@ const BusinessSection = ({ business, onNavigate }: { business: BusinessItem; onN
   );
 };
 
+// --------------------------------------------------------
+// 2. COMPONENT CẤP DANH MỤC (CATEGORY - CẤP 2)
+// --------------------------------------------------------
 const CategorySection = ({ category, onNavigate }: { category: CategoryItem; onNavigate: (id: string) => void }) => {
   const [catData, setCatData] = useState<CategoryDetailData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,15 +98,23 @@ const CategorySection = ({ category, onNavigate }: { category: CategoryItem; onN
       try {
         const res = await axios.get<CategoryDetailData>(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(category.id));
         setCatData(res.data);
-      } catch (error) { console.error(error); } finally { setLoading(false); }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchCatData();
   }, [category.id]);
 
-  if (loading) return null; 
-  if (!catData) return null;
+  if (loading || !catData) return null;
 
-  const hasDirectProducts = catData.products && catData.products.length > 0;
+  // Lọc: Chỉ giữ lại SP thuộc Danh mục này nhưng KHÔNG thuộc Nghiệp vụ nào
+  const categoryDirectProducts = (catData.products || []).filter(
+    (prod: any) => !checkHasBusiness(prod)
+  );
+
+  const hasDirectProducts = categoryDirectProducts.length > 0;
   const hasBusinesses = catData.businesses && catData.businesses.length > 0;
 
   if (!hasDirectProducts && !hasBusinesses) return null;
@@ -81,13 +122,17 @@ const CategorySection = ({ category, onNavigate }: { category: CategoryItem; onN
   return (
     <div className="section-block">
       <h3 className="section-title">{catData.categoryName}</h3>
+      
+      {/* Hiển thị SP trực thuộc Danh mục */}
       {hasDirectProducts && (
         <div className="products-grid">
-          {catData.products!.map(prod => (
+          {categoryDirectProducts.map(prod => (
             <ProductCard key={prod.id} product={prod} onClick={() => onNavigate(prod.id)} />
           ))}
         </div>
       )}
+
+      {/* Render các Nghiệp vụ con */}
       {hasBusinesses && catData.businesses.map(bus => (
         <BusinessSection key={bus.id} business={bus} onNavigate={onNavigate} />
       ))}
@@ -95,6 +140,9 @@ const CategorySection = ({ category, onNavigate }: { category: CategoryItem; onN
   );
 };
 
+// --------------------------------------------------------
+// 3. COMPONENT CẤP NHÓM (GROUP - CẤP 1 - VIEW CHÍNH)
+// --------------------------------------------------------
 const GroupView: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
@@ -108,6 +156,7 @@ const GroupView: React.FC = () => {
       try {
         const res = await axios.get<GroupDetailData>(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL_FULL(groupId));
         let currentData = res.data;
+        
         if (!currentData.superGroup) {
           try {
             const listRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
@@ -120,7 +169,11 @@ const GroupView: React.FC = () => {
           } catch (listError) {}
         }
         setGroupData(currentData);
-      } catch (error) { console.error(error); } finally { setLoading(false); }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchGroupDetail();
   }, [groupId]);
@@ -132,43 +185,50 @@ const GroupView: React.FC = () => {
 
   const currentGroupName = groupData.groupName || 'Chi tiết nhóm';
   const categories = groupData.categories || [];
-  const groupProducts = groupData.products || [];
   const superGroupLabel = GROUP_OPTIONS.find((opt) => opt.value === groupData.superGroup)?.label || 'Nhóm sản phẩm dịch vụ'; 
+
+  // Lọc: Chỉ giữ lại SP trực thuộc Nhóm (KHÔNG có Danh mục và KHÔNG có Nghiệp vụ)
+  const groupDirectProducts = (groupData.products || []).filter(
+    (prod: any) => !checkHasCategory(prod) && !checkHasBusiness(prod)
+  );
 
   return (
     <div className="group-view">
       <div className="group-breadcrumb">
-         <span className="breadcrumb-link" onClick={() => navigate('/view')}>
-           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-             <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-             <polyline points="9 22 9 12 15 12 15 22"></polyline>
-           </svg>
-           Trang chủ
-         </span>
-         <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-link">{superGroupLabel}</span>
-         <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-current">{currentGroupName}</span>
+        <span className="breadcrumb-link" onClick={() => navigate('/view')}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+          Trang chủ
+        </span>
+        <span className="breadcrumb-separator">❯</span>
+        <span className="breadcrumb-link">{superGroupLabel}</span>
+        <span className="breadcrumb-separator">❯</span>
+        <span className="breadcrumb-current">{currentGroupName}</span>
       </div>
 
       <h2 className="group-page-title">{currentGroupName}</h2>
 
-      {groupProducts.length > 0 && (
+      {/* Hiển thị SP trực thuộc Nhóm */}
+      {groupDirectProducts.length > 0 && (
         <div className="section-block">
           <div className="products-grid">
-            {groupProducts.map((prod) => (
+            {groupDirectProducts.map((prod) => (
               <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
             ))}
           </div>
         </div>
       )}
 
+      {/* Render các Danh mục con */}
       {categories.map((cat) => (
-         <CategorySection key={cat.id} category={cat} onNavigate={handleNavigate} />
+        <CategorySection key={cat.id} category={cat} onNavigate={handleNavigate} />
       ))}
 
-      {groupProducts.length === 0 && categories.length === 0 && (
-         <div className="state-message">Nhóm này chưa có dữ liệu sản phẩm.</div>
+      {/* Thông báo nếu không có bất kỳ dữ liệu nào */}
+      {groupDirectProducts.length === 0 && categories.length === 0 && (
+        <div className="state-message">Nhóm này chưa có dữ liệu sản phẩm.</div>
       )}
     </div>
   );

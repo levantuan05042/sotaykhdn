@@ -243,7 +243,7 @@ const ProductDetailView: React.FC = () => {
             <React.Fragment key={`${item.type}-${item.id || index}`}>
               <button
                 className="dp-breadcrumb-link"
-                onClick={() => item.id && navigate(`/${item.type}/${item.id}`)}
+                onClick={() => item.id && navigate(`/view/${item.type}/${item.id}`)} 
               >
                 {item.name}
               </button>
