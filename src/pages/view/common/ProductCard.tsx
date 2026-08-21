@@ -15,6 +15,7 @@ export interface ProductInfo {
   productGroupName?: string | null;
   createdAt?: string | null;
   views?: number;
+  viewCount?: number; 
   [key: string]: any;
 }
 
@@ -109,7 +110,8 @@ const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () =
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
             </svg>
-            <span>{product.views ?? 0}</span>
+            {/* LẤY CẢ VIEWCOUNT VÀ VIEWS ĐỂ ĐẢM BẢO KHÔNG BỊ UNDEFINED */}
+            <span>{product.viewCount ?? product.views ?? 0}</span>
           </div>
 
           <div className="product-actions" onClick={(e) => e.stopPropagation()}>

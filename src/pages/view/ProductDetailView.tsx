@@ -36,7 +36,6 @@ const formatDateTime = (dateStr?: string) => {
   }
 };
 
-// Hàm kiểm tra đăng nhập
 const checkIsLoggedIn = () => {
   const username = localStorage.getItem('currentUserUsername');
   return !!username; 
@@ -71,6 +70,7 @@ interface ProductData {
   createdAt?: string;
   updatedAt?: string;
   views?: number;
+  viewCount?: number;
   [key: string]: any;
 }
 
@@ -99,7 +99,7 @@ const ProductDetailView: React.FC = () => {
       name: prod.name,
       imageUrl: prod.imageUrl,
       categoryName: prod.productCategoryName || prod.categoryName,
-      views: prod.views || 0,
+      views: prod.views || prod.viewCount || 0,
       createdAt: prod.createdAt,
     });
     
@@ -113,7 +113,7 @@ const ProductDetailView: React.FC = () => {
       if (!id) return;
       try {
         setLoading(true);
-        const res = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(id));
+        const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
         setProduct(res.data);
         saveToHistory(res.data);
         if (res.data.imageUrl) setSelectedImage(res.data.imageUrl);
@@ -126,7 +126,41 @@ const ProductDetailView: React.FC = () => {
     fetchProduct();
   }, [id]);
 
-  // 2. Fetch trạng thái đã lưu qua API
+  // 2. Tăng view ngầm sau 3 giây (Dùng fetch để đồng bộ cơ chế gửi Cookie/Session)
+  useEffect(() => {
+    if (!id) return;
+    
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`${BASE_URL}/api/v1/products/${id}/view`, {
+          method: 'POST',
+          credentials: 'include', // Quan trọng: Đảm bảo gửi kèm cookie/session của người dùng
+        });
+
+        if (response.ok) {
+          setProduct((prevProduct) => {
+            if (!prevProduct) return null;
+            const currentViews = prevProduct.views ?? prevProduct.viewCount ?? 0;
+            return {
+              ...prevProduct,
+              views: currentViews + 1,
+              viewCount: currentViews + 1,
+            };
+          });
+        } else {
+          console.error("Tăng view thất bại, mã lỗi:", response.status);
+        }
+      } catch (err) {
+        console.error("Lỗi kết nối khi tăng view:", err);
+      }
+    }, 1);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [id]);
+
+  // 3. Fetch trạng thái đã lưu qua API
   useEffect(() => {
     const checkSavedStatus = async () => {
       if (!id) return;
@@ -157,7 +191,6 @@ const ProductDetailView: React.FC = () => {
     };
   }, []);
 
-  // 3. Xử lý Toggle Save/Unsave qua API
   const handleToggleSave = async () => {
     if (!product) return;
 
@@ -179,8 +212,6 @@ const ProductDetailView: React.FC = () => {
       if (response.ok) {
         const result = await response.json(); 
         setIsSaved(result); 
-      } else {
-        console.error("Xử lý lưu thất bại. Mã lỗi:", response.status);
       }
     } catch (error) {
       console.error("Lỗi kết nối khi lưu:", error);
@@ -401,6 +432,11 @@ const ProductDetailView: React.FC = () => {
                   <p>{product.businessName}</p>
                 </div>
               )}
+
+              <div className="dp-info-item">
+                <label>Lượt xem</label>
+                <p>{product.views ?? product.viewCount ?? 0} lượt xem</p>
+              </div>
 
               <div className="dp-info-item">
                 <label>Người tạo</label>

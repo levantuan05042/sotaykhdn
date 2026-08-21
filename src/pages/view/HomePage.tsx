@@ -34,20 +34,16 @@ const HomePage: React.FC = () => {
   const location = useLocation();
 
   const [recentProducts, setRecentProducts] = useState<ProductInfo[]>([]);
-  // THÊM STATE CHO SẢN PHẨM MỚI TẠO (Version = 1)
   const [newlyCreatedProducts, setNewlyCreatedProducts] = useState<ProductInfo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [groupProductCounts, setGroupProductCounts] = useState<Record<string, number>>({});
-  
   const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,26 +102,41 @@ const HomePage: React.FC = () => {
           });
           setGroupProductCounts(counts);
 
-          // Lọc danh sách SP active để xử lý các khối hiển thị
           const activeProductsForUpdate = products.filter((product: any) => {
             const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
             const isActive = product.isactive === true || product.isActive === true || product.active === true;
             return isStatusActive && isActive;
           });
 
-          // Sắp xếp theo ngày mới nhất
           const sortedByDate = activeProductsForUpdate.sort((a: any, b: any) => {
             const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
             const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
             return dateB - dateA; 
           });
 
-          // 1. SET STATE CHO KHỐI MỚI CẬP NHẬT
           setRecentUpdates(sortedByDate.slice(0, 4));
-
-          // 2. SET STATE CHO KHỐI SẢN PHẨM MỚI TẠO (Lọc version === 1, lấy 6 item)
           const newProducts = sortedByDate.filter((p: any) => (p.version ?? 1) === 1);
           setNewlyCreatedProducts(newProducts.slice(0, 6));
+          try {
+            const saved = localStorage.getItem('recentlyViewed');
+            if (saved) {
+              const parsedSaved = JSON.parse(saved);
+              const syncedAndFilteredProducts = parsedSaved
+                .map((savedItem: any) => {
+                  const liveProduct = products.find((p: any) => p.id === savedItem.id);
+                  return liveProduct || savedItem;
+                })
+                .filter((product: any) => {
+                  const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
+                  const isActive = product.isactive === true || product.isActive === true || product.active === true;            
+                  return isStatusActive && isActive;
+                });              
+              setRecentProducts(syncedAndFilteredProducts.slice(0, 6));
+            }
+          } catch (err) {
+            console.error('Lỗi đồng bộ sản phẩm xem gần đây:', err);
+          }
+
         }
       } catch (error) { 
         console.error("Lỗi khi fetch sản phẩm:", error); 
