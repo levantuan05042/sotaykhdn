@@ -40,6 +40,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -73,11 +74,11 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
     if (!keyword.trim()) return;
     const stored = localStorage.getItem('recentSearches');
     let searches: string[] = stored ? JSON.parse(stored) : [];
-    
+
     searches = searches.filter(item => item.toLowerCase() !== keyword.toLowerCase());
     searches.unshift(keyword);
     searches = searches.slice(0, 10);
-    
+
     localStorage.setItem('recentSearches', JSON.stringify(searches));
   };
 
@@ -89,6 +90,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
       setRecentSearches(JSON.parse(updated));
     }
     setShowDropdown(false);
+    setIsMobileSearchOpen(false);
     navigate(`/view/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
@@ -116,7 +118,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
         setSearchResult(response.data);
         setShowDropdown(true);
       } catch (error) {
-        console.error('Lỗi khi tìm kiếm nhanh:', error);
+        console.error(error);
       } finally {
         setLoadingSearch(false);
       }
@@ -134,6 +136,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
   const handleNavigate = (type: string, id: string) => {
     setShowDropdown(false);
+    setIsMobileSearchOpen(false);
     switch (type) {
       case 'group': navigate(`/view/groups/${id}`); break;
       case 'category': navigate(`/view/category/${id}`); break;
@@ -147,6 +150,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
+        setIsMobileSearchOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -198,7 +202,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
           </button>
 
           <div className={styles['header-brand']}>
-            <img src={logoAgribank} alt="Logo Agribank" className={styles['header-logo']} />
+            <img src={logoAgribank} alt="Logo" className={styles['header-logo']} />
             <div className={styles['header-brand-text']}>
               <h1 className={styles['header-title']}>
                 <span className={styles['header-title-line']}>Sổ tay sản phẩm dịch vụ</span>
@@ -208,19 +212,19 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
           </div>
         </div>
 
-        <div className={styles['header-search-wrapper']} ref={dropdownRef}>
-          <form 
-            className={styles['header-search']} 
-            onSubmit={(e) => { 
-              e.preventDefault(); 
-              handleSearch(); 
+        <div className={`${styles['header-search-wrapper']} ${isMobileSearchOpen ? styles['mobile-active'] : ''}`} ref={dropdownRef}>
+          <form
+            className={styles['header-search']}
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch();
             }}
           >
-            <svg 
-              width="20" 
-              height="20" 
-              viewBox="0 0 24 24" 
-              fill="none" 
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
               className={styles['header-search-icon']}
             >
               <path
@@ -248,9 +252,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                   <>
                     <div className={styles['search-history-header']}>
                       <span>Tìm kiếm gần đây</span>
-                      <button 
+                      <button
                         type="button"
-                        className={styles['clear-history-btn']} 
+                        className={styles['clear-history-btn']}
                         onClick={(e) => {
                           e.stopPropagation();
                           localStorage.removeItem('recentSearches');
@@ -263,18 +267,18 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     </div>
                     <div className={styles['recent-searches-container']}>
                       {recentSearches.map(keyword => (
-                        <div 
-                          key={keyword} 
-                          className={styles['recent-item']} 
+                        <div
+                          key={keyword}
+                          className={styles['recent-item']}
                           onClick={() => setSearchQuery(keyword)}
                         >
-                          <svg 
-                            className={styles['recent-item-icon']} 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="2" 
-                            strokeLinecap="round" 
+                          <svg
+                            className={styles['recent-item-icon']}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
                             strokeLinejoin="round"
                           >
                             <circle cx="11" cy="11" r="8"></circle>
@@ -340,14 +344,15 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     )}
                   </>
                 )}
-              </div> 
+              </div>
 
               {!loadingSearch && searchQuery.trim() && (
                 <div
                   className={styles['search-view-all']}
                   onClick={() => {
                     handleSearch();
-                    setShowDropdown(false); 
+                    setShowDropdown(false);
+                    setIsMobileSearchOpen(false);
                   }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -364,8 +369,24 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
         </div>
 
         <div className={styles['header-right']}>
+          <button
+            type="button"
+            className={styles['mobile-search-trigger']}
+            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path
+                d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
           <div className={styles['user-profile-container']} ref={userMenuRef}>
-            <div 
+            <div
               className={styles['user-profile-trigger']}
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
@@ -380,16 +401,16 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     <circle cx="12" cy="7" r="4"></circle>
                   </svg>
                 </div>
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  width="24" 
-                  height="24" 
-                  viewBox="0 0 24 24" 
-                  fill="none" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
                   className={styles['chevron-icon']}
                 >
-                  <path 
-                    d="M17.4697 8.46967C17.7626 8.17678 18.2373 8.17678 18.5302 8.46967C18.8231 8.76256 18.8231 9.23732 18.5302 9.53022L12.5302 15.5302C12.2373 15.8231 11.7626 15.8231 11.4697 15.5302L5.46967 9.53022C5.17678 9.23732 5.17678 8.76256 5.46967 8.46967C5.76256 8.17678 6.23732 8.17678 6.53022 8.46967L11.9999 13.9394L17.4697 8.46967Z" 
+                  <path
+                    d="M17.4697 8.46967C17.7626 8.17678 18.2373 8.17678 18.5302 8.46967C18.8231 8.76256 18.8231 9.23732 18.5302 9.53022L12.5302 15.5302C12.2373 15.8231 11.7626 15.8231 11.4697 15.5302L5.46967 9.53022C5.17678 9.23732 5.17678 8.76256 5.46967 8.46967C5.76256 8.17678 6.23732 8.17678 6.53022 8.46967L11.9999 13.9394L17.4697 8.46967Z"
                     fill="#211F26"
                   />
                 </svg>
@@ -398,42 +419,42 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
             {isDropdownOpen && (
               <div className={styles['user-dropdown-menu']}>
-                <button 
+                <button
                   className={`${styles['dropdown-item']} ${role === 'VIEWER' ? styles.active : ''}`}
                   onClick={() => handleRoleSelect('VIEWER')}
                 >
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
                   </svg>
                   <span>Tra cứu sản phẩm</span>
                 </button>
 
                 {(currentUserRole === 'ESA08' || currentUserRole === 'ETN08') && (
-                  <button 
+                  <button
                     className={`${styles['dropdown-item']} ${role === 'ETN08' ? styles.active : ''}`}
                     onClick={() => handleRoleSelect('ETN08')}
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                     <span>Quản trị nội dung</span>
                   </button>
                 )}
 
                 {(currentUserRole === 'ESA08' || currentUserRole === 'ETK08') && (
-                  <button 
+                  <button
                     className={`${styles['dropdown-item']} ${role === 'ETK08' ? styles.active : ''}`}
                     onClick={() => handleRoleSelect('ETK08')}
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                     <span>Kiểm duyệt nội dung</span>
                   </button>
@@ -441,18 +462,18 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
                 <div className={styles['dropdown-divider']} />
 
-                <button 
+                <button
                   className={styles['dropdown-item']}
                   onClick={() => {
                     setIsDropdownOpen(false);
-                    localStorage.removeItem('userRole'); 
+                    localStorage.removeItem('userRole');
                     window.location.href = AUTH_SERVICE_LOGOUT_URL;
                   }}
                 >
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                    <polyline points="16 17 21 12 16 7"/>
-                    <line x1="21" y1="12" x2="9" y2="12"/>
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                    <polyline points="16 17 21 12 16 7" />
+                    <line x1="21" y1="12" x2="9" y2="12" />
                   </svg>
                   <span>Đăng xuất</span>
                 </button>

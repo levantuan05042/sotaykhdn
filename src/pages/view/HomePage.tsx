@@ -386,7 +386,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="container mx-auto max-w-6xl px-4 py-12">
+      <div className="w-full px-10 py-12">
         {categories.length > 0 && (
           <div className="mb-16">
             <div className="flex items-center space-x-3 mb-6">

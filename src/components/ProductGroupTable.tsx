@@ -14,9 +14,11 @@ interface ProductGroup {
 
 interface Props {
   data: ProductGroup[];
+  // Bổ sung prop này để có thể truyền sự kiện thay đổi toggle ra bên ngoài gọi API (nếu cần)
+  onToggleActive?: (id: any, newActiveStatus: boolean) => void;
 }
 
-const ProductGroupTable: React.FC<Props> = ({ data }) => {
+const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
@@ -86,17 +88,39 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
     return (
       <div className={`status-badge ${config.className}`}>
         {config.showDot && (
-          <svg
-            width="8"
-            height="8"
-            viewBox="0 0 8 8"
-            fill="none"
-            className="mr-2"
-          >
+          <svg width="8" height="8" viewBox="0 0 8 8" fill="none" className="mr-2">
             <circle cx="4" cy="4" r="3" fill="currentColor" />
           </svg>
         )}
         <span>{config.label}</span>
+      </div>
+    );
+  };
+
+  // Hàm render giao diện Toggle Hiệu lực
+  const renderActiveToggle = (item: ProductGroup) => {
+    // Disable nếu trạng thái thuộc nhóm: Chờ duyệt, Từ chối, Lưu nháp, Yêu cầu chỉnh sửa
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const isDisabled = disabledStatuses.includes(item.status);
+
+    return (
+      <div className="toggle-wrapper">
+        <label className="toggle-switch">
+          <input 
+            type="checkbox" 
+            checked={item.active || false} 
+            disabled={isDisabled}
+            onChange={(e) => {
+              if (onToggleActive && !isDisabled) {
+                onToggleActive(item.id, e.target.checked);
+              }
+            }}
+          />
+          <span className="toggle-slider"></span>
+        </label>
+        <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
+          {item.active ? 'Hiện' : 'Ẩn'}
+        </span>
       </div>
     );
   };
@@ -124,22 +148,16 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
                   {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                 </td>
                 <td className="product-name-cell">
-                  <span
-                    className="truncate-text"
-                    title={item.name}
-                  >
+                  <span className="truncate-text" title={item.name}>
                     {item.name}
                   </span>
                 </td>
 
                 <td>{renderStatus(item.status)}</td>
-                <td>
-                  {item.active ? (
-                    <span className="text-success">Đang hiển thị</span>
-                  ) : (
-                    <span className="text-danger">Đã ẩn</span>
-                  )}
-                </td>
+                
+                {/* Áp dụng Toggle thay cho Text cũ */}
+                <td>{renderActiveToggle(item)}</td>
+
                 <td>{item.createdByFullName || '---'}</td>
                 <td>{item.approvedBy || '---'}</td>
                 <td style={{ 
@@ -159,17 +177,7 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
                     onClick={() => handleViewDetail(item.id)}
                     title="Xem chi tiết"
                   >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="mr-1.5"
-                    >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
                       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg> 
@@ -179,10 +187,7 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
             ))
           ) : (
             <tr>
-              <td
-                colSpan={4}
-                className="text-center py-20 text-gray-400"
-              >
+              <td colSpan={8} className="text-center py-20 text-gray-400">
                 Không có dữ liệu hiển thị
               </td>
             </tr>
@@ -192,48 +197,32 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
       {totalPages > 1 && (
         <div className="pagination-wrapper">
           <div className="pagination-container">
-            {/* Prev */}
             <button
               className="pagination-arrow"
               disabled={currentPage === 1}
-              onClick={() =>
-                setCurrentPage((prev) => prev - 1)
-              }
+              onClick={() => setCurrentPage((prev) => prev - 1)}
             >
               ←
             </button>
-            {Array.from(
-              { length: totalPages },
-              (_, i) => i + 1
-            )
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
               .filter((page) => {
                 return (
                   page === 1 ||
                   page === totalPages ||
-                  (page >= currentPage - 1 &&
-                    page <= currentPage + 1)
+                  (page >= currentPage - 1 && page <= currentPage + 1)
                 );
               })
               .map((page, index, arr) => {
                 const prevPage = arr[index - 1];
                 return (
                   <React.Fragment key={page}>
-                    {prevPage &&
-                      page - prevPage > 1 && (
-                        <span className="pagination-dots">
-                          ...
-                        </span>
-                      )}
+                    {prevPage && page - prevPage > 1 && (
+                      <span className="pagination-dots">...</span>
+                    )}
 
                     <button
-                      className={`pagination-number ${
-                        currentPage === page
-                          ? 'active'
-                          : ''
-                      }`}
-                      onClick={() =>
-                        setCurrentPage(page)
-                      }
+                      className={`pagination-number ${currentPage === page ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(page)}
                     >
                       {page}
                     </button>
@@ -243,9 +232,7 @@ const ProductGroupTable: React.FC<Props> = ({ data }) => {
             <button
               className="pagination-arrow"
               disabled={currentPage === totalPages}
-              onClick={() =>
-                setCurrentPage((prev) => prev + 1)
-              }
+              onClick={() => setCurrentPage((prev) => prev + 1)}
             >
               →
             </button>

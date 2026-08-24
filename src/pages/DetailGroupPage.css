@@ -1,4 +1,3 @@
-/* --- 1. LAYOUT WRAPPERS --- */
 .pageWrapper {
   display: flex;
   justify-content: center;
@@ -18,7 +17,6 @@
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
-/* --- 2. HEADER SECTION --- */
 .header {
   display: flex;
   width: 100%;
@@ -42,7 +40,6 @@
   flex-shrink: 0;
 }
 
-/* --- 3. BREADCRUMB & BACK BUTTON --- */
 .btnBack {
   display: flex;
   align-items: center;
@@ -99,7 +96,6 @@
   cursor: default;
 }
 
-/* --- 4. STATUS BADGE --- */
 .statusBadge {
   display: flex;
   padding: 8px 20px;
@@ -130,7 +126,6 @@
   line-height: 24px;
 }
 
-/* --- CÁC BIẾN THỂ MÀU SẮC --- */
 .status-active { background-color: #E0F9EC; }
 .status-active .statusText { color: #14532D; }
 .status-active .dot { background-color: #12B76A; }
@@ -155,7 +150,6 @@
 .status-archived .statusText { color: #0C4A6E; }
 .status-archived .dot { background-color: #0EA5E9; }
 
-/* --- 5. ACTION BUTTONS --- */
 .btnDraft {
   padding: 8px 14px;
   border-radius: 8px;
@@ -201,7 +195,6 @@
   background: #8e1734;
 }
 
-/* --- 6. FORM SECTION (LEFT COLUMN) --- */
 .contentGrid {
   display: flex;
   width: 100%;
@@ -269,7 +262,6 @@
   border-color: #AE1C3F;
 }
 
-/* CSS xử lý cắt ngắn chữ (Truncate Text) */
 .truncate-text {
   white-space: nowrap;
   overflow: hidden;
@@ -280,7 +272,6 @@
   color: #1A191B;
 }
 
-/* Icon mũi tên */
 .arrow-icon {
   transition: transform 0.3s ease;
   flex-shrink: 0;
@@ -344,7 +335,6 @@
   font-weight: bold;
 }
 
-/* --- 7. COMMENT SECTION (RIGHT COLUMN) --- */
 .rightCol {
   width: 337px;
   flex-shrink: 0;
@@ -429,7 +419,6 @@
   margin: 16px 0;
 }
 
-/* --- TOAST COMPONENTS & OTHERS --- */
 .toast-pill-container {
   display: flex;
   align-items: center;
@@ -565,4 +554,115 @@
 
 .product-image-placeholder:hover {
   opacity: 0.9;
+}
+
+/* Container phủ toàn màn hình */
+.warning-toast-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  pointer-events: none; /* Không block click ngoài overlay */
+}
+
+/* Khung card màu trắng */
+.warning-toast-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 16px; /* Bo góc to hơn theo thiết kế */
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid #F3F4F6;
+  width: 360px;
+  text-align: center;
+  pointer-events: auto; /* Bật lại tương tác cho card */
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Cụm Icon bo tròn */
+.warning-toast-icon-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+/* Hào quang ngoài cùng */
+.warning-bg-outer {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  background-color: #FEF08A; /* Vàng sáng */
+  opacity: 0.3;
+  border-radius: 50%;
+}
+
+/* Hào quang giữa */
+.warning-bg-inner {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  background-color: #FDE047;
+  opacity: 0.4;
+  border-radius: 50%;
+}
+
+.warning-toast-icon {
+  z-index: 10;
+}
+
+/* Style Text */
+.warning-toast-title {
+  color: #1F2937; /* Màu chữ đậm như UI */
+  font-size: 18px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.warning-toast-desc {
+  color: #6B7280; /* Màu text phụ xám nhạt */
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+/* Style Button */
+.warning-toast-actions {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.warning-btn-close {
+  padding: 10px 32px;
+  border-radius: 8px;
+  background: #AE1C3F; /* Màu đỏ chủ đạo Agribank */
+  border: none;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.warning-btn-close:hover {
+  background: #8e1734;
 }

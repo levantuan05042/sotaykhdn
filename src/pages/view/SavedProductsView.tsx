@@ -12,7 +12,7 @@ export interface ProductInfo {
   imageUrl?: string | null;
   image_url?: string | null;
   createdAt?: string | null;
-  views?: number;
+  viewCount?: number;
   [key: string]: any;
 }
 
@@ -96,7 +96,7 @@ const ProductCard = ({ product, onClick, onUnsave }: { product: ProductInfo; onC
             <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
             </svg>
-            <span>{product.views ?? 0}</span>
+            <span>{product.viewCount ?? product.views ?? 0}</span> {/* Read viewCount từ DTO */}
           </div>
 
           <div className="product-actions" onClick={(e) => e.stopPropagation()}>

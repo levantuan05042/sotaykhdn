@@ -4,7 +4,6 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import styles from './Sidebar.module.css';
 
-// --- BỘ ICON SVG MẪU ---
 const Icons = {
   Home: () => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -18,7 +17,7 @@ const Icons = {
     </svg>
   ),
   ChevronDown: ({ isOpen }: { isOpen: boolean }) => (
-    <svg 
+    <svg
       width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
       style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s ease' }}
     >
@@ -34,7 +33,6 @@ const Icons = {
   )
 };
 
-// --- INTERFACES ---
 interface SidebarItemProps {
   to: string;
   name: string;
@@ -61,7 +59,6 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
-// --- DATA CẤU HÌNH ---
 const STATIC_ITEMS = [
   { id: 'home', name: 'Trang chủ', path: '/view', icon: <Icons.Home /> },
   { id: 'saved', name: 'Sản phẩm đã lưu', path: '/view/saved-products', icon: <Icons.Bookmark /> },
@@ -73,7 +70,6 @@ const GROUP_OPTIONS = [
   { label: 'Nhóm chương trình ưu đãi', value: 'PROGRAM' }
 ];
 
-// --- COMPONENTS ---
 const SidebarItem: React.FC<SidebarItemProps> = ({ to, name, icon, end = false, onNavigate }) => (
   <NavLink
     to={to}
@@ -89,7 +85,6 @@ const SidebarItem: React.FC<SidebarItemProps> = ({ to, name, icon, end = false, 
 );
 
 const DynamicMenu: React.FC<DynamicMenuProps> = ({ items, loading, error, onNavigate }) => {
-  // State quản lý đóng/mở của từng nhóm (Mặc định mở tất cả)
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     SERVICE: true,
     INSURANCE: true,
@@ -114,9 +109,8 @@ const DynamicMenu: React.FC<DynamicMenuProps> = ({ items, loading, error, onNavi
 
         return (
           <div key={groupOption.value} className={styles['sidebar-group']}>
-            {/* Header của Group: Click để thu gọn/mở rộng */}
-            <div 
-              className={styles['sidebar-divider']} 
+            <div
+              className={styles['sidebar-divider']}
               onClick={() => toggleGroup(groupOption.value)}
               style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
             >
@@ -124,16 +118,15 @@ const DynamicMenu: React.FC<DynamicMenuProps> = ({ items, loading, error, onNavi
               <Icons.ChevronDown isOpen={isOpen} />
             </div>
 
-            {/* Danh sách items (ẩn/hiện dựa theo state isOpen) */}
             {isOpen && (
               <div className={styles['sidebar-group-items']}>
                 {groupItems.map((item) => (
-                  <SidebarItem 
-                    key={item.id} 
-                    to={item.path} 
-                    name={item.name} 
-                    icon={<Icons.DefaultProduct />} /* Đặt icon mặc định cho nhóm động */
-                    onNavigate={onNavigate} 
+                  <SidebarItem
+                    key={item.id}
+                    to={item.path}
+                    name={item.name}
+                    icon={<Icons.DefaultProduct />}
+                    onNavigate={onNavigate}
                   />
                 ))}
               </div>
@@ -168,7 +161,6 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
         setDynamicGroups(formatted);
       } catch (error) {
-        console.error('Lỗi tải nhóm SP:', error);
         setLoadError(true);
       } finally {
         setLoading(false);
@@ -193,23 +185,21 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       </button>
 
       <nav className={styles['sidebar-nav']}>
-        {/* Render danh sách tĩnh */}
         {STATIC_ITEMS.map((item) => (
-          <SidebarItem 
-            key={item.id} 
-            to={item.path} 
-            name={item.name} 
+          <SidebarItem
+            key={item.id}
+            to={item.path}
+            name={item.name}
             icon={item.icon}
-            end={item.path === '/view'} 
+            end={item.path === '/view'}
             onNavigate={onClose}
           />
         ))}
 
-        {/* Render danh sách động (có phân nhóm & thu gọn/mở rộng) */}
-        <DynamicMenu 
-          items={dynamicGroups} 
-          loading={loading} 
-          error={loadError} 
+        <DynamicMenu
+          items={dynamicGroups}
+          loading={loading}
+          error={loadError}
           onNavigate={onClose}
         />
       </nav>

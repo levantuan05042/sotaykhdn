@@ -1,19 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
-// Import tiện ích xử lý User từ utils
 import { getUserMap, getFullName } from '../utils/userUtils';
 
-// --- CẤU HÌNH OPTIONS ---
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
   { label: 'Sản phẩm bảo hiểm', value: 'INSURANCE' },
   { label: 'Chương trình ưu đãi', value: 'PROGRAM' }
 ];
 
-// --- CẤU HÌNH TRẠNG THÁI (STATUS MAPPING) ---
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
   DRAFT: { label: 'Lưu nháp', className: 'status-draft' },
@@ -23,7 +21,6 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
   ARCHIVED: { label: 'Lưu trữ', className: 'status-archived' },
 };
 
-// --- HELPER: ĐỊNH DẠNG NGÀY ---
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
   const date = new Date(dateString);
@@ -46,17 +43,13 @@ const DetailGroupPage: React.FC = () => {
 
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
 
-  // Khởi tạo userMap một lần duy nhất để tối ưu hiệu suất
   const userMap = useMemo(() => getUserMap(), []);
 
-  // --- HELPER TÁCH ID (Hỗ trợ cả '_' và '-') ---
   const extractBaseId = (rawString: string) => {
     if (!rawString) return '';
-    // Tách chuỗi theo dấu '_' hoặc '-' và lấy phần đầu tiên
     return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
   };
 
-  // --- KIỂM TRA ĐĂNG NHẬP & QUYỀN SỞ HỮU CHÍNH XÁC ---
   const getCurrentUsername = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
     for (const key of possibleKeys) {
@@ -79,7 +72,6 @@ const DetailGroupPage: React.FC = () => {
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
-  // Trích xuất thông tin người tạo từ API data
   const creatorField = productData?.createdBy || productData?.created_by || productData?.creator;
   let creatorUsername = '';
   
@@ -90,7 +82,6 @@ const DetailGroupPage: React.FC = () => {
     creatorUsername = extractBaseId(creatorField);
   }
 
-  // So sánh exact match giữa username hiện tại và người tạo
   const isOwner = Boolean(
     isLoggedIn && 
     currentUsername && 
@@ -98,7 +89,6 @@ const DetailGroupPage: React.FC = () => {
     currentUsername === creatorUsername
   );
 
-  // Chế độ chỉ xem
   const isReadOnly = !isLoggedIn || !isOwner;
 
   const [formData, setFormData] = useState({
@@ -255,6 +245,49 @@ const DetailGroupPage: React.FC = () => {
     }
   };
 
+  const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
+    if (isReadOnly || !id) return;
+    
+    if (newActiveStatus === isActive) {
+      setIsStatusOpen(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const url = `${API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id)}/active?active=${newActiveStatus}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setIsActive(newActiveStatus);
+        setIsStatusOpen(false);
+        toast.success("Cập nhật trạng thái hiển thị thành công", { position: 'top-center' });
+      } else {
+        if (!newActiveStatus) { 
+          renderCannotHideToast(formData.name || productData.name);
+        } else {
+          toast.error(data.message || 'Không thể cập nhật trạng thái', { position: 'top-center' });
+        }
+        setIsStatusOpen(false);
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật trạng thái hiển thị:", error);
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
+      setIsStatusOpen(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const renderCustomToast = (message: string) => {
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
@@ -274,6 +307,54 @@ const DetailGroupPage: React.FC = () => {
         </button>
       </div>
     ), { position: 'top-center' });
+  };
+
+  const renderCannotHideToast = (groupName: string) => {
+    toast.custom((t) => 
+      createPortal(
+        <div className="warning-toast-wrapper">
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
+            {/* Cụm Icon Cảnh báo giống hệt UI */}
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg 
+                className="warning-toast-icon" 
+                width="40" height="40" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path 
+                  fillRule="evenodd" 
+                  clipRule="evenodd" 
+                  d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" 
+                  fill="#EAB308"
+                />
+                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            
+            {/* Nội dung Text */}
+            <h3 className="warning-toast-title">
+              Không thể ẩn nhóm: "{groupName}"
+            </h3>
+            <p className="warning-toast-desc">
+              Nhóm sản phẩm này đang chứa các danh mục hoặc sản phẩm bên trong.
+            </p>
+            
+            {/* Nút hành động */}
+            <div className="warning-toast-actions">
+              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    , { duration: Infinity, id: 'cannot-hide-toast' }); // Đặt Infinity hoặc thời gian dài để người dùng kịp thao tác
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu nhóm sản phẩm...</div>;
@@ -327,10 +408,7 @@ const DetailGroupPage: React.FC = () => {
           </div>
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isReadOnly ? (
-              <span style={{}}>
-              </span>
-            ) : (
+            {isReadOnly ? null : (
               <>
                 {productData.status === 'DRAFT' && (
                   <>
@@ -462,8 +540,18 @@ const DetailGroupPage: React.FC = () => {
                 </div>
                 {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
-                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
+                    <div 
+                      className={`custom-option ${isActive === false ? 'selected' : ''}`} 
+                      onClick={() => handleUpdateDisplayStatus(false)}
+                    >
+                      Ẩn
+                    </div>
+                    <div 
+                      className={`custom-option ${isActive === true  ? 'selected' : ''}`} 
+                      onClick={() => handleUpdateDisplayStatus(true)}
+                    >
+                      Hiển thị
+                    </div>
                   </div>
                 )}
               </div>
@@ -485,7 +573,6 @@ const DetailGroupPage: React.FC = () => {
                             <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
-                                {/* ÁP DỤNG HÀM getFullName TẠI ĐÂY */}
                                 <span className="userName">
                                   {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}
                                 </span>

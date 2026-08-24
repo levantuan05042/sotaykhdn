@@ -4,7 +4,6 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
 import './ProductDetailView.css';
 
-// --- UTILS ---
 const getImageUrl = (path?: string | null) => {
   if (!path) return '';
   if (path.startsWith('http')) return path;
@@ -36,12 +35,23 @@ const formatDateTime = (dateStr?: string) => {
   }
 };
 
+const formatDateOnly = (dateStr?: string) => {
+  if (!dateStr) return '---';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const pad = (num: number) => String(num).padStart(2, '0');
+    return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+  } catch (e) {
+    return '---';
+  }
+};
+
 const checkIsLoggedIn = () => {
   const username = localStorage.getItem('currentUserUsername');
   return !!username; 
 };
 
-// --- INTERFACES ---
 interface DetailItem {
   id: string;
   stt: number;
@@ -62,8 +72,6 @@ interface ProductData {
   productCategoryId?: string;
   groupName?: string;
   categoryName?: string;
-  businessName?: string;
-  businessId?: string;
   createdBy?: string | null;
   approvedBy?: string | null;
   version?: number | string;
@@ -82,18 +90,59 @@ const ProductDetailView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string>('');
   const [imgError, setImgError] = useState(false);
-
   const [isSaved, setIsSaved] = useState(false);
-  const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  
+  const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(() => {
+    const savedDrawer = sessionStorage.getItem(`drawer-${id}`);
+    return savedDrawer === 'true';
+  });
+
   const shareTimeoutRef = useRef<number | null>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
+  const toggleBtnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      sessionStorage.setItem(`scroll-${id}`, window.scrollY.toString());
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [id]);
+
+  useEffect(() => {
+    if (!loading && product) {
+      const savedScroll = sessionStorage.getItem(`scroll-${id}`);
+      if (savedScroll) {
+        window.scrollTo(0, parseInt(savedScroll, 10));
+      }
+    }
+  }, [loading, product, id]);
+
+  useEffect(() => {
+    sessionStorage.setItem(`drawer-${id}`, isMoreDrawerOpen.toString());
+  }, [isMoreDrawerOpen, id]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isMoreDrawerOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target as Node) &&
+        toggleBtnRef.current &&
+        !toggleBtnRef.current.contains(event.target as Node)
+      ) {
+        setIsMoreDrawerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMoreDrawerOpen]);
 
   const saveToHistory = (prod: ProductData) => {
     const saved = localStorage.getItem('recentlyViewed');
     let history: any[] = saved ? JSON.parse(saved) : [];
-    
     history = history.filter((item) => item.id !== prod.id);
-    
     history.unshift({
       id: prod.id,
       name: prod.name,
@@ -102,12 +151,9 @@ const ProductDetailView: React.FC = () => {
       views: prod.views || prod.viewCount || 0,
       createdAt: prod.createdAt,
     });
-    
-    const newHistory = history.slice(0, 6);
-    localStorage.setItem('recentlyViewed', JSON.stringify(newHistory));
+    localStorage.setItem('recentlyViewed', JSON.stringify(history.slice(0, 6)));
   };
 
-  // 1. Fetch thông tin sản phẩm
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
@@ -118,7 +164,7 @@ const ProductDetailView: React.FC = () => {
         saveToHistory(res.data);
         if (res.data.imageUrl) setSelectedImage(res.data.imageUrl);
       } catch (err) {
-        console.error("Lỗi lấy dữ liệu:", err);
+        console.error(err);
       } finally {
         setLoading(false);
       }
@@ -126,62 +172,31 @@ const ProductDetailView: React.FC = () => {
     fetchProduct();
   }, [id]);
 
-  // 2. Tăng view ngầm sau 3 giây (Dùng fetch để đồng bộ cơ chế gửi Cookie/Session)
   useEffect(() => {
     if (!id) return;
-    
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/v1/products/${id}/view`, {
-          method: 'POST',
-          credentials: 'include', // Quan trọng: Đảm bảo gửi kèm cookie/session của người dùng
-        });
-
+        const response = await fetch(`${BASE_URL}/api/v1/products/${id}/view`, { method: 'POST', credentials: 'include' });
         if (response.ok) {
-          setProduct((prevProduct) => {
-            if (!prevProduct) return null;
-            const currentViews = prevProduct.views ?? prevProduct.viewCount ?? 0;
-            return {
-              ...prevProduct,
-              views: currentViews + 1,
-              viewCount: currentViews + 1,
-            };
+          setProduct((prev) => {
+            if (!prev) return null;
+            const currentViews = prev.views ?? prev.viewCount ?? 0;
+            return { ...prev, views: currentViews + 1, viewCount: currentViews + 1 };
           });
-        } else {
-          console.error("Tăng view thất bại, mã lỗi:", response.status);
         }
-      } catch (err) {
-        console.error("Lỗi kết nối khi tăng view:", err);
-      }
+      } catch (err) {}
     }, 1);
-
-    return () => {
-      clearTimeout(timer);
-    };
+    return () => clearTimeout(timer);
   }, [id]);
 
-  // 3. Fetch trạng thái đã lưu qua API
   useEffect(() => {
     const checkSavedStatus = async () => {
-      if (!id) return;
-      const isLoggedIn = checkIsLoggedIn();
-      if (!isLoggedIn) return;
-
+      if (!id || !checkIsLoggedIn()) return;
       try {
-        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${id}`, {
-          method: 'GET',
-          credentials: 'include', 
-        });
-
-        if (response.ok) {
-          const status = await response.json();
-          setIsSaved(status); 
-        }
-      } catch (error) {
-        console.error("Lỗi khi kiểm tra trạng thái lưu:", error);
-      }
+        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${id}`, { method: 'GET', credentials: 'include' });
+        if (response.ok) setIsSaved(await response.json());
+      } catch (error) {}
     };
-    
     checkSavedStatus();
   }, [id]);
 
@@ -193,285 +208,217 @@ const ProductDetailView: React.FC = () => {
 
   const handleToggleSave = async () => {
     if (!product) return;
-
-    const isLoggedIn = checkIsLoggedIn();
-    if (!isLoggedIn) {
+    if (!checkIsLoggedIn()) {
       alert("Vui lòng đăng nhập để lưu sản phẩm!");
       return;
     }
-
     try {
       const response = await fetch(`${BASE_URL}/api/saved-products/toggle?productId=${product.id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', 
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
       });
-
-      if (response.ok) {
-        const result = await response.json(); 
-        setIsSaved(result); 
-      }
-    } catch (error) {
-      console.error("Lỗi kết nối khi lưu:", error);
-    }
+      if (response.ok) setIsSaved(await response.json());
+    } catch (error) {}
   };
 
   const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-    } catch (err) {
-      console.error('Không thể sao chép liên kết:', err);
-    }
+    try { await navigator.clipboard.writeText(window.location.href); } catch (err) {}
     setShareCopied(true);
     if (shareTimeoutRef.current) window.clearTimeout(shareTimeoutRef.current);
     shareTimeoutRef.current = window.setTimeout(() => setShareCopied(false), 1500);
   };
 
-  if (loading) {
-    return (
-      <div className="dp-container">
-        <div className="dp-loading">Đang tải chi tiết sản phẩm...</div>
-      </div>
-    );
-  }
+  const buildBreadcrumbs = () => {
+    if (!product) return [];
+    const items = [{ name: 'Trang chủ', type: 'home', id: null }];
+    if (product.productGroupName || product.groupName) items.push({ name: product.productGroupName || product.groupName, type: 'groups', id: product.productGroupId || product.groupId });
+    if (product.productCategoryName || product.categoryName) items.push({ name: product.productCategoryName || product.categoryName, type: 'category', id: product.productCategoryId || product.categoryId });
+    if (product.name) items.push({ name: product.name, type: 'product', id: null });
+    return items;
+  };
 
-  if (!product) {
-    return (
-      <div className="dp-container">
-        <div className="dp-error">Không tìm thấy sản phẩm.</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="dp-container"><div className="dp-loading">Đang tải chi tiết sản phẩm...</div></div>;
+  if (!product) return <div className="dp-container"><div className="dp-error">Không tìm thấy sản phẩm.</div></div>;
 
   const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
   const sortedDetails = [...(product.details || [])].sort((a, b) => a.stt - b.stt);
+  const breadcrumbItems = buildBreadcrumbs();
 
-  const breadcrumbItems = [
-    {
-      name: product.productGroupName || product.groupName,
-      id: product.productGroupId || product.groupId,
-      type: 'groups',
-    },
-    {
-      name: product.productCategoryName || product.categoryName,
-      id: product.productCategoryId || product.categoryId,
-      type: 'category',
-    },
-    {
-      name: product.businessName,
-      id: product.businessId,
-      type: 'business',
-    },
-  ].filter((item) => item.name); 
+  const displayBreadcrumbs = breadcrumbItems.length > 4 
+    ? [breadcrumbItems[0], { name: '...', type: 'ellipsis', id: 'ellipsis' }, breadcrumbItems[breadcrumbItems.length - 2], breadcrumbItems[breadcrumbItems.length - 1]]
+    : breadcrumbItems;
 
   return (
     <div className="dp-container">
-      <div className="dp-top-row">
-        <div className="dp-breadcrumb">
-          {breadcrumbItems.map((item, index) => (
-            <React.Fragment key={`${item.type}-${item.id || index}`}>
-              <button
-                className="dp-breadcrumb-link"
-                onClick={() => item.id && navigate(`/view/${item.type}/${item.id}`)} 
-              >
-                {item.name}
+      <div className={`dp-layout ${isMoreDrawerOpen ? 'sidebar-open' : ''}`}>
+        
+        <div className="dp-main-column">
+          <div className="dp-top-row">
+            <div className="dp-breadcrumb">
+              {displayBreadcrumbs.map((item, index) => {
+                const isLast = index === displayBreadcrumbs.length - 1;
+                const isEllipsis = item.type === 'ellipsis';
+                return (
+                  <React.Fragment key={`${item.type}-${item.id || index}`}>
+                    {isEllipsis ? <span className="dp-breadcrumb-ellipsis">...</span> : (
+                      <button
+                        className={`dp-breadcrumb-link ${isLast ? 'dp-active' : ''}`}
+                        onClick={() => {
+                          if (isLast) return;
+                          if (item.type === 'home') navigate('/view');
+                          else if (item.id) navigate(`/view/${item.type}/${item.id}`);
+                        }}
+                        disabled={isLast} title={item.name}
+                      >
+                        {item.type === 'home' && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '2px' }}>
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                          </svg>
+                        )}
+                        <span className="dp-breadcrumb-text">{item.name}</span>
+                      </button>
+                    )}
+                    {!isLast && <span className="dp-breadcrumb-sep">/</span>}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            <div className="dp-actions">
+              <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <span className="dp-action-label">Lưu sản phẩm</span>
               </button>
-              {index < breadcrumbItems.length - 1 && (
-                <span className="dp-breadcrumb-sep"> &gt; </span>
-              )}
-            </React.Fragment>
-          ))}
-          {breadcrumbItems.length === 0 && (
-            <button className="dp-breadcrumb-link" onClick={() => navigate(-1)}>
-              Danh sách sản phẩm
-            </button>
-          )}
-        </div>
 
-        <div className="dp-actions">
-          <button
-            className={`dp-action-btn ${isSaved ? 'is-active' : ''}`}
-            onClick={handleToggleSave}
-            aria-label={isSaved ? 'Đã lưu' : 'Lưu sản phẩm'}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-            </svg>
-            <span className="dp-action-label">{isSaved ? 'Đã lưu' : 'Lưu sản phẩm'}</span>
-          </button>
-
-          <div className="dp-share-wrapper">
-            <button className="dp-action-btn" onClick={handleShare} aria-label="Chia sẻ">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="18" cy="5" r="3" />
-                <circle cx="6" cy="12" r="3" />
-                <circle cx="18" cy="19" r="3" />
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-              </svg>
-              <span className="dp-action-label">Chia sẻ</span>
-            </button>
-            {shareCopied && <span className="dp-copied-tip">Đã sao chép liên kết</span>}
-          </div>
-
-          <button className="dp-icon-btn" onClick={() => setIsMoreDrawerOpen(true)} aria-label="Thêm tùy chọn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="1.8" />
-              <circle cx="12" cy="12" r="1.8" />
-              <circle cx="12" cy="19" r="1.8" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <h1 className="dp-product-title">{product.name}</h1>
-
-      <div className="dp-main-content">
-        <div className="dp-image-section">
-          <div className="dp-image-container">
-            <div className="dp-main-image-box">
-              {imgError || allImages.length === 0 || !selectedImage ? (
-                <div
-                  className="dp-fallback-img"
-                  style={{ 
-                    backgroundColor: stringToColor(product.name), 
-                    color: '#fff', 
-                    width: '100%', 
-                    height: '100%', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
-                    fontSize: '80px', 
-                    fontWeight: 'bold' 
-                  }}
-                >
-                  {product.name.charAt(0).toUpperCase()}
-                </div>
-              ) : (
-                <img
-                  src={getImageUrl(selectedImage)}
-                  alt={product.name}
-                  onError={() => setImgError(true)}
-                />
-              )}
-            </div>
-          </div>
-          {allImages.length > 1 && (
-            <div className="dp-thumbnails">
-              {allImages.map((img, idx) => (
-                <div
-                  key={idx}
-                  className={`dp-thumb ${selectedImage === img ? 'active' : ''}`}
-                  onClick={() => {
-                    setSelectedImage(img);
-                    setImgError(false);
-                  }}
-                >
-                  <img src={getImageUrl(img)} alt="thumbnail" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="dp-criteria-section">
-          {sortedDetails.length > 0 ? (
-            sortedDetails.map((d) => (
-              <div key={d.id} className="dp-row">
-                <div className="dp-label">
-                  {d.tieuChi} 
-                </div>
-                <div className="dp-value" dangerouslySetInnerHTML={{ __html: d.noiDung }} />
+              <div className="dp-share-wrapper">
+                <button className="dp-icon-btn" onClick={handleShare}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                  </svg>
+                </button>
+                {shareCopied && <div className="dp-copied-tip">Đã sao chép liên kết</div>}
               </div>
-            ))
-          ) : (
-            <p className="dp-empty">Chưa có thông số chi tiết.</p>
-          )}
-        </div>
-      </div>
 
-      {isMoreDrawerOpen && (
-        <>
-          <div className="dp-drawer-overlay" onClick={() => setIsMoreDrawerOpen(false)} />
-          <div className="dp-info-drawer">
-            <div className="dp-drawer-header">
-              <h3>Thông tin sản phẩm</h3>
-              <button className="dp-close-btn" onClick={() => setIsMoreDrawerOpen(false)}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
+              <button 
+                ref={toggleBtnRef}
+                className={`dp-icon-btn ${isMoreDrawerOpen ? 'active' : ''}`} 
+                onClick={() => setIsMoreDrawerOpen(!isMoreDrawerOpen)}
+                title="Thông tin thêm"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  viewBox="0 0 4 15" 
+                  fill="none"
+                  style={{ width: '16px', height: '16px' }}
+                >
+                  <path d="M1.66927 8.33496C2.12951 8.33496 2.5026 7.96186 2.5026 7.50163C2.5026 7.04139 2.12951 6.66829 1.66927 6.66829C1.20903 6.66829 0.835938 7.04139 0.835938 7.50163C0.835938 7.96186 1.20903 8.33496 1.66927 8.33496Z" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M1.66927 2.50163C2.12951 2.50163 2.5026 2.12853 2.5026 1.66829C2.5026 1.20806 2.12951 0.834961 1.66927 0.834961C1.20903 0.834961 0.835938 1.20806 0.835938 1.66829C0.835938 2.12853 1.20903 2.50163 1.66927 2.50163Z" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M1.66927 14.1683C2.12951 14.1683 2.5026 13.7952 2.5026 13.335C2.5026 12.8747 2.12951 12.5016 1.66927 12.5016C1.20903 12.5016 0.835938 12.8747 0.835938 13.335C0.835938 13.7952 1.20903 14.1683 1.66927 14.1683Z" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             </div>
+          </div>
 
-            <div className="dp-drawer-content">
-              <div className="dp-info-item">
-                <label>Tên sản phẩm</label>
-                <p>{product.name}</p>
+          <div className="dp-product-header">
+            <div className="dp-header-left">
+              <div className="dp-header-thumbnail">
+                {selectedImage ? (
+                  <img src={getImageUrl(selectedImage)} alt={product.name} onError={() => setImgError(true)} />
+                ) : (
+                  <div className="dp-fallback-img" style={{ background: stringToColor(product.name) }}>
+                    {product.name.charAt(0).toUpperCase()}
+                  </div>
+                )}
               </div>
-
-              {(product.productGroupName || product.groupName) && (
-                <div className="dp-info-item">
-                  <label>Nhóm sản phẩm</label>
-                  <p>{product.productGroupName || product.groupName}</p>
+              {allImages.length > 1 && (
+                <div className="dp-thumbnails">
+                  {allImages.map((img, idx) => (
+                    <div 
+                      key={idx} 
+                      className={`dp-thumb ${selectedImage === img ? 'active' : ''}`}
+                      onClick={() => setSelectedImage(img)}
+                    >
+                      <img src={getImageUrl(img)} alt="" />
+                    </div>
+                  ))}
                 </div>
               )}
+            </div>
 
-              {(product.productCategoryName || product.categoryName) && (
-                <div className="dp-info-item">
-                  <label>Danh mục sản phẩm</label>
-                  <p>{product.productCategoryName || product.categoryName}</p>
+            <div className="dp-header-info">
+              <h1 className="dp-product-title">{product.name}</h1>
+              <div className="dp-product-meta">
+                <span className="dp-badge-business">{product.productGroupName || product.groupName || 'Sản phẩm'}</span>
+                <div className="dp-meta-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  {formatDateOnly(product.createdAt)}
                 </div>
-              )}
-
-              {product.businessName && (
-                <div className="dp-info-item">
-                  <label>Nghiệp vụ</label>
-                  <p>{product.businessName}</p>
+                <div className="dp-meta-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                  {product.views || product.viewCount || 0} lượt xem
                 </div>
-              )}
-
-              <div className="dp-info-item">
-                <label>Lượt xem</label>
-                <p>{product.views ?? product.viewCount ?? 0} lượt xem</p>
-              </div>
-
-              <div className="dp-info-item">
-                <label>Người tạo</label>
-                <p>{product.createdBy || '---'}</p>
-              </div>
-
-              <div className="dp-info-item">
-                <label>Người kiểm duyệt</label>
-                <p>{product.approvedBy || '---'}</p>
-              </div>
-
-              <div className="dp-info-item">
-                <label>Phiên bản</label>
-                <p>
-                  {product.version !== undefined && product.version !== null
-                    ? typeof product.version === 'number'
-                      ? `Phiên bản ${product.version}`
-                      : product.version
-                    : '1.0.0'}
-                </p>
-              </div>
-
-              <div className="dp-info-item">
-                <label>Ngày tạo</label>
-                <p>{formatDateTime(product.createdAt)}</p>
-              </div>
-
-              <div className="dp-info-item">
-                <label>Lần cập nhật cuối cùng</label>
-                <p>{formatDateTime(product.updatedAt || product.createdAt)}</p>
               </div>
             </div>
           </div>
-        </>
-      )}
+
+          <div className="dp-criteria-section">
+            {sortedDetails.length > 0 ? (
+              sortedDetails.map((detail, idx) => (
+                <div className="dp-row" key={detail.id || idx}>
+                  <div className="dp-label">{detail.tieuChi}</div>
+                  <div className="dp-value" dangerouslySetInnerHTML={{ __html: detail.noiDung }} />
+                </div>
+              ))
+            ) : (
+              <div className="dp-empty">Chưa có thông tin chi tiết cho sản phẩm này.</div>
+            )}
+          </div>
+        </div>
+
+        <div className="dp-sidebar-wrapper" ref={sidebarRef}>
+          <div className="dp-sidebar-inner">
+            <h3 className="dp-sidebar-title">Thông tin hệ thống</h3>
+            <div className="dp-sidebar-content">
+              <div className="dp-info-row">
+                <div className="dp-info-label">Phiên bản</div>
+                <div className="dp-info-value">V{product.version || 1}</div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Người tạo</div>
+                <div className="dp-info-value">{product.createdBy || 'Hệ thống'}</div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Thời gian tạo</div>
+                <div className="dp-info-value">{formatDateTime(product.createdAt)}</div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Người phê duyệt</div>
+                <div className="dp-info-value">{product.approvedBy || '---'}</div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Thời gian phê duyệt</div>
+                <div className="dp-info-value">{formatDateTime(product.updatedAt)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

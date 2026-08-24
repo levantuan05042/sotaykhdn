@@ -67,7 +67,7 @@
 /* Badge Trạng thái */
 /* Badge Trạng thái chung */
 .status-badge {
-display: inline-flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
@@ -88,7 +88,7 @@ display: inline-flex;
   line-height: 100%;
 }
 
-/* Các biến thể màu sắc dựa trên image_cd4383.png */
+/* Các biến thể màu sắc */
 
 /* Đang hoạt động - Xanh lá */
 .status-active {
@@ -240,16 +240,83 @@ display: inline-flex;
   font-size: 14px;
 }
 
-.product-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  min-width: 800px; /* Đảm bảo bảng có chiều rộng tối thiểu để kích hoạt cuộn */
-}
 .product-table thead th {
   position: sticky;
   top: 0;
   background-color: #f2eff3;
   z-index: 10;
   box-shadow: inset 0 -1px 0 #e3dfe6;
+}
+
+/* =========================================
+   Toggle Switch Styles (Cột Hiệu lực)
+========================================= */
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #E3DFE6; /* Màu xám khi tắt */
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #72D5A1; /* Màu xanh khi bật */
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+/* Trạng thái Disable */
+.toggle-switch input:disabled + .toggle-slider {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toggle-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a191b;
+  min-width: 35px; /* Giữ độ rộng cố định để UI không bị giật khi text đổi */
+}
+
+.toggle-label.disabled-text {
+  color: #9CA3AF;
 }
