@@ -313,7 +313,7 @@ const HomePage: React.FC = () => {
   return (
     <div className="homepage min-h-screen font-sans">
       <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
-        <h1 className="hero-title text-4xl font-bold text-gray-800 mb-8 text-center">
+        <h1 className="text-[36px] font-bold text-[#211F26] leading-[1.2] mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
         </h1>
         
