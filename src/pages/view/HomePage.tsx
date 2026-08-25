@@ -5,7 +5,6 @@ import { BASE_URL } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 
-// --- IMPORT CÁC ICON SVG CHO DANH MỤC ---
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
 import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
 import iconBaoLanh from '../../assets/icons/sp-bao-lanh.svg';
@@ -17,8 +16,8 @@ import iconNganHangDienTu from '../../assets/icons/sp-ngan-hang-dien-tu.svg';
 import iconNganQuy from '../../assets/icons/sp-ngan-quy.svg';
 import iconBaoHiem from '../../assets/icons/sp-bao-hiem.svg';
 import iconChuongTrinhUuDai from '../../assets/icons/uu-dai-khdn.svg';
+import iconTimKiem from '../../assets/icon/timkiem.svg';
 
-// --- HÀM HELPER CHUẨN HÓA VÀ LẤY CẤU HÌNH ICON + MÀU NỀN ---
 const removeAccents = (str: string) => {
   return str
     .normalize('NFD')
@@ -93,6 +92,19 @@ const HomePage: React.FC = () => {
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  const highlightText = (text: string, query: string) => {
+  if (!query.trim()) return text;
+  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${safeQuery})`, 'gi'));
+  return parts.map((part, index) => 
+    part.toLowerCase() === query.toLowerCase() ? (
+      <strong key={index} className="font-bold text-gray-900">{part}</strong>
+    ) : (
+      part
+    )
+  );
+};
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('recentlyViewed');
@@ -101,7 +113,7 @@ const HomePage: React.FC = () => {
         setRecentProducts(parsed.slice(0, 6));
       }
     } catch (error) { 
-      console.error('Lỗi khi đọc lịch sử:', error); 
+      console.error(error); 
     }
 
     const storedSearches = localStorage.getItem('recentSearches');
@@ -119,7 +131,7 @@ const HomePage: React.FC = () => {
           setCategories(data);
         }
       } catch (error) { 
-        console.error("Lỗi khi fetch categories:", error); 
+        console.error(error); 
       }
     };
     fetchCategories();
@@ -181,12 +193,11 @@ const HomePage: React.FC = () => {
               setRecentProducts(syncedAndFilteredProducts.slice(0, 6));
             }
           } catch (err) {
-            console.error('Lỗi đồng bộ sản phẩm xem gần đây:', err);
+            console.error(err);
           }
-
         }
       } catch (error) { 
-        console.error("Lỗi khi fetch sản phẩm:", error); 
+        console.error(error); 
       }
     };
     fetchAndCountProducts();
@@ -206,6 +217,7 @@ const HomePage: React.FC = () => {
     const keyword = searchQuery.trim();
     if (!keyword) { 
       setSearchResult(null); 
+      setShowDropdown(false);
       return; 
     }
 
@@ -219,7 +231,7 @@ const HomePage: React.FC = () => {
           setShowDropdown(true);
         }
       } catch (error) { 
-        console.error('Lỗi khi tìm kiếm nhanh:', error); 
+        console.error(error); 
       } finally { 
         setLoadingSearch(false); 
       }
@@ -293,12 +305,13 @@ const HomePage: React.FC = () => {
   };
   
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 10);
+  
+  // Lấy 3 lịch sử tìm kiếm gần nhất, nếu chưa có thì dùng mặc định[cite: 22]
   const defaultSearches = ['SP vay vốn', 'thanh toán', 'xuất khẩu'];
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
   return (
     <div className="homepage min-h-screen font-sans">
-      {/* HERO / SEARCH SECTION */}
       <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
         <h1 className="hero-title text-4xl font-bold text-gray-800 mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
@@ -308,11 +321,13 @@ const HomePage: React.FC = () => {
           <form onSubmit={handleSearchSubmit} className="relative flex items-center z-20">
             <input 
               type="text" 
-              placeholder="Thanh toán" 
+              placeholder="Tìm kiếm" 
               value={searchQuery} 
-              onFocus={() => setShowDropdown(true)} 
+              onFocus={() => {
+                if (searchQuery.trim()) setShowDropdown(true);
+              }} 
               onChange={(e) => setSearchQuery(e.target.value)} 
-              className="w-full pl-6 pr-16 py-4 rounded-full border border-gray-200 shadow-md text-lg focus:outline-none focus:ring-2 focus:ring-[#AE1C3F] focus:border-transparent text-gray-700 placeholder-gray-400 bg-white" 
+              className="w-full pl-6 pr-16 py-4 rounded-full border border-gray-200 text-lg focus:outline-none focus:ring-2 focus:ring-[#AE1C3F] focus:border-transparent text-gray-700 placeholder-gray-400 bg-white" 
             />
             <button 
               type="submit" 
@@ -327,7 +342,7 @@ const HomePage: React.FC = () => {
 
           {showDropdown && searchQuery.trim() && (
             <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-gray-100 max-h-[400px] overflow-y-auto z-50">
-              <div className="p-4 text-left">
+              <div className="py-2 text-left">
                 {loadingSearch && (
                   <div className="p-6 text-center text-gray-500 text-sm">
                     Đang tìm kiếm dữ liệu...
@@ -342,61 +357,113 @@ const HomePage: React.FC = () => {
                 
                 {!loadingSearch && hasResult && (
                   <>
+                    {/* Nhóm sản phẩm */}
                     {searchResult?.groups && searchResult.groups.length > 0 && (
-                      <>
-                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Nhóm sản phẩm</div>
-                        {searchResult.groups.map(item => (
-                          <div 
-                            key={item.id} 
-                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
-                            onClick={() => handleNavigateFromDropdown('group', item.id)}
-                          >
-                            {item.name}
+                      searchResult.groups.map(item => (
+                        <div 
+                          key={item.id} 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          onClick={() => handleNavigateFromDropdown('group', item.id)}
+                        >
+                          <span className="text-gray-400 flex-shrink-0 mt-0.5">
+                            {/* Icon lưới / Nhóm sản phẩm */}
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="3" y="3" width="7" height="7" rx="1" />
+                              <rect x="14" y="3" width="7" height="7" rx="1" />
+                              <rect x="14" y="14" width="7" height="7" rx="1" />
+                              <rect x="3" y="14" width="7" height="7" rx="1" />
+                            </svg>
+                          </span>
+                          <div className="flex flex-col text-left overflow-hidden">
+                            <span className="text-sm text-gray-800 truncate">
+                              {highlightText(item.name, searchQuery)}
+                            </span>
+                            <span className="text-xs text-gray-400 mt-0.5">Nhóm sản phẩm</span>
                           </div>
-                        ))}
-                      </>
+                        </div>
+                      ))
                     )}
+
+                    {/* Danh mục */}
                     {searchResult?.categories && searchResult.categories.length > 0 && (
-                      <>
-                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Danh mục</div>
-                        {searchResult.categories.map(item => (
-                          <div 
-                            key={item.id} 
-                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
-                            onClick={() => handleNavigateFromDropdown('category', item.id)}
-                          >
-                            {item.name}
+                      searchResult.categories.map(item => (
+                        <div 
+                          key={item.id} 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          onClick={() => handleNavigateFromDropdown('category', item.id)}
+                        >
+                          <span className="text-gray-400 flex-shrink-0 mt-0.5">
+                            {/* Icon danh sách */}
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <line x1="8" y1="6" x2="21" y2="6" />
+                              <line x1="8" y1="12" x2="21" y2="12" />
+                              <line x1="8" y1="18" x2="21" y2="18" />
+                              <line x1="3" y1="6" x2="3.01" y2="6" />
+                              <line x1="3" y1="12" x2="3.01" y2="12" />
+                              <line x1="3" y1="18" x2="3.01" y2="18" />
+                            </svg>
+                          </span>
+                          <div className="flex flex-col text-left overflow-hidden">
+                            <span className="text-sm text-gray-800 truncate">
+                              {highlightText(item.name, searchQuery)}
+                            </span>
+                            <span className="text-xs text-gray-400 mt-0.5">Danh mục</span>
                           </div>
-                        ))}
-                      </>
+                        </div>
+                      ))
                     )}
+
+                    {/* Nghiệp vụ / Doanh nghiệp */}
                     {searchResult?.businesses && searchResult.businesses.length > 0 && (
-                      <>
-                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Loại hình Doanh nghiệp</div>
-                        {searchResult.businesses.map(item => (
-                          <div 
-                            key={item.id} 
-                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
-                            onClick={() => handleNavigateFromDropdown('business', item.id)}
-                          >
-                            {item.name}
+                      searchResult.businesses.map(item => (
+                        <div 
+                          key={item.id} 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          onClick={() => handleNavigateFromDropdown('business', item.id)}
+                        >
+                          <span className="text-gray-400 flex-shrink-0 mt-0.5">
+                            {/* Icon tài liệu / Nghiệp vụ */}
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                              <polyline points="14 2 14 8 20 8" />
+                              <line x1="16" y1="13" x2="8" y2="13" />
+                              <line x1="16" y1="17" x2="8" y2="17" />
+                            </svg>
+                          </span>
+                          <div className="flex flex-col text-left overflow-hidden">
+                            <span className="text-sm text-gray-800 truncate">
+                              {highlightText(item.name, searchQuery)}
+                            </span>
+                            <span className="text-xs text-gray-400 mt-0.5">Nghiệp vụ</span>
                           </div>
-                        ))}
-                      </>
+                        </div>
+                      ))
                     )}
+
+                    {/* Sản phẩm */}
                     {searchResult?.products && searchResult.products.length > 0 && (
-                      <>
-                        <div className="text-xs font-semibold text-gray-400 uppercase mt-4 mb-2 first:mt-0">Sản phẩm</div>
-                        {searchResult.products.map(item => (
-                          <div 
-                            key={item.id} 
-                            className="px-3 py-2.5 rounded-md cursor-pointer flex items-center text-sm hover:bg-gray-100" 
-                            onClick={() => handleNavigateFromDropdown('product', item.id)}
-                          >
-                            {item.name}
+                      searchResult.products.map(item => (
+                        <div 
+                          key={item.id} 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          onClick={() => handleNavigateFromDropdown('product', item.id)}
+                        >
+                          <span className="text-gray-400 flex-shrink-0 mt-0.5">
+                            {/* Icon hộp / Sản phẩm */}
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                              <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                          </span>
+                          <div className="flex flex-col text-left overflow-hidden">
+                            <span className="text-sm text-gray-800 truncate">
+                              {highlightText(item.name, searchQuery)}
+                            </span>
+                            <span className="text-xs text-gray-400 mt-0.5">Sản phẩm</span>
                           </div>
-                        ))}
-                      </>
+                        </div>
+                      ))
                     )}
                   </>
                 )}
@@ -404,46 +471,54 @@ const HomePage: React.FC = () => {
               
               {!loadingSearch && (
                 <div 
-                  className="px-4 py-3 border-t border-gray-100 flex items-center justify-center gap-2 cursor-pointer text-[#A31720] text-sm font-medium bg-[#fdf2f3] hover:bg-[#fae6e8] transition-colors" 
+                  className="px-4 py-3 border-t border-gray-100 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors text-gray-800 rounded-b-xl" 
                   onClick={handleSearchSubmit}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <span>Xem tất cả kết quả cho "<strong>{searchQuery}</strong>"</span>
+                  <span className="text-gray-400 flex-shrink-0">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8" />
+                      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
+                  <span className="text-sm text-gray-800">Tìm kiếm</span>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3 mt-6">
+        <div className="flex flex-wrap justify-center gap-3 mt-6 self-stretch">
           {searchTags.map((tag, index) => (
             <button 
               key={index} 
               onClick={() => handleTagClick(tag)} 
-              className="bg-white/80 hover:bg-white text-gray-600 px-5 py-2 rounded-full shadow-sm text-sm font-medium flex items-center transition-colors border border-white"
+              className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-full text-[14px] font-normal leading-[24px] flex items-center justify-center gap-2 transition-colors border border-gray-200"
             >
-              <svg className="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              {tag}
+              <img src={iconTimKiem} alt="search" className="w-[14px] h-[14px] flex-shrink-0" />
+              <span>{tag}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* DANH MỤC NHÓM SẢN PHẨM SECTION */}
       <div className="w-full px-10 py-12">
         {categories.length > 0 && (
           <div className="mb-16">
             <div className="flex items-center space-x-3 mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 6h16M4 12h16M4 18h16" />
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                <line x1="3" y1="9" x2="21" y2="9"/>
-                <line x1="9" y1="21" x2="9" y2="9"/>
+              <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width="24" 
+                height="24" 
+                viewBox="0 0 17 17" 
+                fill="none"
+              >
+                <path 
+                  d="M0.75 5.75H15.75M0.75 10.75H15.75M4.75 0.75H11.75C13.1501 0.75 13.8502 0.75 14.385 1.02248C14.8554 1.26217 15.2378 1.64462 15.4775 2.11502C15.75 2.6498 15.75 3.34987 15.75 4.75V11.75C15.75 13.1501 15.75 13.8502 15.4775 14.385C15.2378 14.8554 14.8554 15.2378 14.385 15.4775C13.8502 15.75 13.1501 15.75 11.75 15.75H4.75C3.34987 15.75 2.6498 15.75 2.11502 15.4775C1.64462 15.2378 1.26217 14.8554 1.02248 14.385C0.75 13.8502 0.75 13.1501 0.75 11.75V4.75C0.75 3.34987 0.75 2.6498 1.02248 2.11502C1.26217 1.64462 1.64462 1.26217 2.11502 1.02248C2.6498 0.75 3.34987 0.75 4.75 0.75Z" 
+                  stroke="#3C393F" 
+                  strokeWidth="1.5" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                />
               </svg>
               <h2 className="text-2xl font-bold text-gray-800">Danh mục nhóm sản phẩm</h2>
             </div>
@@ -453,7 +528,6 @@ const HomePage: React.FC = () => {
                 const config = getCategoryConfig(cat.name); 
                 const count = groupProductCounts[cat.id] || 0;
                 
-                // Xử lý lấy đường dẫn file SVG an toàn
                 const iconUrl = typeof config.icon === 'string' 
                   ? config.icon 
                   : (config.icon as any)?.default || (config.icon as any)?.src || '';
@@ -464,13 +538,11 @@ const HomePage: React.FC = () => {
                     onClick={() => handleCategoryClick(cat.id)} 
                     className="bg-white rounded-[12px] p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-[150px]"
                   >
-                    {/* Khung nền nhạt chứa Icon */}
                     <div 
                       className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: config.bgColor }}
                     >
                       {iconUrl ? (
-                        /* Tô màu đậm cho Icon SVG bằng Mask */
                         <div 
                           className="w-5 h-5"
                           style={{
@@ -493,7 +565,6 @@ const HomePage: React.FC = () => {
                       )}
                     </div>
                     
-                    {/* Nội dung Tên & Số lượng */}
                     <div className="flex flex-col gap-1 w-full mt-auto">
                       <h3 className="font-semibold text-[14px] text-[#1A1A1A] leading-[20px] line-clamp-2">
                         {cat.name}
@@ -523,7 +594,6 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {/* KHỐI SẢN PHẨM MỚI TẠO DÙNG PRODUCT CARD */}
         {newlyCreatedProducts.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-6">
@@ -545,7 +615,6 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {/* ĐÃ XEM GẦN ĐÂY SECTION */}
         {recentProducts.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-6">
@@ -570,7 +639,6 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {/* MỚI CẬP NHẬT SECTION */}
         {recentUpdates.length > 0 && (
           <div className="mb-16">
             <div className="flex items-center space-x-3 mb-6">

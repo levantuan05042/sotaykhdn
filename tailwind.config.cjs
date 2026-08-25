@@ -9,7 +9,10 @@ module.exports = {
       colors: {
         'agri-red': '#A62026',
         'agri-light': '#FEEBEB',
-      }
+      },
+      fontFamily: {
+        sans: ['Inter', 'sans-serif'], // Thêm dòng này để nhận font Inter toàn hệ thống
+      },
     },
   },
   plugins: [],

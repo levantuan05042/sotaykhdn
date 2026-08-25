@@ -16,7 +16,7 @@
   height: 100%;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
+  padding: 0 16px;
   box-sizing: border-box;
 }
 
@@ -209,11 +209,13 @@
   top: calc(100% + 10px);
   right: 0;
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-  min-width: 240px;
-  padding: 8px 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  width: 240px;
+  padding: 8px 0; 
   border: 1px solid #f0f0f0;
+  z-index: 1000;
+  overflow: hidden;
 }
 
 .dropdown-item {
@@ -221,32 +223,44 @@
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 12px 16px;
+  height: 48px;
+  padding: 0 16px; 
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
+  transition: all 0.2s ease;
+  font-family: 'Inter', sans-serif; 
   font-size: 14px;
-  color: #333;
-  transition: background-color 0.2s;
+  font-weight: 400; 
+  line-height: 24px;
+  color: #404040; 
+}
+
+.dropdown-icon {
+  width: 16px; 
+  height: 16px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .dropdown-item:hover {
-  background-color: #f5f5f5;
+  background-color: #F3F4F6;
 }
 
 .dropdown-item.active {
-  color: #A31720;
   font-weight: 500;
-  background-color: #fdf2f3;
+  background-color: #FDEBEB; 
+  color: #A31720; 
 }
 
 .dropdown-divider {
   height: 1px;
   background-color: #f0f0f0;
-  margin: 8px 0;
+  margin: 4px 0; 
 }
 
+/* KHU VỰC MENU DROPDOWN TÌM KIẾM */
 .search-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -258,35 +272,87 @@
   border: 1px solid #f0f0f0;
   max-height: 400px;
   overflow-y: auto;
+  z-index: 1000;
 }
 
 .search-dropdown-content {
-  padding: 16px;
-}
-
-.search-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #888;
-  text-transform: uppercase;
-  margin: 16px 0 8px;
-}
-
-.search-title:first-child {
-  margin-top: 0;
+  padding: 8px 0;
 }
 
 .search-item {
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 10px 16px;
   cursor: pointer;
   display: flex;
-  align-items: center;
-  font-size: 14px;
+  align-items: flex-start;
+  gap: 12px;
+  transition: background-color 0.2s ease;
 }
 
 .search-item:hover {
   background-color: #f5f5f5;
+}
+
+.item-icon {
+  color: #9CA3AF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-title {
+  font-size: 14px;
+  font-weight: 500; /* Medium theo thiết kế */
+  color: #171717; /* Mã màu Token/Text_primary_color chuẩn */
+}
+
+.item-subtitle {
+  font-size: 12px;
+  color: #9CA3AF;
+}
+
+.highlight-text {
+  font-weight: 700;
+  color: #171717;
+}
+
+.search-empty,
+.search-loading {
+  padding: 24px;
+  text-align: center;
+  color: #666;
+  font-size: 14px;
+}
+
+.search-view-all {
+  padding: 12px 16px;
+  border-top: 1px solid #E3DFE6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #171717;
+  background-color: #ffffff;
+  justify-content: flex-start;
+  transition: background-color 0.2s ease;
+}
+
+.search-view-all:hover {
+  background-color: #F4F4F6;
+}
+
+.search-view-all .item-icon {
+  margin-top: 0;
+  color: #9CA3AF;
 }
 
 .search-history-header {
@@ -297,6 +363,7 @@
   color: #666;
   font-weight: 500;
   margin-bottom: 8px;
+  padding: 0 16px;
 }
 
 .clear-history-btn {
@@ -313,6 +380,7 @@
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 12px;
+  padding: 0 16px 8px 16px;
 }
 
 .recent-item {
@@ -337,32 +405,6 @@
   height: 16px;
   color: #555;
   flex-shrink: 0;
-}
-
-.search-empty,
-.search-loading {
-  padding: 24px;
-  text-align: center;
-  color: #666;
-  font-size: 14px;
-}
-
-.search-view-all {
-  padding: 12px 16px;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  color: #A31720;
-  font-size: 14px;
-  font-weight: 500;
-  justify-content: center;
-  background-color: #fdf2f3;
-}
-
-.search-view-all:hover {
-  background-color: #fae6e8;
 }
 
 @media (max-width: 1024px) {

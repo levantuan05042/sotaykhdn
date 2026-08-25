@@ -7,6 +7,12 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import { AUTH_SERVICE_LOGOUT_URL } from '../../config/apiConfig';
 import { type UserRole } from '../../config/menuConfig';
 
+// Import các icon SVG
+import tracuuIcon from '../../assets/icon/tracuu.svg';
+import qlNoidungIcon from '../../assets/icon/ql-noidung.svg';
+import pheduyetnoidungIcon from '../../assets/icon/pheduyetnoidung.svg';
+import dangxuatIcon from '../../assets/icon/dangxuat.svg';
+
 const ROLE_LABELS: Record<string, string> = {
   ESA08: 'Ban Ngân hàng số',
   ECV08: 'Cán bộ tra cứu',
@@ -272,15 +278,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                           className={styles['recent-item']}
                           onClick={() => setSearchQuery(keyword)}
                         >
-                          <svg
-                            className={styles['recent-item-icon']}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          >
+                          <svg className={styles['recent-item-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <circle cx="11" cy="11" r="8"></circle>
                             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                           </svg>
@@ -297,55 +295,76 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                   <div className={styles['search-empty']}>Không tìm thấy dữ liệu phù hợp</div>
                 )}
 
-                {!loadingSearch && hasResult && (
-                  <>
-                    {searchResult?.groups && searchResult.groups.length > 0 && (
+                {!loadingSearch && hasResult && (() => {
+                  // Hàm hỗ trợ in đậm từ khóa tìm kiếm
+                  const highlightText = (text: string, highlight: string) => {
+                    if (!highlight.trim()) return text;
+                    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+                    return (
                       <>
-                        <div className={styles['search-title']}>Nhóm sản phẩm</div>
-                        {searchResult.groups.map(item => (
-                          <div key={item.id} className={styles['search-item']} onClick={() => handleNavigate('group', item.id)}>
-                            {item.name}
-                          </div>
-                        ))}
+                        {parts.map((part, index) =>
+                          part.toLowerCase() === highlight.toLowerCase() ? (
+                            <span key={index} className={styles['highlight-text']}>{part}</span>
+                          ) : (
+                            part
+                          )
+                        )}
                       </>
-                    )}
+                    );
+                  };
 
-                    {searchResult?.categories && searchResult.categories.length > 0 && (
-                      <>
-                        <div className={styles['search-title']}>Danh mục</div>
-                        {searchResult.categories.map(item => (
-                          <div key={item.id} className={styles['search-item']} onClick={() => handleNavigate('category', item.id)}>
-                            {item.name}
-                          </div>
-                        ))}
-                      </>
-                    )}
+                  // Hàm render dùng chung cho các item
+                  const renderItems = (items: SearchItem[], type: string, subtitle: string, svgPath: React.ReactNode) => {
+                    return items.map(item => (
+                      <div key={`${type}-${item.id}`} className={styles['search-item']} onClick={() => handleNavigate(type, item.id)}>
+                        <div className={styles['item-icon']}>
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            {svgPath}
+                          </svg>
+                        </div>
+                        <div className={styles['item-content']}>
+                          <div className={styles['item-title']}>{highlightText(item.name, searchQuery)}</div>
+                          <div className={styles['item-subtitle']}>{subtitle}</div>
+                        </div>
+                      </div>
+                    ));
+                  };
 
-                    {searchResult?.businesses && searchResult.businesses.length > 0 && (
-                      <>
-                        <div className={styles['search-title']}>Nghiệp vụ</div>
-                        {searchResult.businesses.map(item => (
-                          <div key={item.id} className={styles['search-item']} onClick={() => handleNavigate('business', item.id)}>
-                            {item.name}
-                          </div>
-                        ))}
-                      </>
-                    )}
+                  return (
+                    <>
+                      {/* Icon Nhóm sản phẩm (Dạng lưới - Grid) */}
+                      {searchResult?.groups && searchResult.groups.length > 0 && 
+                        renderItems(searchResult.groups, 'group', 'Nhóm sản phẩm', (
+                          <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></>
+                        ))
+                      }
 
-                    {searchResult?.products && searchResult.products.length > 0 && (
-                      <>
-                        <div className={styles['search-title']}>Sản phẩm</div>
-                        {searchResult.products.map(item => (
-                          <div key={item.id} className={styles['search-item']} onClick={() => handleNavigate('product', item.id)}>
-                            {item.name}
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </>
-                )}
+                      {/* Icon Danh mục (Dạng danh sách - List) */}
+                      {searchResult?.categories && searchResult.categories.length > 0 && 
+                        renderItems(searchResult.categories, 'category', 'Danh mục', (
+                          <><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></>
+                        ))
+                      }
+
+                      {/* Icon Nghiệp vụ (Dạng file tài liệu) */}
+                      {searchResult?.businesses && searchResult.businesses.length > 0 && 
+                        renderItems(searchResult.businesses, 'business', 'Nghiệp vụ', (
+                          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></>
+                        ))
+                      }
+
+                      {/* Icon Sản phẩm (Dạng khối hình hộp - Cube) */}
+                      {searchResult?.products && searchResult.products.length > 0 && 
+                        renderItems(searchResult.products, 'product', 'Sản phẩm', (
+                          <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></>
+                        ))
+                      }
+                    </>
+                  );
+                })()}
               </div>
 
+              {/* Nút Xem tất cả (Tìm kiếm) */}
               {!loadingSearch && searchQuery.trim() && (
                 <div
                   className={styles['search-view-all']}
@@ -355,13 +374,13 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     setIsMobileSearchOpen(false);
                   }}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <span>
-                    Xem tất cả kết quả cho "<strong>{searchQuery}</strong>"
-                  </span>
+                  <div className={styles['item-icon']}>
+                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                       <circle cx="11" cy="11" r="8"></circle>
+                       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                     </svg>
+                  </div>
+                  <span>Tìm kiếm</span>
                 </div>
               )}
             </div>
@@ -423,10 +442,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                   className={`${styles['dropdown-item']} ${role === 'VIEWER' ? styles.active : ''}`}
                   onClick={() => handleRoleSelect('VIEWER')}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
+                  <img src={tracuuIcon} alt="Tra cứu sản phẩm" className={styles['dropdown-icon']} />
                   <span>Tra cứu sản phẩm</span>
                 </button>
 
@@ -435,13 +451,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     className={`${styles['dropdown-item']} ${role === 'ETN08' ? styles.active : ''}`}
                     onClick={() => handleRoleSelect('ETN08')}
                   >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                    <span>Quản trị nội dung</span>
+                    <img src={qlNoidungIcon} alt="Quản lý nội dung" className={styles['dropdown-icon']} />
+                    <span>Quản lý nội dung</span>
                   </button>
                 )}
 
@@ -450,13 +461,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     className={`${styles['dropdown-item']} ${role === 'ETK08' ? styles.active : ''}`}
                     onClick={() => handleRoleSelect('ETK08')}
                   >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                    <span>Kiểm duyệt nội dung</span>
+                    <img src={pheduyetnoidungIcon} alt="Phê duyệt nội dung" className={styles['dropdown-icon']} />
+                    <span>Phê duyệt nội dung</span>
                   </button>
                 )}
 
@@ -470,11 +476,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     window.location.href = AUTH_SERVICE_LOGOUT_URL;
                   }}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <polyline points="16 17 21 12 16 7" />
-                    <line x1="21" y1="12" x2="9" y2="12" />
-                  </svg>
+                  <img src={dangxuatIcon} alt="Đăng xuất" className={styles['dropdown-icon']} />
                   <span>Đăng xuất</span>
                 </button>
               </div>
