@@ -5,19 +5,66 @@ import { BASE_URL } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 
-const getCategoryStyle = (index: number) => {
-  const styles = [
-    { iconColor: 'text-pink-500', bgColor: 'bg-pink-50', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9' },
-    { iconColor: 'text-teal-500', bgColor: 'bg-teal-50', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-    { iconColor: 'text-orange-500', bgColor: 'bg-orange-50', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { iconColor: 'text-green-500', bgColor: 'bg-green-50', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
-    { iconColor: 'text-yellow-500', bgColor: 'bg-yellow-50', icon: 'M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z' },
-    { iconColor: 'text-indigo-500', bgColor: 'bg-indigo-50', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
-    { iconColor: 'text-purple-500', bgColor: 'bg-purple-50', icon: 'M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z' },
-    { iconColor: 'text-cyan-500', bgColor: 'bg-cyan-50', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { iconColor: 'text-red-500', bgColor: 'bg-red-50', icon: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z' },
-  ];
-  return styles[index % styles.length];
+// --- IMPORT CÁC ICON SVG CHO DANH MỤC ---
+import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
+import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
+import iconBaoLanh from '../../assets/icons/sp-bao-lanh.svg';
+import iconThanhToanTrongNuoc from '../../assets/icons/sp-thanh-toan-trong-nuoc.svg';
+import iconKinhDoanhNgoaiTe from '../../assets/icons/sp-kinh-doanh-ngoai-te.svg';
+import iconThanhToanQuocTe from '../../assets/icons/sp-thanh-toan-quoc-te.svg';
+import iconThe from '../../assets/icons/sp-the.svg';
+import iconNganHangDienTu from '../../assets/icons/sp-ngan-hang-dien-tu.svg';
+import iconNganQuy from '../../assets/icons/sp-ngan-quy.svg';
+import iconBaoHiem from '../../assets/icons/sp-bao-hiem.svg';
+import iconChuongTrinhUuDai from '../../assets/icons/uu-dai-khdn.svg';
+
+// --- HÀM HELPER CHUẨN HÓA VÀ LẤY CẤU HÌNH ICON + MÀU NỀN ---
+const removeAccents = (str: string) => {
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+};
+
+const getCategoryConfig = (itemName: string) => {
+  const cleanName = removeAccents((itemName || '').toLowerCase().trim());
+
+  if (cleanName.includes('quoc te')) {
+    return { icon: iconThanhToanQuocTe, bgColor: '#FDF2F5', iconColor: '#C03254' };
+  }
+  if (cleanName.includes('cho vay')) {
+    return { icon: iconChoVay, bgColor: '#E6F7F6', iconColor: '#11817A' };
+  }
+  if (cleanName.includes('ngan quy') || cleanName.includes('dich vu')) {
+    return { icon: iconNganQuy, bgColor: '#FDF2EA', iconColor: '#B96D46' };
+  }
+  if (cleanName.includes('bao lanh')) {
+    return { icon: iconBaoLanh, bgColor: '#ECF9F1', iconColor: '#2E7D52' };
+  }
+  if (cleanName.includes('bao hiem')) {
+    return { icon: iconBaoHiem, bgColor: '#FEF7E6', iconColor: '#B48C2B' };
+  }
+  if (cleanName.includes('trong nuoc') || cleanName.includes('thanh toan')) {
+    return { icon: iconThanhToanTrongNuoc, bgColor: '#ECF9EE', iconColor: '#388E3C' };
+  }
+  if (cleanName.includes('the')) {
+    return { icon: iconThe, bgColor: '#F0F1FB', iconColor: '#3F51B5' };
+  }
+  if (cleanName.includes('dien tu')) {
+    return { icon: iconNganHangDienTu, bgColor: '#F5F0FB', iconColor: '#7B1FA2' };
+  }
+  if (cleanName.includes('huy dong')) {
+    return { icon: iconHuyDongVon, bgColor: '#E5F8F6', iconColor: '#00897B' };
+  }
+  if (cleanName.includes('uu dai')) {
+    return { icon: iconChuongTrinhUuDai, bgColor: '#FCEEF0', iconColor: '#C02242' };
+  }
+  if (cleanName.includes('ngoai te')) {
+    return { icon: iconKinhDoanhNgoaiTe, bgColor: '#FDF2EA', iconColor: '#B96D46' };
+  }
+
+  return { icon: null, bgColor: '#F3F4F6', iconColor: '#6B7280' };
 };
 
 interface Category { id: string | number; name: string; [key: string]: any; }
@@ -251,6 +298,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="homepage min-h-screen font-sans">
+      {/* HERO / SEARCH SECTION */}
       <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
         <h1 className="hero-title text-4xl font-bold text-gray-800 mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
@@ -386,6 +434,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
+      {/* DANH MỤC NHÓM SẢN PHẨM SECTION */}
       <div className="w-full px-10 py-12">
         {categories.length > 0 && (
           <div className="mb-16">
@@ -400,26 +449,58 @@ const HomePage: React.FC = () => {
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {displayedCategories.map((cat, index) => {
-                const style = getCategoryStyle(index); 
+              {displayedCategories.map((cat) => {
+                const config = getCategoryConfig(cat.name); 
                 const count = groupProductCounts[cat.id] || 0;
+                
+                // Xử lý lấy đường dẫn file SVG an toàn
+                const iconUrl = typeof config.icon === 'string' 
+                  ? config.icon 
+                  : (config.icon as any)?.default || (config.icon as any)?.src || '';
+
                 return (
                   <div 
                     key={cat.id} 
                     onClick={() => handleCategoryClick(cat.id)} 
-                    className="bg-white rounded-[16px] p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col items-start gap-4"
+                    className="bg-white rounded-[12px] p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-[150px]"
                   >
+                    {/* Khung nền nhạt chứa Icon */}
                     <div 
-                      className={`rounded-xl flex items-center justify-center ${style.bgColor} ${style.iconColor}`} 
-                      style={{ width: '48px', height: '48px' }}
+                      className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: config.bgColor }}
                     >
-                      <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                        <path d={style.icon} />
-                      </svg>
+                      {iconUrl ? (
+                        /* Tô màu đậm cho Icon SVG bằng Mask */
+                        <div 
+                          className="w-5 h-5"
+                          style={{
+                            backgroundColor: config.iconColor,
+                            maskImage: `url("${iconUrl}")`,
+                            maskRepeat: 'no-repeat',
+                            maskPosition: 'center',
+                            maskSize: 'contain',
+                            WebkitMaskImage: `url("${iconUrl}")`,
+                            WebkitMaskRepeat: 'no-repeat',
+                            WebkitMaskPosition: 'center',
+                            WebkitMaskSize: 'contain'
+                          }}
+                        />
+                      ) : (
+                        <svg width="24" height="24" fill="none" stroke={config.iconColor} strokeWidth="2.2" viewBox="0 0 24 24">
+                          <circle cx="12" cy="12" r="10" />
+                          <path d="M12 8v8M8 12h8" />
+                        </svg>
+                      )}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-[15px] text-gray-800 leading-tight mb-1">{cat.name}</h3>
-                      <p className="text-[13px] text-gray-500 font-medium">{count} sản phẩm</p>
+                    
+                    {/* Nội dung Tên & Số lượng */}
+                    <div className="flex flex-col gap-1 w-full mt-auto">
+                      <h3 className="font-semibold text-[14px] text-[#1A1A1A] leading-[20px] line-clamp-2">
+                        {cat.name}
+                      </h3>
+                      <p className="text-[12.5px] text-[#8C8C8C] font-normal">
+                        {count} sản phẩm
+                      </p>
                     </div>
                   </div>
                 );
@@ -442,7 +523,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {/* THÊM MỚI: KHỐI SẢN PHẨM MỚI TẠO DÙNG PRODUCT CARD */}
+        {/* KHỐI SẢN PHẨM MỚI TẠO DÙNG PRODUCT CARD */}
         {newlyCreatedProducts.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-6">
@@ -464,6 +545,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
+        {/* ĐÃ XEM GẦN ĐÂY SECTION */}
         {recentProducts.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-6">
@@ -488,6 +570,7 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
+        {/* MỚI CẬP NHẬT SECTION */}
         {recentUpdates.length > 0 && (
           <div className="mb-16">
             <div className="flex items-center space-x-3 mb-6">

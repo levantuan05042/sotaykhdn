@@ -47,11 +47,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   color: inherit;
+  flex-shrink: 0;
 }
 
+.dynamic-icon-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: brightness(0) invert(1);
+  transition: filter 0.2s ease;
+}
 .sidebar-text {
   font-family: 'Inter', sans-serif;
   font-size: 14px;
@@ -68,13 +77,17 @@
 
 .sidebar-btn.active .sidebar-content {
   background-color: #F8EAEC;
-  color: #AE1C3F;
+  color: #8A1530;
 }
 
 .sidebar-btn.active .sidebar-text,
 .sidebar-btn.active .sidebar-icon {
-  color: #AE1C3F;
+  color: #8A1530;
   font-weight: 500;
+}
+
+.sidebar-btn.active .dynamic-icon-img {
+  filter: brightness(0) saturate(100%) invert(14%) sepia(82%) saturate(3800%) hue-rotate(330deg) brightness(70%) contrast(98%);
 }
 
 .sidebar-group {
