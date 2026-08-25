@@ -7,7 +7,6 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import { AUTH_SERVICE_LOGOUT_URL } from '../../config/apiConfig';
 import { type UserRole } from '../../config/menuConfig';
 
-// Import các icon SVG
 import tracuuIcon from '../../assets/icon/tracuu.svg';
 import qlNoidungIcon from '../../assets/icon/ql-noidung.svg';
 import pheduyetnoidungIcon from '../../assets/icon/pheduyetnoidung.svg';
@@ -296,7 +295,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                 )}
 
                 {!loadingSearch && hasResult && (() => {
-                  // Hàm hỗ trợ in đậm từ khóa tìm kiếm
                   const highlightText = (text: string, highlight: string) => {
                     if (!highlight.trim()) return text;
                     const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
@@ -313,7 +311,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                     );
                   };
 
-                  // Hàm render dùng chung cho các item
                   const renderItems = (items: SearchItem[], type: string, subtitle: string, svgPath: React.ReactNode) => {
                     return items.map(item => (
                       <div key={`${type}-${item.id}`} className={styles['search-item']} onClick={() => handleNavigate(type, item.id)}>
@@ -332,28 +329,24 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
                   return (
                     <>
-                      {/* Icon Nhóm sản phẩm (Dạng lưới - Grid) */}
                       {searchResult?.groups && searchResult.groups.length > 0 && 
                         renderItems(searchResult.groups, 'group', 'Nhóm sản phẩm', (
                           <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></>
                         ))
                       }
 
-                      {/* Icon Danh mục (Dạng danh sách - List) */}
                       {searchResult?.categories && searchResult.categories.length > 0 && 
                         renderItems(searchResult.categories, 'category', 'Danh mục', (
                           <><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></>
                         ))
                       }
 
-                      {/* Icon Nghiệp vụ (Dạng file tài liệu) */}
                       {searchResult?.businesses && searchResult.businesses.length > 0 && 
                         renderItems(searchResult.businesses, 'business', 'Nghiệp vụ', (
                           <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></>
                         ))
                       }
 
-                      {/* Icon Sản phẩm (Dạng khối hình hộp - Cube) */}
                       {searchResult?.products && searchResult.products.length > 0 && 
                         renderItems(searchResult.products, 'product', 'Sản phẩm', (
                           <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></>
@@ -364,7 +357,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                 })()}
               </div>
 
-              {/* Nút Xem tất cả (Tìm kiếm) */}
               {!loadingSearch && searchQuery.trim() && (
                 <div
                   className={styles['search-view-all']}

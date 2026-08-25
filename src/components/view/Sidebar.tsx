@@ -4,7 +4,7 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import styles from './Sidebar.module.css';
 
-// --- IMPORT SVG ICONS TỪ BỘ ICON ---
+// --- IMPORT SVG ICONS ---
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
 import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
 import iconBaoLanh from '../../assets/icons/sp-bao-lanh.svg';
@@ -101,6 +101,7 @@ interface DynamicMenuProps {
 }
 
 interface SidebarProps {
+  isOpen?: boolean;
   onClose?: () => void;
 }
 
@@ -182,7 +183,7 @@ const DynamicMenu: React.FC<DynamicMenuProps> = ({ items, loading, error, onNavi
   );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const [dynamicGroups, setDynamicGroups] = useState<DynamicItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -215,39 +216,49 @@ const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   }, []);
 
   return (
-    <aside className={styles['sidebar-aside']}>
-      <button
-        type="button"
-        className={styles['sidebar-close-btn']}
+    <>
+      {/* Overlay mờ dùng cho màn hình Tablet & Mobile */}
+      <div 
+        className={`${styles['sidebar-overlay']} ${isOpen ? styles['is-open'] : ''}`}
         onClick={onClose}
-        aria-label="Đóng menu"
-      >
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+        aria-hidden="true"
+      />
 
-      <nav className={styles['sidebar-nav']}>
-        {STATIC_ITEMS.map((item) => (
-          <SidebarItem
-            key={item.id}
-            to={item.path}
-            name={item.name}
-            icon={item.icon}
-            end={item.path === '/view'}
+      {/* Cấu trúc Sidebar chính */}
+      <aside className={`${styles['sidebar-aside']} ${isOpen ? styles['is-open'] : ''}`}>
+        <button
+          type="button"
+          className={styles['sidebar-close-btn']}
+          onClick={onClose}
+          aria-label="Đóng menu"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+
+        <nav className={styles['sidebar-nav']}>
+          {STATIC_ITEMS.map((item) => (
+            <SidebarItem
+              key={item.id}
+              to={item.path}
+              name={item.name}
+              icon={item.icon}
+              end={item.path === '/view'}
+              onNavigate={onClose}
+            />
+          ))}
+
+          <DynamicMenu
+            items={dynamicGroups}
+            loading={loading}
+            error={loadError}
             onNavigate={onClose}
           />
-        ))}
-
-        <DynamicMenu
-          items={dynamicGroups}
-          loading={loading}
-          error={loadError}
-          onNavigate={onClose}
-        />
-      </nav>
-    </aside>
+        </nav>
+      </aside>
+    </>
   );
 };
 

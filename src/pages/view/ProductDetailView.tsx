@@ -162,7 +162,10 @@ const ProductDetailView: React.FC = () => {
         const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
         setProduct(res.data);
         saveToHistory(res.data);
-        if (res.data.imageUrl) setSelectedImage(res.data.imageUrl);
+        if (res.data.imageUrl) {
+          setSelectedImage(res.data.imageUrl);
+          setImgError(false);
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -269,7 +272,8 @@ const ProductDetailView: React.FC = () => {
                           if (item.type === 'home') navigate('/view');
                           else if (item.id) navigate(`/view/${item.type}/${item.id}`);
                         }}
-                        disabled={isLast} title={item.name}
+                        disabled={isLast} 
+                        title={item.name}
                       >
                         {item.type === 'home' && (
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '2px' }}>
@@ -295,7 +299,7 @@ const ProductDetailView: React.FC = () => {
               </button>
 
               <div className="dp-share-wrapper">
-                <button className="dp-icon-btn" onClick={handleShare}>
+                <button className="dp-icon-btn" onClick={handleShare} title="Chia sẻ">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="18" cy="5" r="3"></circle>
                     <circle cx="6" cy="12" r="3"></circle>
@@ -311,7 +315,7 @@ const ProductDetailView: React.FC = () => {
                 ref={toggleBtnRef}
                 className={`dp-icon-btn ${isMoreDrawerOpen ? 'active' : ''}`} 
                 onClick={() => setIsMoreDrawerOpen(!isMoreDrawerOpen)}
-                title="Thông tin thêm"
+                title="Thông tin hệ thống"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -330,7 +334,7 @@ const ProductDetailView: React.FC = () => {
           <div className="dp-product-header">
             <div className="dp-header-left">
               <div className="dp-header-thumbnail">
-                {selectedImage ? (
+                {selectedImage && !imgError ? (
                   <img src={getImageUrl(selectedImage)} alt={product.name} onError={() => setImgError(true)} />
                 ) : (
                   <div className="dp-fallback-img" style={{ background: stringToColor(product.name) }}>
@@ -344,7 +348,10 @@ const ProductDetailView: React.FC = () => {
                     <div 
                       key={idx} 
                       className={`dp-thumb ${selectedImage === img ? 'active' : ''}`}
-                      onClick={() => setSelectedImage(img)}
+                      onClick={() => {
+                        setSelectedImage(img);
+                        setImgError(false);
+                      }}
                     >
                       <img src={getImageUrl(img)} alt="" />
                     </div>
@@ -377,6 +384,7 @@ const ProductDetailView: React.FC = () => {
             </div>
           </div>
 
+          {/* Bảng hiển thị thông tin sản phẩm */}
           <div className="dp-criteria-section">
             {sortedDetails.length > 0 ? (
               sortedDetails.map((detail, idx) => (
@@ -391,6 +399,7 @@ const ProductDetailView: React.FC = () => {
           </div>
         </div>
 
+        {/* Sidebar Thông tin hệ thống */}
         <div className="dp-sidebar-wrapper" ref={sidebarRef}>
           <div className="dp-sidebar-inner">
             <h3 className="dp-sidebar-title">Thông tin hệ thống</h3>
@@ -418,6 +427,7 @@ const ProductDetailView: React.FC = () => {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -2,7 +2,6 @@
   width: 100%;
   height: 80px;
   background: #FDFCFD;
-  border-bottom: 1px solid #E3DFE6;
   position: sticky;
   top: 0;
   z-index: 500;
@@ -260,7 +259,6 @@
   margin: 4px 0; 
 }
 
-/* KHU VỰC MENU DROPDOWN TÌM KIẾM */
 .search-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -309,8 +307,8 @@
 
 .item-title {
   font-size: 14px;
-  font-weight: 500; /* Medium theo thiết kế */
-  color: #171717; /* Mã màu Token/Text_primary_color chuẩn */
+  font-weight: 500; 
+  color: #171717; 
 }
 
 .item-subtitle {
@@ -407,18 +405,15 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 1024px) {
-  .header-container {
-    height: 64px;
-  }
-
+/* --- Md (Tablet: < 1280px) --- */
+@media (max-width: 1279px) {
   .header-content {
     padding: 0 16px;
     gap: 12px;
   }
 
   .mobile-menu-btn {
-    display: block;
+    display: block; /* Hiển thị Hamburger Menu */
   }
 
   .header-title {
@@ -436,7 +431,7 @@
   .header-search-wrapper {
     display: none;
     position: absolute;
-    top: 64px;
+    top: 80px; /* Bám dưới Header 80px của Tablet */
     left: 0;
     right: 0;
     margin: 0;
@@ -452,7 +447,7 @@
   }
 
   .mobile-search-trigger {
-    display: block;
+    display: block; /* Hiển thị icon kính lúp góc phải */
   }
 
   .user-text {
@@ -465,6 +460,17 @@
 
   .user-profile-trigger {
     padding: 4px;
+  }
+}
+
+/* --- Sm (Mobile: < 768px) --- */
+@media (max-width: 767px) {
+  .header-container {
+    height: 64px;
+  }
+  
+  .header-search-wrapper {
+    top: 64px; /* Thu hẹp khoảng cách bám xuống do Header chỉ còn 64px */
   }
 
   .avatar-container {

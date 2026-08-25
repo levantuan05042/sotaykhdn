@@ -19,6 +19,7 @@
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Sidebar Drawer */
 .dp-sidebar-wrapper {
   width: 0;
   opacity: 0;
@@ -84,6 +85,7 @@
   word-break: break-word;
 }
 
+/* Breadcrumb & Actions */
 .dp-top-row {
   display: flex;
   align-items: center;
@@ -230,11 +232,12 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Product Header */
 .dp-product-header {
   display: flex;
   gap: 24px;
   margin-bottom: 32px;
-  align-items: flex-start;
+  align-items: center;
 }
 
 .dp-header-left {
@@ -344,48 +347,55 @@
   color: #9CA3AF;
 }
 
+/* BẢNG THÔNG TIN CHI TIẾT (CHUẨN FIGMA CARD 2 LỚP) */
 .dp-criteria-section {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  background: #FFFFFF;         /* Thẻ Card trắng ngoài */
+  border: 1px solid #E5E7EB;    /* Viền xám nhẹ ngoài */
+  border-radius: 16px;          /* Bo góc thẻ ngoài */
+  padding: 12px;                /* Đệm giữa thẻ và khối hàng */
+  gap: 2px;                     /* Khoảng cách giữa các hàng */
 }
 
 .dp-row {
   display: flex;
-  align-self: stretch;
   align-items: stretch;
+  width: 100%;
+  border-radius: 12px;          /* Bo góc từng khối hàng */
 }
 
+/* Hàng lẻ (1, 3, 5...): Màu nền #F2EFF3 */
 .dp-row:nth-child(odd) {
-  border-radius: 12px;
-  background: var(--Mauve-3, #F2EFF3);
+  background: #F2EFF3;
 }
 
+/* Hàng chẵn (2, 4, 6...): Không màu nền */
 .dp-row:nth-child(even) {
   background: transparent;
 }
 
 .dp-label {
-  width: 240px;
-  padding: 20px 24px;
+  width: 260px;
+  padding: 16px 20px;
   flex-shrink: 0;
   box-sizing: border-box;
   color: #111827;
   font-size: 14px;
   font-weight: 700;
-  border-right: 1px solid #D1D5DB;
   display: flex;
-  align-items: center;
+  align-items: flex-start; 
+  border-right: 1px solid #E5E7EB; 
 }
 
 .dp-value {
   flex: 1;
-  padding: 20px 24px;
+  padding: 16px 20px;
   box-sizing: border-box;
   color: #374151;
   font-size: 14px;
   font-weight: 400;
-  line-height: 22px;
+  line-height: 1.6;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -393,9 +403,13 @@
   word-break: break-word;
 }
 
-.dp-value p { margin: 0 0 10px 0; }
+/* Định dạng nội dung HTML bên trong dp-value */
+.dp-value p { margin: 0 0 8px 0; }
 .dp-value p:last-child { margin-bottom: 0; }
+.dp-value ul, .dp-value ol { margin: 8px 0; padding-left: 20px; }
+.dp-value li { margin-bottom: 6px; line-height: 1.6; }
 .dp-value strong, .dp-value b { font-weight: 700; color: #111827; }
+
 .dp-empty { color: #9CA3AF; font-size: 14px; padding: 24px 0; text-align: center; }
 
 .dp-loading, .dp-error {
@@ -406,34 +420,36 @@
 }
 .dp-error { color: #DC2626; }
 
+/* Responsive */
 @media (max-width: 1024px) {
   .dp-layout.sidebar-open { flex-direction: column; }
   .dp-layout.sidebar-open .dp-sidebar-wrapper {
-    width: 100%; margin-left: 0; padding-left: 0;
-    border-left: none; border-top: 1px solid #E5E7EB;
-    margin-top: 32px; padding-top: 32px;
+    width: 100%; 
+    margin-left: 0; 
+    padding-left: 0;
+    border-left: none; 
+    border-top: 1px solid #E5E7EB;
+    margin-top: 32px; 
+    padding-top: 32px;
   }
   .dp-sidebar-inner { width: 100%; }
 }
 
 @media (max-width: 768px) {
   .dp-container { padding: 20px; }
-  
   .dp-top-row { flex-direction: column; align-items: flex-start; gap: 16px; }
-  
   .dp-actions { width: 100%; justify-content: space-between; }
-  
   .dp-action-btn { flex: 1; }
-  
   .dp-product-header { flex-direction: column; gap: 16px; }
-  
   .dp-header-left { width: 100%; max-width: 100%; }
-  
   .dp-header-thumbnail { aspect-ratio: 16 / 9; }
   
   .dp-row { flex-direction: column; align-items: stretch; }
-  
-  .dp-label { width: 100%; border-right: none; border-bottom: 1px solid #D1D5DB; padding: 16px 20px; }
-  
-  .dp-value { padding: 16px 20px; }
+  .dp-label { 
+    width: 100%; 
+    border-right: none; /* Bỏ viền dọc trên mobile */
+    border-bottom: 1px solid #E5E7EB; /* Đổi thành viền ngang */
+    padding: 14px 16px 6px 16px; 
+  }
+  .dp-value { padding: 6px 16px 14px 16px; }
 }

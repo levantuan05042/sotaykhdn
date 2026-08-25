@@ -1,13 +1,36 @@
+/* --- TRẠNG THÁI DESKTOP (Mặc định >= 1280px) --- */
 .sidebar-aside {
-  width: 100%;
+  width: 322px;
+  min-width: 322px;
   max-width: 322px;
-  min-height: 100%;
+  flex-shrink: 0;
+  height: 100%;
+  position: relative;
   padding-top: 24px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   background-color: #AE1C3F;
   box-sizing: border-box;
+  overflow-y: auto;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 400;
+
+  /* Hide scrollbar default */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom Scrollbar cho Sidebar */
+.sidebar-aside::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-aside::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+.sidebar-aside::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .sidebar-nav {
@@ -15,8 +38,9 @@
   flex-direction: column;
   align-items: flex-start;
   width: 100%;
-  gap: 4px;
+  gap: 6px;
   box-sizing: border-box;
+  padding-bottom: 24px;
 }
 
 .sidebar-btn {
@@ -61,11 +85,13 @@
   filter: brightness(0) invert(1);
   transition: filter 0.2s ease;
 }
+
+/* Cấu hình Fontsize 16px cho tên Menu */
 .sidebar-text {
   font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 20px;
+  font-size: 16px; 
+  font-weight: 500;
+  line-height: 24px;
   text-align: left;
   color: #ffffff;
   transition: all 0.2s ease;
@@ -83,7 +109,7 @@
 .sidebar-btn.active .sidebar-text,
 .sidebar-btn.active .sidebar-icon {
   color: #8A1530;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .sidebar-btn.active .dynamic-icon-img {
@@ -107,8 +133,8 @@
 .sidebar-divider {
   color: rgba(255, 255, 255, 0.9);
   font-family: 'Inter', sans-serif;
-  font-size: 13px;
-  font-weight: 400;
+  font-size: 14px;
+  font-weight: 600;
   padding: 16px 24px 8px 24px;
   width: 100%;
   box-sizing: border-box;
@@ -127,7 +153,7 @@
 .sidebar-empty {
   color: rgba(255, 255, 255, 0.6);
   font-family: 'Inter', sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.4;
   padding: 8px 24px;
   width: 100%;
@@ -154,21 +180,48 @@
   background-color: rgba(255, 255, 255, 0.22);
 }
 
-@media (max-width: 1024px) {
+/* Back-drop Overlay cho Mobile / Tablet */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(17, 24, 39, 0.45);
+  z-index: 900;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.is-open {
+  display: block;
+  opacity: 1;
+}
+
+/* --- Breakpoint Tablet / Mobile (< 1280px) --- */
+@media (max-width: 1279px) {
+  .sidebar-aside {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 322px;
+    height: 100vh;
+    transform: translateX(-100%);
+    z-index: 1000;
+    box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
+  }
+
+  .sidebar-aside.is-open {
+    transform: translateX(0);
+  }
+
   .sidebar-close-btn {
     display: flex;
   }
-
-  .sidebar-aside {
-    padding-top: 12px;
-    width: 300px;
-    height: 100vh;
-    overflow-y: auto;
-  }
 }
 
-@media (max-width: 640px) {
+/* --- Breakpoint Mobile nhỏ (< 768px) --- */
+@media (max-width: 767px) {
   .sidebar-aside {
-    width: 84vw;
+    width: min(322px, 85vw);
+    padding-top: 16px;
   }
 }

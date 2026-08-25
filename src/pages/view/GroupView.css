@@ -5,7 +5,8 @@
   display: flex;
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  padding: 40px 60px; /* Căn lề rộng rãi hơn giống UI */
+  /* Mặc định padding cho Mobile (SM) */
+  padding: 16px; 
   min-height: 100vh;
 }
 
@@ -87,15 +88,8 @@
 }
 
 /* =======================================
-   LƯỚI SẢN PHẨM & CARD
+   CARD CHUNG (Sản phẩm / Danh mục)
 ======================================= */
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  align-items: stretch; 
-}
-
 .product-card {
   background: #ffffff;
   border: 1px solid #F0F0F0;
@@ -149,14 +143,62 @@
 }
 
 /* =======================================
-   RESPONSIVE
+   LƯỚI (GRID) RESPONSIVE CHUẨN THEO FIGMA
+   (Sử dụng Mobile-First min-width)
 ======================================= */
-@media (max-width: 1024px) {
-  .group-view { padding: 30px; }
-  .products-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
+
+/* 1. Màn hình SM (Mobile: < 768px) */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr); /* Sản phẩm: 1 item/hàng */
+  gap: 16px;
+  align-items: stretch; 
 }
 
-@media (max-width: 640px) {
-  .group-view { padding: 20px; }
-  .products-grid { grid-template-columns: 1fr; gap: 16px; }
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Danh mục: 2 items/hàng */
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* 2. Màn hình MD (Tablet: 768px - 1279px) */
+@media (min-width: 768px) {
+  .group-view { padding: 30px 24px; }
+  
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr); /* Sản phẩm: 2 items/hàng */
+    gap: 20px;
+  }
+  
+  .categories-grid {
+    grid-template-columns: repeat(3, 1fr); /* Danh mục: 3 items/hàng */
+    gap: 20px;
+  }
+}
+
+/* 3. Màn hình LG (Desktop: 1280px - 1599px) */
+@media (min-width: 1280px) {
+  .group-view { padding: 40px 60px; } /* Căn lề rộng giống UI cũ */
+  
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr); /* Sản phẩm: 2 items/hàng */
+    gap: 24px;
+  }
+  
+  .categories-grid {
+    grid-template-columns: repeat(3, 1fr); /* Danh mục: 3 items/hàng */
+    gap: 24px;
+  }
+}
+
+/* 4. Màn hình XL (Desktop Large: >= 1600px) */
+@media (min-width: 1600px) {
+  .products-grid {
+    grid-template-columns: repeat(4, 1fr); /* Sản phẩm: 4 items/hàng */
+  }
+  
+  .categories-grid {
+    grid-template-columns: repeat(5, 1fr); /* Danh mục: 5 items/hàng */
+  }
 }

@@ -310,7 +310,7 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="homepage min-h-screen font-sans">
-      <div className="hero-section flex flex-col items-center justify-center py-20 px-4 relative">
+      <div className="hero-section flex flex-col items-center justify-center py-20 px-4 md:px-6 relative">
         <h1 className="text-[36px] font-bold text-[#211F26] leading-[1.2] mb-8 text-center">
           Tra cứu sản phẩm dịch vụ
         </h1>
@@ -491,7 +491,7 @@ const HomePage: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full px-10 py-12">
+      <div className="content-area">
         {categories.length > 0 && (
           <div className="mb-16">
             <div className="flex items-center space-x-3 mb-6">
@@ -503,17 +503,17 @@ const HomePage: React.FC = () => {
                 fill="none"
               >
                 <path 
-                  d="M0.75 5.75H15.75M0.75 10.75H15.75M4.75 0.75H11.75C13.1501 0.75 13.8502 0.75 14.385 1.02248C14.8554 1.26217 15.2378 1.64462 15.4775 2.11502C15.75 2.6498 15.75 3.34987 15.75 4.75V11.75C15.75 13.1501 15.75 13.8502 15.4775 14.385C15.2378 14.8554 14.8554 15.2378 14.385 15.4775C13.8502 15.75 13.1501 15.75 11.75 15.75H4.75C3.34987 15.75 2.6498 15.75 2.11502 15.4775C1.64462 15.2378 1.26217 14.8554 1.02248 14.385C0.75 13.8502 0.75 13.1501 0.75 11.75V4.75C0.75 3.34987 0.75 2.6498 1.02248 2.11502C1.26217 1.64462 1.64462 1.26217 2.11502 1.02248C2.6498 0.75 3.34987 0.75 4.75 0.75Z" 
+                  d="M0.75 5.75H15.75M0.75 10.75H15.75M4.75 0.75H11.75C13.1501 0.75 13.8502 0.75 14.385 1.02248C14.8554 1.26217 15.2378 1.64462 15.4775 2.11502C15.75 2.6498 15.75 3.34987 15.75 4.75V11.75C15.75 13.1501 15.75 13.8502 15.4775 14.385C15.2378 14.8554 14.8554 15.2378 14.385 15.4775C13.8502 15.75 13.1501 15.75 11.75 15.75H4.75C3.34987 15.75 2.6498 15.75 2.11502 15.4775C1.64462 15.2378 1.26217 14.8554 1.02248 14.385C0.75 13.8502 0.75 13.1501 1.02248 2.11502C1.26217 1.64462 1.64462 1.26217 2.11502 1.02248C2.6498 0.75 3.34987 0.75 4.75 0.75Z" 
                   stroke="#3C393F" 
                   strokeWidth="1.5" 
                   strokeLinecap="round" 
                   strokeLinejoin="round"
                 />
               </svg>
-              <h2 className="text-2xl font-bold text-gray-800">Danh mục nhóm sản phẩm</h2>
+              <h2 className="text-2xl font-bold text-[#1A191B]">Danh mục nhóm sản phẩm</h2>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="categories-grid">
               {displayedCategories.map((cat) => {
                 const config = getCategoryConfig(cat.name); 
                 const count = groupProductCounts[cat.id] || 0;
@@ -526,10 +526,10 @@ const HomePage: React.FC = () => {
                   <div 
                     key={cat.id} 
                     onClick={() => handleCategoryClick(cat.id)} 
-                    className="bg-white rounded-[12px] p-4 border border-gray-200 transition-all cursor-pointer flex flex-col justify-between h-[150px]"
+                    className="bg-white rounded-[12px] p-5 border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between min-h-[158px] w-full"
                   >
                     <div 
-                      className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0 mb-auto"
+                      className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
                       style={{ backgroundColor: config.bgColor }}
                     >
                       {iconUrl ? (
@@ -555,11 +555,11 @@ const HomePage: React.FC = () => {
                       )}
                     </div>
                     
-                    <div className="flex flex-col gap-1 w-full mt-auto">
-                      <h3 className="font-semibold text-[14px] text-[#1A1A1A] leading-[20px] line-clamp-2 h-[40px]">
+                    <div className="flex flex-col gap-1 w-full mt-4">
+                      <h3 className="font-bold text-[15px] text-[#1A191B] leading-[20px] line-clamp-2 min-h-[40px] flex items-center">
                         {cat.name}
                       </h3>
-                      <p className="text-[12.5px] text-[#8C8C8C] font-normal">
+                      <p className="text-[13px] text-[#84828E] font-normal">
                         {count} sản phẩm
                       </p>
                     </div>
@@ -653,7 +653,7 @@ const HomePage: React.FC = () => {
                   <div 
                     key={product.id}
                     onClick={() => navigate(`/view/product-detail/${product.id}`)}
-                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 transition-all cursor-pointer"
+                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 transition-all cursor-pointer hover:border-gray-300 hover:shadow-sm"
                   >
                     <div className="flex items-center gap-4">
                       <span className={`px-4 py-1.5 text-xs font-semibold rounded-full w-[80px] text-center whitespace-nowrap ${badgeClass}`}>

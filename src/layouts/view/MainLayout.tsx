@@ -3,7 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import HeaderBar from '../../components/view/HeaderBar';
 import Sidebar from '../../components/view/Sidebar';
 import { Toaster } from 'react-hot-toast';
-import styles from './MainLayout.module.css'; 
+import styles from './MainLayout.module.css';
 import EmailIcon from '../../assets/icon/email.svg';
 import PhoneIcon from '../../assets/icon/phone.svg';
 
@@ -11,10 +11,12 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Tự động đóng sidebar khi chuyển tuyến đường
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
+  // Ngăn cuộn trang và lắng nghe phím ESC để đóng Sidebar trên Mobile
   useEffect(() => {
     document.body.style.overflow = isSidebarOpen ? 'hidden' : '';
 
@@ -41,17 +43,8 @@ const MainLayout: React.FC = () => {
       </header>
 
       <div className={styles['grid-container']}>
-        {isSidebarOpen && (
-          <div
-            className={styles['sidebar-overlay']}
-            onClick={() => setIsSidebarOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-
-        <aside className={`${styles['grid-sidebar']} ${isSidebarOpen ? styles.open : ''}`}>
-          <Sidebar onClose={() => setIsSidebarOpen(false)} />
-        </aside>
+        {/* Sidebar quản lý trạng thái mở/đóng trực tiếp */}
+        <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
         <div className={styles['grid-main-wrapper']}>
           <main className={styles['grid-content']}>
