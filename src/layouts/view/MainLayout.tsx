@@ -4,6 +4,8 @@ import HeaderBar from '../../components/view/HeaderBar';
 import Sidebar from '../../components/view/Sidebar';
 import { Toaster } from 'react-hot-toast';
 import styles from './MainLayout.module.css'; 
+import EmailIcon from '../../assets/icon/email.svg';
+import PhoneIcon from '../../assets/icon/phone.svg';
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
@@ -31,7 +33,6 @@ const MainLayout: React.FC = () => {
     <div className={styles['main-layout']}>
       <Toaster position="top-right" reverseOrder={false} />
 
-      {/* Header */}
       <header className={styles['grid-header']}>
         <HeaderBar
           isMenuOpen={isSidebarOpen}
@@ -39,7 +40,6 @@ const MainLayout: React.FC = () => {
         />
       </header>
 
-      {/* Grid Container */}
       <div className={styles['grid-container']}>
         {isSidebarOpen && (
           <div
@@ -49,12 +49,10 @@ const MainLayout: React.FC = () => {
           />
         )}
 
-        {/* Sidebar Menu bên trái */}
         <aside className={`${styles['grid-sidebar']} ${isSidebarOpen ? styles.open : ''}`}>
           <Sidebar onClose={() => setIsSidebarOpen(false)} />
         </aside>
 
-        {/* Cột bên phải: Gồm Nội dung chính + Footer gom chung */}
         <div className={styles['grid-main-wrapper']}>
           <main className={styles['grid-content']}>
             <div className="page-body">
@@ -62,16 +60,21 @@ const MainLayout: React.FC = () => {
             </div>
           </main>
 
-          {/* Footer nằm trọn bên phải */}
           <footer className={styles['grid-footer']}>
             <div className={styles['footer-content']}>
-              <div>
+              <div className={styles['footer-left']}>
                 © Bản quyền thuộc Agribank <br />
                 Phiên bản 1.0 cập nhật 04/2026
               </div>
               <div className={styles['footer-right']}>
-                ✉ bannganhangso@agribank.com.vn <br />
-                📞 0123456789 - Văn thư Ban NHS
+                <div className={styles['footer-contact-item']}>
+                  <img src={EmailIcon} alt="Email" className={styles['footer-icon']} />
+                  <span>bannganhangso@agribank.com.vn</span>
+                </div>
+                <div className={styles['footer-contact-item']}>
+                  <img src={PhoneIcon} alt="Phone" className={styles['footer-icon']} />
+                  <span>0123456789 - Văn thư Ban NHS</span>
+                </div>
               </div>
             </div>
           </footer>

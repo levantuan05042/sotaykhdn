@@ -23,6 +23,7 @@
   overflow: hidden;
   position: relative; 
 }
+
 .grid-sidebar {
   grid-column: span 2; 
   background-color: #AE1C3F;
@@ -75,8 +76,26 @@
   gap: 8px 24px;
 }
 
+.footer-left {
+  line-height: 1.5;
+}
+
 .footer-right {
-  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.footer-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-icon {
+  width: 16px;
+  height: 16px;
 }
 
 @media (max-width: 1024px) {
@@ -154,10 +173,9 @@
   .footer-content {
     flex-direction: column;
     align-items: flex-start;
-    text-align: left;
   }
 
   .footer-right {
-    text-align: left;
+    margin-top: 8px;
   }
 }

@@ -93,17 +93,17 @@ const HomePage: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const highlightText = (text: string, query: string) => {
-  if (!query.trim()) return text;
-  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const parts = text.split(new RegExp(`(${safeQuery})`, 'gi'));
-  return parts.map((part, index) => 
-    part.toLowerCase() === query.toLowerCase() ? (
-      <strong key={index} className="font-bold text-gray-900">{part}</strong>
-    ) : (
-      part
-    )
-  );
-};
+    if (!query.trim()) return text;
+    const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${safeQuery})`, 'gi'));
+    return parts.map((part, index) => 
+      part.toLowerCase() === query.toLowerCase() ? (
+        <strong key={index} className="font-bold text-gray-900">{part}</strong>
+      ) : (
+        part
+      )
+    );
+  };
 
   useEffect(() => {
     try {
@@ -305,8 +305,6 @@ const HomePage: React.FC = () => {
   };
   
   const displayedCategories = showAllCategories ? categories : categories.slice(0, 10);
-  
-  // Lấy 3 lịch sử tìm kiếm gần nhất, nếu chưa có thì dùng mặc định[cite: 22]
   const defaultSearches = ['SP vay vốn', 'thanh toán', 'xuất khẩu'];
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
@@ -357,7 +355,6 @@ const HomePage: React.FC = () => {
                 
                 {!loadingSearch && hasResult && (
                   <>
-                    {/* Nhóm sản phẩm */}
                     {searchResult?.groups && searchResult.groups.length > 0 && (
                       searchResult.groups.map(item => (
                         <div 
@@ -366,7 +363,6 @@ const HomePage: React.FC = () => {
                           onClick={() => handleNavigateFromDropdown('group', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
-                            {/* Icon lưới / Nhóm sản phẩm */}
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <rect x="3" y="3" width="7" height="7" rx="1" />
                               <rect x="14" y="3" width="7" height="7" rx="1" />
@@ -384,7 +380,6 @@ const HomePage: React.FC = () => {
                       ))
                     )}
 
-                    {/* Danh mục */}
                     {searchResult?.categories && searchResult.categories.length > 0 && (
                       searchResult.categories.map(item => (
                         <div 
@@ -393,7 +388,6 @@ const HomePage: React.FC = () => {
                           onClick={() => handleNavigateFromDropdown('category', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
-                            {/* Icon danh sách */}
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <line x1="8" y1="6" x2="21" y2="6" />
                               <line x1="8" y1="12" x2="21" y2="12" />
@@ -413,7 +407,6 @@ const HomePage: React.FC = () => {
                       ))
                     )}
 
-                    {/* Nghiệp vụ / Doanh nghiệp */}
                     {searchResult?.businesses && searchResult.businesses.length > 0 && (
                       searchResult.businesses.map(item => (
                         <div 
@@ -422,7 +415,6 @@ const HomePage: React.FC = () => {
                           onClick={() => handleNavigateFromDropdown('business', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
-                            {/* Icon tài liệu / Nghiệp vụ */}
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                               <polyline points="14 2 14 8 20 8" />
@@ -440,7 +432,6 @@ const HomePage: React.FC = () => {
                       ))
                     )}
 
-                    {/* Sản phẩm */}
                     {searchResult?.products && searchResult.products.length > 0 && (
                       searchResult.products.map(item => (
                         <div 
@@ -449,7 +440,6 @@ const HomePage: React.FC = () => {
                           onClick={() => handleNavigateFromDropdown('product', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
-                            {/* Icon hộp / Sản phẩm */}
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
                               <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
@@ -536,15 +526,15 @@ const HomePage: React.FC = () => {
                   <div 
                     key={cat.id} 
                     onClick={() => handleCategoryClick(cat.id)} 
-                    className="bg-white rounded-[12px] p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between h-[150px]"
+                    className="bg-white rounded-[12px] p-4 border border-gray-200 transition-all cursor-pointer flex flex-col justify-between h-[150px]"
                   >
                     <div 
-                      className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+                      className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0 mb-auto"
                       style={{ backgroundColor: config.bgColor }}
                     >
                       {iconUrl ? (
                         <div 
-                          className="w-5 h-5"
+                          className="w-6 h-6"
                           style={{
                             backgroundColor: config.iconColor,
                             maskImage: `url("${iconUrl}")`,
@@ -566,7 +556,7 @@ const HomePage: React.FC = () => {
                     </div>
                     
                     <div className="flex flex-col gap-1 w-full mt-auto">
-                      <h3 className="font-semibold text-[14px] text-[#1A1A1A] leading-[20px] line-clamp-2">
+                      <h3 className="font-semibold text-[14px] text-[#1A1A1A] leading-[20px] line-clamp-2 h-[40px]">
                         {cat.name}
                       </h3>
                       <p className="text-[12.5px] text-[#8C8C8C] font-normal">
@@ -663,7 +653,7 @@ const HomePage: React.FC = () => {
                   <div 
                     key={product.id}
                     onClick={() => navigate(`/view/product-detail/${product.id}`)}
-                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 transition-all cursor-pointer"
                   >
                     <div className="flex items-center gap-4">
                       <span className={`px-4 py-1.5 text-xs font-semibold rounded-full w-[80px] text-center whitespace-nowrap ${badgeClass}`}>
