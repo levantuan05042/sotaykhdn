@@ -130,7 +130,8 @@ const DetailGroupPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-groups');
 
-  const handleUpdateGroup = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+  // Đã thêm 'NEEDS_REVISION' vào kiểu dữ liệu của status
+  const handleUpdateGroup = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
@@ -164,7 +165,9 @@ const DetailGroupPage: React.FC = () => {
       if (response.ok) {
         let message = '';
         switch (status) {
-          case 'DRAFT': message = "Lưu nháp nhóm sản phẩm thành công"; break;
+          case 'DRAFT': 
+          case 'NEEDS_REVISION': // Xử lý thông báo thành công cho trường hợp lưu nháp YCCS
+            message = "Lưu nháp nhóm sản phẩm thành công"; break;
           case 'ARCHIVED': message = "Lưu trữ nhóm sản phẩm thành công"; break;
           case 'ACTIVE': message = "Kích hoạt nhóm sản phẩm hoạt động trở lại thành công"; break;
           case 'PENDING_APPROVAL': message = "Gửi phê duyệt nhóm sản phẩm thành công"; break;
@@ -314,7 +317,6 @@ const DetailGroupPage: React.FC = () => {
       createPortal(
         <div className="warning-toast-wrapper">
           <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
-            {/* Cụm Icon Cảnh báo giống hệt UI */}
             <div className="warning-toast-icon-container">
               <div className="warning-bg-outer"></div>
               <div className="warning-bg-inner"></div>
@@ -336,7 +338,6 @@ const DetailGroupPage: React.FC = () => {
               </svg>
             </div>
             
-            {/* Nội dung Text */}
             <h3 className="warning-toast-title">
               Không thể ẩn nhóm: "{groupName}"
             </h3>
@@ -344,7 +345,6 @@ const DetailGroupPage: React.FC = () => {
               Nhóm sản phẩm này đang chứa các danh mục hoặc sản phẩm bên trong.
             </p>
             
-            {/* Nút hành động */}
             <div className="warning-toast-actions">
               <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
                 Đóng
@@ -354,7 +354,7 @@ const DetailGroupPage: React.FC = () => {
         </div>,
         document.body
       )
-    , { duration: Infinity, id: 'cannot-hide-toast' }); // Đặt Infinity hoặc thời gian dài để người dùng kịp thao tác
+    , { duration: Infinity, id: 'cannot-hide-toast' }); 
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu nhóm sản phẩm...</div>;
@@ -362,13 +362,6 @@ const DetailGroupPage: React.FC = () => {
 
   const currentStatus = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
   
-  const isDirty = (
-    formData.name !== (productData.name || '') || 
-    formData.superGroup !== (productData.superGroup || '') ||
-    isActive !== (productData?.active ?? true)
-  );
-  const canSubmit = !isReadOnly && isDirty && formData.name.trim() !== '';
-
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
@@ -418,11 +411,13 @@ const DetailGroupPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Đã bỏ disabled để có thể click bất cứ lúc nào */}
+                    <button className="btnDraft active" onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Đã bỏ disabled để có thể click bất cứ lúc nào */}
+                    <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -430,11 +425,11 @@ const DetailGroupPage: React.FC = () => {
                 )}
                 {productData.status === 'ACTIVE' && (
                   <>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnDraft active" onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -442,11 +437,12 @@ const DetailGroupPage: React.FC = () => {
                 )}
                 {productData.status === 'NEEDS_REVISION' && (
                   <>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Truyền trạng thái 'NEEDS_REVISION' để giữ nguyên trạng thái cũ */}
+                    <button className="btnDraft active" onClick={() => handleUpdateGroup('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>

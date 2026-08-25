@@ -351,7 +351,6 @@
 .dp-criteria-section {
   display: flex;
   flex-direction: column;
-  background: #FFFFFF;         /* Thẻ Card trắng ngoài */
   border: 1px solid #E5E7EB;    /* Viền xám nhẹ ngoài */
   border-radius: 16px;          /* Bo góc thẻ ngoài */
   padding: 12px;                /* Đệm giữa thẻ và khối hàng */
