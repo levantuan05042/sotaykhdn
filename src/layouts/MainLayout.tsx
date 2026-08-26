@@ -79,7 +79,11 @@ const MainLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Lấy token từ URL query parameter nếu được auth-service redirect về
+    const goToLogin = () => {
+      const redirectUri = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    };
+
     const searchParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = searchParams.get('token');
     if (tokenFromUrl) {
@@ -92,12 +96,17 @@ const MainLayout: React.FC = () => {
     }
 
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-    const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+    // Chưa có token thì không gọi /me (tránh 401 không Bearer). Sang login, auth-service
+    // sẽ redirect về kèm ?token= rồi request sau luôn có Authorization.
+    if (!token) {
+      goToLogin();
+      return;
     }
 
-    setLoading(true);
+    const headers: Record<string, string> = {
+      Authorization: `Bearer ${token}`,
+    };
+
     axios.get(AUTH_ME_URL, { headers, withCredentials: true })
       .then(res => {
         if (res.data) {
@@ -130,7 +139,6 @@ const MainLayout: React.FC = () => {
               if (usersRes.data) {
                 const rawData = typeof usersRes.data === 'string' ? usersRes.data : JSON.stringify(usersRes.data);
                 sessionStorage.setItem('beadminUsers', rawData);
-                console.log("Successfully fetched and saved BEAdmin users to sessionStorage");
               }
             })
             .catch(e => {
@@ -141,8 +149,7 @@ const MainLayout: React.FC = () => {
       })
       .catch(err => {
         console.error("Failed to fetch user info", err);
-        const redirectUri = window.location.href;
-        window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+        goToLogin();
       });
   }, []);
 
