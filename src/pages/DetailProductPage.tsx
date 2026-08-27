@@ -9,7 +9,6 @@ import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 
-// LƯU Ý: Đảm bảo đường dẫn import này khớp với cấu trúc thư mục của bạn
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 
 // ─────────────────────────────────────────────
@@ -298,7 +297,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
 };
 
 // ─────────────────────────────────────────────
-// BatchApprovalModal (Thông báo xác nhận gửi phê duyệt theo lô đúng chuẩn UI)
+// BatchApprovalModal
 // ─────────────────────────────────────────────
 interface BatchApprovalModalProps {
   isOpen: boolean;
@@ -326,7 +325,6 @@ const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, backdropFilter: 'blur(2px)' }}>
       <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '440px', maxWidth: '95vw', padding: '32px 24px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
         
-        {/* Warning Icon */}
         <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#FEFCE8', border: '8px solid #FEFDE8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', boxShadow: '0 0 0 4px #FEF9C3' }}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -484,7 +482,6 @@ const DetailProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Khởi tạo userMap ngay khi vào component, chỉ chạy 1 lần
   const userMap = useMemo(() => getUserMap(), []);
 
   const groupRef     = useRef<HTMLDivElement>(null);
@@ -501,7 +498,6 @@ const DetailProductPage: React.FC = () => {
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [showImageModal,    setShowImageModal]    = useState(false);
   
-  // State quản lý Modal xác nhận gửi phê duyệt theo lô
   const [showBatchModal,    setShowBatchModal]    = useState(false);
 
   const [groupOptions,     setGroupOptions]     = useState<{ label: string; value: string }[]>([]);
@@ -549,12 +545,10 @@ const DetailProductPage: React.FC = () => {
     if (isBatch) {
       setShowBatchModal(true);
     } else {
-      // Gọi cập nhật trạng thái kèm nội dung nháp trước đó (cho sản phẩm lẻ)
       handleUpdateProduct('PENDING_APPROVAL');
     }
   };
 
-  // CẬP NHẬT CHÍNH: Tách xử lý baseUsername để xác nhận cho phép chỉnh sửa
   let rawCurrentUsername = getCurrentUsername();
   const currentUsername = rawCurrentUsername ? rawCurrentUsername.split('_')[0].toLowerCase() : '';
   const isLoggedIn = Boolean(currentUsername);
@@ -567,7 +561,6 @@ const DetailProductPage: React.FC = () => {
     rawCreatorUsername = String(creatorField).trim().toLowerCase();
   }
   
-  // Tách lấy base username từ API trả về (VD: "37ETN082_10500037" -> "37etn082")
   const creatorUsername = rawCreatorUsername ? rawCreatorUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
@@ -577,7 +570,6 @@ const DetailProductPage: React.FC = () => {
     currentUsername === creatorUsername
   );
   
-
   const isReadOnly = !isLoggedIn || !isOwner;
 
   useEffect(() => {
@@ -628,7 +620,7 @@ const DetailProductPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // 1. Fetch dữ liệu sản phẩm chi tiết ban đầu
+  // Fetch dữ liệu
   useEffect(() => {
     const init = async () => {
       if (!id) return;
@@ -677,6 +669,7 @@ const DetailProductPage: React.FC = () => {
     };
     init();
   }, [id]);
+
   useEffect(() => {
     if (!formData.productGroupId) { 
       setCategoryOptions([]); 
@@ -766,8 +759,8 @@ const DetailProductPage: React.FC = () => {
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
 
-  // THÊM PENDING_APPROVAL VÀO ĐÂY
-  const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
+  // Xử lý Cập nhật trạng thái
+  const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
@@ -799,12 +792,12 @@ const DetailProductPage: React.FC = () => {
         body: JSON.stringify(payload) 
       });
       if (res.ok) {
-        // CẬP NHẬT THÊM CÂU THÔNG BÁO PENDING_APPROVAL
         const msgs: Record<string, string> = {
           DRAFT: 'Lưu nháp sản phẩm thành công', 
           ARCHIVED: 'Lưu trữ sản phẩm thành công',
           ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công',
           PENDING_APPROVAL: 'Gửi phê duyệt sản phẩm thành công',
+          NEEDS_REVISION: 'Lưu thay đổi thành công (Trạng thái: Yêu cầu chỉnh sửa)',
         };
         renderCustomToast(msgs[status] || 'Cập nhật sản phẩm thành công');
         setTimeout(() => navigate('/products/processing'), 2000);
@@ -816,12 +809,38 @@ const DetailProductPage: React.FC = () => {
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
   };
 
-  // CẬP NHẬT LẠI HÀM NÀY: CHỈ XỬ LÝ LÔ
+  const handleToggleActive = async (newActiveStatus: boolean) => {
+    if (isReadOnly || !id) return;
+    setIsActive(newActiveStatus);
+    setIsStatusOpen(false);
+    
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const res = await fetch(`${BASE_URL}/products/${id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      
+      if (res.ok) {
+        renderCustomToast(newActiveStatus ? 'Đã bật hiển thị sản phẩm' : 'Đã ẩn sản phẩm');
+      } else {
+        const err = await res.json();
+        toast.error(err.message || 'Lỗi khi thay đổi trạng thái hiển thị', { position: 'top-center' });
+        setIsActive(!newActiveStatus);
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error('Lỗi kết nối máy chủ khi đổi trạng thái hiển thị', { position: 'top-center' });
+      setIsActive(!newActiveStatus);
+    }
+  };
+
   const handleBatchStatusSubmit = async (requestId: string, status: string) => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
-      // Bỏ '|| id' đi vì hàm này không dùng để submit lẻ nữa
       const targetRequestId = requestId || productData?.requestId || productData?.batchRequestId;
       
       if (!targetRequestId) {
@@ -971,16 +990,15 @@ const DetailProductPage: React.FC = () => {
                     </svg>
                     Xóa
                   </button>
-                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className="btnDraft active" onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
                   <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'ACTIVE' && (<>
                   <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-                  <button className="btnDraft" onClick={() => handleUpdateProduct('ARCHIVED')}>Lưu trữ</button>
                   <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'NEEDS_REVISION' && (<>
-                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className="btnDraft active" onClick={() => handleUpdateProduct('NEEDS_REVISION')}>Lưu nháp</button>
                   <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'ARCHIVED' && (
@@ -1184,8 +1202,8 @@ const DetailProductPage: React.FC = () => {
                 </div>
                 {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
-                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
+                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleToggleActive(false)}>Ẩn</div>
+                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleToggleActive(true)}>Hiển thị</div>
                   </div>
                 )}
               </div>
@@ -1207,7 +1225,6 @@ const DetailProductPage: React.FC = () => {
                           <img src={c.avatarUrl || 'https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png'} className="avatar" alt="avatar"/>
                           <div style={{ flex: 1 }}>
                             <div className="userHeader">
-                              {/* CẬP NHẬT CHÍNH: Sử dụng getFullName để hiển thị tên đẹp hơn ở phần comment */}
                               <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
                               <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                             </div>
@@ -1241,7 +1258,6 @@ const DetailProductPage: React.FC = () => {
         onConfirm={handleImageConfirm}
       />
 
-      {/* Modal xác nhận gửi phê duyệt theo lô đúng chuẩn UI */}
       <BatchApprovalModal
         isOpen={showBatchModal}
         onClose={() => setShowBatchModal(false)}

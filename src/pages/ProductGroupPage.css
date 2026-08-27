@@ -1,11 +1,13 @@
-/* --- LAYOUT CHÍNH --- */
 .product-group-container {
   display: flex;
   flex-direction: column;
+  height: 100vh;          /* Khóa cứng chiều cao bằng màn hình */
+  max-height: 100vh;
   background-color: #F9FAFB;
-  min-height: 100%;
   padding: 20px;
   gap: 20px;
+  box-sizing: border-box;
+  overflow: hidden;       /* Ngăn không cho cả trang bị cuộn */
 }
 
 .content-wrapper,
@@ -214,14 +216,59 @@
 .btn-remove-tag:hover {
   color: #AE1C3F;
 }
-
 .table-placeholder {
-  flex: 1;            /* Tự động co giãn chiếm phần không gian còn lại */
+  flex: 1;            
   background-color: #ffffff;
   border-radius: 12px;
   border: 1px solid #E5E5E5;
   display: flex;
   flex-direction: column;
-  overflow: hidden; 
-  min-height: 0;      /* Bắt buộc có trong Flexbox để tránh bị tràn */
+  overflow: hidden;     
+  min-height: 0;      
+}
+
+/* Đảm bảo khung bọc chứa bảng hiển thị flex column */
+.table-placeholder > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important; /* Tắt cuộn ở thẻ bọc ngoài cùng */
+  min-height: 0;
+}
+
+/* 1. Đưa thanh cuộn dọc dịch xuống chỉ ôm gọn phần tbody bên dưới */
+.table-placeholder table {
+  min-width: 1300px !important;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.table-placeholder thead {
+  flex-shrink: 0;
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table-placeholder tbody {
+  display: block;
+  overflow-y: auto !important; 
+  overflow-x: auto !important; 
+  flex: 1;
+  width: 100%;
+}
+
+.table-placeholder tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.table-placeholder thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f2eff3;
+  z-index: 10;
+  box-shadow: inset 0 -1px 0 #e3dfe6;
 }

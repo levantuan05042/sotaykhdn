@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -9,7 +10,7 @@ interface ProductCategory {
   productCategoryName?: string | null;
   productGroupName?: string | null;
   requestName?: string | null; 
-  requestId?: string | null;     // <-- Thêm requestId vào interface
+  requestId?: string | null;     
   notes?: string | null;       
   createdAt?: string | null;   
   status: string;
@@ -70,14 +71,6 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'DRAFT': return { label: 'Lưu nháp', className: 'status-draft' };
-      case 'PENDING_APPROVAL': return { label: 'Chờ duyệt', className: 'status-pending' };
-      default: return { label: status, className: 'status-draft' };
-    }
-  };
-
   return (
     <div className="table-wrapper">
       <table className="custom-table">
@@ -118,16 +111,9 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   </span>
                 </td>
                 
-                {/* 4. Trạng thái */}
+                {/* 4. Trạng thái sử dụng StatusBadge2 */}
                 <td>
-                  {(() => {
-                    const statusInfo = getStatusLabel(item.status);
-                    return (
-                      <div className={`status-badge-custom ${statusInfo.className}`}>
-                        <span>{statusInfo.label}</span>
-                      </div>
-                    );
-                  })()}
+                  <StatusBadge2 status={item.status} />
                 </td>
                 
                 {/* 5. Tên yêu cầu */}

@@ -1,89 +1,379 @@
-.table-wrapper {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 
-.custom-table {
+.product-table-container {
+  flex: 1;
   width: 100%;
-  border-collapse: collapse;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important; 
+  min-height: 0;
+  position: relative;
 }
 
-.custom-table th {
-  background: #F9FAFB;
-  padding: 14px 16px;
-  text-align: left;
-  font-size: 13px;
-  color: #6B7280;
-  text-transform: uppercase;
+.product-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 1300px !important; 
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.custom-table td {
-  padding: 16px;
-  border-bottom: 1px solid #F3F4F6;
-  font-size: 14px;
+.table-text-base {
+  color: #1a191b;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 140%;
+  font-feature-settings: 'ss01' on, 'cv01' on;
+  letter-spacing: 0;
 }
 
-/* Badge trạng thái */
-.status-badge-custom {
+/* Header Styles & Sticky Header */
+.product-table thead {
+  flex-shrink: 0;
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  background-color: #f2eff3;
+}
+
+.product-table th {
+  padding: 12px 24px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  background-color: #f2eff3;
+  z-index: 10;
+  box-shadow: inset 0 -1px 0 #e3dfe6;
+}
+
+.product-table .px-40 {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+.product-table .rounded-l-12 {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.product-table .rounded-r-12 {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+/* Body Styles - Thanh cuộn dọc & ngang mượt mà */
+.product-table tbody {
+  display: block;
+  overflow-y: auto !important; 
+  overflow-x: auto !important; 
+  flex: 1;
+  width: 100%;
+  background-color: #ffffff;
+}
+
+.product-table tr {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+}
+
+.product-table td {
+  padding: 12px 24px;
+  border-bottom: 1px solid #e3dfe6;
+  vertical-align: middle;
+  font-weight: 400;
+}
+
+.product-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.product-table tbody tr:hover td {
+  background-color: #f8f4f5;
+}
+
+/* Các thành phần bổ trợ */
+.status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 13px;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 4px 16px;
+  height: 32px;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  text-align: center;
 }
 
-.status-active { background: #E1F7E3; color: #22C55E; }
-.status-active .dot { width: 6px; height: 6px; background: #22C55E; border-radius: 50%; margin-right: 8px; }
-
-.status-draft { background: #F3F4F6; color: #6B7280; }
-.status-draft .dot { display: none; }
-
-/* Nút Xem chi tiết */
-.btn-action-view {
+.btn-view-detail {
+  color: #a62026;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
   background: none;
   border: none;
+  cursor: pointer;
+  transition: text-decoration 0.2s;
+}
+
+.btn-view-detail:hover {
+  text-decoration: underline;
+}
+
+.product-name-cell {
+  max-width: 150px;
+}
+
+.truncate-text {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+/* Footer & Phân trang */
+.table-footer-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 0 4px;
+}
+
+.pagination-info {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #666469;
   display: flex;
   align-items: center;
   gap: 6px;
-  color: #374151;
-  cursor: pointer;
-  font-weight: 500;
-  margin-left: auto;
 }
 
-.btn-action-view:hover { color: #AE1C3F; }
+.select-items-per-page {
+  padding: 4px 8px;
+  border: 1px solid #E3DFE6;
+  border-radius: 6px;
+  background-color: #FFFFFF;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #1A191B;
+  outline: none;
+  cursor: pointer;
+}
 
-/* Phân trang */
-.pagination-box {
+.pagination-container {
   display: flex;
-  justify-content: center;
   align-items: center;
-  padding: 24px;
+  gap: 6px;
+  background: #f8f4f5;
+  border-radius: 12px;
+  padding: 6px;
+}
+
+.pagination-arrow {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 18px;
+  color: #333;
+  transition: 0.2s;
+}
+
+.pagination-arrow:hover:not(:disabled) {
+  background: #ece7e9;
+}
+
+.pagination-arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-number {
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a191b;
+  transition: all 0.2s ease;
+}
+
+.pagination-number.active {
+  background: #f6dfe4;
+  color: #ae1c3f;
+  font-weight: 600;
+}
+
+.pagination-number:hover:not(.active) {
+  background: #ece7e9;
+}
+
+.pagination-dots {
+  padding: 0 6px;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Toggle Switch Styles */
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
   gap: 12px;
 }
 
-.p-item {
-  width: 34px;
-  height: 34px;
-  border: 1px solid #E5E7EB;
-  background: white;
-  border-radius: 6px;
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
   cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: #E3DFE6;
+  transition: 0.3s;
+  border-radius: 24px;
 }
 
-.p-item.active {
-  background: #AE1C3F;
-  color: white;
-  border-color: #AE1C3F;
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px; width: 20px;
+  left: 2px; bottom: 2px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.p-nav-btn {
-  background: none;
-  border: none;
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #72D5A1;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toggle-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a191b;
+  min-width: 35px;
+}
+
+.toggle-label.disabled-text {
+  color: #9CA3AF;
+}
+
+/* Modal Cảnh báo (Warning Toast) */
+.warning-toast-wrapper {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.warning-toast-card {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0px 10px 30px rgba(0,0,0,0.15);
+  text-align: center;
+}
+
+.warning-toast-icon-container {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.warning-bg-outer {
+  position: absolute;
+  width: 64px; height: 64px;
+  background: #FEF9C3;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.warning-bg-inner {
+  position: absolute;
+  width: 48px; height: 48px;
+  background: #FEF08A;
+  border-radius: 50%;
+}
+
+.warning-toast-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.warning-toast-title {
+  margin: 0 0 8px 0;
   font-size: 18px;
-  cursor: pointer;
-  color: #6B7280;
+  font-weight: 600;
+  color: #171717;
 }
 
-.p-nav-btn:disabled { opacity: 0.3; }
+.warning-toast-desc {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: #666469;
+  line-height: 20px;
+}
+
+.warning-toast-actions {
+  display: flex;
+  justify-content: center;
+}
+
+.warning-btn-close {
+  background: #AE1C3F;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.warning-btn-close:hover {
+  opacity: 0.9;
+}

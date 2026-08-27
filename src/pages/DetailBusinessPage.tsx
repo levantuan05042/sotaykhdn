@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
-// 1. Import hàm getUserMap và getFullName từ userUtils
 import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -47,7 +47,11 @@ const getCurrentUsername = () => {
 const DetailBusinessPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  
+  // Refs để xử lý click outside đóng dropdown
   const statusRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+  
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -55,8 +59,6 @@ const DetailBusinessPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-  
-  // 2. Lấy Map người dùng 1 lần duy nhất để tối ưu hiệu suất
   const userMap = useMemo(() => getUserMap(), []);
   
   const currentUsername = getCurrentUsername();
@@ -70,7 +72,6 @@ const DetailBusinessPage: React.FC = () => {
     creatorUsername = String(creatorField).trim().toLowerCase();
   }
 
-  // 3. Tách chuỗi lấy base username (trước dấu '_') để kiểm tra quyền sở hữu
   const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
   const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
 
@@ -89,12 +90,25 @@ const DetailBusinessPage: React.FC = () => {
     categoryId: ''
   });
 
+  // Handle click outside để đóng các custom dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+        setIsStatusOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   useEffect(() => {
     const initPageData = async () => {
       if (!id) return;
       try {
         setLoading(true);
-
         const [detailRes, categoriesRes] = await Promise.all([
           fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DETAIL(id)),
           fetch(`${API_ENDPOINTS.PRODUCT_CATEGORY.LIST}?status=ACTIVE&active=true`)
@@ -109,6 +123,7 @@ const DetailBusinessPage: React.FC = () => {
           categoryId: detailData.categoryId || ''
         });
         setIsActive(detailData.active ?? true);
+        
         if (categoriesRes.ok) {
           const categoriesData = await categoriesRes.json();
           const options = categoriesData.map((c: any) => ({
@@ -121,7 +136,6 @@ const DetailBusinessPage: React.FC = () => {
             { label: detailData.categoryName || 'Danh mục hiện tại', value: detailData.categoryId },
           ]);
         }
-
       } catch (error) {
         console.error("Lỗi khi khởi tạo dữ liệu nghiệp vụ:", error);
         toast.error("Không tìm thấy nghiệp vụ hoặc nghiệp vụ đã bị ẩn");
@@ -129,7 +143,6 @@ const DetailBusinessPage: React.FC = () => {
         setLoading(false);
       }
     };
-
     initPageData();
   }, [id]);
 
@@ -141,7 +154,76 @@ const DetailBusinessPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/business-management');
 
-  const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+  const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
+    if (isReadOnly || !id) return;
+    if (isActive === newActiveStatus) {
+      setIsStatusOpen(false);
+      return;
+    }
+
+    const toastId = toast.loading("Đang cập nhật trạng thái...");
+    try {
+      const response = await fetch(`/api/v1/business/${id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+      });
+      
+      const errorData = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        setIsActive(newActiveStatus);
+        toast.dismiss(toastId);
+        renderCustomToast(newActiveStatus ? "Hiển thị nghiệp vụ thành công" : "Ẩn nghiệp vụ thành công");
+      } else {
+        toast.dismiss(toastId);
+        
+        if (!newActiveStatus && (response.status === 400 || response.status === 409)) {
+          renderCannotHideToast(formData.name || businessData.name);
+        } else {
+          toast.error(errorData.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật trạng thái:", error);
+      toast.error('Lỗi kết nối máy chủ', { id: toastId, position: 'top-center' });
+    } finally {
+      setIsStatusOpen(false);
+    }
+  };
+
+  const renderCannotHideToast = (businessName: string) => {
+    toast.custom((t) => 
+      createPortal(
+        <div className="warning-toast-wrapper">
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg className="warning-toast-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" fill="#EAB308"/>
+                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            <h3 className="warning-toast-title">
+              Không thể ẩn nghiệp vụ: "{businessName}"
+            </h3>
+            <p className="warning-toast-desc">
+              Nghiệp vụ này đang chứa các sản phẩm trực thuộc đang hoạt động bên trong.
+            </p>
+            <div className="warning-toast-actions">
+              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    , { duration: Infinity, id: 'cannot-hide-toast' }); 
+  };
+
+  const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
@@ -167,7 +249,7 @@ const DetailBusinessPage: React.FC = () => {
         body: JSON.stringify({
           name: formData.name || businessData.name,
           categoryId: formData.categoryId || businessData.categoryId,
-          active: isActive,
+          active: isActive, 
           status
         }),
       });
@@ -175,22 +257,22 @@ const DetailBusinessPage: React.FC = () => {
       if (response.ok) {
         let message = '';
         switch (status) {
-          case 'DRAFT': message = "Lưu nháp nghiệp vụ thành công"; break;
+          case 'DRAFT': 
+          case 'NEEDS_REVISION': message = "Lưu nháp nghiệp vụ thành công"; break;
           case 'ARCHIVED': message = "Lưu trữ nghiệp vụ thành công"; break;
           case 'ACTIVE': message = "Kích hoạt nghiệp vụ hoạt động trở lại thành công"; break;
           case 'PENDING_APPROVAL': message = "Gửi phê duyệt nghiệp vụ thành công"; break;
           default: message = "Cập nhật nghiệp vụ thành công";
         }
-
         renderCustomToast(message);
         setTimeout(() => navigate('/business-management'), 2000);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật nghiệp vụ', { position: 'top-center' });
+        toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi cập nhật nghiệp vụ:", error);
+      console.error("Lỗi cập nhật:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -213,18 +295,8 @@ const DetailBusinessPage: React.FC = () => {
           </div>
         </div>
         <div className="confirm-toast-actions">
-          <button 
-            className="confirm-btn-delete"
-            onClick={async () => {
-              toast.dismiss(t.id);
-              await executeDelete();
-            }}
-          >
-            Xóa
-          </button>
-          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
-            Hủy
-          </button>
+          <button className="confirm-btn-delete" onClick={async () => { toast.dismiss(t.id); await executeDelete(); }}>Xóa</button>
+          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>Hủy</button>
         </div>
       </div>
     ), { position: 'top-center', duration: Infinity });
@@ -236,10 +308,7 @@ const DetailBusinessPage: React.FC = () => {
       setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DELETE(id), {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
+        headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
 
       if (response.ok) {
@@ -247,11 +316,11 @@ const DetailBusinessPage: React.FC = () => {
         setTimeout(() => navigate('/business-management'), 2000);
       } else {
         const errorData = await response.json();
-        toast.error(errorData.message || 'Có lỗi xảy ra khi xóa nghiệp vụ', { position: 'top-center' });
+        toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi xóa nghiệp vụ:", error);
+      console.error("Lỗi xóa:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -262,17 +331,12 @@ const DetailBusinessPage: React.FC = () => {
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
         <div className="toast-pill-content">
           <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
           </div>
           <span className="toast-pill-text">{message}</span>
         </div>
         <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     ), { position: 'top-center' });
@@ -283,12 +347,8 @@ const DetailBusinessPage: React.FC = () => {
 
   const currentStatus = STATUS_MAP[businessData.status] || { label: businessData.status, className: '' };
   
-  const isDirty = (
-    formData.name !== (businessData.name || '') || 
-    formData.categoryId !== (businessData.categoryId || '') ||
-    isActive !== (businessData?.active ?? true)
-  );
-  const canSubmit = !isReadOnly && isDirty && formData.name.trim() !== '';
+  // Logic validate chuẩn hóa cho các nút hành động
+  const isActionValid = !isReadOnly && formData.name.trim() !== '' && formData.categoryId !== '';
 
   return (
     <div className="pageWrapper">
@@ -302,7 +362,6 @@ const DetailBusinessPage: React.FC = () => {
           </div>
         )}
         
-        {/* HEADER & BREADCRUMB */}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={handleGoBack}>
@@ -318,11 +377,7 @@ const DetailBusinessPage: React.FC = () => {
                   <path d="M0.5 8.5L4.5 4.5L0.5 0.5" stroke="#171717" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              
-              <span className="breadcrumbActive breadcrumb-truncate" title={businessData.name}>
-                {businessData.name}
-              </span>
-
+              <span className="breadcrumbActive breadcrumb-truncate" title={businessData.name}>{businessData.name}</span>
               <div className={`statusBadge ${currentStatus.className}`}>
                 <span className="dot"></span>
                 <span className="statusText">{currentStatus.label}</span>
@@ -330,12 +385,8 @@ const DetailBusinessPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ACTIONS CONTROLLER */}
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isReadOnly ? (
-              <span style={{}}>
-              </span>
-            ) : (
+            {!isReadOnly && (
               <>
                 {businessData.status === 'DRAFT' && (
                   <>
@@ -345,11 +396,11 @@ const DetailBusinessPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateBusiness('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateBusiness('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -358,11 +409,11 @@ const DetailBusinessPage: React.FC = () => {
 
                 {(businessData.status === 'ACTIVE' || businessData.status === 'NEEDS_REVISION') && (
                   <>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateBusiness('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness(businessData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateBusiness('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -371,10 +422,7 @@ const DetailBusinessPage: React.FC = () => {
 
                 {businessData.status === 'ARCHIVED' && (
                   <button className="btnRestore active" onClick={() => handleUpdateBusiness('ACTIVE')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#115e59', color: '#ffffff', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="23 4 23 10 17 10"></polyline>
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                    </svg>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                     Hoạt động trở lại
                   </button>
                 )}
@@ -383,13 +431,12 @@ const DetailBusinessPage: React.FC = () => {
           </div>
         </div>
 
-        {/* CONTENT GRID */}
         <div className="contentGrid">
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
                 <label className="label">Danh mục sản phẩm thuộc về *</label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" ref={categoryRef}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''} ${isReadOnly ? 'disabled-view' : ''}`} 
                     onClick={() => !isReadOnly && setIsOpen(!isOpen)}
@@ -402,7 +449,6 @@ const DetailBusinessPage: React.FC = () => {
                       </svg>
                     )}
                   </div>
-
                   {!isReadOnly && isOpen && (
                     <div className="custom-options-list">
                       {categoryOptions.map((opt) => (
@@ -432,30 +478,12 @@ const DetailBusinessPage: React.FC = () => {
             </div>
           </div>
 
-          {/* CỘT PHẢI */}
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-             <div 
-                className="formCard" 
-                style={{ 
-                  borderRadius: '12px', 
-                  background: 'var(--Mauve-3, #F2EFF3)', 
-                  display: 'flex', 
-                  width: '340px', 
-                  padding: '24px', 
-                  flexDirection: 'column', 
-                  alignItems: 'flex-start', 
-                  gap: '10px', 
-                  border: '1px solid #E5E7EB' 
-                }}
-              >
+             <div className="formCard" style={{ borderRadius: '12px', background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: '340px', padding: '24px', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', border: '1px solid #E5E7EB' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span style={{ color: '#1A191B', fontSize: '16px', fontWeight: 500, lineHeight: '24px' }}>
-                    Trạng thái hiển thị
-                  </span>
+                  <span style={{ color: '#1A191B', fontSize: '16px', fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    <circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>
                   </svg>
                 </div>
                 
@@ -463,37 +491,19 @@ const DetailBusinessPage: React.FC = () => {
                   <div 
                     className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
                     onClick={() => !isReadOnly && setIsStatusOpen(!isStatusOpen)} 
-                    style={{ 
-                      display: 'flex',
-                      padding: '8px 12px',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '8px',
-                      alignSelf: 'stretch',
-                      borderRadius: '8px',
-                      border: '1px solid #D5D7DA',
-                      background: isReadOnly ? '#F9FAFB' : '#FFF',
-                      boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)',
-                      cursor: isReadOnly ? 'not-allowed' : 'pointer',
-                      boxSizing: 'border-box',
-                      width: '100%'
-                    }}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
                   >
-                    <span style={{ color: '#1A191B', fontWeight: 500 }}>
-                      {isActive === false ? 'Ẩn' : 'Hiển thị'}
-                    </span>
-                    
+                    <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                     {!isReadOnly && (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
                         <path d="M5 7.5L10 12.5L15 7.5" />
                       </svg>
                     )}
                   </div>
-                  
                   {!isReadOnly && isStatusOpen && (
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
-                      <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
-                      <div className={`custom-option ${isActive === true ? 'selected' : ''}`} onClick={() => { setIsActive(true); setIsStatusOpen(false); }}>Hiển thị</div>
+                      <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(false)}>Ẩn</div>
+                      <div className={`custom-option ${isActive === true ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(true)}>Hiển thị</div>
                     </div>
                   )}
                 </div>
@@ -515,7 +525,6 @@ const DetailBusinessPage: React.FC = () => {
                             <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
-                                {/* 4. Ứng dụng hàm getFullName để lấy tên người dùng trong phần bình luận */}
                                 <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
                                 <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                               </div>

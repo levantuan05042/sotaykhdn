@@ -1,16 +1,14 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
 import './ProductCriteriaTable.css'; 
 
-// Cấu trúc dữ liệu nhóm sản phẩm từ API
 interface ProductGroup {
   id: string;
   name: string;
   status: string | null;
-
 }
 
-// Khai báo Interface dữ liệu đầu vào cho Tiêu chí (Criteria)
 interface ProductCriteria {
   id: string;
   code: string;
@@ -28,99 +26,111 @@ interface ProductCriteria {
 
 interface Props {
   data: ProductCriteria[];
+  onToggleActive?: (id: any, newActiveStatus: boolean) => void;
 }
 
-const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
+const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
 
-  // ===== Pagination =====
+  // ===== Pagination & State =====
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
+  const [tableData, setTableData] = useState<ProductCriteria[]>([]);
+  const [warningData, setWarningData] = useState<{ show: boolean; title: string; message: string }>({
+    show: false,
+    title: '',
+    message: ''
+  });
 
-  // Tự động đưa về trang 1 nếu dữ liệu thay đổi (tìm kiếm, bộ lọc...)
   useEffect(() => {
+    setTableData(data);
     setCurrentPage(1);
   }, [data]);
 
-  const totalPages = Math.ceil((data?.length || 0) / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil((tableData?.length || 0) / ITEMS_PER_PAGE);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return (data || []).slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [data, currentPage]);
+    return tableData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [tableData, currentPage]);
 
   const handleViewDetail = (id: string) => {
     navigate(`/criteria-management/${id}`);
   };
 
-  const renderStatus = (status: string) => {
-    let config = { className: '', label: '', showDot: false };
+  const handleToggleActive = async (item: ProductCriteria, currentActive: boolean) => {
+    const newActiveStatus = !currentActive;
 
-    switch (status) {
-      case 'ACTIVE':
-        config = {
-          className: 'status-active',
-          label: 'Đang hoạt động',
-          showDot: false
-        };
-        break;
-      case 'DRAFT':
-        config = {
-          className: 'status-draft',
-          label: 'Lưu nháp',
-          showDot: false
-        };
-        break;
-      case 'REJECTED':
-        config = {
-          className: 'status-rejected',
-          label: 'Từ chối',
-          showDot: false
-        };
-        break;
-      case 'NEEDS_REVISION':
-        config = {
-          className: 'status-revision',
-          label: 'Yêu cầu chỉnh sửa',
-          showDot: false
-        };
-        break;
-      case 'PENDING_APPROVAL':
-        config = {
-          className: 'status-pending',
-          label: 'Chờ duyệt',
-          showDot: false
-        };
-        break;
-      case 'ARCHIVED':
-        config = {
-          className: 'status-archived',
-          label: 'Lưu trữ',
-          showDot: false
-        };
-        break;
-      default:
-        config = {
-          className: 'status-rejected',
-          label: status || 'Không xác định',
-          showDot: false
-        };
+    // 1. Optimistic Update (Cập nhật UI ngay lập tức)
+    setTableData(prevData => 
+      prevData.map(d => 
+        d.id === item.id ? { ...d, active: newActiveStatus } : d
+      )
+    );
+
+    try {
+      // 2. Gọi API cập nhật trạng thái
+      const response = await fetch(`http://localhost:8082/api/v1/criteria/${item.id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Không thể thay đổi trạng thái');
+      }
+
+      if (onToggleActive) {
+        onToggleActive(item.id, newActiveStatus);
+      }
+
+    } catch (error) {
+      console.error("Lỗi cập nhật hiệu lực tiêu chí:", error);
+      
+      // 3. Rollback UI nếu gặp lỗi
+      setTableData(prevData => 
+        prevData.map(d => 
+          d.id === item.id ? { ...d, active: currentActive } : d
+        )
+      );
+
+      // 4. Hiển thị thông báo cảnh báo
+      setWarningData({
+        show: true,
+        title: `Không thể ẩn tiêu chí: "${item.name}"`,
+        message: "Tiêu chí này đang được sử dụng hoặc gặp sự cố khi cập nhật."
+      });
     }
+  };
+
+  const renderActiveToggle = (item: ProductCriteria) => {
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const isDisabled = disabledStatuses.includes(item.status);
+    const isActive = item.active || false;
 
     return (
-      <div className={`status-badge ${config.className}`}>
-        {config.showDot && (
-          <svg
-            width="8"
-            height="8"
-            viewBox="0 0 8 8"
-            fill="none"
-            className="mr-2"
-          >
-            <circle cx="4" cy="4" r="3" fill="currentColor" />
-          </svg>
-        )}
-        <span>{config.label}</span>
+      <div 
+        className="toggle-wrapper"
+        onClick={(e) => e.stopPropagation()} // Ngăn sự kiện click lan ra tr
+      >
+        <label className="toggle-switch">
+          <input 
+            type="checkbox" 
+            checked={isActive} 
+            disabled={isDisabled}
+            onChange={(e) => {
+              e.stopPropagation();
+              if (!isDisabled) {
+                handleToggleActive(item, isActive);
+              }
+            }}
+          />
+          <span className="toggle-slider"></span>
+        </label>
+        <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
+          {isActive ? 'Hiện' : 'Ẩn'}
+        </span>
       </div>
     );
   };
@@ -146,7 +156,6 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
         <tbody>
           {paginatedData.length > 0 ? (
             paginatedData.map((item, index) => {
-              // Lọc chuẩn xác: Chỉ những nhóm tồn tại và hoạt động (ACTIVE) mới gom tên hiển thị
               const activeGroups = item.productGroups && Array.isArray(item.productGroups)
                 ? item.productGroups.filter(group => group.status === 'ACTIVE')
                 : [];
@@ -156,7 +165,10 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                 : '---';
 
               return (
-                <tr key={item.id || index}>
+                <tr 
+                  key={item.id || index}
+                  onClick={() => handleViewDetail(item.id)} // Click hàng để xem chi tiết
+                >
                   <td className="px-40">
                     {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                   </td>
@@ -168,31 +180,26 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                   </td>
 
                   <td className="product-name-cell">
-                    {/* Cập nhật cả title khi hover chuột vào nếu có dấu * */}
                     <div className="truncate-text" style={{ maxWidth: '200px' }} title={item.isRequired ? `${item.name} *` : item.name}>
                       {item.name}
-                      {/* Thêm điều kiện render dấu * màu đỏ (hoặc isRequired tuỳ biến của bạn) */}
                       {item.isRequired && (
                         <span className="text-red-500 ml-1" style={{ color: 'red' }}>*</span>
                       )}
                     </div>
                   </td>
                   
-                  {/* ====== Đã fix class và đổi thẻ span thành div ====== */}
                   <td className="product-group-cell">
                     <div className="truncate-text" title={groupNamesText}>
                       {groupNamesText}
                     </div>
                   </td>
 
-                  <td>{renderStatus(item.status)}</td>
+                  {/* Thay thế hàm renderStatus cũ bằng Component mới */}
                   <td>
-                    {item.active ? (
-                      <span className="text-success">Đang hiển thị</span>
-                    ) : (
-                      <span className="text-danger">Đã ẩn</span>
-                    )}
+                    <StatusBadge2 status={item.status} />
                   </td>
+
+                  <td>{renderActiveToggle(item)}</td>
                   <td>{item.createdByFullName || '---'}</td>
                   <td>{item.approvedBy || '---'}</td>
                   <td style={{ 
@@ -209,7 +216,10 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
                   <td className="px-40 text-right">
                     <button
                       className="btn-view-detail"
-                      onClick={() => handleViewDetail(item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Chặn lan truyền click
+                        handleViewDetail(item.id);
+                      }}
                       title='Xem chi tiết'
                     >
                       <svg
@@ -289,6 +299,35 @@ const ProductCriteriaTable: React.FC<Props> = ({ data }) => {
             >
               →
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Cảnh báo */}
+      {warningData.show && (
+        <div className="warning-toast-wrapper">
+          <div className="warning-toast-card">
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg className="warning-toast-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            
+            <h3 className="warning-toast-title">{warningData.title}</h3>
+            <p className="warning-toast-desc">{warningData.message}</p>
+            
+            <div className="warning-toast-actions">
+              <button 
+                className="warning-btn-close" 
+                onClick={() => setWarningData({ ...warningData, show: false })}
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

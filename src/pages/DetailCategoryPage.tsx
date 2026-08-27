@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import './DetailGroupPage.css';
+import './DetailGroupPage.css'; // Giữ nguyên import CSS theo file của bạn
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 // Import thêm 2 hàm utils của bạn (hãy điều chỉnh đường dẫn '../utils/userUtils' cho khớp với project)
@@ -136,7 +137,8 @@ const DetailCategoryPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-category');
 
-  const handleUpdateCategory = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+  // Thêm trạng thái NEEDS_REVISION vào khai báo
+  const handleUpdateCategory = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
@@ -163,14 +165,15 @@ const DetailCategoryPage: React.FC = () => {
           name: formData.name || categoryData.name,
           groupId: formData.groupId || categoryData.groupId,
           active: isActive,
-          status
+          status // Sẽ gửi đúng NEEDS_REVISION nếu người dùng ở trạng thái YCCS
         }),
       });
 
       if (response.ok) {
         let message = '';
         switch (status) {
-          case 'DRAFT': message = "Lưu nháp danh mục thành công"; break;
+          case 'DRAFT': 
+          case 'NEEDS_REVISION': message = "Lưu nháp danh mục thành công"; break;
           case 'ARCHIVED': message = "Lưu trữ danh mục thành công"; break;
           case 'ACTIVE': message = "Kích hoạt danh mục hoạt động trở lại thành công"; break;
           case 'PENDING_APPROVAL': message = "Gửi phê duyệt danh mục thành công"; break;
@@ -188,6 +191,76 @@ const DetailCategoryPage: React.FC = () => {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
+  };
+
+  const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
+    if (isReadOnly || !id) return;
+    if (isActive === newActiveStatus) {
+      setIsStatusOpen(false);
+      return;
+    }
+    const toastId = toast.loading("Đang cập nhật trạng thái...");
+    try {
+      const response = await fetch(`/api/v1/product-category/${id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: { 
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        setIsActive(newActiveStatus);
+        toast.dismiss(toastId);
+        renderCustomToast(newActiveStatus ? "Hiển thị danh mục thành công" : "Ẩn danh mục thành công");
+      } else {
+        toast.dismiss(toastId);
+        // Nếu chuyển sang Ẩn (false) và bị lỗi (do có nghiệp vụ/sản phẩm con)
+        if (!newActiveStatus && (response.status === 400 || response.status === 409)) {
+          renderCannotHideToast(formData.name || categoryData.name);
+        } else {
+          toast.error(data.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật trạng thái:", error);
+      toast.error('Lỗi kết nối máy chủ', { id: toastId, position: 'top-center' });
+    } finally {
+      setIsStatusOpen(false);
+    }
+  };
+
+  const renderCannotHideToast = (categoryName: string) => {
+    toast.custom((t) => 
+      createPortal(
+        <div className="warning-toast-wrapper">
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg className="warning-toast-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path fillRule="evenodd" clipRule="evenodd" d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" fill="#EAB308"/>
+                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            <h3 className="warning-toast-title">
+              Không thể ẩn danh mục: "{categoryName}"
+            </h3>
+            <p className="warning-toast-desc">
+              Danh mục này đang chứa các nghiệp vụ hoặc sản phẩm bên trong.
+            </p>
+            <div className="warning-toast-actions">
+              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    , { duration: Infinity, id: 'cannot-hide-toast' }); 
   };
 
   const handleDeleteCategory = () => {
@@ -282,6 +355,7 @@ const DetailCategoryPage: React.FC = () => {
     formData.groupId !== (categoryData.groupId || '') ||
     isActive !== (categoryData?.active ?? true)
   );
+  
   const canSubmit = !isReadOnly && isDirty && formData.name.trim() !== '';
 
   return (
@@ -336,11 +410,13 @@ const DetailCategoryPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCategory('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Yêu cầu 1: Bỏ logic isDirty khỏi nút Lưu nháp để luôn sáng */}
+                    <button className="btnDraft active" disabled={isReadOnly} onClick={() => handleUpdateCategory('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCategory('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Yêu cầu 1: Bỏ isDirty ở Gửi phê duyệt, chỉ check điền đủ form */}
+                    <button className={`btnSubmit ${!isReadOnly && formData.name.trim() && formData.groupId ? 'active' : 'disabled'}`} disabled={isReadOnly || !formData.name.trim() || !formData.groupId} onClick={() => handleUpdateCategory('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -348,7 +424,8 @@ const DetailCategoryPage: React.FC = () => {
                 )}
                 {(categoryData.status === 'ACTIVE' || categoryData.status === 'NEEDS_REVISION') && (
                   <>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCategory('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Yêu cầu 2: Ở trạng thái YCCS, khi click nút sẽ gửi status là NEEDS_REVISION thay vì DRAFT */}
+                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCategory(categoryData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
@@ -445,8 +522,9 @@ const DetailCategoryPage: React.FC = () => {
                 </div>
                 {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
-                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
+                    {/* Yêu cầu 3: Gắn API handleUpdateDisplayStatus khi click Đổi trạng thái Ẩn/Hiện */}
+                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(false)}>Ẩn</div>
+                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(true)}>Hiển thị</div>
                   </div>
                 )}
               </div>

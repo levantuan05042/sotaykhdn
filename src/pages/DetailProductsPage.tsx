@@ -102,28 +102,21 @@ const getCroppedBlob = async (src: string, px: PixelCrop): Promise<Blob> => {
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92));
 };
 
-// 1. Hàm tách và chuẩn hóa Username từ chuỗi hoặc Object
 const extractUsername = (rawUser: any): string => {
   if (!rawUser) return '';
-  
   let strVal = '';
   if (typeof rawUser === 'object' && rawUser !== null) {
     strVal = rawUser.username || rawUser.userName || rawUser.code || rawUser.userCode || rawUser.sub || rawUser.fullName || rawUser.name || '';
   } else {
     strVal = String(rawUser);
   }
-
   strVal = strVal.trim().toLowerCase();
-
-  // Bỏ phần email nếu có (vd: user@agribank.com.vn -> user)
   if (strVal.includes('@')) {
     strVal = strVal.split('@')[0];
   }
-
   return strVal;
 };
 
-// 2. Hàm lấy username người dùng hiện tại từ Storage
 const getCurrentUsername = (): string => {
   const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
   for (const key of possibleKeys) {
@@ -337,7 +330,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
 };
 
 // ─────────────────────────────────────────────
-// QuillEditor Component (Hỗ trợ chế độ ReadOnly)
+// QuillEditor Component
 // ─────────────────────────────────────────────
 interface QuillEditorProps {
   value: string;
@@ -495,11 +488,9 @@ const DetailProductPage: React.FC = () => {
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
-  // Tách Username người tạo từ dữ liệu sản phẩm
   const rawCreator = productData?.createdBy || productData?.created_by || productData?.creator;
   const creatorUsername = extractUsername(rawCreator);
 
-  // So sánh khớp username chính xác hoặc phần mã NV trước ký tự '_' (ví dụ: 37ETN082 khớp 37ETN082_10500037)
   const isOwner = useMemo(() => {
     if (!isLoggedIn || !currentUsername || !creatorUsername) return false;
     
@@ -511,7 +502,6 @@ const DetailProductPage: React.FC = () => {
     return currentBase === creatorBase && currentBase.length > 0;
   }, [isLoggedIn, currentUsername, creatorUsername]);
 
-  // Nếu không đăng nhập hoặc không phải người tạo -> Chế độ chỉ đọc (Read-only)
   const isReadOnly = !isLoggedIn || !isOwner;
 
   useEffect(() => {
@@ -553,7 +543,6 @@ const DetailProductPage: React.FC = () => {
     }
   };
 
-  // Click outside listener for dropdowns
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (groupRef.current     && !groupRef.current.contains(e.target as Node))     setIsGroupOpen(false);
@@ -669,6 +658,59 @@ const DetailProductPage: React.FC = () => {
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = !isReadOnly && (isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true));
 
+  // Render Toast Custom
+  const renderCustomToast = (message: string) => {
+    toast.custom(t => (
+      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
+        <div className="toast-pill-content">
+          <div className="toast-pill-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <span className="toast-pill-text">{message}</span>
+        </div>
+        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    ), { position: 'top-center' });
+  };
+
+  // ─────────────────────────────────────────────
+  // Xử lý gọi API thay đổi trạng thái Ẩn / Hiển thị ngay khi chọn
+  // ─────────────────────────────────────────────
+  const handleToggleActive = async (newActiveStatus: boolean) => {
+    if (isReadOnly) {
+      toast.error('Bạn không có quyền thay đổi trạng thái sản phẩm này.', { position: 'top-center' });
+      return;
+    }
+
+    if (!id || newActiveStatus === isActive) return;
+
+    try {
+      // Gọi API GET /api/v1/products/{id}/active?active={newActiveStatus}
+      const res = await fetch(`${BASE_URL}/products/${id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+        },
+      });
+
+      if (res.ok) {
+        setIsActive(newActiveStatus);
+        setProductData((prev: any) => prev ? { ...prev, active: newActiveStatus } : prev);
+        renderCustomToast(newActiveStatus ? 'Cập nhật hiển thị sản phẩm thành công' : 'Ẩn sản phẩm thành công');
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.message || 'Cập nhật trạng thái hiển thị thất bại', { position: 'top-center' });
+      }
+    } catch (e) {
+      console.error('Lỗi khi cập nhật trạng thái hiển thị:', e);
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
+    }
+  };
+
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
     if (isReadOnly) {
       toast.error('Bạn không có quyền chỉnh sửa sản phẩm này do không phải là người tạo.', { position: 'top-center' });
@@ -716,28 +758,10 @@ const DetailProductPage: React.FC = () => {
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
   };
 
-  const renderCustomToast = (message: string) => {
-    toast.custom(t => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
-  };
-
   if (loading)      return <div className="loading" style={{ padding: 40, textAlign: 'center' }}>Đang tải dữ liệu sản phẩm...</div>;
   if (!productData) return <div className="error" style={{ padding: 40, textAlign: 'center' }}>Không tìm thấy dữ liệu sản phẩm phù hợp.</div>;
 
-  const currentStatus       = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
+  const currentStatus = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
 
   const renderCriterionField = (criterion: Criterion) => {
     const hasErr = criterion.isRequired && isHtmlEmpty(criterion.value);
@@ -772,6 +796,7 @@ const DetailProductPage: React.FC = () => {
       </div>
     );
   };
+
   const requiredCriteria = criteria.filter(c => c.isSelected && c.isRequired);
   const optionalCriteria = criteria.filter(c => c.isSelected && !c.isRequired);
 
@@ -1026,6 +1051,7 @@ const DetailProductPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Trạng thái hiển thị */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10, width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
@@ -1046,8 +1072,24 @@ const DetailProductPage: React.FC = () => {
                   </div>
                   {isStatusOpen && !isReadOnly && (
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
-                      <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
-                      <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
+                      <div 
+                        className={`custom-option ${isActive === false ? 'selected' : ''}`} 
+                        onClick={() => { 
+                          handleToggleActive(false); 
+                          setIsStatusOpen(false); 
+                        }}
+                      >
+                        Ẩn
+                      </div>
+                      <div 
+                        className={`custom-option ${isActive === true ? 'selected' : ''}`} 
+                        onClick={() => { 
+                          handleToggleActive(true); 
+                          setIsStatusOpen(false); 
+                        }}
+                      >
+                        Hiển thị
+                      </div>
                     </div>
                   )}
                 </div>

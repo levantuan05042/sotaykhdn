@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -28,7 +29,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
     setCurrentPage(1);
   }, [data]);
 
-  // Bộ lọc CHỈ hiển thị trạng thái ACTIVE
+  // Bộ lọc hiển thị trạng thái REJECTED
   const activeData = useMemo(() => {
     return (data || []).filter(item => item.status?.toUpperCase() === 'REJECTED');
   }, [data]);
@@ -101,11 +102,12 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                     {item.businessName || '---'}
                   </span>
                 </td>
+
+                {/* Sử dụng Component StatusBadge2 dùng chung */}
                 <td>
-                  <div className="status-badge-custom status-rejected">
-                    <span>Từ chối</span>
-                  </div>
+                  <StatusBadge2 status={item.status} />
                 </td>
+
                 <td>
                   {item.active ? (
                     <span className="text-success">Đang hiển thị</span>

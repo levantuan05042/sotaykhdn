@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ProductGroupPage.css';
-import ProductGroupTable from '../components/ProductGroupTable';
+import DataTable, { type Column } from '../components/ui/DataTable'; // Import DataTable chuẩn
+import StatusBadge2 from '../components/ui/StatusBadge2';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 
@@ -33,16 +34,30 @@ const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, o
   </div>
 );
 
+interface ProductGroupItem {
+  id: any;
+  name: string;
+  status: string;
+  active?: boolean;
+  createdByFullName?: string | null;
+  approvedBy?: string | null;
+  version?: number | null;
+}
+
 const ProductGroupPage: React.FC = () => {
   const navigate = useNavigate();
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ProductGroupItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-  const [currentPage, setCurrentPage] = useState(0); // Spring Page bắt đầu từ 0
-  const [totalPages, setTotalPages] = useState(0);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const [warningData, setWarningData] = useState<{ show: boolean; title: string; message: string }>({
+    show: false,
+    title: '',
+    message: ''
+  });
 
   const statusRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
@@ -50,13 +65,12 @@ const ProductGroupPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Gọi API lấy danh sách đầy đủ (DataTable sẽ xử lý phân trang client-side giống ApproverProductGroupListPage)
       const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
         params: {
           keyword: searchTerm.trim() || undefined,
           status: selectedStatus || undefined,
           types: selectedGroups.length > 0 ? selectedGroups : undefined,
-          page: currentPage,
-          size: 10
         },
         paramsSerializer: (params) => {
           const searchParams = new URLSearchParams();
@@ -74,10 +88,8 @@ const ProductGroupPage: React.FC = () => {
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
 
-      // Lấy danh sách user map 1 lần duy nhất từ utils
       const userMap = getUserMap();
 
-      // Sử dụng hàm getFullName để tách chuỗi và lấy tên
       const enrichedData = rawList.map((item: any) => ({
         ...item,
         createdByFullName: getFullName(item.createdBy, userMap),
@@ -85,7 +97,6 @@ const ProductGroupPage: React.FC = () => {
       }));
 
       setData(enrichedData);
-      setTotalPages(response.data?.totalPages || 1);
 
     } catch (error) {
       console.error('Lỗi khi gọi API:', error);
@@ -96,9 +107,9 @@ const ProductGroupPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const handler = setTimeout(() => fetchData(), 500);
+    const handler = setTimeout(() => fetchData(), 300);
     return () => clearTimeout(handler);
-  }, [searchTerm, selectedStatus, selectedGroups, currentPage]);
+  }, [searchTerm, selectedStatus, selectedGroups]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -119,8 +130,143 @@ const ProductGroupPage: React.FC = () => {
     setSelectedGroups(prev =>
       prev.includes(val) ? prev.filter(item => item !== val) : [...prev, val]
     );
-    setCurrentPage(0);
   };
+
+  // Xử lý bật/tắt hiệu lực (Active Toggle)
+  const handleToggleActive = async (item: ProductGroupItem, currentActive: boolean) => {
+    const newActiveStatus = !currentActive;
+
+    // 1. Optimistic Update
+    setData(prevData => 
+      prevData.map(d => 
+        d.id === item.id ? { ...d, active: newActiveStatus } : d
+      )
+    );
+
+    try {
+      const response = await fetch(`http://localhost:8082/api/v1/product-groups/${item.id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error('Không thể thay đổi trạng thái');
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật hiệu lực:", error);
+      
+      // Rollback UI nếu lỗi
+      setData(prevData => 
+        prevData.map(d => 
+          d.id === item.id ? { ...d, active: currentActive } : d
+        )
+      );
+
+      setWarningData({
+        show: true,
+        title: `Không thể ẩn nhóm: "${item.name}"`,
+        message: "Nhóm sản phẩm này đang chứa các danh mục hoặc sản phẩm bên trong."
+      });
+    }
+  };
+
+  const renderActiveToggle = (item: ProductGroupItem) => {
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const isDisabled = disabledStatuses.includes(item.status);
+    const isActive = item.active || false;
+
+    return (
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
+        <label className="toggle-switch">
+          <input 
+            type="checkbox" 
+            checked={isActive} 
+            disabled={isDisabled}
+            onChange={() => {
+              if (!isDisabled) {
+                handleToggleActive(item, isActive);
+              }
+            }}
+          />
+          <span className="toggle-slider"></span>
+        </label>
+        <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
+          {isActive ? 'Hiện' : 'Ẩn'}
+        </span>
+      </div>
+    );
+  };
+
+  const columns: Column<any>[] = [
+    {
+      key: 'stt',
+      header: 'STT',
+      width: '70px',
+      align: 'center',
+      render: (_, index) => index + 1,
+    },
+    {
+      key: 'name',
+      header: 'Tên nhóm sản phẩm',
+      render: (row) => (
+        <span className="truncate-text product-group-item-title" title={row.name}>
+          {row.name}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '180px',
+      render: (row) => <StatusBadge2 status={row.status} />,
+    },
+    {
+      key: 'active',
+      header: 'Hiệu lực',
+      render: (row) => renderActiveToggle(row),
+    },
+    {
+      key: 'createdByFullName',
+      header: 'Người tạo',
+      render: (row) => row.createdByFullName || '---',
+    },
+    {
+      key: 'approvedBy',
+      header: 'Người kiểm duyệt',
+      render: (row) => row.approvedBy || '---',
+    },
+    {
+      key: 'version',
+      header: 'Phiên bản',
+      render: (row) => (
+        <span style={{ fontWeight: 600, color: '#053E2B' }}>
+          {row.version ? `Phiên bản ${row.version}` : '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'action',
+      header: '',
+      width: '80px',
+      align: 'center',
+      render: (row) => (
+        <button
+          className="btn-view-detail"
+          title="Xem chi tiết"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/product-groups/${row.id}`);
+          }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      ),
+    },
+  ];
 
   return (
     <div className="product-group-container">
@@ -146,7 +292,7 @@ const ProductGroupPage: React.FC = () => {
             placeholder="Tìm kiếm" 
             className="search-input" 
             value={searchTerm} 
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(0); }}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
@@ -164,7 +310,7 @@ const ProductGroupPage: React.FC = () => {
                 <div className="dropdown-menu">
                   {STATUS_OPTIONS.map(opt => (
                     <div key={opt.value} className={`menu-item ${selectedStatus === opt.value ? 'selected' : ''}`}
-                      onClick={() => { setSelectedStatus(opt.value); setOpenDropdown(null); setCurrentPage(0); }}>
+                      onClick={() => { setSelectedStatus(opt.value); setOpenDropdown(null); }}>
                       <span>{opt.label}</span>
                       {selectedStatus === opt.value && <i className="check-icon">✔</i>}
                     </div>
@@ -204,48 +350,43 @@ const ProductGroupPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="table-placeholder">
-        {loading ? (
-          <div className="loading-spinner">Đang tải dữ liệu...</div>
-        ) : data.length > 0 ? (
-          <ProductGroupTable data={data} />
-        ) : (
-          <div className="empty-state">Không tìm thấy kết quả phù hợp.</div>
-        )}
+      <div className="table-placeholder" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <DataTable
+          columns={columns}
+          data={data}
+          keyExtractor={(row) => row.id}
+          onRowClick={(row) => navigate(`/product-groups/${row.id}`)}
+          loading={loading}
+          emptyText="Không tìm thấy nhóm sản phẩm nào phù hợp."
+        />
       </div>
 
-      {/* PAGINATION */}
-      {totalPages > 1 && (
-        <div className="pagination-container">
-          <button 
-            className="p-2 disabled:opacity-30" 
-            disabled={currentPage === 0}
-            onClick={() => setCurrentPage(prev => prev - 1)}
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <path d="M15.8333 10H4.16667M4.16667 10L10 15.8333M4.16667 10L10 4.16667" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
-          
-          {[...Array(totalPages)].map((_, i) => (
-            <button 
-              key={i} 
-              onClick={() => setCurrentPage(i)}
-              className={`pagination-btn ${currentPage === i ? 'active' : ''}`}
-            >
-              {i + 1}
-            </button>
-          ))}
-
-          <button 
-            className="p-2 disabled:opacity-30" 
-            disabled={currentPage === totalPages - 1}
-            onClick={() => setCurrentPage(prev => prev + 1)}
-          >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-              <path d="M4.16667 10H15.8333M15.8333 10L10 4.16667M15.8333 10L10 15.8333" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+      {/* Warning Toast khi toggle lỗi */}
+      {warningData.show && (
+        <div className="warning-toast-wrapper">
+          <div className="warning-toast-card">
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg className="warning-toast-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            
+            <h3 className="warning-toast-title">{warningData.title}</h3>
+            <p className="warning-toast-desc">{warningData.message}</p>
+            
+            <div className="warning-toast-actions">
+              <button 
+                className="warning-btn-close" 
+                onClick={() => setWarningData({ ...warningData, show: false })}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

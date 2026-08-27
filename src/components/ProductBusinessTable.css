@@ -24,6 +24,16 @@
   font-size: 14px;
 }
 
+/* Hiệu ứng con trỏ và hover khi chọn hàng */
+.product-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.product-table tbody tr:hover {
+  background-color: #F9FAFB;
+}
+
 /* Badge trạng thái */
 .status-badge-custom {
   display: inline-flex;
@@ -87,3 +97,75 @@
 }
 
 .p-nav-btn:disabled { opacity: 0.3; }
+
+/* =========================================
+   Toggle Switch Styles (Cột Hiệu lực)
+========================================= */
+.toggle-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #E3DFE6;
+  transition: 0.3s;
+  border-radius: 24px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background-color: #72D5A1;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+  transform: translateX(20px);
+}
+
+.toggle-switch input:disabled + .toggle-slider {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.toggle-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a191b;
+  min-width: 35px;
+}
+
+.toggle-label.disabled-text {
+  color: #9CA3AF;
+}

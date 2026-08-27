@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 
@@ -123,7 +124,6 @@ const DetailCriteriaPage: React.FC = () => {
         if (!isMounted) return;
         setCriteriaData(detailData);
 
-        // Đã FIX: Ép kiểu toàn bộ ID thành String ngay từ đầu
         const initialGroupIds = detailData.productGroups 
           ? detailData.productGroups.map((g: any) => String(g.id)) 
           : [];
@@ -141,7 +141,7 @@ const DetailCriteriaPage: React.FC = () => {
           const groupsData = await groupsRes.json();
           const options = groupsData.map((g: any) => ({
             label: g.name,
-            value: String(g.id) // Đã FIX: Ép kiểu thành String
+            value: String(g.id) 
           }));
           setGroupOptions(options);
         } else {
@@ -207,7 +207,7 @@ const DetailCriteriaPage: React.FC = () => {
     return true;
   };
 
-  const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+  const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
@@ -242,7 +242,9 @@ const DetailCriteriaPage: React.FC = () => {
       if (response.ok) {
         let message = '';
         switch (status) {
-          case 'DRAFT': message = "Lưu nháp tiêu chí thành công"; break;
+          case 'DRAFT': 
+          case 'NEEDS_REVISION':
+            message = "Lưu nháp tiêu chí thành công"; break;
           case 'ARCHIVED': message = "Lưu trữ tiêu chí thành công"; break;
           case 'ACTIVE': message = "Kích hoạt tiêu chí hoạt động trở lại thành công"; break;
           case 'PENDING_APPROVAL': message = "Gửi phê duyệt tiêu chí thành công"; break;
@@ -259,6 +261,87 @@ const DetailCriteriaPage: React.FC = () => {
     } catch (error) {
       console.error("Lỗi cập nhật:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
+      setLoading(false);
+    }
+  };
+
+  const showCannotHideWarning = (itemName: string) => {
+    toast.custom((t) => 
+      createPortal(
+        <div className="warning-toast-wrapper">
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg 
+                className="warning-toast-icon" 
+                width="40" height="40" 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path 
+                  fillRule="evenodd" 
+                  clipRule="evenodd" 
+                  d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" 
+                  fill="#EAB308"
+                />
+                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
+                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
+              </svg>
+            </div>
+            
+            <h3 className="warning-toast-title">
+              Không thể ẩn nghiệp vụ: "{itemName}"
+            </h3>
+            <p className="warning-toast-desc">
+              Nghiệp vụ này đang chứa các sản phẩm trực thuộc đang hoạt động bên trong.
+            </p>
+            
+            <div className="warning-toast-actions">
+              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )
+    , { duration: Infinity, id: 'cannot-hide-toast' }); 
+  };
+
+  const handleToggleActive = async (newActiveState: boolean) => {
+    if (isReadOnly || !id) return;
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      const response = await fetch(`/api/v1/criteria/${id}/active?active=${newActiveState}`, {
+        method: 'GET',
+        headers: { 
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+
+      if (response.ok) {
+        setIsActive(newActiveState);
+        setIsStatusOpen(false);
+        renderCustomToast(newActiveState ? 'Hiển thị tiêu chí thành công' : 'Ẩn tiêu chí thành công');
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        setIsStatusOpen(false);
+        
+        // Nếu chuyển sang trạng thái Ẩn mà có lỗi, bật Popup cảnh báo không thể ẩn
+        if (!newActiveState || errorData.code === 'HAS_ACTIVE_PRODUCTS') {
+          showCannotHideWarning(criteriaData?.name || "Tiêu chí");
+        } else {
+          toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật trạng thái', { position: 'top-center' });
+        }
+      }
+    } catch (error) {
+      console.error("Lỗi cập nhật trạng thái:", error);
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
+    } finally {
       setLoading(false);
     }
   };
@@ -351,21 +434,10 @@ const DetailCriteriaPage: React.FC = () => {
 
   const currentStatus = STATUS_MAP[criteriaData.status] || { label: criteriaData.status, className: '' };
   
-  const initialGroupIds = criteriaData.productGroups ? criteriaData.productGroups.map((g: any) => String(g.id)) : [];
-  const isGroupsChanged = JSON.stringify([...formData.groupIds].sort()) !== JSON.stringify([...initialGroupIds].sort());
-  
-  const isDirty = formData.name !== (criteriaData.name || '') || 
-                  formData.code !== (criteriaData.code || '') || 
-                  formData.isRequired !== (criteriaData.isRequired || false) ||
-                  isActive !== (criteriaData.active ?? true) ||
-                  isGroupsChanged;
+  const isFormValid = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0;
+  const canSubmit = !isReadOnly && isFormValid;
+  const canSaveDraft = !isReadOnly;
 
-  const canSubmit = !isReadOnly && isDirty && 
-                    formData.code.trim() !== '' && 
-                    formData.name.trim() !== '' && 
-                    formData.groupIds.length > 0;
-
-  // Logic hiển thị Text ở Dropdown
   const selectedCount = formData.groupIds.length;
   const totalCount = groupOptions.length;
   let selectedGroupsText = "Chọn nhóm sản phẩm";
@@ -423,10 +495,7 @@ const DetailCriteriaPage: React.FC = () => {
 
           {/* ACTIONS CONTROLLER */}
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isReadOnly ? (
-              <span style={{}}>
-              </span>
-            ) : (
+            {!isReadOnly && (
               <>
                 {criteriaData.status === 'DRAFT' && (
                   <>
@@ -436,7 +505,7 @@ const DetailCriteriaPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
@@ -449,7 +518,7 @@ const DetailCriteriaPage: React.FC = () => {
 
                 {(criteriaData.status === 'ACTIVE' || criteriaData.status === 'NEEDS_REVISION') && (
                   <>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => handleUpdateCriteria(criteriaData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
@@ -516,11 +585,10 @@ const DetailCriteriaPage: React.FC = () => {
                     style={{ 
                       opacity: isReadOnly ? 0.7 : 1, 
                       cursor: isReadOnly ? 'not-allowed' : 'pointer',
-                      // DÙNG GRID THAY VÌ FLEX ĐỂ TRỊ DỨT ĐIỂM LỖI TRÀN CHỮ
                       display: 'grid', 
-                      gridTemplateColumns: '1fr auto', // Cột 1 (chữ) tự động chiếm phần còn lại, cột 2 (icon) ôm sát
+                      gridTemplateColumns: '1fr auto', 
                       alignItems: 'center', 
-                      gap: '8px', // Khoảng cách giữa chữ và icon
+                      gap: '8px',
                       width: '100%',
                       boxSizing: 'border-box'
                     }}
@@ -548,11 +616,8 @@ const DetailCriteriaPage: React.FC = () => {
                     )}
                   </div>
 
-                  {/* KHỐI DROPDOWN OPTIONS GIỮ NGUYÊN NHƯ CŨ */}
                   {!isReadOnly && isOpen && (
                     <div className="custom-options-list">
-                      
-                      {/* OPTION: CHỌN TẤT CẢ */}
                       {groupOptions.length > 0 && (() => {
                         const isAllSelected = formData.groupIds.length === groupOptions.length;
                         return (
@@ -583,7 +648,6 @@ const DetailCriteriaPage: React.FC = () => {
                         );
                       })()}
 
-                      {/* OPTION: CÁC NHÓM LẺ */}
                       {groupOptions.map((opt) => {
                         const isChecked = formData.groupIds.includes(String(opt.value));
                         return (
@@ -630,7 +694,7 @@ const DetailCriteriaPage: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12.01" y2="16"/>
                 </svg>
               </div>
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
@@ -648,8 +712,8 @@ const DetailCriteriaPage: React.FC = () => {
                 </div>
                 {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => { setIsActive(false); setIsStatusOpen(false); }}>Ẩn</div>
-                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => { setIsActive(true);  setIsStatusOpen(false); }}>Hiển thị</div>
+                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleToggleActive(false)}>Ẩn</div>
+                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleToggleActive(true)}>Hiển thị</div>
                   </div>
                 )}
               </div>

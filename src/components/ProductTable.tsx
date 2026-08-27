@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -17,20 +18,23 @@ interface ProductCategory {
 
 interface Props {
   data: ProductCategory[];
+  onToggleActive?: (id: string, newActiveStatus: boolean) => void;
 }
 
-const ProductCategoryTable: React.FC<Props> = ({ data }) => {
+const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
+  const [tableData, setTableData] = useState<ProductCategory[]>([]);
 
   useEffect(() => {
+    setTableData(data || []);
     setCurrentPage(1);
   }, [data]);
 
   const activeData = useMemo(() => {
-    return (data || []).filter(item => item.status?.toUpperCase() === 'ACTIVE');
-  }, [data]);
+    return tableData.filter(item => item.status?.toUpperCase() === 'ACTIVE');
+  }, [tableData]);
 
   const totalPages = Math.ceil(activeData.length / ITEMS_PER_PAGE);
 
@@ -39,8 +43,46 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
     return activeData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [activeData, currentPage]);
 
+  // Chuyển hướng sang chi tiết
   const handleViewDetail = (id: string) => {
     navigate(`/products/${id}`);
+  };
+
+  // Cập nhật lại hàm handleToggleActive trong ProductCategoryTable.tsx
+  const handleToggleActive = async (e: React.ChangeEvent<HTMLInputElement>, item: ProductCategory) => {
+    e.stopPropagation(); // Chặn sự kiện click lan ra hàng tr
+    const newActiveStatus = e.target.checked;
+
+    // 1. Cập nhật UI ngay lập tức (Optimistic UI)
+    setTableData(prev =>
+      prev.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
+    );
+
+    try {
+      // 2. Gọi API cập nhật trạng thái Hiệu lực
+      const response = await fetch(
+        `http://localhost:8082/api/v1/products/${item.id}/active?active=${newActiveStatus}`,
+        {
+          method: 'GET', 
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Gọi API thất bại');
+      }
+      if (onToggleActive) {
+        onToggleActive(item.id, newActiveStatus);
+      }
+    } catch (error) {
+      console.error('Lỗi khi gọi API cập nhật hiệu lực:', error);
+      setTableData(prev =>
+        prev.map(d => d.id === item.id ? { ...d, active: !newActiveStatus } : d)
+      );
+      alert('Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!');
+    }
   };
 
   return (
@@ -65,11 +107,11 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
         <tbody>
           {paginatedData.length > 0 ? (
             paginatedData.map((item, index) => (
-              <tr key={item.id || index}>
-
-                <td>
-                  {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                </td>
+              <tr 
+                key={item.id || index}
+                onClick={() => handleViewDetail(item.id)} // Click hàng chuyển sang chi tiết
+              >
+                <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                 <td>
                   {(() => {
                     const stripHtml = (htmlString: string) => {
@@ -94,32 +136,42 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                     {item.productCategoryName || '---'}
                   </span>
                 </td>
-
                 <td className="col-business">
                   <span className="truncate-text" title={item.businessName || ''}>
                     {item.businessName || '---'}
                   </span>
                 </td>
+
+                {/* Sử dụng Component StatusBadge2 dùng chung */}
                 <td>
-                  <div className="status-badge-custom status-active">
-                    <span className="dot"></span>
-                    <span>Đang hoạt động</span>
+                  <StatusBadge2 status={item.status} />
+                </td>
+
+                {/* Cột Hiệu lực: Gạt bật/tắt */}
+                <td onClick={(e) => e.stopPropagation()}>
+                  <div className="toggle-wrapper">
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        checked={item.active || false} 
+                        onChange={(e) => handleToggleActive(e, item)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                    <span className="toggle-label">
+                      {item.active ? 'Hiện' : 'Ẩn'}
+                    </span>
                   </div>
                 </td>
-                <td>
-                  {item.active ? (
-                    <span className="text-success">Đang hiển thị</span>
-                  ) : (
-                    <span className="text-danger">Đã ẩn</span>
-                  )}
-                </td>
+
                 <td>{item.createdByFullName || '---'}</td>
                 <td>{item.approvedBy || '---'}</td>
                 <td style={{ fontWeight: 600 }}>
                   {item.version ? `Phiên bản ${item.version}` : '---'}
                 </td>
 
-                <td>
+                {/* Cột Thao tác */}
+                <td onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn-action-view"
                     onClick={() => handleViewDetail(item.id)}
@@ -142,6 +194,8 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
           )}
         </tbody>
       </table>
+
+      {/* Phân trang */}
       {totalPages > 1 && (
         <div className="pagination-box">
           <button
@@ -153,20 +207,12 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
           </button>
 
           {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((page) => {
-              return (
-                page === 1 ||
-                page === totalPages ||
-                (page >= currentPage - 1 && page <= currentPage + 1)
-              );
-            })
+            .filter((page) => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
             .map((page, index, arr) => {
               const prevPage = arr[index - 1];
               return (
                 <React.Fragment key={page}>
-                  {prevPage && page - prevPage > 1 && (
-                    <span className="pagination-dots">...</span>
-                  )}
+                  {prevPage && page - prevPage > 1 && <span className="pagination-dots">...</span>}
                   <button
                     className={`p-item ${currentPage === page ? 'active' : ''}`}
                     onClick={() => setCurrentPage(page)}
