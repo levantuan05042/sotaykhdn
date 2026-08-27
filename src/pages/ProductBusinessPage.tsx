@@ -2,10 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ProductBusinessPage.css';
-// Giả định bạn đã hoặc sẽ tạo component Table riêng cho Sản phẩm nghiệp vụ, hoặc tái sử dụng table cũ
-import ProductBusinessTable from '../components/ProductBusinessTable'; 
+import DataTable, { type Column } from '../components/ui/DataTable';
+import StatusBadge2 from '../components/ui/StatusBadge2';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
-import { getUserMap, getFullName } from '../utils/userUtils'; // IMPORT TỪ UTILS
+import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -32,30 +32,42 @@ const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, o
   </div>
 );
 
+interface ProductBusinessItem {
+  id: any;
+  name: string;
+  groupName?: string;
+  categoryName?: string;
+  status: string;
+  active?: boolean;
+  createdByFullName?: string | null;
+  approvedBy?: string | null;
+  version?: number | null;
+}
+
 const ProductBusinessPage: React.FC = () => {
   const navigate = useNavigate();
-  
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ProductBusinessItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  
-  // Lưu danh sách các Danh mục sản phẩm được chọn để lọc cho Sản phẩm nghiệp vụ
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
 
+  const [warningData, setWarningData] = useState<{ show: boolean; title: string; message: string }>({
+    show: false,
+    title: '',
+    message: ''
+  });
+
   const statusRef = useRef<HTMLDivElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
 
-  // Gọi API lấy danh sách Danh mục sản phẩm để cho vào bộ lọc Dropdown
   useEffect(() => {
     const fetchCategoryOptions = async () => {
       try {
         const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST);
-        // data backend có thể trả về mảng trực tiếp hoặc bọc trong object có field content
         const rawData = response.data?.content || response.data || [];
         const mappedCategories = rawData
           .filter((item: any) => item.status === 'ACTIVE')
@@ -63,7 +75,6 @@ const ProductBusinessPage: React.FC = () => {
             value: item.id,
             label: item.name
           }));
-          
         setCategoryOptions(mappedCategories);
       } catch (error) {
         console.error('Lỗi khi lấy danh sách danh mục sản phẩm:', error);
@@ -96,11 +107,8 @@ const ProductBusinessPage: React.FC = () => {
       
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
-
-      // SỬ DỤNG HÀM TỪ UTILS: Lấy map user 1 lần duy nhất
       const userMap = getUserMap();
 
-      // Sử dụng hàm getFullName để tách chuỗi và lấy tên hiển thị
       const enrichedData = rawList.map((item: any) => {
         const creatorCode = item.createdBy || item.createdByFullName; 
         const approverCode = item.approvedBy;
@@ -122,13 +130,11 @@ const ProductBusinessPage: React.FC = () => {
     }
   };
 
-  // Debounce tìm kiếm 500ms
   useEffect(() => {
-    const handler = setTimeout(() => fetchData(), 500);
+    const handler = setTimeout(() => fetchData(), 300);
     return () => clearTimeout(handler);
   }, [searchTerm, selectedStatus, selectedCategories]);
 
-  // Click outside đóng dropdown menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (statusRef.current && !statusRef.current.contains(event.target as Node) &&
@@ -159,14 +165,149 @@ const ProductBusinessPage: React.FC = () => {
     }
   };
 
-  // Tìm kiếm nội bộ danh mục tại ô Search mini trong Dropdown
   const filteredCategoryOptions = categoryOptions.filter(opt =>
     opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())
   );
 
+  const handleToggleActive = async (item: ProductBusinessItem, currentActive: boolean) => {
+    const newActiveStatus = !currentActive;
+    setData(prevData => 
+      prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
+    );
+
+    try {
+      const response = await fetch(`http://localhost:8082/api/v1/business/${item.id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Không thể thay đổi trạng thái');
+    } catch (error) {
+      console.error("Lỗi cập nhật hiệu lực sản phẩm nghiệp vụ:", error);
+      setData(prevData => 
+        prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
+      );
+      setWarningData({
+        show: true,
+        title: `Không thể ẩn sản phẩm: "${item.name}"`,
+        message: "Sản phẩm nghiệp vụ này đang bị ràng buộc dữ liệu hoặc xảy ra lỗi hệ thống."
+      });
+    }
+  };
+
+  const renderActiveToggle = (item: ProductBusinessItem) => {
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const isDisabled = disabledStatuses.includes(item.status);
+    const isActive = item.active || false;
+
+    return (
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
+        <label className="toggle-switch">
+          <input 
+            type="checkbox" 
+            checked={isActive} 
+            disabled={isDisabled}
+            onChange={() => { if (!isDisabled) handleToggleActive(item, isActive); }}
+          />
+          <span className="toggle-slider"></span>
+        </label>
+        <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
+          {isActive ? 'Hiện' : 'Ẩn'}
+        </span>
+      </div>
+    );
+  };
+
+  const columns: Column<ProductBusinessItem>[] = [
+    {
+      key: 'stt',
+      header: 'STT',
+      width: '70px',
+      align: 'center',
+      render: (_, index) => index + 1,
+    },
+    {
+      key: 'name',
+      header: 'Tên nghiệp vụ',
+      render: (row) => (
+        <span className="truncate-text product-group-item-title" title={row.name}>
+          {row.name}
+        </span>
+      ),
+    },
+    {
+      key: 'groupName',
+      header: 'Nhóm sản phẩm',
+      render: (row) => (
+        <span className="truncate-text" title={row.groupName || '---'}>
+          {row.groupName || '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'categoryName',
+      header: 'Danh mục sản phẩm',
+      render: (row) => (
+        <span className="truncate-text" title={row.categoryName || '---'}>
+          {row.categoryName || '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '180px',
+      render: (row) => <StatusBadge2 status={row.status} />,
+    },
+    {
+      key: 'active',
+      header: 'Hiệu lực',
+      render: (row) => renderActiveToggle(row),
+    },
+    {
+      key: 'createdByFullName',
+      header: 'Người tạo',
+      render: (row) => row.createdByFullName || '---',
+    },
+    {
+      key: 'approvedBy',
+      header: 'Người kiểm duyệt',
+      render: (row) => row.approvedBy || '---',
+    },
+    {
+      key: 'version',
+      header: 'Phiên bản',
+      render: (row) => (
+        <span style={{ fontWeight: 600, color: '#053E2B' }}>
+          {row.version ? `Phiên bản ${row.version}` : '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'action',
+      header: '',
+      width: '80px',
+      align: 'center',
+      render: (row) => (
+        <button
+          className="btn-view-detail"
+          title="Xem chi tiết"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/business-management/${row.id}`);
+          }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="product-group-container">
-      {/* HEADER PAGE */}
       <div className="content-wrapper">
         <h2 className="page-title">Quản lý sản phẩm nghiệp vụ</h2>
         <button className="btn-add-new" onClick={() => navigate('/business-management/add')}>
@@ -177,27 +318,9 @@ const ProductBusinessPage: React.FC = () => {
         </button>
       </div>
 
-      {/* FILTER SECTION */}
       <div className="filter-section">
-        {/* Ô tìm kiếm từ khóa */}
-        <div className="search-container">
-          <span className="search-icon">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm theo mã, tên sản phẩm..." 
-            className="search-input" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
         <div className="dropdown-group-container">
           <div className="dropdown-row">
-            {/* Dropdown Trạng thái */}
             <div className="dropdown-wrapper" ref={statusRef}>
               <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}>
                 <span>Trạng thái</span>
@@ -218,7 +341,6 @@ const ProductBusinessPage: React.FC = () => {
               )}
             </div>
 
-            {/* Dropdown Danh mục sản phẩm */}
             <div className="dropdown-wrapper" ref={categoryRef}>
               <button className="btn-dropdown" onClick={handleToggleCategoryDropdown}>
                 <span>Danh mục sản phẩm</span>
@@ -260,7 +382,6 @@ const ProductBusinessPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Thanh hiển thị các Tag điều kiện đã chọn */}
           <div className="selected-filters-row">
             {selectedStatus && (
               <FilterTag 
@@ -277,18 +398,58 @@ const ProductBusinessPage: React.FC = () => {
             ))}
           </div>
         </div>
+
+        <div className="search-container">
+          <span className="search-icon">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm" 
+            className="search-input" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* BẢNG DỮ LIỆU */}
-      <div className="table-placeholder">
-        {loading ? (
-          <div className="loading-spinner">Đang tải dữ liệu...</div>
-        ) : data.length > 0 ? (
-          <ProductBusinessTable data={data} />
-        ) : (
-          <div className="empty-state">Không tìm thấy kết quả phù hợp.</div>
-        )}
+      <div className="table-placeholder" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <DataTable
+          columns={columns}
+          data={data}
+          keyExtractor={(row) => row.id}
+          onRowClick={(row) => navigate(`/business-management/${row.id}`)}
+          loading={loading}
+          emptyText="Không tìm thấy sản phẩm nghiệp vụ nào phù hợp."
+        />
       </div>
+
+      {warningData.show && (
+        <div className="warning-toast-wrapper">
+          <div className="warning-toast-card">
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg className="warning-toast-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            
+            <h3 className="warning-toast-title">{warningData.title}</h3>
+            <p className="warning-toast-desc">{warningData.message}</p>
+            
+            <div className="warning-toast-actions">
+              <button className="warning-btn-close" onClick={() => setWarningData({ ...warningData, show: false })}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

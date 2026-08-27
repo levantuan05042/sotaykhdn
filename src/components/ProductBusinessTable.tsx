@@ -1,92 +1,191 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
-import './ProductBusinessTable.css'; 
+import axios from 'axios';
+import './ProductBusinessPage.css';
+import DataTable, { type Column } from '../components/ui/DataTable';
+import StatusBadge2 from '../components/ui/StatusBadge2';
+import { API_ENDPOINTS } from '../config/apiConfig'; 
+import { getUserMap, getFullName } from '../utils/userUtils';
 
-interface ProductBusiness {
-  id: string;
-  name: string;    
-  groupName: string;     
-  categoryName: string; 
+const STATUS_OPTIONS = [
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Lưu nháp', value: 'DRAFT' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Từ chối', value: 'REJECTED' },
+  { label: 'Lưu trữ', value: 'ARCHIVED' }
+];
+
+interface CategoryOption {
+  value: string;
+  label: string;
+}
+
+const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
+  <div className="filter-tag">
+    <span>{label}</span>
+    <button className="btn-remove-tag" onClick={onRemove}>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+        <path d="M1 1L9 9M9 1L1 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  </div>
+);
+
+interface ProductBusinessItem {
+  id: any;
+  name: string;
+  groupName?: string;
+  categoryName?: string;
   status: string;
   active?: boolean;
   createdByFullName?: string | null;
   approvedBy?: string | null;
-  version?: number | null; 
+  version?: number | null;
 }
 
-interface Props {
-  data: ProductBusiness[];
-  onToggleActive?: (id: any, newActiveStatus: boolean) => void;
-}
-
-const ProductBusinessTable: React.FC<Props> = ({ data, onToggleActive }) => {
+const ProductBusinessPage: React.FC = () => {
   const navigate = useNavigate();
+  const [data, setData] = useState<ProductBusinessItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryOption[]>([]);
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
 
-  // ===== Pagination & State =====
-  const ITEMS_PER_PAGE = 10;
-  const [currentPage, setCurrentPage] = useState(1);
-  const [tableData, setTableData] = useState<ProductBusiness[]>([]);
   const [warningData, setWarningData] = useState<{ show: boolean; title: string; message: string }>({
     show: false,
     title: '',
     message: ''
   });
 
+  const statusRef = useRef<HTMLDivElement>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    setTableData(data);
-    setCurrentPage(1);
-  }, [data]);
+    const fetchCategoryOptions = async () => {
+      try {
+        const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST);
+        const rawData = response.data?.content || response.data || [];
+        const mappedCategories = rawData
+          .filter((item: any) => item.status === 'ACTIVE')
+          .map((item: any) => ({
+            value: item.id,
+            label: item.name
+          }));
+        setCategoryOptions(mappedCategories);
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách danh mục sản phẩm:', error);
+      }
+    };
+    fetchCategoryOptions();
+  }, []);
 
-  const totalPages = Math.ceil((tableData?.length || 0) / ITEMS_PER_PAGE);
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.PRODUCT_BUSINESS.LIST, {
+        params: {
+          keyword: searchTerm.trim() || undefined,
+          status: selectedStatus || undefined,
+          categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined, 
+        },
+        paramsSerializer: (params) => {
+          const searchParams = new URLSearchParams();
+          Object.entries(params).forEach(([key, value]) => {
+            if (Array.isArray(value)) {
+              value.forEach(v => searchParams.append(key, v)); 
+            } else if (value !== undefined) {
+              searchParams.append(key, String(value));
+            }
+          });
+          return searchParams.toString();
+        }
+      });
+      
+      const resultData = response.data?.content || response.data;
+      const rawList = Array.isArray(resultData) ? resultData : [];
+      const userMap = getUserMap();
 
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return tableData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [tableData, currentPage]);
+      const enrichedData = rawList.map((item: any) => {
+        const creatorCode = item.createdBy || item.createdByFullName; 
+        const approverCode = item.approvedBy;
 
-  const handleViewDetail = (id: string) => {
-    navigate(`/business-management/${id}`);
+        return {
+          ...item,
+          createdByFullName: getFullName(creatorCode, userMap) || '---',
+          approvedBy: getFullName(approverCode, userMap) || '---' 
+        };
+      });
+
+      setData(enrichedData);
+
+    } catch (error) {
+      console.error('Lỗi khi gọi API danh sách sản phẩm nghiệp vụ:', error);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleToggleActive = async (item: ProductBusiness, currentActive: boolean) => {
-    const newActiveStatus = !currentActive;
+  useEffect(() => {
+    const handler = setTimeout(() => fetchData(), 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm, selectedStatus, selectedCategories]);
 
-    // 1. Optimistic Update (Cập nhật UI ngay lập tức)
-    setTableData(prevData => 
-      prevData.map(d => 
-        d.id === item.id ? { ...d, active: newActiveStatus } : d
-      )
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (statusRef.current && !statusRef.current.contains(event.target as Node) &&
+          categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getLabel = (options: any[], value: string) => {
+    return options.find(opt => opt.value === value)?.label || value;
+  };
+
+  const handleCategorySelect = (val: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(val) ? prev.filter(item => item !== val) : [...prev, val]
+    );
+  };
+
+  const handleToggleCategoryDropdown = () => {
+    if (openDropdown === 'category') {
+      setOpenDropdown(null);
+    } else {
+      setOpenDropdown('category');
+      setCategorySearchTerm(''); 
+    }
+  };
+
+  const filteredCategoryOptions = categoryOptions.filter(opt =>
+    opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())
+  );
+
+  const handleToggleActive = async (item: ProductBusinessItem, currentActive: boolean) => {
+    const newActiveStatus = !currentActive;
+    setData(prevData => 
+      prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
     );
 
     try {
-      // 2. Gọi API cập nhật trạng thái
       const response = await fetch(`http://localhost:8082/api/v1/business/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-
-      if (!response.ok) {
-        throw new Error('Không thể thay đổi trạng thái');
-      }
-
-      if (onToggleActive) {
-        onToggleActive(item.id, newActiveStatus);
-      }
-
+      if (!response.ok) throw new Error('Không thể thay đổi trạng thái');
     } catch (error) {
       console.error("Lỗi cập nhật hiệu lực sản phẩm nghiệp vụ:", error);
-      
-      // 3. Rollback UI nếu lỗi
-      setTableData(prevData => 
-        prevData.map(d => 
-          d.id === item.id ? { ...d, active: currentActive } : d
-        )
+      setData(prevData => 
+        prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
       );
-
-      // 4. Mở popup cảnh báo
       setWarningData({
         show: true,
         title: `Không thể ẩn sản phẩm: "${item.name}"`,
@@ -95,27 +194,19 @@ const ProductBusinessTable: React.FC<Props> = ({ data, onToggleActive }) => {
     }
   };
 
-  const renderActiveToggle = (item: ProductBusiness) => {
+  const renderActiveToggle = (item: ProductBusinessItem) => {
     const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.active || false;
 
     return (
-      <div 
-        className="toggle-wrapper"
-        onClick={(e) => e.stopPropagation()} // Ngăn sự kiện click lan ra thẻ <tr>
-      >
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
         <label className="toggle-switch">
           <input 
             type="checkbox" 
             checked={isActive} 
             disabled={isDisabled}
-            onChange={(e) => {
-              e.stopPropagation();
-              if (!isDisabled) {
-                handleToggleActive(item, isActive);
-              }
-            }}
+            onChange={() => { if (!isDisabled) handleToggleActive(item, isActive); }}
           />
           <span className="toggle-slider"></span>
         </label>
@@ -126,162 +217,215 @@ const ProductBusinessTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
   };
 
+  const columns: Column<ProductBusinessItem>[] = [
+    {
+      key: 'stt',
+      header: 'STT',
+      width: '70px',
+      align: 'center',
+      render: (_, index) => index + 1,
+    },
+    {
+      key: 'name',
+      header: 'Tên nghiệp vụ',
+      render: (row) => (
+        <span className="truncate-text product-group-item-title" title={row.name}>
+          {row.name}
+        </span>
+      ),
+    },
+    {
+      key: 'groupName',
+      header: 'Nhóm sản phẩm',
+      render: (row) => (
+        <span className="truncate-text" title={row.groupName || '---'}>
+          {row.groupName || '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'categoryName',
+      header: 'Danh mục sản phẩm',
+      render: (row) => (
+        <span className="truncate-text" title={row.categoryName || '---'}>
+          {row.categoryName || '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '180px',
+      render: (row) => <StatusBadge2 status={row.status} />,
+    },
+    {
+      key: 'active',
+      header: 'Hiệu lực',
+      render: (row) => renderActiveToggle(row),
+    },
+    {
+      key: 'createdByFullName',
+      header: 'Người tạo',
+      render: (row) => row.createdByFullName || '---',
+    },
+    {
+      key: 'approvedBy',
+      header: 'Người kiểm duyệt',
+      render: (row) => row.approvedBy || '---',
+    },
+    {
+      key: 'version',
+      header: 'Phiên bản',
+      render: (row) => (
+        <span style={{ fontWeight: 600, color: '#053E2B' }}>
+          {row.version ? `Phiên bản ${row.version}` : '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'action',
+      header: '',
+      width: '80px',
+      align: 'center',
+      render: (row) => (
+        <button
+          className="btn-view-detail"
+          title="Xem chi tiết"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/business-management/${row.id}`);
+          }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      ),
+    },
+  ];
+
   return (
-    <div className="product-table-container">
-      <table className="product-table table-text-base">
-        <thead>
-          <tr>
-            <th className="px-40 rounded-l-12 w-24">STT</th>
-            <th>Tên nghiệp vụ</th>
-            <th>Nhóm sản phẩm</th>
-            <th>Danh mục sản phẩm</th>
-            <th>Trạng thái</th>
-            <th>Hiệu lực</th>
-            <th>Người tạo</th>
-            <th>Người kiểm duyệt</th>
-            <th>Phiên bản</th>
-            <th className="px-40 rounded-r-12"></th>
-          </tr>
-        </thead>
+    <div className="product-group-container">
+      <div className="content-wrapper">
+        <h2 className="page-title">Quản lý sản phẩm nghiệp vụ</h2>
+        <button className="btn-add-new" onClick={() => navigate('/business-management/add')}>
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M6.66927 0.834961V12.5016M0.835938 6.66829H12.5026" stroke="#FDFCFD" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>Thêm mới</span>
+        </button>
+      </div>
 
-        <tbody>
-          {paginatedData.length > 0 ? (
-            paginatedData.map((item, index) => (
-              <tr 
-                key={item.id || index}
-                onClick={() => handleViewDetail(item.id)} // Click toàn bộ hàng để xem chi tiết
-              >
-                <td className="px-40">
-                  {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                </td>
+      <div className="filter-section">
+        <div className="dropdown-group-container">
+          <div className="dropdown-row">
+            <div className="dropdown-wrapper" ref={statusRef}>
+              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}>
+                <span>Trạng thái</span>
+                <svg className={`chevron-icon ${openDropdown === 'status' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              {openDropdown === 'status' && (
+                <div className="dropdown-menu">
+                  {STATUS_OPTIONS.map(opt => (
+                    <div key={opt.value} className={`menu-item ${selectedStatus === opt.value ? 'selected' : ''}`}
+                      onClick={() => { setSelectedStatus(opt.value); setOpenDropdown(null); }}>
+                      <span>{opt.label}</span>
+                      {selectedStatus === opt.value && <i className="check-icon">✔</i>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
-                <td className="product-name-cell">
-                  <span className="truncate-text" title={item.name}>
-                    {item.name}
-                  </span>
-                </td>
+            <div className="dropdown-wrapper" ref={categoryRef}>
+              <button className="btn-dropdown" onClick={handleToggleCategoryDropdown}>
+                <span>Danh mục sản phẩm</span>
+                <svg className={`chevron-icon ${openDropdown === 'category' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              
+              {openDropdown === 'category' && (
+                <div className="dropdown-menu">
+                  <div className="dropdown-search-box">
+                    <input
+                      type="text"
+                      placeholder="Tìm danh mục..."
+                      className="dropdown-search-input"
+                      value={categorySearchTerm}
+                      onChange={(e) => setCategorySearchTerm(e.target.value)}
+                      autoFocus
+                    />
+                  </div>
 
-                <td>
-                  <span className="truncate-text" title={item.groupName}>
-                    {item.groupName || '---'}
-                  </span>
-                </td>
-                
-                <td>
-                  <span className="truncate-text" title={item.categoryName}>
-                    {item.categoryName || '---'}
-                  </span>
-                </td>
-
-                {/* Gọi Component StatusBadge2 dùng chung */}
-                <td>
-                  <StatusBadge2 status={item.status} />
-                </td>
-
-                <td>{renderActiveToggle(item)}</td>
-                <td>{item.createdByFullName || '---'}</td>
-                <td>{item.approvedBy || '---'}</td>
-                <td style={{ 
-                  color: '#053E2B', 
-                  fontFamily: 'Inter, sans-serif', 
-                  fontSize: '16px', 
-                  fontWeight: 600, 
-                  lineHeight: '24px', 
-                  flex: '1 0 0' 
-                }}>
-                  {item.version ? `Phiên bản ${item.version}` : '---'}
-                </td>
-
-                <td className="px-40 text-right">
-                  <button
-                    className="btn-view-detail"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Tránh trùng sự kiện click với tr
-                      handleViewDetail(item.id);
-                    }}
-                    title='Xem chi tiết'
-                  >
-                    <svg
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="mr-1.5"
-                    >
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={10} className="text-center py-20 text-gray-400">
-                Không có dữ liệu hiển thị
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-
-      {/* ===== Pagination ===== */}
-      {totalPages > 1 && (
-        <div className="pagination-wrapper">
-          <div className="pagination-container">
-            <button
-              className="pagination-arrow"
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => prev - 1)}
-            >
-              ←
-            </button>
-
-            {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((page) => {
-                return (
-                  page === 1 ||
-                  page === totalPages ||
-                  (page >= currentPage - 1 && page <= currentPage + 1)
-                );
-              })
-              .map((page, index, arr) => {
-                const prevPage = arr[index - 1];
-
-                return (
-                  <React.Fragment key={page}>
-                    {prevPage && page - prevPage > 1 && (
-                      <span className="pagination-dots">...</span>
+                  <div className="dropdown-scroll-items">
+                    {categoryOptions.length === 0 ? (
+                      <div className="menu-item disabled">Đang tải dữ liệu...</div>
+                    ) : filteredCategoryOptions.length === 0 ? (
+                      <div className="menu-item disabled">Không tìm thấy kết quả</div>
+                    ) : (
+                      filteredCategoryOptions.map(opt => (
+                        <div key={opt.value} className={`menu-item ${selectedCategories.includes(opt.value) ? 'selected' : ''}`}
+                          onClick={() => handleCategorySelect(opt.value)}>
+                          <span>{opt.label}</span>
+                          {selectedCategories.includes(opt.value) && <i className="check-icon">✔</i>}
+                        </div>
+                      ))
                     )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
-                    <button
-                      className={`pagination-number ${
-                        currentPage === page ? 'active' : ''
-                      }`}
-                      onClick={() => setCurrentPage(page)}
-                    >
-                      {page}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-
-            <button
-              className="pagination-arrow"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((prev) => prev + 1)}
-            >
-              →
-            </button>
+          <div className="selected-filters-row">
+            {selectedStatus && (
+              <FilterTag 
+                label={getLabel(STATUS_OPTIONS, selectedStatus)} 
+                onRemove={() => setSelectedStatus(null)} 
+              />
+            )}
+            {selectedCategories.map(catVal => (
+              <FilterTag 
+                key={catVal} 
+                label={getLabel(categoryOptions, catVal)} 
+                onRemove={() => handleCategorySelect(catVal)} 
+              />
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Modal Cảnh báo */}
+        <div className="search-container">
+          <span className="search-icon">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm" 
+            className="search-input" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="table-placeholder" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <DataTable
+          columns={columns}
+          data={data}
+          keyExtractor={(row) => row.id}
+          onRowClick={(row) => navigate(`/business-management/${row.id}`)}
+          loading={loading}
+          emptyText="Không tìm thấy sản phẩm nghiệp vụ nào phù hợp."
+        />
+      </div>
+
       {warningData.show && (
         <div className="warning-toast-wrapper">
           <div className="warning-toast-card">
@@ -299,10 +443,7 @@ const ProductBusinessTable: React.FC<Props> = ({ data, onToggleActive }) => {
             <p className="warning-toast-desc">{warningData.message}</p>
             
             <div className="warning-toast-actions">
-              <button 
-                className="warning-btn-close" 
-                onClick={() => setWarningData({ ...warningData, show: false })}
-              >
+              <button className="warning-btn-close" onClick={() => setWarningData({ ...warningData, show: false })}>
                 Đóng
               </button>
             </div>
@@ -313,4 +454,4 @@ const ProductBusinessTable: React.FC<Props> = ({ data, onToggleActive }) => {
   );
 };
 
-export default ProductBusinessTable;
+export default ProductBusinessPage;

@@ -2,12 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ProductGroupPage.css';
-import DataTable, { type Column } from '../components/ui/DataTable'; // Import DataTable chuẩn
+import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 
-// --- MAPPING DATA ---
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
   { label: 'Lưu nháp', value: 'DRAFT' },
@@ -65,7 +64,6 @@ const ProductGroupPage: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Gọi API lấy danh sách đầy đủ (DataTable sẽ xử lý phân trang client-side giống ApproverProductGroupListPage)
       const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
         params: {
           keyword: searchTerm.trim() || undefined,
@@ -87,7 +85,6 @@ const ProductGroupPage: React.FC = () => {
       
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
-
       const userMap = getUserMap();
 
       const enrichedData = rawList.map((item: any) => ({
@@ -97,7 +94,6 @@ const ProductGroupPage: React.FC = () => {
       }));
 
       setData(enrichedData);
-
     } catch (error) {
       console.error('Lỗi khi gọi API:', error);
       setData([]);
@@ -132,15 +128,10 @@ const ProductGroupPage: React.FC = () => {
     );
   };
 
-  // Xử lý bật/tắt hiệu lực (Active Toggle)
   const handleToggleActive = async (item: ProductGroupItem, currentActive: boolean) => {
     const newActiveStatus = !currentActive;
-
-    // 1. Optimistic Update
     setData(prevData => 
-      prevData.map(d => 
-        d.id === item.id ? { ...d, active: newActiveStatus } : d
-      )
+      prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
     );
 
     try {
@@ -148,20 +139,12 @@ const ProductGroupPage: React.FC = () => {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-
-      if (!response.ok) {
-        throw new Error('Không thể thay đổi trạng thái');
-      }
+      if (!response.ok) throw new Error('Không thể thay đổi trạng thái');
     } catch (error) {
       console.error("Lỗi cập nhật hiệu lực:", error);
-      
-      // Rollback UI nếu lỗi
       setData(prevData => 
-        prevData.map(d => 
-          d.id === item.id ? { ...d, active: currentActive } : d
-        )
+        prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
       );
-
       setWarningData({
         show: true,
         title: `Không thể ẩn nhóm: "${item.name}"`,
@@ -182,11 +165,7 @@ const ProductGroupPage: React.FC = () => {
             type="checkbox" 
             checked={isActive} 
             disabled={isDisabled}
-            onChange={() => {
-              if (!isDisabled) {
-                handleToggleActive(item, isActive);
-              }
-            }}
+            onChange={() => { if (!isDisabled) handleToggleActive(item, isActive); }}
           />
           <span className="toggle-slider"></span>
         </label>
@@ -281,21 +260,7 @@ const ProductGroupPage: React.FC = () => {
       </div>
 
       <div className="filter-section">
-        <div className="search-container">
-          <span className="search-icon">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm" 
-            className="search-input" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
+        {/* Nhóm Dropdown và Tags nằm bên trái */}
         <div className="dropdown-group-container">
           <div className="dropdown-row">
             {/* Dropdown Trạng thái */}
@@ -348,6 +313,22 @@ const ProductGroupPage: React.FC = () => {
             ))}
           </div>
         </div>
+
+        {/* Ô Tìm kiếm nằm bên phải */}
+        <div className="search-container">
+          <span className="search-icon">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm" 
+            className="search-input" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="table-placeholder" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
@@ -361,7 +342,6 @@ const ProductGroupPage: React.FC = () => {
         />
       </div>
 
-      {/* Warning Toast khi toggle lỗi */}
       {warningData.show && (
         <div className="warning-toast-wrapper">
           <div className="warning-toast-card">
@@ -379,10 +359,7 @@ const ProductGroupPage: React.FC = () => {
             <p className="warning-toast-desc">{warningData.message}</p>
             
             <div className="warning-toast-actions">
-              <button 
-                className="warning-btn-close" 
-                onClick={() => setWarningData({ ...warningData, show: false })}
-              >
+              <button className="warning-btn-close" onClick={() => setWarningData({ ...warningData, show: false })}>
                 Đóng
               </button>
             </div>

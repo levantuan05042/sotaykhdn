@@ -1,13 +1,13 @@
 .product-group-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;          /* Khóa cứng chiều cao bằng màn hình */
+  height: 100vh;
   max-height: 100vh;
   background-color: #F9FAFB;
   padding: 20px;
   gap: 20px;
   box-sizing: border-box;
-  overflow: hidden;       /* Ngăn không cho cả trang bị cuộn */
+  overflow: hidden;
 }
 
 .content-wrapper,
@@ -58,69 +58,40 @@
   font-weight: 600;
 }
 
-/* --- FILTER & SEARCH SECTION --- */
 .filter-section {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;           
+  justify-content: space-between; 
+  align-items: center;           
   border-radius: 12px;
   border: 1px solid #F2EFF3;
   background-color: #F2EFF3;
-  padding: 10px 20px;
+  padding: 12px 20px;
   gap: 20px;
+  box-sizing: border-box;
 }
 
-.search-container {
-  position: relative;
-  width: 100%;
-}
-
-.search-icon {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 16px;
-  display: flex;
-  align-items: center;
-}
-
-.search-input {
-  display: block;
-  width: 100%;
-  border: 1px solid #E5E5E5;
-  border-radius: 10px;
-  background-color: #FDFCFD;
-  padding: 16px 16px 16px 48px;
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  color: #1A191B;
-  outline: none;
-  transition: box-shadow 0.2s;
-}
-
-.search-input:focus {
-  box-shadow: 0 0 0 1px #AE1C3F;
-}
-
-.search-input::placeholder {
-  color: #737373;
-}
-
-/* --- DROPDOWN FILTERS --- */
 .dropdown-group-container {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
+  min-width: 0;                  /* Ngăn không cho khối bên trái bóp méo hoặc đẩy ô tìm kiếm */
 }
 
+/* Hàng chứa các nút dropdown */
 .dropdown-row {
   display: flex;
   align-items: center;
-  gap: 20px;
-  height: 44px;
+  gap: 24px;
+  height: 36px;                  /* Cố định chiều cao tương thích với ô tìm kiếm */
 }
 
 .dropdown-wrapper {
   position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .btn-dropdown {
@@ -129,8 +100,9 @@
   background-color: transparent;
   border: none;
   cursor: pointer;
-  padding: 10px 0; /* Giảm padding ngang nếu đã có gap ở parent */
+  padding: 0;
   gap: 8px;
+  height: 100%;
 }
 
 .btn-dropdown span {
@@ -150,7 +122,7 @@
 
 .dropdown-menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 6px);
   left: 0;
   min-width: 240px;
   background: #FFFFFF;
@@ -177,11 +149,54 @@
   color: #171717;
 }
 
+/* --- Ô TÌM KIẾM BÊN PHẢI --- */
+.search-container {
+  position: relative;
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.search-input {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 40px;                   /* Đồng bộ chiều cao chuẩn */
+  border: 1px solid #E5E5E5;
+  border-radius: 10px;
+  background-color: #FDFCFD;
+  padding: 0 16px 0 48px;         /* Căn chỉnh padding fit tuyệt đối cho icon */
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  color: #1A191B;
+  outline: none;
+  box-sizing: border-box;
+  transition: box-shadow 0.2s;
+}
+
+.search-input:focus {
+  box-shadow: 0 0 0 1px #AE1C3F;
+}
+
+.search-input::placeholder {
+  color: #737373;
+}
+
 /* --- SELECTED TAGS (CHIPS) --- */
 .selected-filters-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .filter-tag {
@@ -216,6 +231,8 @@
 .btn-remove-tag:hover {
   color: #AE1C3F;
 }
+
+/* --- TABLE SECTION --- */
 .table-placeholder {
   flex: 1;            
   background-color: #ffffff;
@@ -224,51 +241,50 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;     
-  min-height: 0;      
+  min-height: 0;  
+  padding: 0px !important;    
 }
 
-/* Đảm bảo khung bọc chứa bảng hiển thị flex column */
 .table-placeholder > div {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden !important; /* Tắt cuộn ở thẻ bọc ngoài cùng */
+  display: block;
+  overflow: auto !important;
   min-height: 0;
+  scrollbar-gutter: stable;
 }
 
-/* 1. Đưa thanh cuộn dọc dịch xuống chỉ ôm gọn phần tbody bên dưới */
 .table-placeholder table {
+  width: 100%;
   min-width: 1300px !important;
-  display: flex;
-  flex-direction: column;
-  height: 100%;
+  table-layout: fixed !important;
+  border-collapse: collapse;
 }
 
 .table-placeholder thead {
-  flex-shrink: 0;
-  display: table;
-  width: 100%;
-  table-layout: fixed;
+  display: table-header-group !important;
 }
 
 .table-placeholder tbody {
-  display: block;
-  overflow-y: auto !important; 
-  overflow-x: auto !important; 
-  flex: 1;
-  width: 100%;
+  display: table-row-group !important;
 }
 
 .table-placeholder tr {
-  display: table;
+  display: table-row !important;
   width: 100%;
-  table-layout: fixed;
+}
+
+.table-placeholder th,
+.table-placeholder td {
+  display: table-cell !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .table-placeholder thead th {
-  position: sticky;
+  position: sticky !important;
   top: 0;
-  background-color: #f2eff3;
+  background-color: #f2eff3 !important;
   z-index: 10;
   box-shadow: inset 0 -1px 0 #e3dfe6;
 }

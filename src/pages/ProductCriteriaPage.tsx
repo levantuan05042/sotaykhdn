@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ProductCriteriaPage.css';
-import ProductCriteriaTable from '../components/ProductCriteriaTable';
+import DataTable, { type Column } from '../components/ui/DataTable';
+import StatusBadge2 from '../components/ui/StatusBadge2';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
-import { getUserMap, getFullName } from '../utils/userUtils'; // IMPORT TỪ UTILS
+import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -33,23 +34,24 @@ const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, o
 
 const ProductCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
-  
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  
-  // Bộ lọc theo các Nhóm sản phẩm được chọn
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
-
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
 
+  const [warningData, setWarningData] = useState<{ show: boolean; title: string; message: string }>({
+    show: false,
+    title: '',
+    message: ''
+  });
+
   const statusRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
 
-  // Gọi API lấy danh sách Nhóm sản phẩm đổ vào bộ lọc Dropdown
   useEffect(() => {
     const fetchGroupOptions = async () => {
       try {
@@ -60,10 +62,9 @@ const ProductCriteriaPage: React.FC = () => {
             value: item.id,
             label: item.name
           }));
-          
         setGroupOptions(mappedGroups);
       } catch (error) {
-        console.error('Lỗi khi lấy danh sách nhóm sản phẩm:', error);
+        console.error(error);
       }
     };
     fetchGroupOptions();
@@ -93,15 +94,11 @@ const ProductCriteriaPage: React.FC = () => {
       
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
-
-      // SỬ DỤNG HÀM TỪ UTILS: Lấy map user 1 lần duy nhất
       const userMap = getUserMap();
 
-      // Sử dụng hàm getFullName để tách chuỗi và lấy tên hiển thị
       const enrichedData = rawList.map((item: any) => {
         const creatorCode = item.createdBy || item.createdByFullName; 
         const approverCode = item.approvedBy;
-
         return {
           ...item,
           createdByFullName: getFullName(creatorCode, userMap) || '---',
@@ -110,22 +107,19 @@ const ProductCriteriaPage: React.FC = () => {
       });
 
       setData(enrichedData);
-
     } catch (error) {
-      console.error('Lỗi khi gọi API danh sách tiêu chí sản phẩm:', error);
+      console.error(error);
       setData([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Debounce 500ms tự động kích hoạt tìm kiếm khi thay đổi các bộ lọc đầu vào
   useEffect(() => {
     const handler = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(handler);
   }, [searchTerm, selectedStatus, selectedGroups]);
 
-  // Bắt sự kiện click bên ngoài để ẩn dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (statusRef.current && !statusRef.current.contains(event.target as Node) &&
@@ -156,14 +150,152 @@ const ProductCriteriaPage: React.FC = () => {
     }
   };
 
-  // Lọc danh sách nhóm hiển thị trực tiếp theo từ khóa search nội bộ dropdown
+  const handleToggleActive = async (item: any, currentActive: boolean) => {
+    const newActiveStatus = !currentActive;
+    setData(prevData => 
+      prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
+    );
+
+    try {
+      const response = await fetch(`http://localhost:8082/api/v1/criteria/${item.id}/active?active=${newActiveStatus}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!response.ok) throw new Error('Error');
+    } catch (error) {
+      setData(prevData => 
+        prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
+      );
+      setWarningData({
+        show: true,
+        title: `Không thể ẩn tiêu chí: "${item.name}"`,
+        message: "Tiêu chí này đang được sử dụng hoặc gặp sự cố khi cập nhật."
+      });
+    }
+  };
+
+  const renderActiveToggle = (item: any) => {
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const isDisabled = disabledStatuses.includes(item.status);
+    const isActive = item.active || false;
+
+    return (
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
+        <label className="toggle-switch">
+          <input 
+            type="checkbox" 
+            checked={isActive} 
+            disabled={isDisabled}
+            onChange={() => { if (!isDisabled) handleToggleActive(item, isActive); }}
+          />
+          <span className="toggle-slider"></span>
+        </label>
+        <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
+          {isActive ? 'Hiện' : 'Ẩn'}
+        </span>
+      </div>
+    );
+  };
+
+  const columns: Column<any>[] = [
+    {
+      key: 'stt',
+      header: 'STT',
+      width: '70px',
+      align: 'center',
+      render: (_, index) => index + 1,
+    },
+    {
+      key: 'code',
+      header: 'Mã tiêu chí',
+      width: '120px',
+      render: (row) => (
+        <span className="truncate-text" title={row.code}>
+          {row.code}
+        </span>
+      ),
+    },
+    {
+      key: 'name',
+      header: 'Tên tiêu chí',
+      render: (row) => (
+        <span className="truncate-text" title={row.isRequired ? `${row.name} *` : row.name}>
+          {row.name}
+          {row.isRequired && <span style={{ color: 'red', marginLeft: '4px' }}>*</span>}
+        </span>
+      ),
+    },
+    {
+      key: 'productGroups',
+      header: 'Nhóm sản phẩm',
+      render: (row) => {
+        const activeGroups = row.productGroups && Array.isArray(row.productGroups)
+          ? row.productGroups.filter((g: any) => g.status === 'ACTIVE')
+          : [];
+        const text = activeGroups.length > 0 ? activeGroups.map((g: any) => g.name).join(', ') : '---';
+        return <span className="truncate-text" title={text}>{text}</span>;
+      }
+    },
+    {
+      key: 'status',
+      header: 'Trạng thái',
+      width: '180px',
+      render: (row) => <StatusBadge2 status={row.status} />,
+    },
+    {
+      key: 'active',
+      header: 'Hiệu lực',
+      render: (row) => renderActiveToggle(row),
+    },
+    {
+      key: 'createdByFullName',
+      header: 'Người tạo',
+      render: (row) => row.createdByFullName || '---',
+    },
+    {
+      key: 'approvedBy',
+      header: 'Người kiểm duyệt',
+      render: (row) => row.approvedBy || '---',
+    },
+    {
+      key: 'version',
+      header: 'Phiên bản',
+      render: (row) => (
+        <span style={{ fontWeight: 600, color: '#053E2B' }}>
+          {row.version ? `Phiên bản ${row.version}` : '---'}
+        </span>
+      ),
+    },
+    {
+      key: 'action',
+      header: '',
+      width: '80px',
+      align: 'center',
+      render: (row) => (
+        <button
+          className="btn-view-detail"
+          title="Xem chi tiết"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/criteria-management/${row.id}`);
+          }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
+      ),
+    },
+  ];
+
   const filteredGroupOptions = groupOptions.filter(opt =>
     opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
   );
 
   return (
-    <div className="product-group-container">
-      {/* HEADER PAGE */}
+    <div className="product-criteria-container">
       <div className="content-wrapper">
         <h2 className="page-title">Quản lý danh sách tiêu chí</h2>
         <button className="btn-add-new" onClick={() => navigate('/criteria-management/add')}>
@@ -174,27 +306,9 @@ const ProductCriteriaPage: React.FC = () => {
         </button>
       </div>
 
-      {/* FILTER SECTION */}
       <div className="filter-section">
-        {/* Ô tìm kiếm từ khóa */}
-        <div className="search-container">
-          <span className="search-icon">
-            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm" 
-            className="search-input" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
         <div className="dropdown-group-container">
           <div className="dropdown-row">
-            {/* Dropdown Trạng thái */}
             <div className="dropdown-wrapper" ref={statusRef}>
               <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}>
                 <span>Trạng thái</span>
@@ -215,7 +329,6 @@ const ProductCriteriaPage: React.FC = () => {
               )}
             </div>
 
-            {/* Dropdown Nhóm sản phẩm */}
             <div className="dropdown-wrapper" ref={groupRef}>
               <button className="btn-dropdown" onClick={handleToggleGroupDropdown}>
                 <span>Nhóm sản phẩm</span>
@@ -223,7 +336,6 @@ const ProductCriteriaPage: React.FC = () => {
                   <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              
               {openDropdown === 'group' && (
                 <div className="dropdown-menu">
                   <div className="dropdown-search-box">
@@ -236,7 +348,6 @@ const ProductCriteriaPage: React.FC = () => {
                       autoFocus
                     />
                   </div>
-
                   <div className="dropdown-scroll-items">
                     {groupOptions.length === 0 ? (
                       <div className="menu-item disabled">Đang tải dữ liệu...</div>
@@ -257,7 +368,6 @@ const ProductCriteriaPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Thanh hiển thị danh sách các Tags bộ lọc hiện tại */}
           <div className="selected-filters-row">
             {selectedStatus && (
               <FilterTag 
@@ -274,18 +384,56 @@ const ProductCriteriaPage: React.FC = () => {
             ))}
           </div>
         </div>
+
+        <div className="search-container">
+          <span className="search-icon">
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M19 19L14.65 14.65M17 9C17 13.4183 13.4183 17 9 17C4.58172 17 1 13.4183 1 9C1 4.58172 4.58172 1 9 1C13.4183 1 17 4.58172 17 9Z" stroke="#737373" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm" 
+            className="search-input" 
+            value={searchTerm} 
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
-      {/* BẢNG DỮ LIỆU */}
-      <div className="table-placeholder">
-        {loading ? (
-          <div className="loading-spinner">Đang tải dữ liệu...</div>
-        ) : data.length > 0 ? (
-          <ProductCriteriaTable data={data} />
-        ) : (
-          <div className="empty-state">Không tìm thấy kết quả phù hợp.</div>
-        )}
+      <div className="table-placeholder" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <DataTable
+          columns={columns}
+          data={data}
+          keyExtractor={(row) => row.id}
+          onRowClick={(row) => navigate(`/criteria-management/${row.id}`)}
+          loading={loading}
+          emptyText="Không tìm thấy kết quả phù hợp."
+        />
       </div>
+
+      {warningData.show && (
+        <div className="warning-toast-wrapper">
+          <div className="warning-toast-card">
+            <div className="warning-toast-icon-container">
+              <div className="warning-bg-outer"></div>
+              <div className="warning-bg-inner"></div>
+              <svg className="warning-toast-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                <line x1="12" y1="9" x2="12" y2="13"></line>
+                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+              </svg>
+            </div>
+            <h3 className="warning-toast-title">{warningData.title}</h3>
+            <p className="warning-toast-desc">{warningData.message}</p>
+            <div className="warning-toast-actions">
+              <button className="warning-btn-close" onClick={() => setWarningData({ ...warningData, show: false })}>
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

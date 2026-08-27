@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge2 from './ui/StatusBadge2'; // <--- Import Component mới của bạn
+import StatusBadge2 from './ui/StatusBadge2';
 import './ProductGroupTable.css'; 
 
 interface ProductGroup {
@@ -48,7 +48,6 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const handleToggleActive = async (item: ProductGroup, currentActive: boolean) => {
     const newActiveStatus = !currentActive;
 
-    // 1. Optimistic Update
     setTableData(prevData => 
       prevData.map(d => 
         d.id === item.id ? { ...d, active: newActiveStatus } : d
@@ -56,7 +55,6 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
 
     try {
-      // 2. Gọi API
       const response = await fetch(`http://localhost:8082/api/v1/product-groups/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: {
@@ -75,14 +73,12 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
     } catch (error) {
       console.error("Lỗi cập nhật hiệu lực:", error);
       
-      // 3. Rollback UI
       setTableData(prevData => 
         prevData.map(d => 
           d.id === item.id ? { ...d, active: currentActive } : d
         )
       );
 
-      // 4. Mở popup hiển thị text cảnh báo
       setWarningData({
         show: true,
         title: `Không thể ẩn nhóm: "${item.name}"`,
@@ -117,79 +113,99 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
       </div>
     );
   };
-   return (
-  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-    {/* Vùng chứa bảng có thanh cuộn */}
-    <div className="product-table-container">
-      <table className="product-table table-text-base">
-        <thead>
-          <tr>
-            <th className="px-40 rounded-l-12 w-24">STT</th>
-            <th>Tên nhóm sản phẩm</th>
-            <th>Trạng thái</th>
-            <th>Hiệu lực</th>
-            <th>Người tạo</th>
-            <th>Người kiểm duyệt</th>
-            <th>Phiên bản</th>
-            <th className="px-40 rounded-r-12"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedData.length > 0 ? (
-            paginatedData.map((item, index) => (
-              <tr key={item.id || index} onClick={() => handleViewDetail(item.id)}>
-                <td className="px-40">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
-                <td className="product-name-cell">
-                  <span className="truncate-text" title={item.name}>{item.name}</span>
-                </td>
-                <td><StatusBadge2 status={item.status} /></td>
-                <td>{renderActiveToggle(item)}</td>
-                <td>{item.createdByFullName || '---'}</td>
-                <td>{item.approvedBy || '---'}</td>
-                <td style={{ color: '#053E2B', fontWeight: 600 }}>
-                  {item.version ? `Phiên bản ${item.version}` : '---'}
-                </td>
-                <td className="px-40 text-right" onClick={(e) => e.stopPropagation()}>
-                  <button className="btn-view-detail" onClick={() => handleViewDetail(item.id)} title="Xem chi tiết">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={8} className="text-center py-20 text-gray-400">Không có dữ liệu hiển thị</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
 
-    {/* Phần phân trang cố định ở đáy */}
-    {totalPages > 1 && (
-      <div className="pagination-wrapper" style={{ marginTop: '12px', marginBottom: '0px' }}>
-        <div className="pagination-container">
-          <button className="pagination-arrow" disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => prev - 1)}>←</button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1)
-            .filter((page) => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
-            .map((page, index, arr) => {
-              const prevPage = arr[index - 1];
-              return (
-                <React.Fragment key={page}>
-                  {prevPage && page - prevPage > 1 && <span className="pagination-dots">...</span>}
-                  <button className={`pagination-number ${currentPage === page ? 'active' : ''}`} onClick={() => setCurrentPage(page)}>
-                    {page}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          <button className="pagination-arrow" disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => prev + 1)}>→</button>
-        </div>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Vùng chứa bảng có thanh cuộn */}
+      <div className="product-table-container">
+        <table className="product-table table-text-base">
+          {/* Cố định chiều rộng từng cột để phần thead và tbody luôn khớp tuyệt đối */}
+          <colgroup>
+            <col style={{ width: '70px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '160px' }} />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '80px' }} />
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="rounded-l-12 text-center">STT</th>
+              <th>Tên nhóm sản phẩm</th>
+              <th>Trạng thái</th>
+              <th>Hiệu lực</th>
+              <th>Người tạo</th>
+              <th>Người kiểm duyệt</th>
+              <th>Phiên bản</th>
+              <th className="rounded-r-12"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {paginatedData.length > 0 ? (
+              paginatedData.map((item, index) => (
+                <tr key={item.id || index} onClick={() => handleViewDetail(item.id)}>
+                  <td className="text-center">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
+                  <td className="product-name-cell">
+                    <span className="truncate-text" title={item.name}>{item.name}</span>
+                  </td>
+                  <td><StatusBadge2 status={item.status} /></td>
+                  <td>{renderActiveToggle(item)}</td>
+                  <td>
+                    <span className="truncate-text" title={item.createdByFullName || '---'}>
+                      {item.createdByFullName || '---'}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="truncate-text" title={item.approvedBy || '---'}>
+                      {item.approvedBy || '---'}
+                    </span>
+                  </td>
+                  <td style={{ color: '#053E2B', fontWeight: 600 }}>
+                    {item.version ? `Phiên bản ${item.version}` : '---'}
+                  </td>
+                  <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                    <button className="btn-view-detail" onClick={() => handleViewDetail(item.id)} title="Xem chi tiết">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={8} className="text-center py-20 text-gray-400">Không có dữ liệu hiển thị</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-    )}
+
+      {/* Phần phân trang cố định ở đáy */}
+      {totalPages > 1 && (
+        <div className="pagination-wrapper" style={{ marginTop: '12px', marginBottom: '0px' }}>
+          <div className="pagination-container">
+            <button className="pagination-arrow" disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => prev - 1)}>←</button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((page) => page === 1 || page === totalPages || (page >= currentPage - 1 && page <= currentPage + 1))
+              .map((page, index, arr) => {
+                const prevPage = arr[index - 1];
+                return (
+                  <React.Fragment key={page}>
+                    {prevPage && page - prevPage > 1 && <span className="pagination-dots">...</span>}
+                    <button className={`pagination-number ${currentPage === page ? 'active' : ''}`} onClick={() => setCurrentPage(page)}>
+                      {page}
+                    </button>
+                  </React.Fragment>
+                );
+              })}
+            <button className="pagination-arrow" disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => prev + 1)}>→</button>
+          </div>
+        </div>
+      )}
 
       {warningData.show && (
         <div className="warning-toast-wrapper">
