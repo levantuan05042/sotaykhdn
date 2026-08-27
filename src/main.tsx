@@ -15,7 +15,13 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   if (newInit.credentials === undefined) {
     newInit.credentials = 'include';
   }
-  
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+  if (token) {
+    const headers = new Headers(newInit.headers || (input instanceof Request ? input.headers : undefined));
+    headers.set('Authorization', `Bearer ${token}`);
+    newInit.headers = headers;
+  }
+
   let request: RequestInfo | URL = input;
   if (input instanceof Request) {
     request = new Request(input, newInit);

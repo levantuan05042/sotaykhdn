@@ -235,8 +235,8 @@ const ProductDetailView: React.FC = () => {
   const buildBreadcrumbs = () => {
     if (!product) return [];
     const items = [{ name: 'Trang chủ', type: 'home', id: null }];
-    if (product.productGroupName || product.groupName) items.push({ name: product.productGroupName || product.groupName, type: 'groups', id: product.productGroupId || product.groupId });
-    if (product.productCategoryName || product.categoryName) items.push({ name: product.productCategoryName || product.categoryName, type: 'category', id: product.productCategoryId || product.categoryId });
+    if (product.productGroupName || product.groupName) items.push({ name: product.productGroupName || product.groupName || '', type: 'groups', id: product.productGroupId || product.groupId });
+    if (product.productCategoryName || product.categoryName) items.push({ name: product.productCategoryName || product.categoryName || '', type: 'category', id: product.productCategoryId || product.categoryId });
     if (product.name) items.push({ name: product.name, type: 'product', id: null });
     return items;
   };

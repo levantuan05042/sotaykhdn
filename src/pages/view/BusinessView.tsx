@@ -44,7 +44,6 @@ const BusinessView: React.FC = () => {
         }
 
         let currentGroupId = prods[0]?.productGroupId;
-        let currentSuperGroup = '';
 
         if (!currentGroupId) {
           try {
@@ -67,7 +66,6 @@ const BusinessView: React.FC = () => {
                     currentGroupId = grp.id;
                     setGroupId(grp.id);
                     setGroupName(grp.name);
-                    currentSuperGroup = grp.superGroup;
                     setSuperGroup(grp.superGroup);
                     setCategoryId(cat.id);
                     setCategoryName(cat.name);

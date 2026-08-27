@@ -79,11 +79,7 @@ const MainLayout: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const goToLogin = () => {
-      const redirectUri = `${window.location.origin}${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
-    };
-
+    // Lấy token từ URL query parameter nếu được auth-service redirect về
     const searchParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = searchParams.get('token');
     if (tokenFromUrl) {
@@ -96,17 +92,12 @@ const MainLayout: React.FC = () => {
     }
 
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-    // Chưa có token thì không gọi /me (tránh 401 không Bearer). Sang login, auth-service
-    // sẽ redirect về kèm ?token= rồi request sau luôn có Authorization.
-    if (!token) {
-      goToLogin();
-      return;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
-    };
-
+    setLoading(true);
     axios.get(AUTH_ME_URL, { headers, withCredentials: true })
       .then(res => {
         if (res.data) {
@@ -149,7 +140,8 @@ const MainLayout: React.FC = () => {
       })
       .catch(err => {
         console.error("Failed to fetch user info", err);
-        goToLogin();
+        const redirectUri = window.location.href;
+        window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
       });
   }, []);
 
