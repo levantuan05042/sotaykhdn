@@ -59,6 +59,8 @@ const DetailBusinessPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   
   const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  
+  // 2. Lấy Map người dùng 1 lần duy nhất để tối ưu hiệu suất
   const userMap = useMemo(() => getUserMap(), []);
   
   const currentUsername = getCurrentUsername();

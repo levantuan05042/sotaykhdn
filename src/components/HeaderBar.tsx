@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import logoAgribank from '../assets/logo-agribank.png';
 import './HeaderBar.css';
 import { type UserRole } from '../config/menuConfig';
@@ -150,9 +151,9 @@ const HeaderBar: React.FC = () => {
   const fetchNotifications = async (pageToFetch = 0, append = false) => {
     try {
       if (append) setLoadingMore(true);
-      const res = await fetch(`${API_ENDPOINTS.NOTIFICATIONS.LIST}?page=${pageToFetch}&size=10`, { credentials: 'include' });
-      if (res.ok) {
-        const rawData: any[] = await res.json();
+      const res = await axios.get(`${API_ENDPOINTS.NOTIFICATIONS.LIST}?page=${pageToFetch}&size=10`);
+      if (res.status === 200) {
+        const rawData: any[] = res.data;
         if (Array.isArray(rawData)) {
           const normalized: NotificationItem[] = rawData.map(item => ({
             ...item,
@@ -193,9 +194,9 @@ const HeaderBar: React.FC = () => {
 
   const fetchUnreadCount = async () => {
     try {
-      const res = await fetch(API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT, { credentials: 'include' });
-      if (res.ok) {
-        const data = await res.json();
+      const res = await axios.get(API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT);
+      if (res.status === 200) {
+        const data = res.data;
         if (typeof data.unreadCount === 'number') {
           setUnreadCount(data.unreadCount);
         }
@@ -237,10 +238,7 @@ const HeaderBar: React.FC = () => {
 
     // Call API mark read
     try {
-      await fetch(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(item.groupId), {
-        method: 'PUT',
-        credentials: 'include',
-      });
+      await axios.put(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(item.groupId));
     } catch (e) {
       console.warn('Failed to mark read on server', e);
     }
@@ -257,10 +255,7 @@ const HeaderBar: React.FC = () => {
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
     try {
-      await fetch(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ, {
-        method: 'PUT',
-        credentials: 'include',
-      });
+      await axios.put(API_ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
     } catch (e) {
       console.warn('Failed to mark all read on server', e);
     }
