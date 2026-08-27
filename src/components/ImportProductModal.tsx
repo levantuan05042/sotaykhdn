@@ -6,7 +6,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 interface ImportProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImportSuccess: () => void;
+  onSuccess?: () => void; // Thêm dòng này vào
 }
 
 type ModalStatus = 'idle' | 'uploading' | 'success' | 'error';
