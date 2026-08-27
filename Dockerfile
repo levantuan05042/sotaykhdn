@@ -3,9 +3,18 @@ FROM node:22-alpine AS build
 
 WORKDIR /app
 
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ENV http_proxy=$HTTP_PROXY
+ENV https_proxy=$HTTPS_PROXY
+
 COPY package*.json ./
 
-RUN npm ci
+# Increase npm fetch timeout & retries to prevent network timeout errors
+RUN npm config set fetch-retry-maxtimeout 600000 \
+ && npm config set fetch-retry-mintimeout 10000 \
+ && npm config set fetch-retries 5 \
+ && npm ci
 
 COPY . .
 

@@ -1,6 +1,8 @@
 services:
   sotay-fe:
-    build: .
+    build:
+      context: .
+      network: host
     container_name: sotay-fe
     image: sotay-fe:uat
     ports:
