@@ -1138,7 +1138,7 @@ const BatchRequestDetailPage: React.FC = () => {
                           style={{ padding: '0 12px', textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}
                         >
                           <div className="batch-action-inner" style={{ justifyContent: 'center' }}>
-                            <button
+                            {/* <button
                               onClick={() => navigate(`/product/${item.id}`)}
                               className="btn-icon-eye"
                               title="Xem chi tiết"
@@ -1147,7 +1147,7 @@ const BatchRequestDetailPage: React.FC = () => {
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                                 <circle cx="12" cy="12" r="3"></circle>
                               </svg>
-                            </button>
+                            </button> */}
                             <button
                               onClick={() => handleOpenQuickView(item)}
                               className="btn-xem-nhanh"

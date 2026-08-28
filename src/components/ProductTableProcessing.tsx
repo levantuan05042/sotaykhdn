@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
+import StatusBadge2 from './ui/StatusBadge2';
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -24,13 +24,34 @@ interface Props {
   data: ProductCategory[];
 }
 
-// Hàm hỗ trợ loại bỏ thẻ HTML
+interface CellWithTooltipProps {
+  text?: string | null;
+  style?: React.CSSProperties;
+  onClick?: () => void;
+}
+
+const CellWithTooltip: React.FC<CellWithTooltipProps> = ({ text, style, onClick }) => {
+  const content = text && text.trim() !== '' ? text : '---';
+
+  if (content === '---') {
+    return <span style={style}>{content}</span>;
+  }
+
+  return (
+    <div className="truncate-wrapper" onClick={onClick}>
+      <span className="truncate-text" style={style}>
+        {content}
+      </span>
+      <span className="custom-tooltip">{content}</span>
+    </div>
+  );
+};
+
 const stripHtml = (htmlString?: string | null) => {
   if (!htmlString) return '';
   return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
-// Hàm hỗ trợ format ngày tháng (DD/MM/YYYY)
 const formatDate = (dateString?: string | null) => {
   if (!dateString) return '---';
   const date = new Date(dateString);
@@ -64,7 +85,6 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
     navigate(`/products/${id}`);
   };
 
-  // Hàm xử lý chuyển hướng khi click vào Tên yêu cầu
   const handleViewBatchDetail = (requestId?: string | null) => {
     if (requestId) {
       navigate(`/products/batch/${requestId}`);
@@ -94,68 +114,60 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
           {paginatedData.length > 0 ? (
             paginatedData.map((item, index) => (
               <tr key={item.id || index}>
-                {/* 1. STT */}
                 <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                 
-                {/* 2. Sản phẩm */}
                 <td>
-                  <span className="truncate-text" title={stripHtml(item.name)} style={{ fontWeight: 500 }}>
-                    {stripHtml(item.name) || '---'} 
-                  </span>
+                  <CellWithTooltip 
+                    text={stripHtml(item.name)} 
+                    style={{ fontWeight: 500 }} 
+                  />
                 </td>
                 
-                {/* 3. Nhóm sản phẩm */}
                 <td className="col-group">
-                  <span className="truncate-text" title={item.productGroupName || ''}>
-                    {item.productGroupName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.productGroupName} />
                 </td>
                 
-                {/* 4. Trạng thái sử dụng StatusBadge2 */}
                 <td>
                   <StatusBadge2 status={item.status} />
                 </td>
                 
-                {/* 5. Tên yêu cầu */}
                 <td className="col-highlight col-highlight-first">
-                  <span 
-                    className="truncate-text" 
-                    title={stripHtml(item.requestName) || ''}
+                  <CellWithTooltip 
+                    text={stripHtml(item.requestName)}
                     onClick={() => handleViewBatchDetail(item.requestId)}
                     style={{ 
                       cursor: item.requestId ? 'pointer' : 'default', 
                       color: item.requestId ? '#2563EB' : 'inherit',
                       textDecoration: item.requestId ? 'underline' : 'none' 
                     }}
-                  >
-                    {stripHtml(item.requestName) || '---'}
-                  </span>
+                  />
                 </td>
                 
-                {/* 6. Ghi chú */}
                 <td className="col-highlight">
                   <div className="col-highlight-content">
-                    <span className="truncate-text" title={item.notes || ''}>
-                      {item.notes || '---'}
-                    </span>
+                    <CellWithTooltip text={item.notes} />
                   </div>
                 </td>
 
-                {/* 7. Ngày tạo */}
-                <td className="col-highlight col-highlight-last">{formatDate(item.createdAt)}</td>
+                <td className="col-highlight col-highlight-last">
+                  <CellWithTooltip text={formatDate(item.createdAt)} />
+                </td>
                 
-                {/* 8. Người tạo */}
-                <td>{item.createdByFullName || '---'}</td>
+                <td>
+                  <CellWithTooltip text={item.createdByFullName} />
+                </td>
                 
-                {/* 9. Người kiểm duyệt */}
-                <td>{item.approvedBy || '---'}</td>
+                <td>
+                  <CellWithTooltip text={item.approvedBy} />
+                </td>
                 
-                {/* 10. Phiên bản */}
-                <td style={{ fontWeight: 600 }}>
-                  {item.version ? `Phiên bản ${item.version}` : '---'}
+                <td>
+                  <CellWithTooltip 
+                    text={item.version ? `Phiên bản ${item.version}` : ''} 
+                    style={{ fontWeight: 600 }} 
+                  />
                 </td>
 
-                {/* 11. Action */}
                 <td>
                   <button
                     className="btn-action-view"
@@ -180,7 +192,6 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
         </tbody>
       </table>
       
-      {/* Khối Phân trang đầy đủ logic */}
       {totalPages > 1 && (
         <div className="pagination-box">
           <button

@@ -25,6 +25,11 @@ const formatDateTime = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
+const extractBaseId = (rawString: string) => {
+  if (!rawString) return '';
+  return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
+};
+
 const getCurrentUsername = () => {
   const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
   for (const key of possibleKeys) {
@@ -34,10 +39,10 @@ const getCurrentUsername = () => {
         const parsed = JSON.parse(val);
         if (typeof parsed === 'object' && parsed !== null) {
           const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-          if (u) return String(u).trim().toLowerCase();
+          if (u) return extractBaseId(u);
         }
       } catch {
-        return String(val).trim().toLowerCase();
+        return extractBaseId(val);
       }
     }
   }
@@ -53,6 +58,7 @@ const DetailCriteriaPage: React.FC = () => {
   
   const [isOpen, setIsOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(true);
   
   const [isActive, setIsActive] = useState(true);
   const [criteriaData, setCriteriaData] = useState<any>(null);
@@ -75,19 +81,17 @@ const DetailCriteriaPage: React.FC = () => {
   const creatorField = criteriaData?.createdBy || criteriaData?.created_by || criteriaData?.creator;
   let creatorUsername = '';
   if (typeof creatorField === 'object' && creatorField !== null) {
-    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+    const rawObjUsername = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
+    creatorUsername = extractBaseId(rawObjUsername);
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = String(creatorField).trim().toLowerCase();
+    creatorUsername = extractBaseId(creatorField);
   }
-
-  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
-  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
     isLoggedIn && 
-    baseCurrentUsername && 
-    baseCreatorUsername && 
-    baseCurrentUsername === baseCreatorUsername
+    currentUsername && 
+    creatorUsername && 
+    currentUsername === creatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -331,7 +335,6 @@ const DetailCriteriaPage: React.FC = () => {
         const errorData = await response.json().catch(() => ({}));
         setIsStatusOpen(false);
         
-        // Nếu chuyển sang trạng thái Ẩn mà có lỗi, bật Popup cảnh báo không thể ẩn
         if (!newActiveState || errorData.code === 'HAS_ACTIVE_PRODUCTS') {
           showCannotHideWarning(criteriaData?.name || "Tiêu chí");
         } else {
@@ -427,6 +430,30 @@ const DetailCriteriaPage: React.FC = () => {
         </button>
       </div>
     ), { position: 'top-center' });
+  };
+
+  const getCreatorDisplayName = () => {
+    if (criteriaData?.createdByFullName) return criteriaData.createdByFullName;
+    if (creatorUsername) {
+      const mapped = getFullName(creatorUsername, userMap);
+      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+    }
+    return creatorUsername ? creatorUsername.toUpperCase() : '---';
+  };
+
+  const getApproverDisplayName = () => {
+    if (criteriaData?.approvedByFullName) return criteriaData.approvedByFullName;
+    if (criteriaData?.approvedBy && criteriaData.approvedBy === criteriaData.createdBy && criteriaData.createdByFullName) {
+      return criteriaData.createdByFullName;
+    }
+
+    if (criteriaData?.approvedBy) {
+      const baseId = extractBaseId(criteriaData.approvedBy);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
+      return baseId.toUpperCase();
+    }
+    return '---';
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu tiêu chí...</div>;
@@ -712,47 +739,104 @@ const DetailCriteriaPage: React.FC = () => {
                 </div>
                 {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleToggleActive(false)}>Ẩn</div>
-                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleToggleActive(true)}>Hiển thị</div>
+                    <div 
+                      className={`custom-option ${isActive === false ? 'selected' : ''}`} 
+                      onClick={() => handleToggleActive(false)}
+                    >
+                      Ẩn
+                    </div>
+                    <div 
+                      className={`custom-option ${isActive === true  ? 'selected' : ''}`} 
+                      onClick={() => handleToggleActive(true)}
+                    >
+                      Hiển thị
+                    </div>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="commentCard">
-                <div className="commentHeader">
-                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span className="commentTitle">Bình luận phản hồi</span>
+            {/* Khối Thông tin nghiệp vụ */}
+            <div className="infoCard">
+              <div className="infoHeader" onClick={() => setIsInfoOpen(!isInfoOpen)}>
+                <span className="infoTitle">Thông tin nghiệp vụ</span>
+                <svg 
+                  className={`infoChevron ${isInfoOpen ? 'open' : ''}`} 
+                  width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <path d="M5 7.5L10 12.5L15 7.5"/>
+                </svg>
+              </div>
+              
+              {isInfoOpen && (
+                <div className="infoContent">
+                  <div className="infoGrid">
+                    <div className="infoItem">
+                      <span className="infoLabel">Người tạo</span>
+                      <span className="infoValue">
+                        {getCreatorDisplayName()}
+                      </span>
+                    </div>
+                    <div className="infoItem">
+                      <span className="infoLabel">Người kiểm duyệt</span>
+                      <span className="infoValue">
+                        {getApproverDisplayName()}
+                      </span>
+                    </div>
+                    <div className="infoItem">
+                      <span className="infoLabel">Thời gian tạo</span>
+                      <span className="infoValue">
+                        {formatDateTime(criteriaData.createdAt)}
+                      </span>
+                    </div>
+                    <div className="infoItem">
+                      <span className="infoLabel">Phiên bản</span>
+                      <div className="versionBadge">
+                        Phiên bản {criteriaData.version ?? 0}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="commentList">
-                  {criteriaData.comments && criteriaData.comments.length > 0 ? (
-                    criteriaData.comments.map((c: any, index: number) => (
-                      <React.Fragment key={c.id || index}>
-                        <div className="commentItem">
-                          <div className="userInfo">
-                            <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
-                            <div style={{ flex: 1 }}>
-                              <div className="userHeader">
-                                <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
-                                <span className="commentDate">{formatDateTime(c.createdAt)}</span>
-                              </div>
-                              <p className="commentText">{c.comment}</p>
+              )}
+            </div>
+
+            {/* Khối Bình luận phản hồi */}
+            <div className="commentCard">
+              <div className="commentHeader">
+                <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="commentTitle">Bình luận phản hồi</span>
+              </div>
+              <div className="commentList">
+                {criteriaData.comments && criteriaData.comments.length > 0 ? (
+                  criteriaData.comments.map((c: any, index: number) => (
+                    <React.Fragment key={c.id || index}>
+                      <div className="commentItem">
+                        <div className="userInfo">
+                          <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
+                          <div style={{ flex: 1 }}>
+                            <div className="userHeader">
+                              <span className="userName">
+                                {getFullName(extractBaseId(c.createdBy), userMap) || c.createdBy || 'Người kiểm duyệt'}
+                              </span>
+                              <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                             </div>
+                            <p className="commentText">{c.comment}</p>
                           </div>
                         </div>
-                        {index < criteriaData.comments.length - 1 && <hr className="commentDivider" />}
-                      </React.Fragment>
-                    ))
-                  ) : (
-                    <div className="no-comments">Chưa có bình luận hay phản hồi nào cho tiêu chí này.</div>
-                  )}
-                </div>
+                      </div>
+                      {index < criteriaData.comments.length - 1 && <hr className="commentDivider" />}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <div className="no-comments">Chưa có bình luận hay phản hồi nào cho tiêu chí này.</div>
+                )}
+              </div>
             </div>
+
           </div>
         </div>
-
       </div>
     </div>
   );

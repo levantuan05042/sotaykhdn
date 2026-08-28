@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
+import StatusBadge2 from './ui/StatusBadge2'; 
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -20,6 +20,21 @@ interface Props {
   data: ProductCategory[];
   onToggleActive?: (id: string, newActiveStatus: boolean) => void;
 }
+
+const CellWithTooltip = ({ text, weight = 400 }: { text: string; weight?: number }) => {
+  if (!text || text === '---') {
+    return <span style={{ fontWeight: weight }}>{text || '---'}</span>;
+  }
+  
+  return (
+    <div className="truncate-wrapper">
+      <span className="truncate-text" style={{ fontWeight: weight }}>
+        {text}
+      </span>
+      <span className="custom-tooltip">{text}</span>
+    </div>
+  );
+};
 
 const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
@@ -43,23 +58,19 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
     return activeData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [activeData, currentPage]);
 
-  // Chuyển hướng sang chi tiết
   const handleViewDetail = (id: string) => {
     navigate(`/products/${id}`);
   };
 
-  // Cập nhật lại hàm handleToggleActive trong ProductCategoryTable.tsx
   const handleToggleActive = async (e: React.ChangeEvent<HTMLInputElement>, item: ProductCategory) => {
-    e.stopPropagation(); // Chặn sự kiện click lan ra hàng tr
+    e.stopPropagation(); 
     const newActiveStatus = e.target.checked;
 
-    // 1. Cập nhật UI ngay lập tức (Optimistic UI)
     setTableData(prev =>
       prev.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
     );
 
     try {
-      // 2. Gọi API cập nhật trạng thái Hiệu lực
       const response = await fetch(
         `http://localhost:8082/api/v1/products/${item.id}/active?active=${newActiveStatus}`,
         {
@@ -71,18 +82,22 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
       );
 
       if (!response.ok) {
-        throw new Error('Gọi API thất bại');
+        throw new Error('API failed');
       }
       if (onToggleActive) {
         onToggleActive(item.id, newActiveStatus);
       }
     } catch (error) {
-      console.error('Lỗi khi gọi API cập nhật hiệu lực:', error);
       setTableData(prev =>
         prev.map(d => d.id === item.id ? { ...d, active: !newActiveStatus } : d)
       );
       alert('Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!');
     }
+  };
+
+  const stripHtml = (htmlString: string) => {
+    if (!htmlString) return '';
+    return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
   };
 
   return (
@@ -97,8 +112,8 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
             <th className="col-business">Nghiệp vụ</th> 
             <th>Trạng thái</th>
             <th>Hiệu lực</th>
-            <th>Người tạo</th>
-            <th>Người kiểm duyệt</th>
+            <th className="col-creator">Người tạo</th>
+            <th className="col-reviewer">Người kiểm duyệt</th>
             <th>Phiên bản</th>
             <th style={{ width: '60px' }}></th>
           </tr>
@@ -109,45 +124,26 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
             paginatedData.map((item, index) => (
               <tr 
                 key={item.id || index}
-                onClick={() => handleViewDetail(item.id)} // Click hàng chuyển sang chi tiết
+                onClick={() => handleViewDetail(item.id)}
               >
                 <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                 <td>
-                  {(() => {
-                    const stripHtml = (htmlString: string) => {
-                      if (!htmlString) return '';
-                      return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
-                    };
-                    const plainText = stripHtml(item.name);
-                    return (
-                      <span className="truncate-text" title={plainText} style={{ fontWeight: 500 }}>
-                        {plainText || '---'} 
-                      </span>
-                    );
-                  })()}
+                  <CellWithTooltip text={stripHtml(item.name)} weight={500} />
                 </td>
                 <td className="col-group">
-                  <span className="truncate-text" title={item.productGroupName || ''}>
-                    {item.productGroupName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.productGroupName || ''} />
                 </td>
                 <td className="col-category">
-                  <span className="truncate-text" title={item.productCategoryName || ''}>
-                    {item.productCategoryName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.productCategoryName || ''} />
                 </td>
                 <td className="col-business">
-                  <span className="truncate-text" title={item.businessName || ''}>
-                    {item.businessName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.businessName || ''} />
                 </td>
 
-                {/* Sử dụng Component StatusBadge2 dùng chung */}
                 <td>
                   <StatusBadge2 status={item.status} />
                 </td>
 
-                {/* Cột Hiệu lực: Gạt bật/tắt */}
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="toggle-wrapper">
                     <label className="toggle-switch">
@@ -164,18 +160,20 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                   </div>
                 </td>
 
-                <td>{item.createdByFullName || '---'}</td>
-                <td>{item.approvedBy || '---'}</td>
-                <td style={{ fontWeight: 600 }}>
-                  {item.version ? `Phiên bản ${item.version}` : '---'}
+                <td className="col-creator">
+                  <CellWithTooltip text={item.createdByFullName || ''} />
+                </td>
+                <td className="col-reviewer">
+                  <CellWithTooltip text={item.approvedBy || ''} />
+                </td>
+                <td>
+                  <CellWithTooltip text={item.version ? `Phiên bản ${item.version}` : ''} weight={600} />
                 </td>
 
-                {/* Cột Thao tác */}
                 <td onClick={(e) => e.stopPropagation()}>
                   <button
                     className="btn-action-view"
                     onClick={() => handleViewDetail(item.id)}
-                    title="Xem chi tiết"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -195,7 +193,6 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
         </tbody>
       </table>
 
-      {/* Phân trang */}
       {totalPages > 1 && (
         <div className="pagination-box">
           <button

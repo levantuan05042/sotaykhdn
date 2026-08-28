@@ -1,6 +1,4 @@
-/* ==========================================================================
-   DETAIL PRODUCT PAGE - FIGMA UI STYLES
-   ========================================================================== */
+/* 
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -13,32 +11,27 @@
   height: 100vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 60px; /* Tạo khoảng trống ở đáy giúp cuộn thấy hoàn toàn nội dung cuối */
+  padding-bottom: 60px; 
   box-sizing: border-box;
 }
 
 .mainContainer {
   display: flex;
   width: 1220px;
-  padding: 0 40px 40px 40px;
+  padding: 25px 180px 40px 180px;
   flex-direction: column;
   align-items: flex-start;
   gap: 20px;
-  background-color: #FFFFFF;
   border-radius: 16px;
-  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
 }
 
-/* ─────────────────────────────────────────────
-   1. HEADER SECTION
-   ───────────────────────────────────────────── */
 .header {
   display: flex;
   width: 100%;
   justify-content: space-between;
   align-items: center;
   padding-bottom: 20px;
-  border-bottom: 1px solid #E5E7EB; /* Gạch phân ô dưới header */
+  border-bottom: 1px solid #E5E7EB; 
 }
 
 .breadcrumb-truncate {
@@ -50,7 +43,7 @@
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 16px; /* Tăng khoảng cách để chứa vạch kẻ dọc */
+  gap: 16px; 
   min-width: 0;
 }
 
@@ -61,15 +54,15 @@
   background-color: transparent;
   border: none;
   cursor: pointer;
-  padding: 0 16px 0 0; /* Thêm padding bên phải */
-  border-right: 1px solid #E5E7EB; /* Vạch kẻ dọc ngăn cách */
+  padding: 0 16px 0 0; 
+  border-right: 1px solid #E5E7EB; 
   flex-shrink: 0;
 }
 
 .breadcrumbText {
   color: #111827;
   font-size: 15px;
-  font-weight: 600; /* Đổi thành in đậm cho chữ 'Quay lại' */
+  font-weight: 600; 
   line-height: 140%;
 }
 
@@ -80,7 +73,6 @@
   min-width: 0;
 }
 
-/* Thêm class mới cho Nhóm sản phẩm (nhạt màu hơn) */
 .breadcrumbGroup {
   color: #4B5563;
   font-size: 15px;
@@ -90,12 +82,9 @@
 .breadcrumbActive {
   color: #111827;
   font-size: 15px;
-  font-weight: 700; /* Đậm hơn giống bản thiết kế */
+  font-weight: 700; 
 }
 
-/* ─────────────────────────────────────────────
-   2. STATUS BADGES
-   ───────────────────────────────────────────── */
 .statusBadge {
   display: flex;
   padding: 6px 16px;
@@ -121,7 +110,6 @@
   white-space: nowrap;
 }
 
-/* Status variants */
 .status-active {
   background-color: #E0F9EC;
 }
@@ -158,9 +146,6 @@
 .status-archived .statusText { color: #0C4A6E; }
 .status-archived .dot { background-color: #0EA5E9; }
 
-/* ─────────────────────────────────────────────
-   3. ACTION BUTTONS
-   ───────────────────────────────────────────── */
 .btnDraft {
   padding: 8px 16px;
   border-radius: 8px;
@@ -229,9 +214,6 @@
   white-space: nowrap;
 }
 
-/* ─────────────────────────────────────────────
-   4. CONTENT GRID & FORMS (LEFT COLUMN)
-   ───────────────────────────────────────────── */
 .contentGrid {
   display: flex;
   width: 100%;
@@ -279,7 +261,6 @@
   box-shadow: 0 0 0 2px rgba(174, 28, 63, 0.1);
 }
 
-/* Custom Dropdown Styles */
 .custom-select-container {
   position: relative;
   width: 100%;
@@ -347,10 +328,6 @@
   color: #AE1C3F;
   font-weight: 600;
 }
-
-/* ─────────────────────────────────────────────
-   5. RIGHT COLUMN (STATUS, INFO, COMMENTS)
-   ───────────────────────────────────────────── */
 .rightCol {
   width: 340px;
   flex-shrink: 0;
@@ -361,7 +338,6 @@
   gap: 16px;
 }
 
-/* Comment Section Card */
 .commentCard {
   display: flex;
   padding: 20px;
@@ -501,9 +477,6 @@
   text-decoration: underline;
 }
 
-/* ─────────────────────────────────────────────
-   6. TOAST NOTIFICATIONS & MODALS
-   ───────────────────────────────────────────── */
 .toast-pill-container {
   display: flex;
   align-items: center;
@@ -548,7 +521,6 @@
   padding: 4px;
 }
 
-/* Confirm Toast Card */
 .confirm-toast-card {
   background: #FFFFFF;
   padding: 20px;
@@ -626,7 +598,6 @@
   cursor: pointer;
 }
 
-/* --- READ-ONLY & PERMISSION MODES --- */
 .readOnlyOverlay {
   pointer-events: none;
   background-color: #F9FAFB !important;
@@ -650,4 +621,4 @@
   font-size: 14px;
   color: #92400E;
   fontWeight: 500;
-}
+} */

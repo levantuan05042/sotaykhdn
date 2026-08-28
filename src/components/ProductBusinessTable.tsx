@@ -223,64 +223,99 @@ const ProductBusinessPage: React.FC = () => {
       header: 'STT',
       width: '70px',
       align: 'center',
-      render: (_, index) => index + 1,
+      render: (_, index) => (
+        <div className="custom-tooltip-container" style={{ justifyContent: 'center' }}>
+          <span className="truncate-text" style={{ textAlign: 'center' }}>{index + 1}</span>
+          <div className="custom-tooltip">{index + 1}</div>
+        </div>
+      ),
     },
     {
       key: 'name',
       header: 'Tên nghiệp vụ',
       render: (row) => (
-        <span className="truncate-text product-group-item-title" title={row.name}>
-          {row.name}
-        </span>
+        <div className="custom-tooltip-container">
+          <span className="truncate-text product-group-item-title">{row.name}</span>
+          <div className="custom-tooltip">{row.name}</div>
+        </div>
       ),
     },
     {
       key: 'groupName',
       header: 'Nhóm sản phẩm',
       render: (row) => (
-        <span className="truncate-text" title={row.groupName || '---'}>
-          {row.groupName || '---'}
-        </span>
+        <div className="custom-tooltip-container">
+          <span className="truncate-text">{row.groupName || '---'}</span>
+          <div className="custom-tooltip">{row.groupName || '---'}</div>
+        </div>
       ),
     },
     {
       key: 'categoryName',
       header: 'Danh mục sản phẩm',
       render: (row) => (
-        <span className="truncate-text" title={row.categoryName || '---'}>
-          {row.categoryName || '---'}
-        </span>
+        <div className="custom-tooltip-container">
+          <span className="truncate-text">{row.categoryName || '---'}</span>
+          <div className="custom-tooltip">{row.categoryName || '---'}</div>
+        </div>
       ),
     },
     {
       key: 'status',
       header: 'Trạng thái',
       width: '180px',
-      render: (row) => <StatusBadge2 status={row.status} />,
+      render: (row) => {
+        const statusText = STATUS_OPTIONS.find(opt => opt.value === row.status)?.label || row.status;
+        return (
+          <div className="custom-tooltip-container">
+            <StatusBadge2 status={row.status} />
+            <div className="custom-tooltip">{statusText}</div>
+          </div>
+        );
+      },
     },
     {
       key: 'active',
       header: 'Hiệu lực',
-      render: (row) => renderActiveToggle(row),
+      render: (row) => (
+        <div className="custom-tooltip-container">
+          {renderActiveToggle(row)}
+          <div className="custom-tooltip">{row.active ? 'Hiện' : 'Ẩn'}</div>
+        </div>
+      ),
     },
     {
       key: 'createdByFullName',
       header: 'Người tạo',
-      render: (row) => row.createdByFullName || '---',
+      render: (row) => (
+        <div className="custom-tooltip-container">
+          <span className="truncate-text">{row.createdByFullName || '---'}</span>
+          <div className="custom-tooltip">{row.createdByFullName || '---'}</div>
+        </div>
+      ),
     },
     {
       key: 'approvedBy',
       header: 'Người kiểm duyệt',
-      render: (row) => row.approvedBy || '---',
+      render: (row) => (
+        <div className="custom-tooltip-container">
+          <span className="truncate-text">{row.approvedBy || '---'}</span>
+          <div className="custom-tooltip">{row.approvedBy || '---'}</div>
+        </div>
+      ),
     },
     {
       key: 'version',
       header: 'Phiên bản',
-      render: (row) => (
-        <span style={{ fontWeight: 600, color: '#053E2B' }}>
-          {row.version ? `Phiên bản ${row.version}` : '---'}
-        </span>
-      ),
+      render: (row) => {
+        const v = row.version ? `Phiên bản ${row.version}` : '---';
+        return (
+          <div className="custom-tooltip-container">
+            <span className="truncate-text" style={{ fontWeight: 600, color: '#053E2B' }}>{v}</span>
+            <div className="custom-tooltip">{v}</div>
+          </div>
+        );
+      },
     },
     {
       key: 'action',
@@ -288,20 +323,22 @@ const ProductBusinessPage: React.FC = () => {
       width: '80px',
       align: 'center',
       render: (row) => (
-        <button
-          className="btn-view-detail"
-          title="Xem chi tiết"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/business-management/${row.id}`);
-          }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
+        <div className="custom-tooltip-container" style={{ justifyContent: 'center' }}>
+          <button
+            className="btn-view-detail"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/business-management/${row.id}`);
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+          <div className="custom-tooltip">Xem chi tiết</div>
+        </div>
       ),
     },
   ];

@@ -3,18 +3,19 @@
 .product-table-container {
   flex: 1;
   width: 100%;
-  overflow: auto !important;     /* Cuộn chung cả dọc và ngang */
+  overflow: auto !important;
   position: relative;
-  min-height: 0;        
-  scrollbar-gutter: stable;      /* Đồng bộ thanh cuộn */
+  min-height: 0;
+  scrollbar-gutter: stable;
 }
+
 .product-table {
   width: 100%;
-  table-layout: fixed !important; /* Cố định tuyệt đối chiều rộng các cột */
+  table-layout: fixed !important;
   border-collapse: collapse;
-  min-width: 1300px;     
+  min-width: 1300px;
 }
-/* Base Text Style */
+
 .table-text-base {
   color: #1a191b;
   font-family: 'Inter', sans-serif;
@@ -24,13 +25,12 @@
   letter-spacing: 0;
 }
 
-/* Header Styles */
 .product-table thead tr {
   background-color: #f2eff3;
 }
 
 .product-table th {
-  padding: 12px 16px; 
+  padding: 12px 16px;
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
@@ -58,7 +58,6 @@
   border-bottom-right-radius: 12px;
 }
 
-/* Body Styles */
 .product-table tbody {
   background-color: #ffffff;
 }
@@ -73,13 +72,12 @@
   text-overflow: ellipsis;
 }
 
-/* Badge Trạng thái chung */
 .status-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  padding: 4px 16px; 
+  padding: 4px 16px;
   height: 32px;
   font-family: 'Inter', sans-serif;
   font-size: 16px;
@@ -94,7 +92,6 @@
   line-height: 100%;
 }
 
-/* Action Button */
 .btn-view-detail {
   color: #a62026;
   font-size: 14px;
@@ -111,15 +108,6 @@
   text-decoration: underline;
 }
 
-.truncate-text {
-  display: block;
-  white-space: nowrap;     
-  overflow: hidden;         
-  text-overflow: ellipsis;  
-  cursor: help;             
-}
-
-/* Wrapper căn giữa */
 .pagination-wrapper {
   display: flex;
   justify-content: center;
@@ -189,20 +177,11 @@
 .product-table thead th {
   position: sticky;
   top: 0;
-  background-color: #f2eff3; 
+  background-color: #f2eff3;
   z-index: 10;
   box-shadow: inset 0 -1px 0 #e3dfe6;
 }
-.product-table th,
-.product-table td {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
-/* =========================================
-   Toggle Switch Styles (Cột Hiệu lực)
-========================================= */
 .toggle-wrapper {
   display: flex;
   align-items: center;
@@ -229,7 +208,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #E3DFE6; 
+  background-color: #E3DFE6;
   transition: 0.3s;
   border-radius: 24px;
 }
@@ -248,7 +227,7 @@
 }
 
 .toggle-switch input:checked + .toggle-slider {
-  background-color: #72D5A1; 
+  background-color: #72D5A1;
 }
 
 .toggle-switch input:checked + .toggle-slider:before {
@@ -265,7 +244,7 @@
   font-size: 15px;
   font-weight: 500;
   color: #1a191b;
-  min-width: 35px; 
+  min-width: 35px;
 }
 
 .toggle-label.disabled-text {
@@ -278,5 +257,54 @@
 }
 
 .product-table tbody tr:hover td {
-  background-color: #f8f4f5; 
+  background-color: #f8f4f5;
+}
+
+.product-table td.tooltip-cell {
+  overflow: visible !important; 
+}
+
+.custom-tooltip-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.custom-tooltip-container .truncate-text {
+  flex: 1;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.custom-tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 6px;
+  z-index: 9999;
+  background-color: #FDEBEB;
+  color: #1A191B;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+  word-wrap: break-word;
+  width: max-content;
+  max-width: 250px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  pointer-events: none;
+}
+
+.custom-tooltip-container:hover .custom-tooltip {
+  visibility: visible;
+  opacity: 1;
 }

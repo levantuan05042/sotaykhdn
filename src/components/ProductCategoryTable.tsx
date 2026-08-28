@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge2 from './ui/StatusBadge2';
-import './ProductCategoryTable.css'; 
+import './ProductCategoryTable.css';
 
 interface ProductCategory {
   id: string;
@@ -11,7 +11,7 @@ interface ProductCategory {
   active?: boolean;
   createdByFullName?: string | null;
   approvedBy?: string | null;
-  version?: number | null; 
+  version?: number | null;
 }
 
 interface Props {
@@ -51,15 +51,13 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const handleToggleActive = async (item: ProductCategory, currentActive: boolean) => {
     const newActiveStatus = !currentActive;
 
-    // 1. Optimistic Update
-    setTableData(prevData => 
-      prevData.map(d => 
+    setTableData(prevData =>
+      prevData.map(d =>
         d.id === item.id ? { ...d, active: newActiveStatus } : d
       )
     );
 
     try {
-      // 2. Gọi API thay đổi trạng thái hiệu lực danh mục sản phẩm
       const response = await fetch(`http://localhost:8082/api/v1/product-category/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
@@ -74,16 +72,12 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
       }
 
     } catch (error) {
-      console.error("Lỗi cập nhật hiệu lực danh mục:", error);
-      
-      // 3. Rollback UI khi lỗi
-      setTableData(prevData => 
-        prevData.map(d => 
+      setTableData(prevData =>
+        prevData.map(d =>
           d.id === item.id ? { ...d, active: currentActive } : d
         )
       );
 
-      // 4. Mở popup cảnh báo
       setWarningData({
         show: true,
         title: `Không thể ẩn danh mục: "${item.name}"`,
@@ -100,9 +94,9 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
         <label className="toggle-switch">
-          <input 
-            type="checkbox" 
-            checked={isActive} 
+          <input
+            type="checkbox"
+            checked={isActive}
             disabled={isDisabled}
             onChange={() => {
               if (!isDisabled) {
@@ -124,14 +118,13 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Vùng chứa bảng có thanh cuộn dọc & ngang */}
       <div className="product-table-container">
         <table className="product-table table-text-base">
           <thead>
             <tr>
               <th className="px-40 rounded-l-12 w-24">STT</th>
               <th>Tên danh mục sản phẩm</th>
-              <th>Nhóm sản phẩm</th> 
+              <th>Nhóm sản phẩm</th>
               <th>Trạng thái</th>
               <th>Hiệu lực</th>
               <th>Người tạo</th>
@@ -143,52 +136,92 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
           <tbody>
             {paginatedData.length > 0 ? (
-              paginatedData.map((item, index) => (
-                <tr 
-                  key={item.id || index}
-                  onClick={() => handleViewDetail(item.id)}
-                  className="cursor-pointer hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-40">
-                    {(currentPage - 1) * itemsPerPage + index + 1}
-                  </td>
+              paginatedData.map((item, index) => {
+                const sttVal = (currentPage - 1) * itemsPerPage + index + 1;
+                const activeVal = item.active ? 'Hiện' : 'Ẩn';
+                const versionVal = item.version ? `Phiên bản ${item.version}` : '---';
+                const createdVal = item.createdByFullName || '---';
+                const approvedVal = item.approvedBy || '---';
+                const groupVal = item.groupName || '---';
 
-                  <td className="product-name-cell">
-                    <span className="truncate-text" title={item.name}>
-                      {item.name}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="truncate-text" title={item.groupName}>
-                      {item.groupName || '---'}
-                    </span>
-                  </td>
+                return (
+                  <tr
+                    key={item.id || index}
+                    onClick={() => handleViewDetail(item.id)}
+                  >
+                    <td className="px-40">
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text">{sttVal}</span>
+                        <div className="custom-tooltip">{sttVal}</div>
+                      </div>
+                    </td>
 
-                  <td>
-                    <StatusBadge2 status={item.status} />
-                  </td>
-                  
-                  <td>{renderActiveToggle(item)}</td>
-                  <td>{item.createdByFullName || '---'}</td>
-                  <td>{item.approvedBy || '---'}</td>
-                  <td style={{ color: '#053E2B', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: 600, lineHeight: '24px' }}>
-                    {item.version ? `Phiên bản ${item.version}` : '---'}
-                  </td>
+                    <td>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text">{item.name}</span>
+                        <div className="custom-tooltip">{item.name}</div>
+                      </div>
+                    </td>
 
-                  <td className="px-40 text-right" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      className="btn-view-detail"
-                      onClick={() => handleViewDetail(item.id)}
-                      title='Xem chi tiết'
-                    >
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))
+                    <td>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text">{groupVal}</span>
+                        <div className="custom-tooltip">{groupVal}</div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="custom-tooltip-container">
+                        <StatusBadge2 status={item.status} />
+                        <div className="custom-tooltip">{item.status}</div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="custom-tooltip-container">
+                        {renderActiveToggle(item)}
+                        <div className="custom-tooltip">{activeVal}</div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text">{createdVal}</span>
+                        <div className="custom-tooltip">{createdVal}</div>
+                      </div>
+                    </td>
+
+                    <td>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text">{approvedVal}</span>
+                        <div className="custom-tooltip">{approvedVal}</div>
+                      </div>
+                    </td>
+
+                    <td style={{ color: '#053E2B', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: 600, lineHeight: '24px' }}>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text">{versionVal}</span>
+                        <div className="custom-tooltip">{versionVal}</div>
+                      </div>
+                    </td>
+
+                    <td className="px-40 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="custom-tooltip-container" style={{ justifyContent: 'flex-end' }}>
+                        <button
+                          className="btn-view-detail"
+                          onClick={() => handleViewDetail(item.id)}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                        <div className="custom-tooltip">Xem chi tiết</div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={9} className="text-center py-20 text-gray-400">
@@ -200,11 +233,10 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
         </table>
       </div>
 
-      {/* Phần chọn số lượng bản ghi & phân trang ở đáy */}
       <div className="table-footer-pagination">
         <div className="pagination-info">
           Hiển thị{' '}
-          <select 
+          <select
             className="select-items-per-page"
             value={itemsPerPage}
             onChange={(e) => {
@@ -257,7 +289,6 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
         )}
       </div>
 
-      {/* Modal Cảnh báo khi ẩn nhóm/danh mục đang có dữ liệu */}
       {warningData.show && (
         <div className="warning-toast-wrapper">
           <div className="warning-toast-card">
@@ -270,13 +301,13 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                 <line x1="12" y1="17" x2="12.01" y2="17"></line>
               </svg>
             </div>
-            
+
             <h3 className="warning-toast-title">{warningData.title}</h3>
             <p className="warning-toast-desc">{warningData.message}</p>
-            
+
             <div className="warning-toast-actions">
-              <button 
-                className="warning-btn-close" 
+              <button
+                className="warning-btn-close"
                 onClick={() => setWarningData({ ...warningData, show: false })}
               >
                 Đóng
