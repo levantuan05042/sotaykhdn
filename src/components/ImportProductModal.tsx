@@ -25,7 +25,7 @@ const getFileExtension = (fileName: string): string => {
   return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
 };
 
-const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose, onImportSuccess }) => {
+const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose, onSuccess }) => {
   // ─── TẤT CẢ HOOKS PHẢI Ở TRÊN CÙNG, TRƯỚC MỌI ĐIỀU KIỆN RETURN ───
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [status, setStatus] = useState<ModalStatus>('idle');
@@ -159,7 +159,7 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
       setStatus('success');
       setUploadProgress(100);
       closeTimeoutRef.current = setTimeout(() => {
-        onImportSuccess();
+        onSuccess?.();
         resetState();
         onClose();
       }, 1100);
@@ -170,7 +170,7 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
       setErrorMessage(serverMessage || 'Tải lên thất bại. Kiểm tra lại định dạng tệp và thử lại.');
       console.error('Lỗi khi nhập sản phẩm từ Excel:', error);
     }
-  }, [selectedFile, onImportSuccess, resetState, onClose]);
+  }, [selectedFile, onSuccess, resetState, onClose]);
 
   // useEffect cũng phải nằm trước early return
   useEffect(() => {
