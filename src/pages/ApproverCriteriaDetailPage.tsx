@@ -51,7 +51,7 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
         name: critData.name || '---',
         status: critData.status,
         active: !!critData.active,
-        isRequired: !!critData.isRequired,
+        isRequired: critData.isRequired === true || critData.isRequired === 1 || critData.isRequired === '1',
         createdBy: critData.createdBy || '---',
         approvedBy: critData.approvedBy || '---',
         createdAt: critData.createdAt,
@@ -137,41 +137,11 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
       onSaveReview={handleSaveReview}
     >
       <div className="formGroup">
-        <label className="formLabel">Thuộc nhóm sản phẩm <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Mã tiêu chí <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 
-          value={detail.superGroupName === 'SERVICE' ? 'Chương trình dịch vụ' : detail.superGroupName === 'INSURANCE' ? 'Bảo hiểm' : detail.superGroupName === 'PROGRAM' ? 'Chương trình ưu đãi' : detail.superGroupName} 
-          readOnly 
-        />
-      </div>
-
-      <div className="formGroup">
-        <label className="formLabel">Nhóm sản phẩm <span className="required-asterisk">(*)</span></label>
-        <input 
-          type="text" 
-          className="formInput readonly" 
-          value={detail.groupName} 
-          readOnly 
-        />
-      </div>
-
-      <div className="formGroup">
-        <label className="formLabel">Danh mục sản phẩm <span className="required-asterisk">(*)</span></label>
-        <input 
-          type="text" 
-          className="formInput readonly" 
-          value={detail.categoryName} 
-          readOnly 
-        />
-      </div>
-
-      <div className="formGroup">
-        <label className="formLabel">Tên nghiệp vụ sản phẩm <span className="required-asterisk">(*)</span></label>
-        <input 
-          type="text" 
-          className="formInput readonly" 
-          value={detail.businessName} 
+          value={detail.code} 
           readOnly 
         />
       </div>
@@ -187,13 +157,27 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Mã tiêu chí <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Nhóm sản phẩm <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 
-          value={detail.code} 
+          value={detail.groupName} 
           readOnly 
         />
+      </div>
+
+      <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px', cursor: 'not-allowed' }}>
+        <input 
+          type="checkbox" 
+          id="isRequired"
+          name="isRequired"
+          checked={detail.isRequired} 
+          disabled
+          style={{ width: '18px', height: '18px', cursor: 'not-allowed' }}
+        />
+        <label htmlFor="isRequired" style={{ fontSize: '14px', fontWeight: '500', color: '#3C393F', cursor: 'not-allowed', userSelect: 'none' }}>
+          Đây là tiêu chí bắt buộc
+        </label>
       </div>
     </ApproverDetailWrapper>
   );

@@ -315,6 +315,29 @@
   transform: scale(1.08);
 }
 
+.btn-quick-view-green {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background-color: #E8F6ED;
+  color: #0F5237;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-quick-view-green:hover {
+  background-color: #D3F0E0;
+  color: #0A3C28;
+}
+
 .btn-toggle-quickview {
   background-color: #ECFDF5;
   color: #059669;
