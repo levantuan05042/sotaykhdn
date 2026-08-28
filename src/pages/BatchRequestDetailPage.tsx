@@ -9,7 +9,6 @@ import 'react-easy-crop/react-easy-crop.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import './BatchRequestDetailPage.css';
 
-// Hàm hỗ trợ tách lấy username từ chuỗi raw (VD: "37ETN082_10500037" -> "37etn082")
 const extractUsername = (rawName: string | null | undefined): string => {
   if (!rawName) return '';
   return String(rawName).split('_')[0].trim().toLowerCase();
@@ -35,6 +34,13 @@ interface PixelCrop {
   y: number;
   width: number;
   height: number;
+}
+
+interface GroupCacheData {
+  categoryId: string;
+  businessId: string;
+  details: any[];
+  addedOptionalIds: string[];
 }
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
@@ -457,9 +463,6 @@ const BatchRequestDetailPage: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
 
-  // =========================================
-  // LOGIC PHÂN QUYỀN VÀ TÁCH USERNAME
-  // =========================================
   const getCurrentUsernameRaw = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
     for (const key of possibleKeys) {
@@ -479,13 +482,11 @@ const BatchRequestDetailPage: React.FC = () => {
     return '';
   };
 
-  // Tách username người đang đăng nhập (loại bỏ phần _machinhanh nếu có)
   const currentUsername = extractUsername(getCurrentUsernameRaw());
   const isLoggedIn = Boolean(currentUsername);
 
   const [products, setProducts] = useState<any[]>([]);
   
-  // Tách username người tạo sản phẩm từ thuộc tính 'createdBy' (loại bỏ phần _machinhanh nếu có)
   const firstProduct = products.length > 0 ? products[0] : null;
   const creatorField = firstProduct?.createdBy || firstProduct?.created_by || firstProduct?.creator;
   let rawCreatorName = '';
@@ -498,7 +499,6 @@ const BatchRequestDetailPage: React.FC = () => {
 
   const creatorUsername = extractUsername(rawCreatorName);
 
-  // So sánh username gốc để xác định quyền sở hữu
   const isOwner = Boolean(
     isLoggedIn && 
     currentUsername && 
@@ -521,6 +521,8 @@ const BatchRequestDetailPage: React.FC = () => {
     feedback: '',
   });
   
+  const [groupCache, setGroupCache] = useState<Record<string, GroupCacheData>>({});
+
   const [showImageModal, setShowImageModal] = useState(false);
   const [previewImage, setPreviewImage] = useState('');   
   const [avatarFile, setAvatarFile] = useState<File | null>(null); 
@@ -559,26 +561,18 @@ const BatchRequestDetailPage: React.FC = () => {
   const normalizedBatchStatus = (batchStatus || 'DRAFT').toString().toUpperCase();
   const isEditableStatus = normalizedBatchStatus === 'DRAFT' || normalizedBatchStatus === 'NEEDS_REVISION';
 
-  // Chế độ Edit/Read-only
   const canEdit = isEditableStatus && isOwner;
   const isReadOnly = !canEdit;
 
   const getStatusUI = (status: string) => {
     switch (status) {
-      case 'ACTIVE':
-        return { label: 'Đang hoạt động', bg: '#E0F9EC', text: '#14532D', dot: '#12B76A' };
-      case 'DRAFT':
-        return { label: 'Lưu nháp', bg: '#FEF9C3', text: '#713F12', dot: '#CA8A04' };
-      case 'NEEDS_REVISION':
-        return { label: 'Yêu cầu chỉnh sửa', bg: '#FECACA', text: '#7F1D1D', dot: '#EF4444' };
-      case 'PENDING_APPROVAL':
-        return { label: 'Chờ phê duyệt', bg: '#FED7AA', text: '#7C2D12', dot: '#F97316' };
-      case 'REJECTED':
-        return { label: 'Từ chối', bg: '#EAE7EC', text: '#65636D', dot: '#65636D' };
-      case 'ARCHIVED':
-        return { label: 'Lưu trữ', bg: '#BAE6FD', text: '#0C4A6E', dot: '#0EA5E9' };
-      default:
-        return { label: status || 'Không xác định', bg: '#F3F4F6', text: '#374151', dot: '#9CA3AF' };
+      case 'ACTIVE': return { label: 'Đang hoạt động', bg: '#E0F9EC', text: '#14532D' };
+      case 'DRAFT': return { label: 'Lưu nháp', bg: '#FEF9C3', text: '#713F12' };
+      case 'NEEDS_REVISION': return { label: 'Yêu cầu chỉnh sửa', bg: '#FECACA', text: '#7F1D1D' };
+      case 'PENDING_APPROVAL': return { label: 'Chờ phê duyệt', bg: '#FED7AA', text: '#7C2D12' };
+      case 'REJECTED': return { label: 'Từ chối', bg: '#EAE7EC', text: '#65636D' };
+      case 'ARCHIVED': return { label: 'Lưu trữ', bg: '#BAE6FD', text: '#0C4A6E' };
+      default: return { label: status || 'Không xác định', bg: '#F3F4F6', text: '#374151' };
     }
   };
   const statusUI = getStatusUI(normalizedBatchStatus);
@@ -619,14 +613,13 @@ const BatchRequestDetailPage: React.FC = () => {
     fetchGroupOptions();
   }, []);
 
+  // Effect fetch Danh mục (phụ thuộc vào productGroupId)
   useEffect(() => {
     if (!quickViewProduct || !formData.productGroupId) {
       setCategoryOptions([]);
-      setOperationOptions([]);
       return;
     }
     let cancelled = false;
-
     (async () => {
       try {
         setLoadingCategories(true);
@@ -640,11 +633,20 @@ const BatchRequestDetailPage: React.FC = () => {
         if (!cancelled) setLoadingCategories(false); 
       }
     })();
+    return () => { cancelled = true; };
+  }, [formData.productGroupId, quickViewProduct]);
 
+  // Effect fetch Nghiệp vụ (phụ thuộc vào productCategoryId)
+  useEffect(() => {
+    if (!quickViewProduct || !formData.productCategoryId) {
+      setOperationOptions([]);
+      return;
+    }
+    let cancelled = false;
     (async () => {
       try {
         setLoadingOperations(true);
-        const res = await axios.get(`${API_ENDPOINTS.PRODUCT_BUSINESS.LIST}?status=ACTIVE&types=${formData.productGroupId}&active=true`);
+        const res = await axios.get(`${API_ENDPOINTS.PRODUCT_BUSINESS.LIST}?status=ACTIVE&types=${formData.productCategoryId}&active=true`);
         if (cancelled) return;
         const options: OptionItem[] = (res.data || []).map((b: any) => ({ id: String(b.id), name: b.name }));
         setOperationOptions(options);
@@ -654,13 +656,13 @@ const BatchRequestDetailPage: React.FC = () => {
         if (!cancelled) setLoadingOperations(false); 
       }
     })();
-
     return () => { cancelled = true; };
-  }, [formData.productGroupId, quickViewProduct]);
+  }, [formData.productCategoryId, quickViewProduct]);
 
+  // Effect fetch Tiêu chí (chỉ phụ thuộc vào productGroupId)
   useEffect(() => {
     if (!quickViewProduct || !formData.productGroupId) {
-      setDetails([]);
+      if (!formData.productGroupId) setDetails([]);
       return;
     }
 
@@ -671,7 +673,7 @@ const BatchRequestDetailPage: React.FC = () => {
     let cancelled = false;
     (async () => {
       try {
-        const targetId = formData.productCategoryId || formData.productGroupId;
+        const targetId = formData.productGroupId; 
         const criteriaEndpoint = `${API_ENDPOINTS.PRODUCT_CRITERIA?.LIST || '/api/criteria'}?status=ACTIVE&types=${targetId}&active=true`;
         
         const res = await axios.get(criteriaEndpoint);
@@ -693,17 +695,52 @@ const BatchRequestDetailPage: React.FC = () => {
           setDetails([]);
         }
       } catch (error) {
-        console.error('Lỗi khi tải bộ tiêu chí theo danh mục:', error);
+        console.error('Lỗi khi tải bộ tiêu chí theo nhóm:', error);
         setDetails([]);
       }
     })();
 
     return () => { cancelled = true; };
-  }, [formData.productGroupId, formData.productCategoryId, quickViewProduct]);
+  }, [formData.productGroupId, quickViewProduct]);
 
   useEffect(() => {
     return () => { if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage); };
   }, [previewImage, avatarFile]);
+
+  const handleGroupChange = (newGroupId: string) => {
+    // 1. Lưu lại state hiện tại vào cache nếu đang có productGroupId
+    if (formData.productGroupId) {
+      setGroupCache(prev => ({
+        ...prev,
+        [formData.productGroupId]: {
+          categoryId: formData.productCategoryId,
+          businessId: formData.businessId,
+          details: details,
+          addedOptionalIds: addedOptionalIds
+        }
+      }));
+    }
+
+    // 2. Khôi phục từ cache nếu đã từng chọn nhóm này trước đó
+    if (groupCache[newGroupId]) {
+      const cachedData = groupCache[newGroupId];
+      isUserActionRef.current = false; 
+      handleFormChange({
+        productGroupId: newGroupId,
+        productCategoryId: cachedData.categoryId,
+        businessId: cachedData.businessId
+      });
+      setDetails(cachedData.details);
+      setAddedOptionalIds(cachedData.addedOptionalIds);
+    } else {
+      isUserActionRef.current = true; 
+      handleFormChange({
+        productGroupId: newGroupId,
+        productCategoryId: '',
+        businessId: ''
+      });
+    }
+  };
 
   const handleImageConfirm = (file: File, blobUrl: string) => {
     if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage);
@@ -755,6 +792,7 @@ const BatchRequestDetailPage: React.FC = () => {
   const handleOpenQuickView = (product: any) => {
     isUserActionRef.current = false;
     setShowAddOptionalDropdown(false);
+    setGroupCache({}); 
     
     setQuickViewProduct(product);
     setHasFormChanges(false);
@@ -1012,7 +1050,6 @@ const BatchRequestDetailPage: React.FC = () => {
           
           <div className="batch-header-divider"></div>
 
-          {/* Gắn Tag Chỉ Xem hoặc Nút Lưu/Gửi theo Quyền */}
           {isReadOnly ? (
              <span style={{ fontSize: '14px', color: '#6B7280', fontStyle: 'italic', padding: '6px 12px', background: '#F3F4F6', borderRadius: '6px' }}>
                Chỉ được xem
@@ -1085,13 +1122,13 @@ const BatchRequestDetailPage: React.FC = () => {
                           </div>
                         </td>
                         <td className="batch-table-td">
-                          {item.productGroupName || '—'}
+                          {item.productGroupName || 'Chưa chọn'}
                         </td>
                         <td className="batch-table-td">
-                          {item.productCategoryName || '—'}
+                          {item.productCategoryName || 'Chưa chọn'}
                         </td>
                         <td className="batch-table-td">
-                          {item.businessName || '—'}
+                          {item.businessName || 'Chưa chọn'}
                         </td>
                         <td className="batch-table-td" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
                           {item.notes || '—'}
@@ -1173,46 +1210,42 @@ const BatchRequestDetailPage: React.FC = () => {
                   label="Nhóm sản phẩm"
                   value={formData.productGroupId}
                   options={groupOptions}
-                  placeholder="Chọn nhóm"
+                  placeholder="Chưa chọn"
                   disabled={!canEdit}
-                  onChange={(val) => {
-                    isUserActionRef.current = true;
-                    handleFormChange({ productGroupId: val, productCategoryId: '', businessId: '' });
-                  }}
+                  onChange={(val) => handleGroupChange(val)}
                 />
                 
+                {/* Đã thêm alignItems: 'flex-end' vào thẻ div dưới đây */}
+                <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <CustomSelect
+                      label="Danh mục sản phẩm"
+                      value={formData.productCategoryId}
+                      options={categoryOptions}
+                      placeholder="Chưa chọn"
+                      disabled={!canEdit || !formData.productGroupId}
+                      onChange={(val) => {
+                        handleFormChange({ productCategoryId: val, businessId: '' });
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <CustomSelect
+                      label="Nghiệp vụ"
+                      value={formData.businessId}
+                      options={operationOptions}
+                      placeholder="Chưa chọn"
+                      disabled={!canEdit || !formData.productCategoryId}
+                      onChange={(val) => handleFormChange({ businessId: val })}
+                    />
+                  </div>
+                </div>
+                
+                {/* ĐÃ CHUYỂN XUỐNG DƯỚI: Các tiêu chí ưu tiên (bao gồm cả Tên chương trình to đùng) */}
                 {priorityCriteria.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
                     {priorityCriteria.map(c => renderCriterion(c))}
                   </div>
-                )}
-                
-                {(categoryOptions.length > 0 || operationOptions.length > 0) && (
-                   <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
-                     <div style={{ flex: 1, minWidth: 0 }}>
-                       <CustomSelect
-                         label="Danh mục"
-                         value={formData.productCategoryId}
-                         options={categoryOptions}
-                         placeholder="-- Chọn danh mục --"
-                         disabled={!canEdit}
-                         onChange={(val) => {
-                           isUserActionRef.current = true;
-                           handleFormChange({ productCategoryId: val });
-                         }}
-                       />
-                     </div>
-                     <div style={{ flex: 1, minWidth: 0 }}>
-                       <CustomSelect
-                         label="Nghiệp vụ"
-                         value={formData.businessId}
-                         options={operationOptions}
-                         placeholder="-- Chọn nghiệp vụ --"
-                         disabled={!canEdit}
-                         onChange={(val) => handleFormChange({ businessId: val })}
-                       />
-                     </div>
-                   </div>
                 )}
                 
                 {requiredCriteria.length > 0 && (
