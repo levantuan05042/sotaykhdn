@@ -1132,7 +1132,6 @@ const DetailProductPage: React.FC = () => {
                       readOnly={isReadOnly}
                       onChange={v => handleCriterionValueChange(criterion.id, v)}
                     />
-                    {hasErr && <span style={{ color: '#EF4444', fontSize: 13, marginTop: 6, display: 'block', fontWeight: 500 }}>⚠️ Trường bắt buộc, vui lòng nhập nội dung.</span>}
                   </div>
                 );
               })}
