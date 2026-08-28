@@ -464,8 +464,9 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                   className={styles['dropdown-item']}
                   onClick={() => {
                     setIsDropdownOpen(false);
-                    localStorage.removeItem('userRole');
-                    window.location.href = AUTH_SERVICE_LOGOUT_URL;
+                    localStorage.clear();
+                    const redirectUri = window.location.origin + '/';
+                    window.location.href = `${AUTH_SERVICE_LOGOUT_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
                   }}
                 >
                   <img src={dangxuatIcon} alt="Đăng xuất" className={styles['dropdown-icon']} />

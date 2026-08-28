@@ -474,8 +474,9 @@ const HeaderBar: React.FC = () => {
                 className="dropdown-item"
                 onClick={() => {
                   setIsDropdownOpen(false);
-                  localStorage.removeItem('userRole');
-                  window.location.href = AUTH_SERVICE_LOGOUT_URL;
+                  localStorage.clear();
+                  const redirectUri = window.location.origin + '/';
+                  window.location.href = `${AUTH_SERVICE_LOGOUT_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
                 }}
               >
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

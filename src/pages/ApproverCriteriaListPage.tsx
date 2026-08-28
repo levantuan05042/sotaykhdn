@@ -92,6 +92,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
   }, []);
 
   const filteredCriteria = criteriaList.filter((item) => {
+    if (item.status === 'ARCHIVED') return false;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.code.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = !selectedStatus ? true : item.status === selectedStatus;
@@ -143,12 +144,25 @@ export const ApproverCriteriaListPage: React.FC = () => {
     {
       key: 'active',
       header: 'Hiệu lực',
-      render: (row) => (
-        <span className={row.active ? 'text-success font-medium' : 'text-danger font-medium'}>
-          {row.active ? 'Đang hiển thị' : 'Đã ẩn'}
-        </span>
-      ),
-      width: '120px',
+      render: (row) => {
+        const isActive = !!row.active;
+        return (
+          <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
+            <label className="toggle-switch">
+              <input 
+                type="checkbox" 
+                checked={isActive} 
+                disabled
+              />
+              <span className="toggle-slider"></span>
+            </label>
+            <span className="toggle-label" style={{ color: isActive ? '#171717' : '#9CA3AF' }}>
+              {isActive ? 'Hiện' : 'Ẩn'}
+            </span>
+          </div>
+        );
+      },
+      width: '140px',
     },
     {
       key: 'createdBy',
@@ -173,22 +187,18 @@ export const ApproverCriteriaListPage: React.FC = () => {
     {
       key: 'actions',
       header: '',
-      width: '80px',
+      width: '130px',
       align: 'center',
       render: (row) => (
         <button
-          className="btn-eye-view-red"
+          className="btn-quick-view-green"
           title="Xem chi tiết"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/approver/criteria/${row.id}`);
           }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B42318', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
+          Xem nhanh &raquo;
         </button>
       ),
     },
