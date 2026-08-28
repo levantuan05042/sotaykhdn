@@ -4,13 +4,34 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
 import './ProductDetailView.css';
 
+// [SỬA LỖI]: Nâng cấp hàm getImageUrl để chống lỗi dữ liệu từ UAT
 const getImageUrl = (path?: string | null) => {
-  if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `${BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
+  if (!path || path === 'null' || path === 'undefined') return '';
+
+  let cleanUrl = path;
+
+  // Xử lý trường hợp API UAT trả về chuỗi mảng JSON thay vì string tĩnh
+  try {
+    const parsed = JSON.parse(path);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      cleanUrl = parsed[0];
+    }
+  } catch (e) {
+    // Nếu không phải JSON string thì giữ nguyên
+  }
+
+  // Bỏ qua nếu đã là link tuyệt đối hoặc base64
+  if (cleanUrl.startsWith('http') || cleanUrl.startsWith('data:image')) return cleanUrl;
+
+  // Chuẩn hóa dấu '/' khi nối BASE_URL
+  const baseUrlCleaned = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+  const urlCleaned = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
+
+  return `${baseUrlCleaned}${urlCleaned}`;
 };
 
 const stringToColor = (string: string) => {
+  if (!string) return '#2563EB'; // Fallback an toàn
   let hash = 0;
   for (let i = 0; i < string.length; i++) {
     hash = string.charCodeAt(i) + ((hash << 5) - hash);
@@ -18,7 +39,7 @@ const stringToColor = (string: string) => {
   let color = '#';
   for (let i = 0; i < 3; i++) {
     const value = (hash >> (i * 8)) & 0xFF;
-    color += ('00' + value.toString(16)).substr(-2);
+    color += ('00' + value.toString(16)).substring(-2);
   }
   return color;
 };
@@ -64,7 +85,7 @@ interface ProductData {
   id: string;
   name: string;
   imageUrl?: string | null;
-  images?: string[];
+  images?: string[] | string; // Cho phép dạng string trong trường hợp API trả về mảng JSON bị stringify
   details?: DetailItem[];
   productGroupName?: string;
   productGroupId?: string;
@@ -101,6 +122,11 @@ const ProductDetailView: React.FC = () => {
   const shareTimeoutRef = useRef<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const toggleBtnRef = useRef<HTMLButtonElement>(null);
+
+  // [SỬA LỖI]: Reset trạng thái lỗi ảnh mỗi khi chọn ảnh mới
+  useEffect(() => {
+    setImgError(false);
+  }, [selectedImage]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -162,9 +188,10 @@ const ProductDetailView: React.FC = () => {
         const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
         setProduct(res.data);
         saveToHistory(res.data);
+        
+        // Cập nhật selectedImage bằng dữ liệu thô ban đầu, logic bóc tách URL sẽ do getImageUrl lo
         if (res.data.imageUrl) {
           setSelectedImage(res.data.imageUrl);
-          setImgError(false);
         }
       } catch (err) {
         console.error(err);
@@ -244,7 +271,19 @@ const ProductDetailView: React.FC = () => {
   if (loading) return <div className="dp-container"><div className="dp-loading">Đang tải chi tiết sản phẩm...</div></div>;
   if (!product) return <div className="dp-container"><div className="dp-error">Không tìm thấy sản phẩm.</div></div>;
 
-  const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
+  // [SỬA LỖI]: Phân tích mảng ảnh an toàn nếu API trả về JSON string
+  let parsedImagesArray: string[] = [];
+  if (typeof product.images === 'string') {
+    try {
+      parsedImagesArray = JSON.parse(product.images);
+    } catch (e) {
+      // Ignored
+    }
+  } else if (Array.isArray(product.images)) {
+    parsedImagesArray = product.images;
+  }
+  
+  const allImages = [product.imageUrl, ...parsedImagesArray].filter(Boolean) as string[];
   const sortedDetails = [...(product.details || [])].sort((a, b) => a.stt - b.stt);
   const breadcrumbItems = buildBreadcrumbs();
 
@@ -338,7 +377,7 @@ const ProductDetailView: React.FC = () => {
                   <img src={getImageUrl(selectedImage)} alt={product.name} onError={() => setImgError(true)} />
                 ) : (
                   <div className="dp-fallback-img" style={{ background: stringToColor(product.name) }}>
-                    {product.name.charAt(0).toUpperCase()}
+                    {product.name ? product.name.charAt(0).toUpperCase() : '?'}
                   </div>
                 )}
               </div>
@@ -350,7 +389,6 @@ const ProductDetailView: React.FC = () => {
                       className={`dp-thumb ${selectedImage === img ? 'active' : ''}`}
                       onClick={() => {
                         setSelectedImage(img);
-                        setImgError(false);
                       }}
                     >
                       <img src={getImageUrl(img)} alt="" />

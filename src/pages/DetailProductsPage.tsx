@@ -70,19 +70,49 @@ const checkIsRequired = (item: any) => {
   return t1.includes('(*)') || t2.includes('(*)');
 };
 
+// --- FIX HIỂN THỊ ẢNH UAT ---
+const getApiOrigin = () => {
+  if (!BASE_URL) return window.location.origin;
+  if (BASE_URL.startsWith('http')) {
+    try { 
+      return new URL(BASE_URL).origin; 
+    } catch (e) { 
+      return window.location.origin; 
+    }
+  }
+  return window.location.origin;
+};
+
 const toDisplayUrl = (raw: string) => {
   if (!raw) return '';
+  // 1. Giữ nguyên nếu là dạng blob (ảnh preview local) hoặc data base64
+  if (raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
+
+  let cleanPath = raw;
+  const apiOrigin = getApiOrigin();
+
+  // 2. Tách bóc pathname nếu DB lưu cứng domain cũ (như localhost)
   if (raw.startsWith('http')) {
-    if (raw.includes('localhost:8082') || (BASE_URL && raw.includes(BASE_URL))) {
-      return raw.replace(/^(https?:\/\/[^\/]+)/, '');
+    try {
+      const urlObj = new URL(raw);
+      cleanPath = urlObj.pathname; 
+    } catch (error) {
+      return raw;
     }
-    return raw;
   }
-  const cleanPath = raw.includes('/files/') 
-    ? raw.substring(raw.indexOf('/files/')) 
-    : `/files/products/${raw}`;
-  return cleanPath; 
+
+  // 3. Chuẩn hóa đường dẫn backend trả về
+  if (!cleanPath.includes('/files/')) {
+    const fileName = cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath;
+    cleanPath = `/files/products/${fileName}`;
+  } else if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+
+  // 4. Ghép origin chuẩn của UAT/Prod
+  return `${apiOrigin}${cleanPath}`;
 };
+// ----------------------------
 
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
@@ -484,7 +514,7 @@ const DetailProductPage: React.FC = () => {
   const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
 
-  // --- LOGIC PHÂN QUYỀN (CHECK NGƯỜI TẠO TƯƠNG TỰ DETAILGROUPPAGE) ---
+  // --- LOGIC PHÂN QUYỀN ---
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
@@ -493,12 +523,9 @@ const DetailProductPage: React.FC = () => {
 
   const isOwner = useMemo(() => {
     if (!isLoggedIn || !currentUsername || !creatorUsername) return false;
-    
     if (currentUsername === creatorUsername) return true;
-
     const currentBase = currentUsername.split('_')[0];
     const creatorBase = creatorUsername.split('_')[0];
-    
     return currentBase === creatorBase && currentBase.length > 0;
   }, [isLoggedIn, currentUsername, creatorUsername]);
 
@@ -554,7 +581,6 @@ const DetailProductPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // Fetch product detail & group options
   useEffect(() => {
     const init = async () => {
       if (!id) return;
@@ -599,7 +625,6 @@ const DetailProductPage: React.FC = () => {
     init();
   }, [id]);
 
-  // Dynamic dropdowns & dynamic criteria update
   useEffect(() => {
     if (!formData.productGroupId) { setCategoryOptions([]); setOperationOptions([]); return; }
 
@@ -653,12 +678,10 @@ const DetailProductPage: React.FC = () => {
     setCriteria(prev => prev.map(c => c.id !== id ? c : (c.isRequired ? c : { ...c, isSelected: !c.isSelected })));
   };
 
-  // Form dirty states
   const isFormDirty     = productName !== (productData?.name || '') || formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = !isReadOnly && (isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true));
 
-  // Render Toast Custom
   const renderCustomToast = (message: string) => {
     toast.custom(t => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
@@ -677,24 +700,17 @@ const DetailProductPage: React.FC = () => {
     ), { position: 'top-center' });
   };
 
-  // ─────────────────────────────────────────────
-  // Xử lý gọi API thay đổi trạng thái Ẩn / Hiển thị ngay khi chọn
-  // ─────────────────────────────────────────────
   const handleToggleActive = async (newActiveStatus: boolean) => {
     if (isReadOnly) {
       toast.error('Bạn không có quyền thay đổi trạng thái sản phẩm này.', { position: 'top-center' });
       return;
     }
-
     if (!id || newActiveStatus === isActive) return;
 
     try {
-      // Gọi API GET /api/v1/products/{id}/active?active={newActiveStatus}
       const res = await fetch(`${BASE_URL}/products/${id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-        },
+        headers: { 'Accept': 'application/json, text/plain, */*' },
       });
 
       if (res.ok) {
@@ -805,8 +821,6 @@ const DetailProductPage: React.FC = () => {
       <style>{`.ql-editor{word-break:break-word!important;overflow-wrap:break-word!important;white-space:pre-wrap!important;}`}</style>
 
       <div className="mainContainer">
-
-        {/* Cảnh báo chế độ chỉ xem nếu không phải người tạo */}
         {isReadOnly && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -816,7 +830,6 @@ const DetailProductPage: React.FC = () => {
           </div>
         )}
 
-        {/* Header */}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={() => navigate(-1)}>
@@ -831,7 +844,6 @@ const DetailProductPage: React.FC = () => {
                 const categoryLabel = categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName;
                 const operationLabel = operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName;
                 const currentProductName = productName.trim() || productData?.name;
-
                 const breadcrumbItems = [groupLabel, categoryLabel, operationLabel, currentProductName].filter(Boolean);
 
                 return breadcrumbItems.map((item, index) => {
@@ -886,7 +898,6 @@ const DetailProductPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Content Grid */}
         <div className="contentGrid">
           <div className="leftCol">
             <div className="formCard">
@@ -1051,7 +1062,6 @@ const DetailProductPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Trạng thái hiển thị */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 10, width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
@@ -1074,22 +1084,12 @@ const DetailProductPage: React.FC = () => {
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
                       <div 
                         className={`custom-option ${isActive === false ? 'selected' : ''}`} 
-                        onClick={() => { 
-                          handleToggleActive(false); 
-                          setIsStatusOpen(false); 
-                        }}
-                      >
-                        Ẩn
-                      </div>
+                        onClick={() => { handleToggleActive(false); setIsStatusOpen(false); }}
+                      >Ẩn</div>
                       <div 
                         className={`custom-option ${isActive === true ? 'selected' : ''}`} 
-                        onClick={() => { 
-                          handleToggleActive(true); 
-                          setIsStatusOpen(false); 
-                        }}
-                      >
-                        Hiển thị
-                      </div>
+                        onClick={() => { handleToggleActive(true); setIsStatusOpen(false); }}
+                      >Hiển thị</div>
                     </div>
                   )}
                 </div>
@@ -1198,18 +1198,8 @@ const DetailProductPage: React.FC = () => {
         </div>
       </div>
 
-      <CriteriaModal
-        isOpen={showCriteriaModal}
-        onClose={() => setShowCriteriaModal(false)}
-        criteria={criteria}
-        onToggle={toggleCriterionSelection}
-      />
-
-      <ImageModal
-        isOpen={showImageModal}
-        onClose={() => setShowImageModal(false)}
-        onConfirm={handleImageConfirm}
-      />
+      <CriteriaModal isOpen={showCriteriaModal} onClose={() => setShowCriteriaModal(false)} criteria={criteria} onToggle={toggleCriterionSelection} />
+      <ImageModal isOpen={showImageModal} onClose={() => setShowImageModal(false)} onConfirm={handleImageConfirm} />
     </div>
   );
 };

@@ -66,18 +66,34 @@ const checkIsRequired = (item: any) => {
   return t1.includes('(*)') || t2.includes('(*)');
 };
 
+// ĐÃ SỬA: Hàm xử lý URL ảnh cho môi trường UAT/Production
 const toDisplayUrl = (raw: string) => {
   if (!raw) return '';
+  if (raw.startsWith('blob:')) return raw;
+  const cleanBaseUrl = BASE_URL ? BASE_URL.replace(/\/$/, '') : '';
   if (raw.startsWith('http')) {
-    if (raw.includes('localhost:8082') || (BASE_URL && raw.includes(BASE_URL))) {
-      return raw.replace(/^(https?:\/\/[^\/]+)/, '');
+    if (raw.includes('localhost') || raw.includes('127.0.0.1')) {
+      try {
+        const urlObj = new URL(raw);
+        return `${cleanBaseUrl}${urlObj.pathname}`;
+      } catch (e) {
+        return raw;
+      }
     }
+    // Nếu là URL chuẩn (VD: S3, CDN), giữ nguyên
     return raw;
   }
-  const cleanPath = raw.includes('/files/') 
-    ? raw.substring(raw.indexOf('/files/')) 
-    : `/files/products/${raw}`;
-  return cleanPath; 
+
+  // 3. Xử lý relative path (Database chỉ lưu tên file hoặc path như /files/...)
+  let cleanPath = raw;
+  if (!raw.startsWith('/')) {
+    cleanPath = raw.includes('files/') ? `/${raw}` : `/files/products/${raw}`;
+  } else if (!raw.includes('/files/')) {
+    cleanPath = `/files/products${raw}`;
+  }
+
+  // Luôn gắn BASE_URL của môi trường hiện tại vào trước đường dẫn file
+  return `${cleanBaseUrl}${cleanPath}`;
 };
 
 // ─────────────────────────────────────────────
@@ -87,6 +103,8 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new Image();
     img.src = url;
+    // Bổ sung crossOrigin để tránh lỗi CORS khi vẽ ảnh lên canvas ở UAT
+    img.crossOrigin = "anonymous";
     img.onload  = () => resolve(img);
     img.onerror = reject;
   });
@@ -631,7 +649,7 @@ const DetailProductPage: React.FC = () => {
           fetch(API_ENDPOINTS.PRODUCT.DETAIL(id)),
           fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.LIST}?status=ACTIVE&active=true`),
         ]);
-        if (!pRes.ok) throw new Error('Không thể tải thông vị sản phẩm');
+        if (!pRes.ok) throw new Error('Không thể tải thông tin sản phẩm');
         const pData = await pRes.json();
         setProductData(pData);
         setIsActive(pData.active ?? true);
