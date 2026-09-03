@@ -1,14 +1,15 @@
 .table-wrapper {
   width: 100%;
-  max-width: 100%; /* Ép không cho vượt quá khung chứa bên ngoài */
+  max-width: 100%;
   background: white;
   border-radius: 8px;
   max-height: 560px;
   overflow-y: auto;
-  overflow-x: auto; /* Kích hoạt cuộn ngang[cite: 30] */
+  overflow-x: auto;
   position: relative;
   border: 1px solid #E5E7EB;
 }
+
 .custom-table {
   width: 100%;
   border-collapse: separate;
@@ -16,7 +17,6 @@
   min-width: 1300px; 
 }
 
-/* --- TIÊU ĐỀ CỐ ĐỊNH KHI CUỘN DỌC --- */
 .custom-table th {
   background: #F9FAFB;
   padding: 14px 16px;
@@ -28,7 +28,7 @@
   white-space: nowrap;
   position: sticky;
   top: 0;
-  z-index: 10;             /* Đảm bảo header nổi lên trên khi cuộn dọc */
+  z-index: 10;
   box-shadow: inset 0 -1px 0 #E5E7EB;
 }
 
@@ -39,21 +39,19 @@
   white-space: nowrap; 
 }
 
-/* --- CỐ ĐỊNH CỘT KHI CUỘN NGANG --- */
-/* Cột 1: STT */
 .custom-table th:nth-child(1),
 .custom-table td:nth-child(1) {
   position: sticky;
   left: 0;
-  z-index: 11;             /* Cao hơn header để không bị đè ở góc giao nhau */
+  z-index: 11;
   width: 65px;
   min-width: 65px;
   text-align: center;
 }
+
 .custom-table th:nth-child(1) { background: #F9FAFB; }
 .custom-table td:nth-child(1) { background: white; }
 
-/* Cột 2: Sản phẩm */
 .custom-table th:nth-child(2),
 .custom-table td:nth-child(2) {
   position: sticky;
@@ -63,10 +61,10 @@
   min-width: 260px;
   box-shadow: 4px 0 8px -4px rgba(0, 0, 0, 0.08); 
 }
+
 .custom-table th:nth-child(2) { background: #F9FAFB; }
 .custom-table td:nth-child(2) { background: white; }
 
-/* Cột cuối: Thao tác */
 .custom-table th:last-child,
 .custom-table td:last-child {
   position: sticky;
@@ -76,14 +74,16 @@
   min-width: 60px;
   box-shadow: -4px 0 8px -4px rgba(0, 0, 0, 0.08); 
 }
+
 .custom-table th:last-child { background: #F9FAFB; }
 .custom-table td:last-child { background: white; }
 
 .col-group { min-width: 180px; }
 .col-category { min-width: 180px; }
 .col-business { min-width: 200px; }
+.col-creator { min-width: 150px; }
+.col-reviewer { min-width: 150px; }
 
-/* --- TRẠNG THÁI & GIAO DIỆN KHÁC --- */
 .status-badge-custom {
   display: inline-flex;
   align-items: center;
@@ -104,6 +104,7 @@
   font-size: 16px;
   font-weight: 600;
 }
+
 .text-danger { 
   color: #EF4444; 
   font-family: 'Inter', sans-serif;
@@ -127,7 +128,6 @@
    color: #AE1C3F;
 }
 
-/* --- PHÂN TRANG --- */
 .pagination-box {
   display: flex;
   justify-content: center;
@@ -170,7 +170,6 @@
 .p-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .pagination-dots { color: #9CA3AF; }
 
-/* --- THANH CUỘN (SCROLLBAR) --- */
 .table-wrapper::-webkit-scrollbar {
   width: 6px;   
   height: 6px;   
@@ -189,44 +188,15 @@
   background-color: rgba(0, 0, 0, 0.3);  
 }
 
-.col-highlight {
-  background-color: #F2FCF7 !important;
-  border-bottom: 1px solid #E5E7EB;     
-}
-
-.col-highlight-first {
-  border-left: 1px solid #63B693 !important; 
-}
-
-.col-highlight-last {
-  border-right: 1px solid #63B693 !important; 
-}
-
-.col-highlight-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.truncate-text {
-  display: block;
-  max-width: 100%;
-  white-space: nowrap;     
-  overflow: hidden;         
-  text-overflow: ellipsis;  
-}
-
-/* --- HIỆU ỨNG HOVER & CLICK HÀNG --- */
 .custom-table tbody tr {
   cursor: pointer;
   transition: background-color 0.15s ease-in-out;
 }
 
 .custom-table tbody tr:hover td {
-  background-color: #F9FAFB !important; /* Giữ màu nền đồng bộ với các cột cố định sticky */
+  background-color: #F9FAFB !important; 
 }
 
-/* --- CÔNG TẮC GẠT HIỆU LỰC (TOGGLE SWITCH) --- */
 .toggle-wrapper {
   display: flex;
   align-items: center;
@@ -289,4 +259,61 @@
   font-size: 14px;
   font-weight: 500;
   color: #111827;
+}
+
+.truncate-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+.truncate-wrapper:hover {
+  z-index: 50;
+}
+
+.truncate-text {
+  display: block;
+  width: 100%;
+  white-space: nowrap;     
+  overflow: hidden;         
+  text-overflow: ellipsis;  
+}
+
+.custom-tooltip {
+  visibility: hidden;
+  background-color: #FDEBEB;
+  color: #1A191B;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 9999;
+  bottom: 100%;
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out;
+  white-space: normal;
+  word-wrap: break-word;
+  min-width: 120px;
+  max-width: 320px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  font-weight: 400;
+  margin-bottom: 8px;
+  pointer-events: none;
+}
+
+.custom-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 16px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: #FDEBEB transparent transparent transparent;
+}
+
+.truncate-wrapper:hover .custom-tooltip {
+  visibility: visible;
+  opacity: 1;
 }

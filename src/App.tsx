@@ -19,7 +19,7 @@ import AddBusinessPage from './pages/AddBusinessPage';
 import ProductPage from './pages/ProductPage';
 import AddProductPage from './pages/AddProductPage';
 import DetailProductPage from './pages/DetailProductPage';
-import DetailProductsPage from './pages/DetailProductsPage';
+// import DetailProductsPage from './pages/DetailProductsPage';
 import RequestListPage from './pages/RequestListPage';
 import ApproverRequestListPage from './pages/ApproverRequestListPage';
 import BatchRequestDetailPage from './pages/BatchRequestDetailPage';
@@ -101,7 +101,7 @@ function App() {
           <Route path="product-approval-list" element={<ProductPage />} />
           <Route path="products/add" element={<AddProductPage />} />
           <Route path="products/:id" element={<DetailProductPage />} />
-          <Route path="product/:id" element={<DetailProductsPage />} />
+          {/* <Route path="product/:id" element={<DetailProductsPage />} /> */}
           <Route path="products/batch/:requestId" element={<BatchRequestDetailPage />} />
           
           {/* Luồng Duyệt (Approver) */}

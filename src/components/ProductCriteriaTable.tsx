@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
+import StatusBadge2 from './ui/StatusBadge2';
 import './ProductCriteriaTable.css'; 
 
 interface ProductGroup {
@@ -29,10 +29,17 @@ interface Props {
   onToggleActive?: (id: any, newActiveStatus: boolean) => void;
 }
 
+const STATUS_OPTIONS = [
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Lưu nháp', value: 'DRAFT' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Từ chối', value: 'REJECTED' },
+  { label: 'Lưu trữ', value: 'ARCHIVED' }
+];
+
 const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
-
-  // ===== Pagination & State =====
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
   const [tableData, setTableData] = useState<ProductCriteria[]>([]);
@@ -61,7 +68,6 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const handleToggleActive = async (item: ProductCriteria, currentActive: boolean) => {
     const newActiveStatus = !currentActive;
 
-    // 1. Optimistic Update (Cập nhật UI ngay lập tức)
     setTableData(prevData => 
       prevData.map(d => 
         d.id === item.id ? { ...d, active: newActiveStatus } : d
@@ -69,7 +75,6 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
 
     try {
-      // 2. Gọi API cập nhật trạng thái
       const response = await fetch(`http://localhost:8082/api/v1/criteria/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: {
@@ -86,16 +91,13 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
       }
 
     } catch (error) {
-      console.error("Lỗi cập nhật hiệu lực tiêu chí:", error);
-      
-      // 3. Rollback UI nếu gặp lỗi
+      console.error(error);
       setTableData(prevData => 
         prevData.map(d => 
           d.id === item.id ? { ...d, active: currentActive } : d
         )
       );
 
-      // 4. Hiển thị thông báo cảnh báo
       setWarningData({
         show: true,
         title: `Không thể ẩn tiêu chí: "${item.name}"`,
@@ -112,7 +114,7 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
     return (
       <div 
         className="toggle-wrapper"
-        onClick={(e) => e.stopPropagation()} // Ngăn sự kiện click lan ra tr
+        onClick={(e) => e.stopPropagation()}
       >
         <label className="toggle-switch">
           <input 
@@ -164,79 +166,115 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
                 ? activeGroups.map(group => group.name).join(', ')
                 : '---';
 
+              const statusText = STATUS_OPTIONS.find(opt => opt.value === item.status)?.label || item.status;
+              const serialNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+
               return (
                 <tr 
                   key={item.id || index}
-                  onClick={() => handleViewDetail(item.id)} // Click hàng để xem chi tiết
+                  onClick={() => handleViewDetail(item.id)}
                 >
                   <td className="px-40">
-                    {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
-                  </td>
-
-                  <td className="product-name-cell">
-                    <div className="truncate-text" style={{ maxWidth: '150px' }} title={item.code}>
-                      {item.code}
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text">{serialNumber}</span>
+                      <div className="custom-tooltip">{serialNumber}</div>
                     </div>
                   </td>
 
-                  <td className="product-name-cell">
-                    <div className="truncate-text" style={{ maxWidth: '200px' }} title={item.isRequired ? `${item.name} *` : item.name}>
-                      {item.name}
-                      {item.isRequired && (
-                        <span className="text-red-500 ml-1" style={{ color: 'red' }}>*</span>
-                      )}
+                  <td>
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text">{item.code}</span>
+                      <div className="custom-tooltip">{item.code}</div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text">
+                        {item.name}
+                        {item.isRequired && (
+                          <span style={{ color: 'red', marginLeft: '4px' }}>*</span>
+                        )}
+                      </span>
+                      <div className="custom-tooltip">
+                        {item.name}
+                        {item.isRequired && ' *'}
+                      </div>
                     </div>
                   </td>
                   
-                  <td className="product-group-cell">
-                    <div className="truncate-text" title={groupNamesText}>
-                      {groupNamesText}
+                  <td>
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text">{groupNamesText}</span>
+                      <div className="custom-tooltip">{groupNamesText}</div>
                     </div>
                   </td>
 
-                  {/* Thay thế hàm renderStatus cũ bằng Component mới */}
                   <td>
-                    <StatusBadge2 status={item.status} />
+                    <div className="custom-tooltip-container">
+                      <StatusBadge2 status={item.status} />
+                      <div className="custom-tooltip">{statusText}</div>
+                    </div>
                   </td>
 
-                  <td>{renderActiveToggle(item)}</td>
-                  <td>{item.createdByFullName || '---'}</td>
-                  <td>{item.approvedBy || '---'}</td>
-                  <td style={{ 
-                    color: '#053E2B', 
-                    fontFamily: 'Inter, sans-serif', 
-                    fontSize: '16px', 
-                    fontWeight: 600, 
-                    lineHeight: '24px', 
-                    flex: '1 0 0' 
-                  }}>
-                    {item.version ? `Phiên bản ${item.version}` : '---'}
+                  <td>
+                    <div className="custom-tooltip-container">
+                      {renderActiveToggle(item)}
+                      <div className="custom-tooltip">{item.active ? 'Hiện' : 'Ẩn'}</div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text">{item.createdByFullName || '---'}</span>
+                      <div className="custom-tooltip">{item.createdByFullName || '---'}</div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text">{item.approvedBy || '---'}</span>
+                      <div className="custom-tooltip">{item.approvedBy || '---'}</div>
+                    </div>
+                  </td>
+
+                  <td>
+                    <div className="custom-tooltip-container">
+                      <span className="truncate-text" style={{ color: '#053E2B', fontWeight: 600 }}>
+                        {item.version ? `Phiên bản ${item.version}` : '---'}
+                      </span>
+                      <div className="custom-tooltip">
+                        {item.version ? `Phiên bản ${item.version}` : '---'}
+                      </div>
+                    </div>
                   </td>
 
                   <td className="px-40 text-right">
-                    <button
-                      className="btn-view-detail"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Chặn lan truyền click
-                        handleViewDetail(item.id);
-                      }}
-                      title='Xem chi tiết'
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="mr-1.5"
+                    <div className="custom-tooltip-container" style={{ justifyContent: 'flex-end' }}>
+                      <button
+                        className="btn-view-detail"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetail(item.id);
+                        }}
                       >
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="mr-1.5"
+                        >
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      </button>
+                      <div className="custom-tooltip">Xem chi tiết</div>
+                    </div>
                   </td>
                 </tr>
               );
@@ -251,7 +289,6 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
         </tbody>
       </table>
 
-      {/* ===== Pagination ===== */}
       {totalPages > 1 && (
         <div className="pagination-wrapper">
           <div className="pagination-container">
@@ -303,7 +340,6 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
         </div>
       )}
 
-      {/* Modal Cảnh báo */}
       {warningData.show && (
         <div className="warning-toast-wrapper">
           <div className="warning-toast-card">

@@ -38,6 +38,7 @@ const DetailGroupPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false); 
+  const [isInfoOpen, setIsInfoOpen] = useState(true);
   const [productData, setProductData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -112,7 +113,6 @@ const DetailGroupPage: React.FC = () => {
         });
         setIsActive(data.active ?? true);
       } catch (error) {
-        console.error("Lỗi tải chi tiết nhóm sản phẩm:", error);
         toast.error("Không tìm thấy dữ liệu nhóm sản phẩm");
       } finally {
         setLoading(false);
@@ -130,7 +130,6 @@ const DetailGroupPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-groups');
 
-  // Đã thêm 'NEEDS_REVISION' vào kiểu dữ liệu của status
   const handleUpdateGroup = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
@@ -166,7 +165,7 @@ const DetailGroupPage: React.FC = () => {
         let message = '';
         switch (status) {
           case 'DRAFT': 
-          case 'NEEDS_REVISION': // Xử lý thông báo thành công cho trường hợp lưu nháp YCCS
+          case 'NEEDS_REVISION':
             message = "Lưu nháp nhóm sản phẩm thành công"; break;
           case 'ARCHIVED': message = "Lưu trữ nhóm sản phẩm thành công"; break;
           case 'ACTIVE': message = "Kích hoạt nhóm sản phẩm hoạt động trở lại thành công"; break;
@@ -181,7 +180,6 @@ const DetailGroupPage: React.FC = () => {
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi cập nhật:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -242,7 +240,6 @@ const DetailGroupPage: React.FC = () => {
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi xóa nhóm sản phẩm:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -283,7 +280,6 @@ const DetailGroupPage: React.FC = () => {
         setIsStatusOpen(false);
       }
     } catch (error) {
-      console.error("Lỗi cập nhật trạng thái hiển thị:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setIsStatusOpen(false);
     } finally {
@@ -361,7 +357,31 @@ const DetailGroupPage: React.FC = () => {
   if (!productData) return <div className="error">Không tìm thấy dữ liệu nhóm sản phẩm phù hợp.</div>;
 
   const currentStatus = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
-  
+
+  const getCreatorDisplayName = () => {
+    if (productData.createdByFullName) return productData.createdByFullName;
+    if (creatorUsername) {
+      const mapped = getFullName(creatorUsername, userMap);
+      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+    }
+    return creatorUsername ? creatorUsername.toUpperCase() : '---';
+  };
+
+  const getApproverDisplayName = () => {
+    if (productData.approvedByFullName) return productData.approvedByFullName;
+    if (productData.approvedBy && productData.approvedBy === productData.createdBy && productData.createdByFullName) {
+      return productData.createdByFullName;
+    }
+
+    if (productData.approvedBy) {
+      const baseId = extractBaseId(productData.approvedBy);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
+      return baseId.toUpperCase();
+    }
+    return '---';
+  };
+
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
@@ -411,12 +431,10 @@ const DetailGroupPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    {/* Đã bỏ disabled để có thể click bất cứ lúc nào */}
                     <button className="btnDraft active" onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    {/* Đã bỏ disabled để có thể click bất cứ lúc nào */}
                     <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
@@ -437,7 +455,6 @@ const DetailGroupPage: React.FC = () => {
                 )}
                 {productData.status === 'NEEDS_REVISION' && (
                   <>
-                    {/* Truyền trạng thái 'NEEDS_REVISION' để giữ nguyên trạng thái cũ */}
                     <button className="btnDraft active" onClick={() => handleUpdateGroup('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
@@ -553,39 +570,82 @@ const DetailGroupPage: React.FC = () => {
               </div>
             </div>
 
-             <div className="commentCard">
-                <div className="commentHeader">
-                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span className="commentTitle">Bình luận phản hồi</span>
+            <div className="infoCard">
+              <div className="infoHeader" onClick={() => setIsInfoOpen(!isInfoOpen)}>
+                <span className="infoTitle">Thông tin sản phẩm</span>
+                <svg 
+                  className={`infoChevron ${isInfoOpen ? 'open' : ''}`} 
+                  width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <path d="M5 7.5L10 12.5L15 7.5"/>
+                </svg>
+              </div>
+              
+              {isInfoOpen && (
+                <div className="infoContent">
+                  <div className="infoGrid">
+                    <div className="infoItem">
+                      <span className="infoLabel">Người tạo</span>
+                      <span className="infoValue">
+                        {getCreatorDisplayName()}
+                      </span>
+                    </div>
+                    <div className="infoItem">
+                      <span className="infoLabel">Người kiểm duyệt</span>
+                      <span className="infoValue">
+                        {getApproverDisplayName()}
+                      </span>
+                    </div>
+                    <div className="infoItem">
+                      <span className="infoLabel">Thời gian tạo</span>
+                      <span className="infoValue">
+                        {formatDateTime(productData.createdAt)}
+                      </span>
+                    </div>
+                    <div className="infoItem">
+                      <span className="infoLabel">Phiên bản</span>
+                      <div className="versionBadge">
+                        Phiên bản {productData.version ?? 0}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="commentList">
-                  {productData.comments && productData.comments.length > 0 ? (
-                    productData.comments.map((c: any, index: number) => (
-                      <React.Fragment key={c.id || index}>
-                        <div className="commentItem">
-                          <div className="userInfo">
-                            <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
-                            <div style={{ flex: 1 }}>
-                              <div className="userHeader">
-                                <span className="userName">
-                                  {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}
-                                </span>
-                                <span className="commentDate">{formatDateTime(c.createdAt)}</span>
-                              </div>
-                              <p className="commentText">{c.comment}</p>
+              )}
+            </div>
+
+            <div className="commentCard">
+              <div className="commentHeader">
+                <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="commentTitle">Bình luận phản hồi</span>
+              </div>
+              <div className="commentList">
+                {productData.comments && productData.comments.length > 0 ? (
+                  productData.comments.map((c: any, index: number) => (
+                    <React.Fragment key={c.id || index}>
+                      <div className="commentItem">
+                        <div className="userInfo">
+                          <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
+                          <div style={{ flex: 1 }}>
+                            <div className="userHeader">
+                              <span className="userName">
+                                {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}
+                              </span>
+                              <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                             </div>
+                            <p className="commentText">{c.comment}</p>
                           </div>
                         </div>
-                        {index < productData.comments.length - 1 && <hr className="commentDivider" />}
-                      </React.Fragment>
-                    ))
-                  ) : (
-                    <div className="no-comments">Chưa có bình luận hay phản hồi nào cho nhóm sản phẩm này.</div>
-                  )}
-                </div>
-             </div>
+                      </div>
+                      {index < productData.comments.length - 1 && <hr className="commentDivider" />}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <div className="no-comments">Chưa có bình luận hay phản hồi nào cho nhóm sản phẩm này.</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import './DetailGroupPage.css'; // Giữ nguyên import CSS theo file của bạn
+import './DetailGroupPage.css'; 
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
-// Import thêm 2 hàm utils của bạn (hãy điều chỉnh đường dẫn '../utils/userUtils' cho khớp với project)
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -44,6 +43,12 @@ const getCurrentUsername = () => {
   return '';
 };
 
+// Hàm tách ID hệ thống
+const extractBaseId = (username: string) => {
+  if (!username) return '';
+  return username.split('_')[0];
+};
+
 const DetailCategoryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -57,7 +62,6 @@ const DetailCategoryPage: React.FC = () => {
   
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
   
-  // 1. Khởi tạo userMap 1 lần duy nhất bằng useMemo để tối ưu hiệu suất
   const userMap = useMemo(() => getUserMap(), []);
 
   const currentUsername = getCurrentUsername();
@@ -71,11 +75,9 @@ const DetailCategoryPage: React.FC = () => {
     creatorUsername = String(creatorField).trim().toLowerCase();
   }
 
-  // 2. XỬ LÝ TÁCH LẤY USERNAME CHÍNH XÁC (VD: "37ETN082_10500037" -> "37etn082")
   const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
   const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
 
-  // 3. SO SÁNH QUYỀN SỞ HỮU DỰA TRÊN BASE USERNAME
   const isOwner = Boolean(
     isLoggedIn && 
     baseCurrentUsername && 
@@ -89,6 +91,30 @@ const DetailCategoryPage: React.FC = () => {
     name: '',
     groupId: ''
   });
+
+  // Xử lý lấy tên hiển thị
+  const getCreatorDisplayName = () => {
+    if (categoryData?.createdByFullName) return categoryData.createdByFullName;
+    if (creatorUsername) {
+      const mapped = getFullName(creatorUsername, userMap);
+      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+    }
+    return creatorUsername ? creatorUsername.toUpperCase() : '---';
+  };
+
+  const getApproverDisplayName = () => {
+    if (categoryData?.approvedByFullName) return categoryData.approvedByFullName;
+    if (categoryData?.approvedBy && categoryData.approvedBy === categoryData?.createdBy && categoryData?.createdByFullName) {
+      return categoryData.createdByFullName;
+    }
+    if (categoryData?.approvedBy) {
+      const baseId = extractBaseId(categoryData.approvedBy);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
+      return baseId.toUpperCase();
+    }
+    return '---';
+  };
 
   useEffect(() => {
     const initPageData = async () => {
@@ -137,7 +163,6 @@ const DetailCategoryPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-category');
 
-  // Thêm trạng thái NEEDS_REVISION vào khai báo
   const handleUpdateCategory = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
@@ -165,7 +190,7 @@ const DetailCategoryPage: React.FC = () => {
           name: formData.name || categoryData.name,
           groupId: formData.groupId || categoryData.groupId,
           active: isActive,
-          status // Sẽ gửi đúng NEEDS_REVISION nếu người dùng ở trạng thái YCCS
+          status 
         }),
       });
 
@@ -216,7 +241,6 @@ const DetailCategoryPage: React.FC = () => {
         renderCustomToast(newActiveStatus ? "Hiển thị danh mục thành công" : "Ẩn danh mục thành công");
       } else {
         toast.dismiss(toastId);
-        // Nếu chuyển sang Ẩn (false) và bị lỗi (do có nghiệp vụ/sản phẩm con)
         if (!newActiveStatus && (response.status === 400 || response.status === 409)) {
           renderCannotHideToast(formData.name || categoryData.name);
         } else {
@@ -239,7 +263,7 @@ const DetailCategoryPage: React.FC = () => {
             <div className="warning-toast-icon-container">
               <div className="warning-bg-outer"></div>
               <div className="warning-bg-inner"></div>
-              <svg className="warning-toast-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg className="warning-toast-icon" width="40" height="40" viewBox="0 0 24 24" fill="none">
                 <path fillRule="evenodd" clipRule="evenodd" d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" fill="#EAB308"/>
                 <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
                 <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
@@ -252,9 +276,7 @@ const DetailCategoryPage: React.FC = () => {
               Danh mục này đang chứa các nghiệp vụ hoặc sản phẩm bên trong.
             </p>
             <div className="warning-toast-actions">
-              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
-                Đóng
-              </button>
+              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>Đóng</button>
             </div>
           </div>
         </div>,
@@ -265,7 +287,6 @@ const DetailCategoryPage: React.FC = () => {
 
   const handleDeleteCategory = () => {
     if (isReadOnly || !id) return;
-
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
         <div className="confirm-toast-body">
@@ -280,18 +301,8 @@ const DetailCategoryPage: React.FC = () => {
           </div>
         </div>
         <div className="confirm-toast-actions">
-          <button 
-            className="confirm-btn-delete"
-            onClick={async () => {
-              toast.dismiss(t.id);
-              await executeDelete();
-            }}
-          >
-            Xóa
-          </button>
-          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
-            Hủy
-          </button>
+          <button className="confirm-btn-delete" onClick={async () => { toast.dismiss(t.id); await executeDelete(); }}>Xóa</button>
+          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>Hủy</button>
         </div>
       </div>
     ), { position: 'top-center', duration: Infinity });
@@ -308,7 +319,6 @@ const DetailCategoryPage: React.FC = () => {
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
-
       if (response.ok) {
         renderCustomToast("Xóa danh mục sản phẩm thành công");
         setTimeout(() => navigate('/product-category'), 2000);
@@ -398,8 +408,7 @@ const DetailCategoryPage: React.FC = () => {
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {isReadOnly ? (
-              <span style={{}}>
-              </span>
+              <span></span>
             ) : (
               <>
                 {categoryData.status === 'DRAFT' && (
@@ -410,12 +419,10 @@ const DetailCategoryPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    {/* Yêu cầu 1: Bỏ logic isDirty khỏi nút Lưu nháp để luôn sáng */}
                     <button className="btnDraft active" disabled={isReadOnly} onClick={() => handleUpdateCategory('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    {/* Yêu cầu 1: Bỏ isDirty ở Gửi phê duyệt, chỉ check điền đủ form */}
                     <button className={`btnSubmit ${!isReadOnly && formData.name.trim() && formData.groupId ? 'active' : 'disabled'}`} disabled={isReadOnly || !formData.name.trim() || !formData.groupId} onClick={() => handleUpdateCategory('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
@@ -424,7 +431,6 @@ const DetailCategoryPage: React.FC = () => {
                 )}
                 {(categoryData.status === 'ACTIVE' || categoryData.status === 'NEEDS_REVISION') && (
                   <>
-                    {/* Yêu cầu 2: Ở trạng thái YCCS, khi click nút sẽ gửi status là NEEDS_REVISION thay vì DRAFT */}
                     <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateCategory(categoryData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
@@ -495,12 +501,12 @@ const DetailCategoryPage: React.FC = () => {
                   style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
                 />
               </div>
-
             </div>
           </div>
 
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB' }}>
+            {/* THẺ TRẠNG THÁI HIỂN THỊ */}
+            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -522,7 +528,6 @@ const DetailCategoryPage: React.FC = () => {
                 </div>
                 {!isReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    {/* Yêu cầu 3: Gắn API handleUpdateDisplayStatus khi click Đổi trạng thái Ẩn/Hiện */}
                     <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(false)}>Ẩn</div>
                     <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(true)}>Hiển thị</div>
                   </div>
@@ -530,38 +535,74 @@ const DetailCategoryPage: React.FC = () => {
               </div>
             </div>
 
-             <div className="commentCard">
-                <div className="commentHeader">
-                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  <span className="commentTitle">Bình luận phản hồi</span>
+            {/* KHỐI THÔNG TIN SẢN PHẨM (MỚI THÊM) */}
+            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid #E5E7EB', width: 340, boxSizing: 'border-box' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500 }}>Thông tin sản phẩm</span>
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
+                  <path d="M1 7L6 2L11 7" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              
+              <div style={{ background: '#FFF', borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Người tạo</div>
+                    <div style={{ color: '#1F2937', fontSize: 14, wordBreak: 'break-all' }}>{getCreatorDisplayName()}</div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Người kiểm duyệt</div>
+                    <div style={{ color: '#1F2937', fontSize: 14, wordBreak: 'break-all' }}>{getApproverDisplayName()}</div>
+                  </div>
                 </div>
-                <div className="commentList">
-                  {categoryData.comments && categoryData.comments.length > 0 ? (
-                    categoryData.comments.map((c: any, index: number) => (
-                      <React.Fragment key={c.id || index}>
-                        <div className="commentItem">
-                          <div className="userInfo">
-                            <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
-                            <div style={{ flex: 1 }}>
-                              <div className="userHeader">
-                                {/* 4. SỬ DỤNG HÀM getFullName ĐỂ HIỂN THỊ TÊN ĐẸP CHO NGƯỜI BÌNH LUẬN */}
-                                <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
-                                <span className="commentDate">{formatDateTime(c.createdAt)}</span>
-                              </div>
-                              <p className="commentText">{c.comment}</p>
+                <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Thời gian tạo</div>
+                    <div style={{ color: '#1F2937', fontSize: 14 }}>{formatDateTime(categoryData.createdAt)}</div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Phiên bản</div>
+                    <div style={{ display: 'inline-flex', padding: '4px 12px', background: '#DCFCE7', color: '#166534', borderRadius: 100, fontSize: 13, fontWeight: 500 }}>
+                      Phiên bản {categoryData.version || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* BÌNH LUẬN PHẢN HỒI */}
+            <div className="commentCard">
+              <div className="commentHeader">
+                <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+                  <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="commentTitle">Bình luận phản hồi</span>
+              </div>
+              <div className="commentList">
+                {categoryData.comments && categoryData.comments.length > 0 ? (
+                  categoryData.comments.map((c: any, index: number) => (
+                    <React.Fragment key={c.id || index}>
+                      <div className="commentItem">
+                        <div className="userInfo">
+                          <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
+                          <div style={{ flex: 1 }}>
+                            <div className="userHeader">
+                              <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
+                              <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                             </div>
+                            <p className="commentText">{c.comment}</p>
                           </div>
                         </div>
-                        {index < categoryData.comments.length - 1 && <hr className="commentDivider" />}
-                      </React.Fragment>
-                    ))
-                  ) : (
-                    <div className="no-comments">Chưa có bình luận hay phản hồi nào cho danh mục này.</div>
-                  )}
-                </div>
-             </div>
+                      </div>
+                      {index < categoryData.comments.length - 1 && <hr className="commentDivider" />}
+                    </React.Fragment>
+                  ))
+                ) : (
+                  <div className="no-comments">Chưa có bình luận hay phản hồi nào cho danh mục này.</div>
+                )}
+              </div>
+            </div>
+            
           </div>
         </div>
 

@@ -8,13 +8,11 @@
 .mainContainer {
   display: flex;
   width: 1220px;
-  padding: 0 40px 40px 40px;
+  padding: 20px;
   flex-direction: column;
   align-items: flex-start;
   gap: 20px;
-  background-color: #FFFFFF;
   box-sizing: border-box;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
 }
 
 .header {
@@ -56,7 +54,7 @@
 }
 
 .breadcrumbText {
-  color: #1A191B;
+  color: #6C6E79;
   font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 400;
@@ -336,12 +334,95 @@
 }
 
 .rightCol {
-  width: 337px;
+  width: 340px;
   flex-shrink: 0;
   position: -webkit-sticky; 
   position: sticky;
   top: 123px; 
   height: fit-content; 
+}
+
+.infoCard {
+  display: flex;
+  padding: 20px 24px;
+  flex-direction: column;
+  gap: 16px;
+  border-radius: 12px;
+  background: #F2EFF3;
+  border: 1px solid #E5E7EB;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.infoHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.infoTitle {
+  color: #1A191B;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+}
+
+.infoChevron {
+  transition: transform 0.3s ease;
+}
+
+.infoChevron.open {
+  transform: rotate(180deg);
+}
+
+.infoContent {
+  background: #FFFFFF;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 12px;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.infoLabel {
+  color: #9CA3AF;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.infoValue {
+  color: #374151;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.versionBadge {
+  display: inline-flex;
+  padding: 4px 10px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 100px;
+  background: #E0F9EC;
+  color: #14532D;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  width: fit-content;
 }
 
 .commentCard {
@@ -556,7 +637,6 @@
   opacity: 0.9;
 }
 
-/* Container phủ toàn màn hình */
 .warning-toast-wrapper {
   position: fixed;
   top: 0;
@@ -567,22 +647,21 @@
   align-items: center;
   justify-content: center;
   z-index: 99999;
-  pointer-events: none; /* Không block click ngoài overlay */
+  pointer-events: none;
 }
 
-/* Khung card màu trắng */
 .warning-toast-card {
   display: flex;
   flex-direction: column;
   align-items: center;
   background: #ffffff;
   padding: 32px;
-  border-radius: 16px; /* Bo góc to hơn theo thiết kế */
+  border-radius: 16px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
   border: 1px solid #F3F4F6;
   width: 360px;
   text-align: center;
-  pointer-events: auto; /* Bật lại tương tác cho card */
+  pointer-events: auto;
   animation: slideDown 0.3s ease-out;
 }
 
@@ -591,7 +670,6 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Cụm Icon bo tròn */
 .warning-toast-icon-container {
   position: relative;
   width: 80px;
@@ -602,17 +680,15 @@
   margin-bottom: 20px;
 }
 
-/* Hào quang ngoài cùng */
 .warning-bg-outer {
   position: absolute;
   width: 80px;
   height: 80px;
-  background-color: #FEF08A; /* Vàng sáng */
+  background-color: #FEF08A;
   opacity: 0.3;
   border-radius: 50%;
 }
 
-/* Hào quang giữa */
 .warning-bg-inner {
   position: absolute;
   width: 60px;
@@ -626,9 +702,8 @@
   z-index: 10;
 }
 
-/* Style Text */
 .warning-toast-title {
-  color: #1F2937; /* Màu chữ đậm như UI */
+  color: #1F2937;
   font-size: 18px;
   font-weight: 600;
   font-family: 'Inter', sans-serif;
@@ -637,14 +712,13 @@
 }
 
 .warning-toast-desc {
-  color: #6B7280; /* Màu text phụ xám nhạt */
+  color: #6B7280;
   font-size: 14px;
   font-family: 'Inter', sans-serif;
   margin: 0 0 24px 0;
   line-height: 1.5;
 }
 
-/* Style Button */
 .warning-toast-actions {
   display: flex;
   justify-content: center;
@@ -654,7 +728,7 @@
 .warning-btn-close {
   padding: 10px 32px;
   border-radius: 8px;
-  background: #AE1C3F; /* Màu đỏ chủ đạo Agribank */
+  background: #AE1C3F;
   border: none;
   color: #FFFFFF;
   font-size: 14px;
@@ -666,4 +740,3 @@
 .warning-btn-close:hover {
   background: #8e1734;
 }
-

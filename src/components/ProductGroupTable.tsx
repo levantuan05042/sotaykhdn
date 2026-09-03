@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusBadge2 from './ui/StatusBadge2';
-import './ProductGroupTable.css'; 
+import './ProductGroupTable.css';
 
 interface ProductGroup {
   id: any;
@@ -10,7 +10,7 @@ interface ProductGroup {
   active?: boolean;
   createdByFullName?: string | null;
   approvedBy?: string | null;
-  version?: number | null;  
+  version?: number | null;
 }
 
 interface Props {
@@ -63,7 +63,7 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
       });
 
       if (!response.ok) {
-        throw new Error('Không thể thay đổi trạng thái');
+        throw new Error('Lỗi cập nhật');
       }
 
       if (onToggleActive) {
@@ -71,8 +71,6 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
       }
 
     } catch (error) {
-      console.error("Lỗi cập nhật hiệu lực:", error);
-      
       setTableData(prevData => 
         prevData.map(d => 
           d.id === item.id ? { ...d, active: currentActive } : d
@@ -116,10 +114,8 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      {/* Vùng chứa bảng có thanh cuộn */}
       <div className="product-table-container">
         <table className="product-table table-text-base">
-          {/* Cố định chiều rộng từng cột để phần thead và tbody luôn khớp tuyệt đối */}
           <colgroup>
             <col style={{ width: '70px' }} />
             <col style={{ width: '220px' }} />
@@ -144,37 +140,86 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
           </thead>
           <tbody>
             {paginatedData.length > 0 ? (
-              paginatedData.map((item, index) => (
-                <tr key={item.id || index} onClick={() => handleViewDetail(item.id)}>
-                  <td className="text-center">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
-                  <td className="product-name-cell">
-                    <span className="truncate-text" title={item.name}>{item.name}</span>
-                  </td>
-                  <td><StatusBadge2 status={item.status} /></td>
-                  <td>{renderActiveToggle(item)}</td>
-                  <td>
-                    <span className="truncate-text" title={item.createdByFullName || '---'}>
-                      {item.createdByFullName || '---'}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="truncate-text" title={item.approvedBy || '---'}>
-                      {item.approvedBy || '---'}
-                    </span>
-                  </td>
-                  <td style={{ color: '#053E2B', fontWeight: 600 }}>
-                    {item.version ? `Phiên bản ${item.version}` : '---'}
-                  </td>
-                  <td className="text-right" onClick={(e) => e.stopPropagation()}>
-                    <button className="btn-view-detail" onClick={() => handleViewDetail(item.id)} title="Xem chi tiết">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              ))
+              paginatedData.map((item, index) => {
+                const stt = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                
+                return (
+                  <tr key={item.id || index} onClick={() => handleViewDetail(item.id)}>
+                    
+                    {/* 1. Cột STT */}
+                    <td className="text-center tooltip-cell" style={{ overflow: 'visible' }}>
+                      <div className="custom-tooltip-container" style={{ justifyContent: 'center' }}>
+                        <span>{stt}</span>
+                      </div>
+                    </td>
+                    
+                    {/* 2. Cột Tên nhóm sản phẩm */}
+                    <td className="tooltip-cell" style={{ overflow: 'visible' }}>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text" title={item.name}>{item.name}</span>
+                        <div className="custom-tooltip">{item.name}</div>
+                      </div>
+                    </td>
+                    
+                    {/* 3. Cột Trạng thái */}
+                    <td className="tooltip-cell" style={{ overflow: 'visible' }}>
+                      <div className="custom-tooltip-container">
+                        <StatusBadge2 status={item.status} />
+                      </div>
+                    </td>
+                    
+                    {/* 4. Cột Hiệu lực */}
+                    <td className="tooltip-cell" style={{ overflow: 'visible' }}>
+                      <div className="custom-tooltip-container">
+                        {renderActiveToggle(item)}
+                      </div>
+                    </td>
+                    
+                    {/* 5. Cột Người tạo */}
+                    <td className="tooltip-cell" style={{ overflow: 'visible' }}>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text" title={item.createdByFullName || ''}>
+                          {item.createdByFullName || '---'}
+                        </span>
+                        <div className="custom-tooltip">{item.createdByFullName || '---'}</div>
+                      </div>
+                    </td>
+                    
+                    {/* 6. Cột Người kiểm duyệt */}
+                    <td className="tooltip-cell" style={{ overflow: 'visible' }}>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text" title={item.approvedBy || ''}>
+                          {item.approvedBy || '---'}
+                        </span>
+                        <div className="custom-tooltip">{item.approvedBy || '---'}</div>
+                      </div>
+                    </td>
+                    
+                    {/* 7. Cột Phiên bản */}
+                    <td className="tooltip-cell" style={{ color: '#053E2B', fontWeight: 600, overflow: 'visible' }}>
+                      <div className="custom-tooltip-container">
+                        <span className="truncate-text" title={item.version ? `Phiên bản ${item.version}` : ''}>
+                          {item.version ? `Phiên bản ${item.version}` : '---'}
+                        </span>
+                        <div className="custom-tooltip">{item.version ? `Phiên bản ${item.version}` : '---'}</div>
+                      </div>
+                    </td>
+                    
+                    {/* 8. Cột Nút hành động */}
+                    <td className="text-right tooltip-cell" style={{ overflow: 'visible' }} onClick={(e) => e.stopPropagation()}>
+                      <div className="custom-tooltip-container" style={{ justifyContent: 'flex-end' }}>
+                        <button className="btn-view-detail" onClick={() => handleViewDetail(item.id)} title="Xem chi tiết">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                    
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={8} className="text-center py-20 text-gray-400">Không có dữ liệu hiển thị</td>
@@ -184,7 +229,6 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
         </table>
       </div>
 
-      {/* Phần phân trang cố định ở đáy */}
       {totalPages > 1 && (
         <div className="pagination-wrapper" style={{ marginTop: '12px', marginBottom: '0px' }}>
           <div className="pagination-container">

@@ -25,6 +25,12 @@ const formatDateTime = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
+// Hàm tách ID hệ thống đồng bộ từ Group
+const extractBaseId = (rawString: string) => {
+  if (!rawString) return '';
+  return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
+};
+
 const getCurrentUsername = () => {
   const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
   for (const key of possibleKeys) {
@@ -34,10 +40,10 @@ const getCurrentUsername = () => {
         const parsed = JSON.parse(val);
         if (typeof parsed === 'object' && parsed !== null) {
           const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-          if (u) return String(u).trim().toLowerCase();
+          if (u) return extractBaseId(u);
         }
       } catch {
-        return String(val).trim().toLowerCase();
+        return extractBaseId(val);
       }
     }
   }
@@ -55,33 +61,33 @@ const DetailBusinessPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(true);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('accessToken');
   
-  // 2. Lấy Map người dùng 1 lần duy nhất để tối ưu hiệu suất
+  // Lấy Map người dùng 1 lần duy nhất để tối ưu hiệu suất
   const userMap = useMemo(() => getUserMap(), []);
   
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
+  // Xử lý lấy thông tin người tạo đồng bộ từ Group
   const creatorField = businessData?.createdBy || businessData?.created_by || businessData?.creator;
   let creatorUsername = '';
   if (typeof creatorField === 'object' && creatorField !== null) {
-    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
+    const rawObjUsername = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
+    creatorUsername = extractBaseId(rawObjUsername);
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = String(creatorField).trim().toLowerCase();
+    creatorUsername = extractBaseId(creatorField);
   }
-
-  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
-  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
     isLoggedIn && 
-    baseCurrentUsername && 
-    baseCreatorUsername && 
-    baseCurrentUsername === baseCreatorUsername
+    currentUsername && 
+    creatorUsername && 
+    currentUsername === creatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -91,6 +97,41 @@ const DetailBusinessPage: React.FC = () => {
     name: '',
     categoryId: ''
   });
+
+  // Tối ưu hàm hiển thị tên Người tạo (Đồng bộ với Group)
+  const getCreatorDisplayName = () => {
+    if (businessData?.createdByFullName) return businessData.createdByFullName;
+    if (creatorUsername) {
+      const mapped = getFullName(creatorUsername, userMap);
+      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+    }
+    return creatorUsername ? creatorUsername.toUpperCase() : '---';
+  };
+
+  // Tối ưu hàm hiển thị tên Người duyệt (Đồng bộ với Group)
+  const getApproverDisplayName = () => {
+    if (businessData?.approvedByFullName) return businessData.approvedByFullName;
+
+    let rawApprover = '';
+    if (typeof businessData?.approvedBy === 'object' && businessData.approvedBy !== null) {
+      rawApprover = businessData.approvedBy.username || businessData.approvedBy.code || '';
+    } else {
+      rawApprover = businessData?.approvedBy || '';
+    }
+
+    if (rawApprover && rawApprover === businessData?.createdBy && businessData?.createdByFullName) {
+      return businessData.createdByFullName;
+    }
+    
+    if (rawApprover) {
+      const baseId = extractBaseId(rawApprover);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
+      return baseId.toUpperCase();
+    }
+    
+    return '---';
+  };
 
   // Handle click outside để đóng các custom dropdown
   useEffect(() => {
@@ -509,6 +550,50 @@ const DetailBusinessPage: React.FC = () => {
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* KHỐI THÔNG TIN SẢN PHẨM ĐỒNG BỘ VỚI GROUP */}
+              <div className="infoCard">
+                <div className="infoHeader" onClick={() => setIsInfoOpen(!isInfoOpen)}>
+                  <span className="infoTitle">Thông tin sản phẩm</span>
+                  <svg 
+                    className={`infoChevron ${isInfoOpen ? 'open' : ''}`} 
+                    width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
+                  >
+                    <path d="M5 7.5L10 12.5L15 7.5"/>
+                  </svg>
+                </div>
+                
+                {isInfoOpen && (
+                  <div className="infoContent">
+                    <div className="infoGrid">
+                      <div className="infoItem">
+                        <span className="infoLabel">Người tạo</span>
+                        <span className="infoValue">
+                          {getCreatorDisplayName()}
+                        </span>
+                      </div>
+                      <div className="infoItem">
+                        <span className="infoLabel">Người phê duyệt</span>
+                        <span className="infoValue">
+                          {getApproverDisplayName()}
+                        </span>
+                      </div>
+                      <div className="infoItem">
+                        <span className="infoLabel">Thời gian tạo</span>
+                        <span className="infoValue">
+                          {formatDateTime(businessData.createdAt)}
+                        </span>
+                      </div>
+                      <div className="infoItem">
+                        <span className="infoLabel">Phiên bản</span>
+                        <div className="versionBadge">
+                          Phiên bản {businessData.version || 1}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
              <div className="commentCard">

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import StatusBadge2 from './ui/StatusBadge2'; // Import component dùng chung
+import StatusBadge2 from './ui/StatusBadge2';
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -20,6 +20,34 @@ interface Props {
   data: ProductCategory[];
 }
 
+interface CellWithTooltipProps {
+  text?: string | null;
+  style?: React.CSSProperties;
+  className?: string;
+}
+
+const CellWithTooltip: React.FC<CellWithTooltipProps> = ({ text, style, className }) => {
+  const content = text && text.trim() !== '' ? text : '---';
+
+  if (content === '---') {
+    return <span style={style} className={className}>{content}</span>;
+  }
+
+  return (
+    <div className="truncate-wrapper">
+      <span className={`truncate-text ${className || ''}`} style={style}>
+        {content}
+      </span>
+      <span className="custom-tooltip">{content}</span>
+    </div>
+  );
+};
+
+const stripHtml = (htmlString?: string | null) => {
+  if (!htmlString) return '';
+  return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
+};
+
 const ProductCategoryTable: React.FC<Props> = ({ data }) => {
   const navigate = useNavigate();
   const ITEMS_PER_PAGE = 10;
@@ -29,7 +57,6 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
     setCurrentPage(1);
   }, [data]);
 
-  // Bộ lọc hiển thị trạng thái REJECTED
   const activeData = useMemo(() => {
     return (data || []).filter(item => item.status?.toUpperCase() === 'REJECTED');
   }, [data]);
@@ -68,64 +95,50 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
           {paginatedData.length > 0 ? (
             paginatedData.map((item, index) => (
               <tr key={item.id || index}>
-
                 <td>
                   {(currentPage - 1) * ITEMS_PER_PAGE + index + 1}
                 </td>
                 <td>
-                  {(() => {
-                    const stripHtml = (htmlString: string) => {
-                      if (!htmlString) return '';
-                      return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
-                    };
-                    const plainText = stripHtml(item.name);
-                    return (
-                      <span className="truncate-text" title={plainText} style={{ fontWeight: 500 }}>
-                        {plainText || '---'} 
-                      </span>
-                    );
-                  })()}
+                  <CellWithTooltip 
+                    text={stripHtml(item.name)} 
+                    style={{ fontWeight: 500 }} 
+                  />
                 </td>
                 <td className="col-group">
-                  <span className="truncate-text" title={item.productGroupName || ''}>
-                    {item.productGroupName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.productGroupName} />
                 </td>
                 <td className="col-category">
-                  <span className="truncate-text" title={item.productCategoryName || ''}>
-                    {item.productCategoryName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.productCategoryName} />
                 </td>
-
                 <td className="col-business">
-                  <span className="truncate-text" title={item.businessName || ''}>
-                    {item.businessName || '---'}
-                  </span>
+                  <CellWithTooltip text={item.businessName} />
                 </td>
-
-                {/* Sử dụng Component StatusBadge2 dùng chung */}
                 <td>
                   <StatusBadge2 status={item.status} />
                 </td>
-
                 <td>
                   {item.active ? (
-                    <span className="text-success">Đang hiển thị</span>
+                    <CellWithTooltip text="Đang hiển thị" className="text-success" />
                   ) : (
-                    <span className="text-danger">Đã ẩn</span>
+                    <CellWithTooltip text="Đã ẩn" className="text-danger" />
                   )}
                 </td>
-                <td>{item.createdByFullName || '---'}</td>
-                <td>{item.approvedBy || '---'}</td>
-                <td style={{ fontWeight: 600 }}>
-                  {item.version ? `Phiên bản ${item.version}` : '---'}
+                <td>
+                  <CellWithTooltip text={item.createdByFullName} />
                 </td>
-
+                <td>
+                  <CellWithTooltip text={item.approvedBy} />
+                </td>
+                <td>
+                  <CellWithTooltip 
+                    text={item.version ? `Phiên bản ${item.version}` : ''} 
+                    style={{ fontWeight: 600 }} 
+                  />
+                </td>
                 <td>
                   <button
                     className="btn-action-view"
                     onClick={() => handleViewDetail(item.id)}
-                    title="Xem chi tiết"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
