@@ -170,7 +170,7 @@ const ApproverBatchDetailPage: React.FC = () => {
       toast.error("Không thể phê duyệt lô sản phẩm!");
     }
   };
-  const handleAction = (type: 'DRAFT' | 'SEND' | 'REJECT' | 'REVISION') => {
+  const handleAction = (type: 'DRAFT' | 'SEND' | 'REJECT' | 'REVISION' | 'REVIEWED') => {
     switch (type) {
       case 'DRAFT':
         toast.success('Đã lưu bản nháp lô sản phẩm thành công!');
@@ -188,6 +188,12 @@ const ApproverBatchDetailPage: React.FC = () => {
         if (quickViewProduct) {
           toast.success(`Đã YÊU CẦU CHỈNH SỬA sản phẩm: ${quickViewProduct.name}`);
           setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { ...p, notes: '0' } : p));
+        }
+        break;
+      case 'REVIEWED':
+        if (quickViewProduct) {
+          toast.success(`Đã xác nhận REVIEW sản phẩm: ${quickViewProduct.name}`);
+          setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { ...p, notes: 'REVIEWED' } : p));
         }
         break;
       default:
@@ -303,7 +309,15 @@ const ApproverBatchDetailPage: React.FC = () => {
                           Từ chối
                         </span>
                       )}
-                      {p.notes === '2' && (
+                      {p.notes === 'REVIEWED' && (
+                        <span className="note-badge note-badge--reviewed">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Đã Review
+                        </span>
+                      )}
+                      {p.notes === '2' && batchRequest?.status === 'ACTIVE' && (
                         <span className="note-badge note-badge--approved">
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
                             <polyline points="20 6 9 17 4 12"/>
@@ -311,7 +325,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                           Đã duyệt
                         </span>
                       )}
-                      {(p.notes !== '0' && p.notes !== '1' && p.notes !== '2') && '—'}
+                      {(p.notes !== '0' && p.notes !== '1' && p.notes !== 'REVIEWED' && (p.notes !== '2' || batchRequest?.status !== 'ACTIVE')) && '—'}
                     </td>
                     <td align="center">
                       <div className="action-buttons-group">
@@ -472,13 +486,21 @@ const ApproverBatchDetailPage: React.FC = () => {
                 <button className="btn-qv-reject" onClick={() => handleAction('REJECT')}>
                   Từ chối
                 </button>
-                <button 
-                  className="btn-qv-revision" 
-                  onClick={() => handleAction('REVISION')}
-                  disabled={!quickViewProduct.feedback?.trim()}
-                >
-                  Yêu cầu chỉnh sửa
-                </button>
+                {quickViewProduct.feedback?.trim() ? (
+                  <button 
+                    className="btn-qv-revision" 
+                    onClick={() => handleAction('REVISION')}
+                  >
+                    Gửi lại chỉnh sửa
+                  </button>
+                ) : (
+                  <button 
+                    className="btn-qv-reviewed" 
+                    onClick={() => handleAction('REVIEWED')}
+                  >
+                    Đã Review
+                  </button>
+                )}
               </div>
             )}
 

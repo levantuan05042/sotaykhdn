@@ -387,6 +387,11 @@
   color: #15803D;
 }
 
+.note-badge--reviewed {
+  background-color: #E0F2FE;
+  color: #0369A1;
+}
+
 /* Right Quick View Panel */
 .batch-quickview-panel {
   flex: 0.35; /* Takes ~35% of space */
@@ -760,6 +765,23 @@
   cursor: not-allowed !important;
 }
 
+.btn-qv-reviewed {
+  flex: 1;
+  background-color: #E0F2FE;
+  color: #0369A1;
+  border: 1px solid #BAE6FD;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.btn-qv-reviewed:hover {
+  background-color: #BAE6FD;
+}
+
 .quickview-editor-html-content {
   width: 100%;
   padding: 12px;
@@ -1041,4 +1063,45 @@
 
 .overlay-btn:hover {
   background: rgba(84, 86, 88, 0.95); /* Xám đậm hơn khi hover */
+}
+
+/* Responsive Rules for Mobile & Tablet */
+@media (max-width: 900px) {
+  .batch-header {
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+  .batch-header-left {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .batch-breadcrumb-title {
+    font-size: 15px;
+  }
+  .batch-header-right {
+    justify-content: space-between;
+    width: 100%;
+  }
+  .batch-main-container {
+    flex-direction: column;
+    padding: 12px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+  .batch-table-panel.with-quickview {
+    flex: 1;
+    width: 100%;
+  }
+  .batch-quickview-panel {
+    width: 100%;
+    flex: 1;
+    padding: 0;
+  }
+  .batch-data-table th, .batch-data-table td {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
 }
