@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import Quill from 'quill';
@@ -7,6 +7,7 @@ import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import StatusBadge2 from '../components/ui/StatusBadgeListRequest';
 import './BatchRequestDetailPage.css';
 
 const extractUsername = (rawName: string | null | undefined): string => {
@@ -462,6 +463,12 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
 const BatchRequestDetailPage: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Lấy trạng thái từ navigation state truyền vào màn hình detail (trạng thái chung của lô)
+  const routeState = location.state as any;
+  const externalStatus = routeState?.status || routeState?.requestStatus;
+  const externalName = routeState?.name || routeState?.requestName || routeState?.title;
 
   const getCurrentUsernameRaw = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
@@ -509,7 +516,9 @@ const BatchRequestDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
-  const [batchName, setBatchName] = useState<string>('Chi tiết lô sản phẩm');
+  
+  // Khởi tạo tên lô từ state ngoài truyền vào, nếu không có mới để mặc định
+  const [batchName, setBatchName] = useState<string>(externalName || 'Chi tiết lô sản phẩm');
 
   const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
   const [formData, setFormData] = useState({
@@ -550,32 +559,21 @@ const BatchRequestDetailPage: React.FC = () => {
     if (products.length > 0 && products[0].createdAt) {
       return new Date(products[0].createdAt).toLocaleDateString('vi-VN');
     }
-    return '13/04/2024'; 
+    return new Date().toLocaleDateString('vi-VN'); 
   }, [products]);
 
+  // Ưu tiên trạng thái ngoài truyền vào từ List, nếu không có mới lấy fallback từ dữ liệu bên trong
   const batchStatus = useMemo(() => {
-    if (products.length > 0) return products[0].status;
+    if (externalStatus) return externalStatus;
+    if (products.length > 0) return products[0].requestStatus || products[0].status;
     return 'DRAFT';
-  }, [products]);
+  }, [externalStatus, products]);
 
   const normalizedBatchStatus = (batchStatus || 'DRAFT').toString().toUpperCase();
   const isEditableStatus = normalizedBatchStatus === 'DRAFT' || normalizedBatchStatus === 'NEEDS_REVISION';
 
   const canEdit = isEditableStatus && isOwner;
   const isReadOnly = !canEdit;
-
-  const getStatusUI = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return { label: 'Đang hoạt động', bg: '#E0F9EC', text: '#14532D' };
-      case 'DRAFT': return { label: 'Lưu nháp', bg: '#FEF9C3', text: '#713F12' };
-      case 'NEEDS_REVISION': return { label: 'Yêu cầu chỉnh sửa', bg: '#FECACA', text: '#7F1D1D' };
-      case 'PENDING_APPROVAL': return { label: 'Chờ phê duyệt', bg: '#FED7AA', text: '#7C2D12' };
-      case 'REJECTED': return { label: 'Từ chối', bg: '#EAE7EC', text: '#65636D' };
-      case 'ARCHIVED': return { label: 'Lưu trữ', bg: '#BAE6FD', text: '#0C4A6E' };
-      default: return { label: status || 'Không xác định', bg: '#F3F4F6', text: '#374151' };
-    }
-  };
-  const statusUI = getStatusUI(normalizedBatchStatus);
 
   useEffect(() => {
     const fetchBatchDetails = async () => {
@@ -586,7 +584,9 @@ const BatchRequestDetailPage: React.FC = () => {
         const data = response.data || [];
         setProducts(data);
         setCurrentPage(1); 
-        if (data.length > 0 && data[0].requestName) {
+        
+        // Cập nhật tên lô nếu chưa có tên ngoài truyền vào
+        if (!externalName && data.length > 0 && data[0].requestName) {
           setBatchName(data[0].requestName);
         }
       } catch (error) {
@@ -596,7 +596,7 @@ const BatchRequestDetailPage: React.FC = () => {
       }
     };
     fetchBatchDetails();
-  }, [requestId]);
+  }, [requestId, externalName]);
 
   useEffect(() => {
     const fetchGroupOptions = async () => {
@@ -613,7 +613,6 @@ const BatchRequestDetailPage: React.FC = () => {
     fetchGroupOptions();
   }, []);
 
-  // Effect fetch Danh mục (phụ thuộc vào productGroupId)
   useEffect(() => {
     if (!quickViewProduct || !formData.productGroupId) {
       setCategoryOptions([]);
@@ -636,7 +635,6 @@ const BatchRequestDetailPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [formData.productGroupId, quickViewProduct]);
 
-  // Effect fetch Nghiệp vụ (phụ thuộc vào productCategoryId)
   useEffect(() => {
     if (!quickViewProduct || !formData.productCategoryId) {
       setOperationOptions([]);
@@ -659,7 +657,6 @@ const BatchRequestDetailPage: React.FC = () => {
     return () => { cancelled = true; };
   }, [formData.productCategoryId, quickViewProduct]);
 
-  // Effect fetch Tiêu chí (chỉ phụ thuộc vào productGroupId)
   useEffect(() => {
     if (!quickViewProduct || !formData.productGroupId) {
       if (!formData.productGroupId) setDetails([]);
@@ -708,7 +705,6 @@ const BatchRequestDetailPage: React.FC = () => {
   }, [previewImage, avatarFile]);
 
   const handleGroupChange = (newGroupId: string) => {
-    // 1. Lưu lại state hiện tại vào cache nếu đang có productGroupId
     if (formData.productGroupId) {
       setGroupCache(prev => ({
         ...prev,
@@ -721,7 +717,6 @@ const BatchRequestDetailPage: React.FC = () => {
       }));
     }
 
-    // 2. Khôi phục từ cache nếu đã từng chọn nhóm này trước đó
     if (groupCache[newGroupId]) {
       const cachedData = groupCache[newGroupId];
       isUserActionRef.current = false; 
@@ -1039,9 +1034,7 @@ const BatchRequestDetailPage: React.FC = () => {
             {stripHtml(batchName)}
           </h2>
           
-          <div className="batch-status-badge" style={{ backgroundColor: statusUI.bg, color: statusUI.text }}>
-            {statusUI.label}
-          </div>
+          <StatusBadge2 status={normalizedBatchStatus} className="batch-status-badge" />
         </div>
 
         <div className="batch-header-right">
@@ -1101,23 +1094,10 @@ const BatchRequestDetailPage: React.FC = () => {
                 ) : paginatedData.length > 0 ? (
                   paginatedData.map((item) => {
                     const isSelected = quickViewProduct?.id === item.id;
-                    const itemImage = item.imageUrl || item.image;
-
                     return (
                       <tr key={item.id} className={isSelected ? "batch-tr-selected" : ""}>
                         <td className="batch-table-td batch-table-td-name">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            {itemImage ? (
-                              <img 
-                                src={toDisplayUrl(itemImage)} 
-                                alt="" 
-                                style={{ width: '48px', height: '27px', borderRadius: '4px', objectFit: 'cover', border: '1px solid #E5E7EB', flexShrink: 0 }} 
-                              />
-                            ) : (
-                              <div style={{ width: '48px', height: '27px', borderRadius: '4px', backgroundColor: '#F3F4F6', border: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: '10px', flexShrink: 0 }}>
-                                Chưa có ảnh
-                              </div>
-                            )}
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name || '—'}</span>
                           </div>
                         </td>
@@ -1131,23 +1111,19 @@ const BatchRequestDetailPage: React.FC = () => {
                           {item.businessName || 'Chưa chọn'}
                         </td>
                         <td className="batch-table-td" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
-                          {item.notes || '—'}
+                          {String(item.notes) === '0' ? (
+                            <StatusBadge2 status="NEEDS_REVISION" className="batch-status-badge" />
+                          ) : String(item.notes) === '1' ? (
+                            <StatusBadge2 status="REJECTED" className="batch-status-badge" />
+                          ) : (
+                            item.notes || '—'
+                          )}
                         </td>
                         <td 
                           className="batch-table-td" 
                           style={{ padding: '0 12px', textAlign: 'center', width: '1%', whiteSpace: 'nowrap' }}
                         >
                           <div className="batch-action-inner" style={{ justifyContent: 'center' }}>
-                            {/* <button
-                              onClick={() => navigate(`/product/${item.id}`)}
-                              className="btn-icon-eye"
-                              title="Xem chi tiết"
-                            >
-                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                              </svg>
-                            </button> */}
                             <button
                               onClick={() => handleOpenQuickView(item)}
                               className="btn-xem-nhanh"
@@ -1215,7 +1191,6 @@ const BatchRequestDetailPage: React.FC = () => {
                   onChange={(val) => handleGroupChange(val)}
                 />
                 
-                {/* Đã thêm alignItems: 'flex-end' vào thẻ div dưới đây */}
                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'flex-end' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <CustomSelect
@@ -1241,7 +1216,6 @@ const BatchRequestDetailPage: React.FC = () => {
                   </div>
                 </div>
                 
-                {/* ĐÃ CHUYỂN XUỐNG DƯỚI: Các tiêu chí ưu tiên (bao gồm cả Tên chương trình to đùng) */}
                 {priorityCriteria.length > 0 && (
                   <div style={{ marginBottom: '16px' }}>
                     {priorityCriteria.map(c => renderCriterion(c))}

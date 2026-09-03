@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './RequestListPage.css';
 import DataTable, { type Column } from '../components/ui/DataTable';
-import StatusBadge2 from '../components/ui/StatusBadge2';
+import StatusBadge2 from '../components/ui/StatusBadgeListRequest';
 import { API_ENDPOINTS } from '../config/apiConfig';
 
 const STATUS_OPTIONS = [

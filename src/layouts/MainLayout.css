@@ -50,17 +50,17 @@ body {
 
 .page-body {
   flex: 1;
-  display: flex;          /* Bật flex để điều khiển con bên trong */
+  display: flex;
   flex-direction: column;
-  overflow: hidden;       /* Khóa cuộn trang tổng */
-  min-height: 0;          /* Bắt buộc có để ép co giãn đúng chuẩn */
+  overflow: auto;
+  min-height: 0;
 }
 
 .grid-footer {
   flex: 0 0 auto;
   background-color: #ffffff;
   border-top: 1px solid #eee;
-  padding: 15px 40px; /* Chỉnh lại padding trái/phải cho vừa vặn với content */
+  padding: 15px 40px;
   color: #666;
   font-size: 13px;
   z-index: 10;
@@ -76,12 +76,15 @@ body {
 .footer-right {
   text-align: right;
   line-height: 1.6;
-  
 }
 
 @media (max-width: 992px) {
-  .grid-sidebar { grid-column: span 4; }
-  .grid-content { grid-column: span 8; }
+  .grid-sidebar {
+    grid-column: span 4;
+  }
+  .grid-content {
+    grid-column: span 8;
+  }
 }
 
 @media (max-width: 768px) {
@@ -104,5 +107,33 @@ body {
   }
   .footer-right {
     text-align: center;
+  }
+}
+
+@media (max-width: 1599px) and (min-width: 1280px) {
+  html {
+    zoom: 0.8;
+  }
+  body {
+    height: 125vh;
+    width: 125vw;
+    overflow: hidden;
+  }
+  .main-layout {
+    height: 125vh;
+  }
+}
+
+@media (max-width: 1279px) and (min-width: 993px) {
+  html {
+    zoom: 0.75;
+  }
+  body {
+    height: 133.33vh;
+    width: 133.33vw;
+    overflow: hidden;
+  }
+  .main-layout {
+    height: 133.33vh;
   }
 }

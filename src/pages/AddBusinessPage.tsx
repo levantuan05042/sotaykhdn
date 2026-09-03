@@ -203,7 +203,7 @@ const AddBusinessPage: React.FC = () => {
                   </div>
 
                   {isOpen && (
-                    <div className="custom-options-list">
+                    <div className="custom-options-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                       {categoryOptions.length === 0 ? (
                         <div className="custom-option disabled">Không có danh mục sản phẩm nào khả dụng</div>
                       ) : (

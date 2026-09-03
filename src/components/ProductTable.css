@@ -317,3 +317,12 @@
   visibility: visible;
   opacity: 1;
 }
+
+/* CSS tùy chỉnh cho các cột được highlight xanh nhạt */
+.custom-table th.col-highlight {
+  background-color: #E6F4EA !important;
+}
+
+.custom-table td.col-highlight {
+  background-color: #F0F9F1 !important;
+}

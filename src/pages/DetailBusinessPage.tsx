@@ -6,15 +6,8 @@ import toast from 'react-hot-toast';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
-
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
-  DRAFT: { label: 'Lưu nháp', className: 'status-draft' },
-  NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', className: 'status-revision' },
-  PENDING_APPROVAL: { label: 'Chờ phê duyệt', className: 'status-pending' },
-  REJECTED: { label: 'Từ chối', className: 'status-rejected' },
-  ARCHIVED: { label: 'Lưu trữ', className: 'status-archived' },
-};
+import ProductInfoCard from '../components/ui/ProductInfoCard';
+import StatusBadge2 from '../components/ui/StatusBadge2';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -25,10 +18,9 @@ const formatDateTime = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
-// Hàm tách ID hệ thống đồng bộ từ Group
-const extractBaseId = (rawString: string) => {
-  if (!rawString) return '';
-  return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
+const extractBaseId = (username: string) => {
+  if (!username) return '';
+  return username.split('_')[0];
 };
 
 const getCurrentUsername = () => {
@@ -40,10 +32,10 @@ const getCurrentUsername = () => {
         const parsed = JSON.parse(val);
         if (typeof parsed === 'object' && parsed !== null) {
           const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-          if (u) return extractBaseId(u);
+          if (u) return String(u).trim().toLowerCase();
         }
       } catch {
-        return extractBaseId(val);
+        return String(val).trim().toLowerCase();
       }
     }
   }
@@ -54,40 +46,37 @@ const DetailBusinessPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // Refs để xử lý click outside đóng dropdown
   const statusRef = useRef<HTMLDivElement>(null);
   const categoryRef = useRef<HTMLDivElement>(null);
   
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(true);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('accessToken');
   
-  // Lấy Map người dùng 1 lần duy nhất để tối ưu hiệu suất
   const userMap = useMemo(() => getUserMap(), []);
-  
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
-  // Xử lý lấy thông tin người tạo đồng bộ từ Group
   const creatorField = businessData?.createdBy || businessData?.created_by || businessData?.creator;
   let creatorUsername = '';
   if (typeof creatorField === 'object' && creatorField !== null) {
-    const rawObjUsername = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
-    creatorUsername = extractBaseId(rawObjUsername);
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = extractBaseId(creatorField);
+    creatorUsername = String(creatorField).trim().toLowerCase();
   }
+
+  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
+  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
     isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
+    baseCurrentUsername && 
+    baseCreatorUsername && 
+    baseCurrentUsername === baseCreatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -98,42 +87,30 @@ const DetailBusinessPage: React.FC = () => {
     categoryId: ''
   });
 
-  // Tối ưu hàm hiển thị tên Người tạo (Đồng bộ với Group)
   const getCreatorDisplayName = () => {
     if (businessData?.createdByFullName) return businessData.createdByFullName;
     if (creatorUsername) {
-      const mapped = getFullName(creatorUsername, userMap);
-      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+      const baseId = extractBaseId(creatorUsername);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
     }
     return creatorUsername ? creatorUsername.toUpperCase() : '---';
   };
 
-  // Tối ưu hàm hiển thị tên Người duyệt (Đồng bộ với Group)
   const getApproverDisplayName = () => {
     if (businessData?.approvedByFullName) return businessData.approvedByFullName;
-
-    let rawApprover = '';
-    if (typeof businessData?.approvedBy === 'object' && businessData.approvedBy !== null) {
-      rawApprover = businessData.approvedBy.username || businessData.approvedBy.code || '';
-    } else {
-      rawApprover = businessData?.approvedBy || '';
-    }
-
-    if (rawApprover && rawApprover === businessData?.createdBy && businessData?.createdByFullName) {
+    if (businessData?.approvedBy && businessData.approvedBy === businessData?.createdBy && businessData?.createdByFullName) {
       return businessData.createdByFullName;
     }
-    
-    if (rawApprover) {
-      const baseId = extractBaseId(rawApprover);
+    if (businessData?.approvedBy) {
+      const baseId = extractBaseId(businessData.approvedBy);
       const mapped = getFullName(baseId, userMap);
       if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
       return baseId.toUpperCase();
     }
-    
     return '---';
   };
 
-  // Handle click outside để đóng các custom dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
@@ -219,7 +196,6 @@ const DetailBusinessPage: React.FC = () => {
         renderCustomToast(newActiveStatus ? "Hiển thị nghiệp vụ thành công" : "Ẩn nghiệp vụ thành công");
       } else {
         toast.dismiss(toastId);
-        
         if (!newActiveStatus && (response.status === 400 || response.status === 409)) {
           renderCannotHideToast(formData.name || businessData.name);
         } else {
@@ -388,9 +364,6 @@ const DetailBusinessPage: React.FC = () => {
   if (loading) return <div className="loading">Đang tải dữ liệu nghiệp vụ...</div>;
   if (!businessData) return <div className="error">Không tìm thấy dữ liệu nghiệp vụ phù hợp.</div>;
 
-  const currentStatus = STATUS_MAP[businessData.status] || { label: businessData.status, className: '' };
-  
-  // Logic validate chuẩn hóa cho các nút hành động
   const isActionValid = !isReadOnly && formData.name.trim() !== '' && formData.categoryId !== '';
 
   return (
@@ -421,10 +394,7 @@ const DetailBusinessPage: React.FC = () => {
                 </svg>
               </div>
               <span className="breadcrumbActive breadcrumb-truncate" title={businessData.name}>{businessData.name}</span>
-              <div className={`statusBadge ${currentStatus.className}`}>
-                <span className="dot"></span>
-                <span className="statusText">{currentStatus.label}</span>
-              </div>
+              <StatusBadge2 status={businessData.status} />
             </div>
           </div>
 
@@ -493,7 +463,7 @@ const DetailBusinessPage: React.FC = () => {
                     )}
                   </div>
                   {!isReadOnly && isOpen && (
-                    <div className="custom-options-list">
+                    <div className="custom-options-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                       {categoryOptions.map((opt) => (
                         <div key={opt.value} className={`custom-option ${formData.categoryId === opt.value ? 'selected' : ''}`}
                           onClick={() => { setFormData({...formData, categoryId: opt.value}); setIsOpen(false); }}>
@@ -552,49 +522,12 @@ const DetailBusinessPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* KHỐI THÔNG TIN SẢN PHẨM ĐỒNG BỘ VỚI GROUP */}
-              <div className="infoCard">
-                <div className="infoHeader" onClick={() => setIsInfoOpen(!isInfoOpen)}>
-                  <span className="infoTitle">Thông tin sản phẩm</span>
-                  <svg 
-                    className={`infoChevron ${isInfoOpen ? 'open' : ''}`} 
-                    width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                  >
-                    <path d="M5 7.5L10 12.5L15 7.5"/>
-                  </svg>
-                </div>
-                
-                {isInfoOpen && (
-                  <div className="infoContent">
-                    <div className="infoGrid">
-                      <div className="infoItem">
-                        <span className="infoLabel">Người tạo</span>
-                        <span className="infoValue">
-                          {getCreatorDisplayName()}
-                        </span>
-                      </div>
-                      <div className="infoItem">
-                        <span className="infoLabel">Người phê duyệt</span>
-                        <span className="infoValue">
-                          {getApproverDisplayName()}
-                        </span>
-                      </div>
-                      <div className="infoItem">
-                        <span className="infoLabel">Thời gian tạo</span>
-                        <span className="infoValue">
-                          {formatDateTime(businessData.createdAt)}
-                        </span>
-                      </div>
-                      <div className="infoItem">
-                        <span className="infoLabel">Phiên bản</span>
-                        <div className="versionBadge">
-                          Phiên bản {businessData.version || 1}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <ProductInfoCard
+                creatorName={getCreatorDisplayName()}
+                approverName={getApproverDisplayName()}
+                createdAt={formatDateTime(businessData.createdAt)}
+                version={businessData.version}
+              />
 
              <div className="commentCard">
                 <div className="commentHeader">
@@ -612,7 +545,9 @@ const DetailBusinessPage: React.FC = () => {
                             <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
-                                <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
+                                <span className="userName">
+                                  {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}
+                                </span>
                                 <span className="commentDate">{formatDateTime(c.createdAt)}</span>
                               </div>
                               <p className="commentText">{c.comment}</p>

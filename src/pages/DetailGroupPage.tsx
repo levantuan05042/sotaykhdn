@@ -5,21 +5,14 @@ import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
+import ProductInfoCard from '../components/ui/ProductInfoCard';
+import StatusBadge2 from '../components/ui/StatusBadge2'; // Import StatusBadge2
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
   { label: 'Sản phẩm bảo hiểm', value: 'INSURANCE' },
   { label: 'Chương trình ưu đãi', value: 'PROGRAM' }
 ];
-
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
-  DRAFT: { label: 'Lưu nháp', className: 'status-draft' },
-  NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', className: 'status-revision' },
-  PENDING_APPROVAL: { label: 'Chờ phê duyệt', className: 'status-pending' },
-  REJECTED: { label: 'Từ chối', className: 'status-rejected' },
-  ARCHIVED: { label: 'Lưu trữ', className: 'status-archived' },
-};
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -30,6 +23,31 @@ const formatDateTime = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
+// Hàm tách ID hệ thống (Được đồng bộ logic từ Category Page)
+const extractBaseId = (username: string) => {
+  if (!username) return '';
+  return username.split('_')[0].trim();
+};
+
+const getCurrentUsername = () => {
+  const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
+  for (const key of possibleKeys) {
+    const val = localStorage.getItem(key) || sessionStorage.getItem(key);
+    if (val) {
+      try {
+        const parsed = JSON.parse(val);
+        if (typeof parsed === 'object' && parsed !== null) {
+          const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
+          if (u) return String(u).trim().toLowerCase();
+        }
+      } catch {
+        return String(val).trim().toLowerCase();
+      }
+    }
+  }
+  return '';
+};
+
 const DetailGroupPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -38,7 +56,6 @@ const DetailGroupPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false); 
-  const [isInfoOpen, setIsInfoOpen] = useState(true);
   const [productData, setProductData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,48 +63,27 @@ const DetailGroupPage: React.FC = () => {
 
   const userMap = useMemo(() => getUserMap(), []);
 
-  const extractBaseId = (rawString: string) => {
-    if (!rawString) return '';
-    return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
-  };
-
-  const getCurrentUsername = () => {
-    const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
-    for (const key of possibleKeys) {
-      const val = localStorage.getItem(key) || sessionStorage.getItem(key);
-      if (val) {
-        try {
-          const parsed = JSON.parse(val);
-          if (typeof parsed === 'object' && parsed !== null) {
-            const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-            if (u) return extractBaseId(u);
-          }
-        } catch {
-          return extractBaseId(val);
-        }
-      }
-    }
-    return '';
-  };
-
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
+  // Xử lý username nguyên vẹn để map fullname (Giống Category)
   const creatorField = productData?.createdBy || productData?.created_by || productData?.creator;
   let creatorUsername = '';
-  
   if (typeof creatorField === 'object' && creatorField !== null) {
-    const rawObjUsername = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
-    creatorUsername = extractBaseId(rawObjUsername);
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = extractBaseId(creatorField);
+    creatorUsername = String(creatorField).trim().toLowerCase();
   }
+
+  // Tách baseId để phân quyền
+  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
+  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
     isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
+    baseCurrentUsername && 
+    baseCreatorUsername && 
+    baseCurrentUsername === baseCreatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
@@ -356,24 +352,27 @@ const DetailGroupPage: React.FC = () => {
   if (loading) return <div className="loading">Đang tải dữ liệu nhóm sản phẩm...</div>;
   if (!productData) return <div className="error">Không tìm thấy dữ liệu nhóm sản phẩm phù hợp.</div>;
 
-  const currentStatus = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
-
   const getCreatorDisplayName = () => {
-    if (productData.createdByFullName) return productData.createdByFullName;
-    if (creatorUsername) {
-      const mapped = getFullName(creatorUsername, userMap);
-      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+    if (productData?.createdByFullName) {
+      return productData.createdByFullName;
     }
-    return creatorUsername ? creatorUsername.toUpperCase() : '---';
+    if (creatorUsername) {
+      const baseId = baseCreatorUsername || extractBaseId(creatorUsername);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) {
+        return mapped;
+      }
+      return baseId.toUpperCase();
+    }
+    return '---';
   };
 
   const getApproverDisplayName = () => {
-    if (productData.approvedByFullName) return productData.approvedByFullName;
-    if (productData.approvedBy && productData.approvedBy === productData.createdBy && productData.createdByFullName) {
+    if (productData?.approvedByFullName) return productData.approvedByFullName;
+    if (productData?.approvedBy && productData.approvedBy === productData?.createdBy && productData?.createdByFullName) {
       return productData.createdByFullName;
     }
-
-    if (productData.approvedBy) {
+    if (productData?.approvedBy) {
       const baseId = extractBaseId(productData.approvedBy);
       const mapped = getFullName(baseId, userMap);
       if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
@@ -413,10 +412,11 @@ const DetailGroupPage: React.FC = () => {
                 {productData.name}
               </span>
 
-              <div className={`statusBadge ${currentStatus.className}`}>
-                <span className="dot"></span>
-                <span className="statusText">{currentStatus.label}</span>
+              {/* Sử dụng Component StatusBadge2 */}
+              <div style={{ marginLeft: '12px', flexShrink: 0 }}>
+                <StatusBadge2 status={productData.status} />
               </div>
+
             </div>
           </div>
 
@@ -570,48 +570,12 @@ const DetailGroupPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="infoCard">
-              <div className="infoHeader" onClick={() => setIsInfoOpen(!isInfoOpen)}>
-                <span className="infoTitle">Thông tin sản phẩm</span>
-                <svg 
-                  className={`infoChevron ${isInfoOpen ? 'open' : ''}`} 
-                  width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <path d="M5 7.5L10 12.5L15 7.5"/>
-                </svg>
-              </div>
-              
-              {isInfoOpen && (
-                <div className="infoContent">
-                  <div className="infoGrid">
-                    <div className="infoItem">
-                      <span className="infoLabel">Người tạo</span>
-                      <span className="infoValue">
-                        {getCreatorDisplayName()}
-                      </span>
-                    </div>
-                    <div className="infoItem">
-                      <span className="infoLabel">Người kiểm duyệt</span>
-                      <span className="infoValue">
-                        {getApproverDisplayName()}
-                      </span>
-                    </div>
-                    <div className="infoItem">
-                      <span className="infoLabel">Thời gian tạo</span>
-                      <span className="infoValue">
-                        {formatDateTime(productData.createdAt)}
-                      </span>
-                    </div>
-                    <div className="infoItem">
-                      <span className="infoLabel">Phiên bản</span>
-                      <div className="versionBadge">
-                        Phiên bản {productData.version ?? 0}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ProductInfoCard 
+              creatorName={getCreatorDisplayName()} 
+              approverName={getApproverDisplayName()} 
+              createdAt={formatDateTime(productData.createdAt)} 
+              version={productData.version} 
+            />
 
             <div className="commentCard">
               <div className="commentHeader">

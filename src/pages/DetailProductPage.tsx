@@ -8,8 +8,10 @@ import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
-
 import { getUserMap, getFullName } from '../utils/userUtils'; 
+import ProductInfoCard from '../components/ui/ProductInfoCard';
+
+import StatusBadge2 from '../components/ui/StatusBadge2';
 
 // ─────────────────────────────────────────────
 // Constants
@@ -49,11 +51,13 @@ const isHtmlEmpty = (html: string) => {
   return html.replace(/<[^>]*>?/gm, '').trim().length === 0 && !html.includes('<img');
 };
 
-const formatDateTime = (dateString?: string) => {
+const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
-  return new Date(dateString).toLocaleDateString('vi-VN', {
-    hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric',
-  });
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const checkIsRequired = (item: any) => {
@@ -66,7 +70,6 @@ const checkIsRequired = (item: any) => {
   return t1.includes('(*)') || t2.includes('(*)');
 };
 
-// ĐÃ SỬA: Hàm xử lý URL ảnh cho môi trường UAT/Production
 const toDisplayUrl = (raw: string) => {
   if (!raw) return '';
   if (raw.startsWith('blob:')) return raw;
@@ -80,11 +83,9 @@ const toDisplayUrl = (raw: string) => {
         return raw;
       }
     }
-    // Nếu là URL chuẩn (VD: S3, CDN), giữ nguyên
     return raw;
   }
 
-  // 3. Xử lý relative path (Database chỉ lưu tên file hoặc path như /files/...)
   let cleanPath = raw;
   if (!raw.startsWith('/')) {
     cleanPath = raw.includes('files/') ? `/${raw}` : `/files/products/${raw}`;
@@ -92,18 +93,13 @@ const toDisplayUrl = (raw: string) => {
     cleanPath = `/files/products${raw}`;
   }
 
-  // Luôn gắn BASE_URL của môi trường hiện tại vào trước đường dẫn file
   return `${cleanBaseUrl}${cleanPath}`;
 };
 
-// ─────────────────────────────────────────────
-// Canvas crop → Blob
-// ─────────────────────────────────────────────
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const img = new Image();
     img.src = url;
-    // Bổ sung crossOrigin để tránh lỗi CORS khi vẽ ảnh lên canvas ở UAT
     img.crossOrigin = "anonymous";
     img.onload  = () => resolve(img);
     img.onerror = reject;
@@ -129,13 +125,13 @@ interface ImageModalProps {
 }
 
 const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) => {
-  const fileInputRef            = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging]   = useState(false);
-  const [step, setStep]               = useState<'drop' | 'crop'>('drop');
-  const [dataUrl, setDataUrl]         = useState('');        
-  const [fileName, setFileName]       = useState('');
-  const [crop, setCrop]               = useState({ x: 0, y: 0 });
-  const [zoom, setZoom]               = useState(1);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [step, setStep] = useState<'drop' | 'crop'>('drop');
+  const [dataUrl, setDataUrl] = useState('');        
+  const [fileName, setFileName] = useState('');
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<PixelCrop | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -325,7 +321,7 @@ interface BatchApprovalModalProps {
   requestName: string;
 }
 
-const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose, onSubmitBatch, requestId , requestName }) => {
+const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose, onSubmitBatch, requestId, requestName }) => {
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -358,7 +354,7 @@ const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose
             type="button"
             onClick={onClose}
             disabled={loading}
-            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: '#F3F4F6', color: '#374151', fontWeight: 600, cursor: 'pointer', fontSize: '15px', transition: 'background-color 0.2s' }}
+            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: '#F3F4F6', color: '#374151', fontWeight: 600, cursor: 'pointer', fontSize: '15px' }}
           >
             Hủy
           </button>
@@ -366,12 +362,11 @@ const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose
             type="button"
             onClick={handleConfirm}
             disabled={loading}
-            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#AE1C3F', color: 'white', fontWeight: 600, fontSize: '15px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1, transition: 'opacity 0.2s' }}
+            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#AE1C3F', color: 'white', fontWeight: 600, fontSize: '15px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
           >
             {loading ? 'Đang xử lý...' : 'Phê duyệt'}
           </button>
         </div>
-
       </div>
     </div>
   );
@@ -515,7 +510,6 @@ const DetailProductPage: React.FC = () => {
   const [isStatusOpen,      setIsStatusOpen]      = useState(false);
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [showImageModal,    setShowImageModal]    = useState(false);
-  
   const [showBatchModal,    setShowBatchModal]    = useState(false);
 
   const [groupOptions,     setGroupOptions]     = useState<{ label: string; value: string }[]>([]);
@@ -537,7 +531,7 @@ const DetailProductPage: React.FC = () => {
   const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
 
-  // --- KIỂM TRA ĐĂNG NHẬP & QUYỀN SỞ HỮU ---
+  // Helpers trích xuất username người tạo
   const getCurrentUsername = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
     for (const key of possibleKeys) {
@@ -559,7 +553,6 @@ const DetailProductPage: React.FC = () => {
   
   const handleApproveClick = () => {
     const isBatch = productData?.requestId || productData?.batchRequestId;
-    
     if (isBatch) {
       setShowBatchModal(true);
     } else {
@@ -578,17 +571,41 @@ const DetailProductPage: React.FC = () => {
   } else if (creatorField !== undefined && creatorField !== null) {
     rawCreatorUsername = String(creatorField).trim().toLowerCase();
   }
-  
   const creatorUsername = rawCreatorUsername ? rawCreatorUsername.split('_')[0] : '';
 
-  const isOwner = Boolean(
-    isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
-  );
-  
+  const isOwner = Boolean(isLoggedIn && currentUsername && creatorUsername && currentUsername === creatorUsername);
   const isReadOnly = !isLoggedIn || !isOwner;
+
+  const getCreatorDisplayName = () => {
+    if (productData?.createdByFullName) return productData.createdByFullName;
+    const username = productData?.createdBy || productData?.createdByUsername || creatorUsername;
+    if (username) {
+      const baseId = username.split('_')[0];
+      const mapped = getFullName(baseId, userMap) || getFullName(username, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) {
+        return mapped; 
+      }
+      return baseId.toUpperCase();
+    }
+    
+    return '---';
+  };
+
+  // Hàm chuyển đổi tên người kiểm duyệt (approverName) hiển thị Fullname giống group
+  const getApproverDisplayName = () => {
+    if (productData?.approvedByFullName) return productData.approvedByFullName;
+    if (productData?.approvedBy && productData?.approvedBy === productData?.createdBy && productData?.createdByFullName) {
+      return productData.createdByFullName;
+    }
+    const approverVal = productData?.approvedBy || productData?.reviewer;
+    if (approverVal) {
+      const baseId = String(approverVal).split('_')[0];
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
+      return baseId.toUpperCase();
+    }
+    return '---';
+  };
 
   useEffect(() => {
     if (productData?.imageUrl) setPreviewImage(toDisplayUrl(productData.imageUrl));
@@ -638,7 +655,7 @@ const DetailProductPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // Fetch dữ liệu
+  // Fetch dữ liệu sản phẩm & danh mục
   useEffect(() => {
     const init = async () => {
       if (!id) return;
@@ -680,9 +697,7 @@ const DetailProductPage: React.FC = () => {
         toast.error('Không tìm thấy sản phẩm hoặc cấu trúc dữ liệu không khớp');
       } finally { 
         setLoading(false); 
-        setTimeout(() => {
-          isInitialLoadRef.current = false;
-        }, 100);
+        setTimeout(() => { isInitialLoadRef.current = false; }, 100);
       }
     };
     init();
@@ -757,10 +772,6 @@ const DetailProductPage: React.FC = () => {
         console.error('Lỗi tải danh sách tiêu chí:', e); 
       }
     })();
-    if (isInitialLoadRef.current) {
-      isInitialLoadRef.current = false;
-    }
-
   }, [formData.productGroupId]);
 
   const handleCriterionValueChange = (id: string, v: string) => {
@@ -777,7 +788,6 @@ const DetailProductPage: React.FC = () => {
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
 
-  // Xử lý Cập nhật trạng thái
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
@@ -836,9 +846,7 @@ const DetailProductPage: React.FC = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const res = await fetch(`${BASE_URL}/products/${id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
       
       if (res.ok) {
@@ -858,14 +866,12 @@ const DetailProductPage: React.FC = () => {
   const handleBatchStatusSubmit = async (requestId: string, status: string) => {
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       const targetRequestId = requestId || productData?.requestId || productData?.batchRequestId;
       
       if (!targetRequestId) {
           toast.error('Không tìm thấy thông tin lô!', { position: 'top-center' });
           return;
       }
-
       const targetRequestName = productData?.requestName || 'Tên yêu cầu'; 
 
       const response = await axios.post(
@@ -920,9 +926,7 @@ const DetailProductPage: React.FC = () => {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
       const res = await fetch(API_ENDPOINTS.PRODUCT.DELETE(id), { 
         method: 'POST',
-        headers: {
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
       if (res.ok) { renderCustomToast('Xóa sản phẩm thành công'); setTimeout(() => navigate('/products/processing'), 2000); }
       else { const e = await res.json(); toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' }); setLoading(false); }
@@ -989,17 +993,12 @@ const DetailProductPage: React.FC = () => {
                 </svg>
               </div>
               <span className="breadcrumbActive breadcrumb-truncate" title={productNameBreadcrumb}>{productNameBreadcrumb}</span>
-              <div className={`statusBadge ${currentStatus.className}`}>
-                <span className="dot"/><span className="statusText">{currentStatus.label}</span>
-              </div>
+              <StatusBadge2 status={productData.status} />
             </div>
           </div>
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isReadOnly ? (
-              <span style={{}}>
-              </span>
-            ) : (
+            {!isReadOnly && (
               <>
                 {productData.status === 'DRAFT' && (<>
                   <button className="btnDraft" onClick={handleDeleteProduct} style={{ display: 'flex', padding: '8px 14px', alignItems: 'center', gap: 6, borderRadius: 8, background: '#E3DFE6', border: 'none', cursor: 'pointer', color: '#AE1C3F', fontSize: 14, fontWeight: 600 }}>
@@ -1059,6 +1058,7 @@ const DetailProductPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: 20 }}>
+                {/* Danh mục sản phẩm */}
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
@@ -1080,6 +1080,8 @@ const DetailProductPage: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Nghiệp vụ */}
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
@@ -1111,8 +1113,6 @@ const DetailProductPage: React.FC = () => {
                       {!isReadOnly && !criterion.isRequired && (
                         <button type="button" onClick={() => toggleCriterionSelection(criterion.id)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#9CA3AF', transition: 'color 0.2s' }}
-                          onMouseOver={e => e.currentTarget.style.color = '#EF4444'}
-                          onMouseOut={e => e.currentTarget.style.color = '#9CA3AF'}
                           title="Bỏ tiêu chí này">
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <polyline points="3 6 5 6 21 6"/>
@@ -1176,9 +1176,7 @@ const DetailProductPage: React.FC = () => {
                 !isReadOnly && (
                   <button type="button" onClick={() => setShowImageModal(true)}
                     className="upload-placeholder"
-                    style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280', transition: 'all 0.2s' }}
-                    onMouseOver={e => { e.currentTarget.style.borderColor = '#10B981'; e.currentTarget.style.background = '#F0FDF4'; }}
-                    onMouseOut={e => { e.currentTarget.style.borderColor = '#E5E7EB'; e.currentTarget.style.background = 'transparent'; }}>
+                    style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>
                     <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
@@ -1188,75 +1186,81 @@ const DetailProductPage: React.FC = () => {
                     </div>
                     <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
                     <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
-                    <span style={{ marginTop: 4, fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tỉ lệ 16:9</span>
                   </button>
                 )
               )}
             </div>
           </div>
 
-          {/* ── RIGHT (Sticky Scrollable Sidebar) ── */}
-          <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '123px', height: 'fit-content' }}>
-            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-              </div>
-              <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
-                <div 
-                  className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                  onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'default' : 'pointer', width: '100%', boxSizing: 'border-box' }}
-                >
-                  <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                  {!isReadOnly && (
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
-                      <path d="M5 7.5L10 12.5L15 7.5"/>
-                    </svg>
+          {/* ── RIGHT Sidebar ── */}
+          <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'static' }}>
+              
+              {/* Trạng thái hiển thị */}
+              <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
+                </div>
+                <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
+                  <div 
+                    className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                    onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'default' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  >
+                    <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
+                    {!isReadOnly && (
+                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                        <path d="M5 7.5L10 12.5L15 7.5"/>
+                      </svg>
+                    )}
+                  </div>
+                  {!isReadOnly && isStatusOpen && (
+                    <div className="custom-options-list">
+                      <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleToggleActive(false)}>Ẩn</div>
+                      <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleToggleActive(true)}>Hiển thị</div>
+                    </div>
                   )}
                 </div>
-                {!isReadOnly && isStatusOpen && (
-                  <div className="custom-options-list" style={{ zIndex: 50 }}>
-                    <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleToggleActive(false)}>Ẩn</div>
-                    <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleToggleActive(true)}>Hiển thị</div>
-                  </div>
-                )}
               </div>
-            </div>
 
-            <div className="commentCard emptyComment">
-              <div className="commentHeader">
-                <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                <span className="commentTitle">Bình luận phản hồi</span>
-              </div>
-              <div className="commentList">
-                {productData?.comments?.length > 0 ? (
-                  productData.comments.map((c: any, i: number) => (
-                    <React.Fragment key={c.id || i}>
-                      <div className="commentItem">
-                        <div className="userInfo">
-                          <img src={c.avatarUrl || 'https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png'} className="avatar" alt="avatar"/>
-                          <div style={{ flex: 1 }}>
-                            <div className="userHeader">
-                              <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
-                              <span className="commentDate">{formatDateTime(c.createdAt)}</span>
+              <ProductInfoCard
+                creatorName={getCreatorDisplayName()}
+                approverName={getApproverDisplayName()}
+                createdAt={formatDateTime(productData?.createdAt)}
+                version={productData?.version || 1}
+              />
+
+              {/* Bình luận phản hồi */}
+              <div className="commentCard emptyComment">
+                <div className="commentHeader">
+                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
+                    <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  <span className="commentTitle">Bình luận phản hồi</span>
+                </div>
+                <div className="commentList">
+                  {productData?.comments?.length > 0 ? (
+                    productData.comments.map((c: any, i: number) => (
+                      <React.Fragment key={c.id || i}>
+                        <div className="commentItem">
+                          <div className="userInfo">
+                            <img src={c.avatarUrl || 'https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png'} className="avatar" alt="avatar"/>
+                            <div style={{ flex: 1 }}>
+                              <div className="userHeader">
+                                <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
+                                <span className="commentDate">{formatDateTime(c.createdAt)}</span>
+                              </div>
+                              <p className="commentText">{c.comment}</p>
                             </div>
-                            <p className="commentText">{c.comment}</p>
                           </div>
                         </div>
-                      </div>
-                      {i < productData.comments.length - 1 && <hr className="commentDivider"/>}
-                    </React.Fragment>
-                  ))
-                ) : (
-                  <div className="no-comments">Chưa có bình luận hay phản hồi nào cho sản phẩm này.</div>
-                )}
+                        {i < productData.comments.length - 1 && <hr className="commentDivider"/>}
+                      </React.Fragment>
+                    ))
+                  ) : (
+                    <div className="no-comments">Chưa có bình luận hay phản hồi nào cho sản phẩm này.</div>
+                  )}
+                </div>
               </div>
-            </div>
           </div>
 
         </div>
