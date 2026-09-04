@@ -571,11 +571,11 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
             }}>
               <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Người tạo</span>
-                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{detail.createdBy || '—'}</span>
+                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
               </div>
               <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Người kiểm duyệt</span>
-                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{formatApprovedBy(detail.approvedBy)}</span>
+                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
               </div>
               <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Thời gian tạo</span>

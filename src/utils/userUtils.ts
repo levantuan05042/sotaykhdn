@@ -24,20 +24,12 @@ export const getUserMap = (): Record<string, string> => {
   return userMap;
 };
 
-/**
- * Hàm xử lý chuỗi (VD: "37ETN082_10500037" -> "37ETN082") và đối chiếu để lấy Fullname
- * @param rawName Chuỗi tên/mã người dùng trả về từ API
- * @param userMap Map danh sách người dùng (để tối ưu, nên truyền vào thay vì parse lại)
- */
+import { formatApprovedBy } from './formatUtils';
+
 export const getFullName = (
   rawName: string | null | undefined, 
-  userMap: Record<string, string>
+  userMap?: Record<string, string>
 ): string | null => {
   if (!rawName) return null;
-
-  // Tách chuỗi lấy phần trước dấu '_'
-  const baseUsername = rawName.split('_')[0];
-
-  // Trả về fullname nếu có, nếu không thì trả về mã baseUsername
-  return userMap[baseUsername] || baseUsername;
-};
+  return formatApprovedBy(rawName);
+};

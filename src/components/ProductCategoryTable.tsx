@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductCategoryTable.css';
 
@@ -140,8 +141,8 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                 const sttVal = (currentPage - 1) * itemsPerPage + index + 1;
                 const activeVal = item.active ? 'Hiện' : 'Ẩn';
                 const versionVal = item.version ? `Phiên bản ${item.version}` : '---';
-                const createdVal = item.createdByFullName || '---';
-                const approvedVal = item.approvedBy || '---';
+                const createdVal = formatApprovedBy(item.createdByFullName);
+                const approvedVal = formatApprovedBy(item.approvedBy);
                 const groupVal = item.groupName || '---';
 
                 return (

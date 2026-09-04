@@ -388,8 +388,8 @@
 }
 
 .note-badge--reviewed {
-  background-color: #E0F2FE;
-  color: #0369A1;
+  background-color: #E0F9EC;
+  color: #14532D;
 }
 
 /* Right Quick View Panel */
@@ -716,38 +716,37 @@
 .quickview-actions-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   background-color: #F0FDF4;
   border: 1.5px solid #86EFAC;
   border-radius: 12px;
-  padding: 16px 20px;
+  padding: 14px 20px;
   margin-top: 4px;
 }
 
 .btn-qv-reject {
-  flex: 1;
-  background-color: #FFFFFF;
-  color: #4B5563;
-  border: 1px solid #D1D5DB;
-  padding: 10px;
+  background: transparent;
+  color: #1F2937;
+  border: none;
+  padding: 8px 12px;
   border-radius: 6px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: all 0.15s ease;
 }
 
 .btn-qv-reject:hover {
-  background-color: #F9FAFB;
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #DC2626;
 }
 
 .btn-qv-revision {
-  flex: 1;
   background-color: #FEF9C3;
   color: #854D0E;
   border: 1px solid #FEF08A;
-  padding: 10px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -766,12 +765,11 @@
 }
 
 .btn-qv-reviewed {
-  flex: 1;
-  background-color: #E0F2FE;
-  color: #0369A1;
-  border: 1px solid #BAE6FD;
-  padding: 10px;
-  border-radius: 6px;
+  background-color: #E0F9EC;
+  color: #14532D;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -779,7 +777,7 @@
 }
 
 .btn-qv-reviewed:hover {
-  background-color: #BAE6FD;
+  background-color: #C6F6D5;
 }
 
 .quickview-editor-html-content {

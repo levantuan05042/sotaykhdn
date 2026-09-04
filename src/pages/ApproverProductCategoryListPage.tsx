@@ -84,8 +84,8 @@ export const ApproverProductCategoryListPage: React.FC = () => {
             name: item.name || '---',
             groupName: item.groupName || '---',
             status: item.status || 'DRAFT',
-            createdBy: item.createdBy || '---',
-            approvedBy: item.approvedBy || '---',
+            createdBy: item.createdByFullName || item.createdBy || '---',
+            approvedBy: item.approvedByFullName || item.approvedBy || '---',
             active: item.active === true,
             version: item.version,
           };
@@ -109,12 +109,9 @@ export const ApproverProductCategoryListPage: React.FC = () => {
       const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
       await Promise.all(
         selectedKeys.map((id) =>
-          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST}/${id}/approve`, {
-            action: modalState.type,
-            reason: reason || '',
+          axios.post(API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.REVIEW(id), {
             status: newStatus,
-          }).catch(() => {
-            console.log(`Updated category ${id} status locally`);
+            comment: reason || '',
           })
         )
       );
@@ -171,7 +168,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
-      render: (row) => row.createdBy,
+      render: (row) => formatApprovedBy(row.createdBy),
     },
     {
       key: 'approvedBy',

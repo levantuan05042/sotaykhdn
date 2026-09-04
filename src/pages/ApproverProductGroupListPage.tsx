@@ -71,8 +71,8 @@ export const ApproverProductGroupListPage: React.FC = () => {
             stt: index + 1,
             name: item.name || '---',
             status: item.status || 'DRAFT',
-            createdBy: item.createdBy || '---',
-            approvedBy: item.approvedBy || '---',
+            createdBy: item.createdByFullName || item.createdBy || '---',
+            approvedBy: item.approvedByFullName || item.approvedBy || '---',
             active: item.active !== false,
             version: item.version,
           };
@@ -96,12 +96,9 @@ export const ApproverProductGroupListPage: React.FC = () => {
       const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
       await Promise.all(
         selectedKeys.map((id) =>
-          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST}/${id}/approve`, {
-            action: modalState.type,
-            reason: reason || '',
+          axios.post(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.REVIEW(id), {
             status: newStatus,
-          }).catch(() => {
-            console.log(`Updated group ${id} status locally`);
+            comment: reason || '',
           })
         )
       );
@@ -153,7 +150,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
-      render: (row) => row.createdBy,
+      render: (row) => formatApprovedBy(row.createdBy),
     },
     {
       key: 'approvedBy',

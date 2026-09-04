@@ -82,8 +82,8 @@ const ApproverRequestListPage: React.FC = () => {
             title: item.requestName || '---',
             status: item.status || 'DRAFT',
             createdAt: formattedDate,
-            creator: item.createdBy || '---',
-            approver: item.approvedBy || '---',
+            creator: item.createdByFullName || item.createdBy || '---',
+            approver: item.approvedByFullName || item.approvedBy || '---',
           };
         });
 
@@ -103,14 +103,17 @@ const ApproverRequestListPage: React.FC = () => {
     setProcessing(true);
     try {
       const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
+      const username = localStorage.getItem('currentUserUsername') || '';
+      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+      const approvedByStr = username ? `${username}_${branchCode}` : '';
+      const reviews = reason?.trim() ? [{ comment: reason.trim() }] : [];
+
       await Promise.all(
         selectedKeys.map((id) =>
-          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST}/${id}/approve`, {
-            action: modalState.type,
-            reason: reason || '',
+          axios.post(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.UPDATE_STATUS(String(id)), {
             status: newStatus,
-          }).catch(() => {
-            console.log(`Updated request ${id} status locally`);
+            approvedBy: approvedByStr,
+            productReviews: reviews,
           })
         )
       );
@@ -159,7 +162,7 @@ const ApproverRequestListPage: React.FC = () => {
     {
       key: 'creator',
       header: 'Người tạo',
-      render: (row) => row.creator,
+      render: (row) => formatApprovedBy(row.creator),
     },
     {
       key: 'approver',

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatApprovedBy } from '../utils/formatUtils';
 import './ProductTable.css'; 
 
 export interface RequestItem {
@@ -12,10 +13,6 @@ export interface RequestItem {
   productId: string | null; 
   createdByFullName?: string;    
   approvedBy?: string;   
-}
-
-interface Props {
-  data: RequestItem[];
 }
 
 const stripHtml = (htmlString: string) => {
@@ -149,10 +146,10 @@ const RequestTable: React.FC<Props> = ({ data }) => {
 
                   {/* Render 2 thẻ td riêng biệt */}
                   <td style={{ color: '#4B5563' }}>
-                    {item.createdByFullName || '---'}
+                    {formatApprovedBy(item.createdByFullName)}
                   </td>
                   <td style={{ color: '#4B5563' }}>
-                    {item.approvedBy || '---'}
+                    {formatApprovedBy(item.approvedBy)}
                   </td>
 
                   <td>

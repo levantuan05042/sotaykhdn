@@ -85,8 +85,8 @@ export const ApproverCriteriaListPage: React.FC = () => {
           businessName: item.businessName || '---',
           status: item.status || 'DRAFT',
           active: !!item.active,
-          createdBy: item.createdBy || '---',
-          approvedBy: item.approvedBy || '---',
+          createdBy: item.createdByFullName || item.createdBy || '---',
+          approvedBy: item.approvedByFullName || item.approvedBy || '---',
           version: item.version || 1,
         }));
         setCriteriaList(mapped);
@@ -107,12 +107,9 @@ export const ApproverCriteriaListPage: React.FC = () => {
       const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
       await Promise.all(
         selectedKeys.map((id) =>
-          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_CRITERIA.LIST}/${id}/approve`, {
-            action: modalState.type,
-            reason: reason || '',
+          axios.post(API_ENDPOINTS.APPROVER.PRODUCT_CRITERIA.REVIEW(id), {
             status: newStatus,
-          }).catch(() => {
-            console.log(`Updated criteria ${id} status locally`);
+            comment: reason || '',
           })
         )
       );

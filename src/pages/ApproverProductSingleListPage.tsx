@@ -93,8 +93,8 @@ export const ApproverProductSingleListPage: React.FC = () => {
             id: item.id,
             stt: index + 1,
             name: item.name || '---',
-            createdBy: item.createdBy || '---',
-            approvedBy: item.approvedBy || '---',
+            createdBy: item.createdByFullName || item.createdBy || '---',
+            approvedBy: item.approvedByFullName || item.approvedBy || '---',
             status: item.status || 'DRAFT',
             createdAt: formattedDate,
           };
@@ -116,14 +116,17 @@ export const ApproverProductSingleListPage: React.FC = () => {
     setProcessing(true);
     try {
       const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
+      const notesVal = modalState.type === 'APPROVE' ? '2' : '1';
+      const username = localStorage.getItem('currentUserUsername') || '';
+      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+      const approvedByStr = username ? `${username}_${branchCode}` : '';
+
       await Promise.all(
         selectedKeys.map((id) =>
-          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT.SINGLE_FOR_APPROVAL}/${id}/approve`, {
-            action: modalState.type,
-            reason: reason || '',
-            status: newStatus,
-          }).catch(() => {
-            console.log(`Updated product ${id} status locally`);
+          axios.post(API_ENDPOINTS.APPROVER.PRODUCT.REVIEW(id), {
+            notes: notesVal,
+            comment: reason || '',
+            approvedBy: approvedByStr,
           })
         )
       );
@@ -161,7 +164,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
-      render: (row) => row.createdBy,
+      render: (row) => formatApprovedBy(row.createdBy),
     },
     {
       key: 'approvedBy',

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './ProductBusinessPage.css';
@@ -6,6 +6,7 @@ import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import { API_ENDPOINTS } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
+import { formatApprovedBy } from '../utils/formatUtils';
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -287,22 +288,28 @@ const ProductBusinessPage: React.FC = () => {
     {
       key: 'createdByFullName',
       header: 'Người tạo',
-      render: (row) => (
-        <div className="custom-tooltip-container">
-          <span className="truncate-text">{row.createdByFullName || '---'}</span>
-          <div className="custom-tooltip">{row.createdByFullName || '---'}</div>
-        </div>
-      ),
+      render: (row) => {
+        const name = formatApprovedBy(row.createdByFullName);
+        return (
+          <div className="custom-tooltip-container">
+            <span className="truncate-text">{name}</span>
+            <div className="custom-tooltip">{name}</div>
+          </div>
+        );
+      },
     },
     {
       key: 'approvedBy',
       header: 'Người kiểm duyệt',
-      render: (row) => (
-        <div className="custom-tooltip-container">
-          <span className="truncate-text">{row.approvedBy || '---'}</span>
-          <div className="custom-tooltip">{row.approvedBy || '---'}</div>
-        </div>
-      ),
+      render: (row) => {
+        const name = formatApprovedBy(row.approvedBy);
+        return (
+          <div className="custom-tooltip-container">
+            <span className="truncate-text">{name}</span>
+            <div className="custom-tooltip">{name}</div>
+          </div>
+        );
+      },
     },
     {
       key: 'version',

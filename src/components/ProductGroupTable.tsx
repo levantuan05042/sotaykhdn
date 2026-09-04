@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductGroupTable.css';
 
@@ -178,20 +179,20 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
                     {/* 5. Cột Người tạo */}
                     <td className="tooltip-cell" style={{ overflow: 'visible' }}>
                       <div className="custom-tooltip-container">
-                        <span className="truncate-text" title={item.createdByFullName || ''}>
-                          {item.createdByFullName || '---'}
+                        <span className="truncate-text" title={formatApprovedBy(item.createdByFullName) || ''}>
+                          {formatApprovedBy(item.createdByFullName)}
                         </span>
-                        <div className="custom-tooltip">{item.createdByFullName || '---'}</div>
+                        <div className="custom-tooltip">{formatApprovedBy(item.createdByFullName)}</div>
                       </div>
                     </td>
                     
                     {/* 6. Cột Người kiểm duyệt */}
                     <td className="tooltip-cell" style={{ overflow: 'visible' }}>
                       <div className="custom-tooltip-container">
-                        <span className="truncate-text" title={item.approvedBy || ''}>
-                          {item.approvedBy || '---'}
+                        <span className="truncate-text" title={formatApprovedBy(item.approvedBy) || ''}>
+                          {formatApprovedBy(item.approvedBy)}
                         </span>
-                        <div className="custom-tooltip">{item.approvedBy || '---'}</div>
+                        <div className="custom-tooltip">{formatApprovedBy(item.approvedBy)}</div>
                       </div>
                     </td>
                     

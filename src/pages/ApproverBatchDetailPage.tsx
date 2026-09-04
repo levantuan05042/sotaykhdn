@@ -9,7 +9,6 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ApproveConfirmPopup from '../components/ApproveConfirmPopup';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
-import AuditLogTimeline from '../components/AuditLogTimeline';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
@@ -21,6 +20,7 @@ interface ProductItem {
   notes: string | null;
   characteristics: string;
   feedback: string;
+  originalFeedback: string;
 }
 
 const ApproverBatchDetailPage: React.FC = () => {
@@ -49,6 +49,7 @@ const ApproverBatchDetailPage: React.FC = () => {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.PRODUCTS(requestId));
         const mapped: ProductItem[] = response.data.map((item: any) => {
           const characItem = item.details?.find((d: any) => d.tieuChi?.toLowerCase().includes('đặc tính'));
+          const lastComment = item.comments?.[item.comments.length - 1]?.comment || item.comments?.[item.comments.length - 1]?.content || item.rejectReason || '';
           return {
             id: item.id,
             name: item.name || '—',
@@ -57,7 +58,8 @@ const ApproverBatchDetailPage: React.FC = () => {
             business: item.businessName || '—',
             notes: item.notes || null,
             characteristics: characItem ? characItem.noiDung : '',
-            feedback: item.notes === '0' ? (item.comments?.[item.comments.length - 1]?.comment || item.comments?.[item.comments.length - 1]?.content || '') : ''
+            feedback: item.notes === '0' ? lastComment : '',
+            originalFeedback: lastComment,
           };
         });
         setProducts(mapped);
@@ -193,7 +195,14 @@ const ApproverBatchDetailPage: React.FC = () => {
       case 'REVIEWED':
         if (quickViewProduct) {
           toast.success(`Đã xác nhận REVIEW sản phẩm: ${quickViewProduct.name}`);
-          setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { ...p, notes: 'REVIEWED' } : p));
+          const currentTrim = (quickViewProduct.feedback || '').trim();
+          const origTrim = (quickViewProduct.originalFeedback || '').trim();
+          const isMod = Boolean(currentTrim && currentTrim !== origTrim);
+          setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { 
+            ...p, 
+            notes: 'REVIEWED',
+            feedback: isMod ? p.feedback : ''
+          } : p));
         }
         break;
       default:
@@ -474,35 +483,38 @@ const ApproverBatchDetailPage: React.FC = () => {
                     }}
                   />
                 </div>
-
-                {/* Audit Log Timeline for product */}
-                <AuditLogTimeline objectCode={quickViewProduct.id} />
               </>
             )}
 
             {/* Action Buttons */}
-            {batchRequest?.status === 'PENDING_APPROVAL' && (
-              <div className="quickview-actions-row">
-                <button className="btn-qv-reject" onClick={() => handleAction('REJECT')}>
-                  Từ chối
-                </button>
-                {quickViewProduct.feedback?.trim() ? (
-                  <button 
-                    className="btn-qv-revision" 
-                    onClick={() => handleAction('REVISION')}
-                  >
-                    Gửi lại chỉnh sửa
+            {batchRequest?.status === 'PENDING_APPROVAL' && (() => {
+              const currentTrim = (quickViewProduct.feedback || '').trim();
+              const origTrim = (quickViewProduct.originalFeedback || '').trim();
+              const isCommentModified = Boolean(currentTrim && currentTrim !== origTrim);
+
+              return (
+                <div className="quickview-actions-row">
+                  <button className="btn-qv-reject" onClick={() => handleAction('REJECT')}>
+                    Từ chối
                   </button>
-                ) : (
-                  <button 
-                    className="btn-qv-reviewed" 
-                    onClick={() => handleAction('REVIEWED')}
-                  >
-                    Đã Review
-                  </button>
-                )}
-              </div>
-            )}
+                  {isCommentModified ? (
+                    <button 
+                      className="btn-qv-revision" 
+                      onClick={() => handleAction('REVISION')}
+                    >
+                      Gửi lại chỉnh sửa
+                    </button>
+                  ) : (
+                    <button 
+                      className="btn-qv-reviewed" 
+                      onClick={() => handleAction('REVIEWED')}
+                    >
+                      Đã Review
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
 
           </section>
         )}

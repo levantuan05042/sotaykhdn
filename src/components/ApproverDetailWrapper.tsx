@@ -173,7 +173,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
               <div className="meta-grid">
                 <div className="meta-item-vertical">
                   <span className="meta-label">Người tạo</span>
-                  <span className="meta-value">{createdBy || '---'}</span>
+                  <span className="meta-value">{formatApprovedBy(createdBy)}</span>
                 </div>
                 <div className="meta-item-vertical">
                   <span className="meta-label">Người kiểm duyệt</span>
@@ -214,7 +214,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
                         <img src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92" alt="Avatar" />
                       </div>
                       <div className="comment-author-info">
-                        <span className="comment-author">{comment.createdBy || 'Cán bộ duyệt'}</span>
+                        <span className="comment-author">{formatApprovedBy(comment.createdBy) || 'Cán bộ duyệt'}</span>
                         <span className="comment-date">{dateStr}</span>
                       </div>
                     </div>

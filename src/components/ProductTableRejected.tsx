@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductTable.css'; 
 
@@ -124,10 +125,10 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   )}
                 </td>
                 <td>
-                  <CellWithTooltip text={item.createdByFullName} />
+                  <CellWithTooltip text={formatApprovedBy(item.createdByFullName)} />
                 </td>
                 <td>
-                  <CellWithTooltip text={item.approvedBy} />
+                  <CellWithTooltip text={formatApprovedBy(item.approvedBy)} />
                 </td>
                 <td>
                   <CellWithTooltip 

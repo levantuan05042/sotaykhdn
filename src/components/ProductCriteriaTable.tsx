@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductCriteriaTable.css'; 
 
@@ -226,15 +227,15 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
                   <td>
                     <div className="custom-tooltip-container">
-                      <span className="truncate-text">{item.createdByFullName || '---'}</span>
-                      <div className="custom-tooltip">{item.createdByFullName || '---'}</div>
+                      <span className="truncate-text">{formatApprovedBy(item.createdByFullName)}</span>
+                      <div className="custom-tooltip">{formatApprovedBy(item.createdByFullName)}</div>
                     </div>
                   </td>
 
                   <td>
                     <div className="custom-tooltip-container">
-                      <span className="truncate-text">{item.approvedBy || '---'}</span>
-                      <div className="custom-tooltip">{item.approvedBy || '---'}</div>
+                      <span className="truncate-text">{formatApprovedBy(item.approvedBy)}</span>
+                      <div className="custom-tooltip">{formatApprovedBy(item.approvedBy)}</div>
                     </div>
                   </td>
 

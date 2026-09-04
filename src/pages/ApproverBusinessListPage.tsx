@@ -84,8 +84,8 @@ export const ApproverBusinessListPage: React.FC = () => {
           categoryName: item.categoryName || '---',
           status: item.status || 'DRAFT',
           active: !!item.active,
-          createdBy: item.createdBy || '---',
-          approvedBy: item.approvedBy || '---',
+          createdBy: item.createdByFullName || item.createdBy || '---',
+          approvedBy: item.approvedByFullName || item.approvedBy || '---',
           version: item.version || 1,
         }));
         setBusinesses(mapped);
@@ -106,12 +106,9 @@ export const ApproverBusinessListPage: React.FC = () => {
       const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
       await Promise.all(
         selectedKeys.map((id) =>
-          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.LIST}/${id}/approve`, {
-            action: modalState.type,
-            reason: reason || '',
+          axios.post(API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.REVIEW(id), {
             status: newStatus,
-          }).catch(() => {
-            console.log(`Updated business ${id} status locally`);
+            comment: reason || '',
           })
         )
       );
@@ -185,7 +182,7 @@ export const ApproverBusinessListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
-      render: (row) => row.createdBy,
+      render: (row) => formatApprovedBy(row.createdBy),
     },
     {
       key: 'approvedBy',
