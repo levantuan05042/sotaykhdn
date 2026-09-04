@@ -20,33 +20,12 @@ export interface ProductInfo {
 }
 
 const toDisplayUrl = (raw?: string | null) => {
-  // Bắt các trường hợp rác dữ liệu (thường gặp khi migrate database lên UAT)
-  if (!raw || raw === 'null' || raw === 'undefined') return '';
-
-  let cleanUrl = raw;
-  
-  // Xử lý dự phòng: Đôi khi API trả về chuỗi JSON mảng ảnh thay vì 1 đường dẫn thuần (VD: '["/path1.jpg", "/path2.jpg"]')
-  try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      cleanUrl = parsed[0];
-    }
-  } catch (e) {
-    // Bỏ qua nếu là chuỗi thông thường
-  }
-
-  // Hỗ trợ link tuyệt đối HTTP/HTTPS và Base64
-  if (cleanUrl.startsWith('http') || cleanUrl.startsWith('data:image')) return cleanUrl;
-
-  // Chuẩn hóa đường dẫn để tránh lỗi thừa hoặc thiếu dấu '/' khi nối BASE_URL
-  const baseUrlCleaned = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
-  const urlCleaned = cleanUrl.startsWith('/') ? cleanUrl : `/${cleanUrl}`;
-
-  return `${baseUrlCleaned}${urlCleaned}`;
+  if (!raw) return '';
+  if (raw.startsWith('http')) return raw;
+  return `${BASE_URL}${raw.startsWith('/') ? raw : `/${raw}`}`;
 };
 
 const getColorFromText = (text: string) => {
-  if (!text) return '#2563EB'; // Fallback an toàn
   const colors = ['#AE1C3F', '#2563EB', '#059669', '#D97706', '#7C3AED', '#DC2626', '#0891B2', '#4F46E5', '#9333EA', '#EA580C'];
   let hash = 0;
   for (let i = 0; i < text.length; i++) hash = text.charCodeAt(i) + ((hash << 5) - hash);
@@ -69,13 +48,6 @@ const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () =
   const [imgError, setImgError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
-
-  const imageUrl = toDisplayUrl(product.imageUrl || product.image_url);
-
-  // [SỬA LỖI QUAN TRỌNG]: Reset imgError khi imageUrl thay đổi
-  useEffect(() => {
-    setImgError(false);
-  }, [imageUrl]);
 
   useEffect(() => {
     let isMounted = true;
@@ -129,6 +101,7 @@ const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () =
     }
   };
 
+  const imageUrl = toDisplayUrl(product.imageUrl || product.image_url);
   const firstLetter = product.name?.trim()?.charAt(0)?.toUpperCase() || '?';
   const totalViews = product.viewCount ?? product.views ?? 0;
 
