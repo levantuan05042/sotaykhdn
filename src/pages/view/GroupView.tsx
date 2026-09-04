@@ -6,6 +6,9 @@ import './GroupView.css';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 
+// TODO: Điều chỉnh đường dẫn import này cho đúng với cấu trúc thư mục của dự án
+import EmptyIcon from '../../assets/icon/khong_san_pham.svg'; 
+
 const GROUP_OPTIONS = [
   { label: 'Nhóm sản phẩm dịch vụ', value: 'SERVICE' },
   { label: 'Nhóm sản phẩm bảo hiểm', value: 'INSURANCE' },
@@ -226,9 +229,12 @@ const GroupView: React.FC = () => {
         <CategorySection key={cat.id} category={cat} onNavigate={handleNavigate} />
       ))}
 
-      {/* Thông báo nếu không có bất kỳ dữ liệu nào */}
+      {/* THAY ĐỔI MỚI: Giao diện Empty State khi không có dữ liệu */}
       {groupDirectProducts.length === 0 && categories.length === 0 && (
-        <div className="state-message">Nhóm này chưa có dữ liệu sản phẩm.</div>
+        <div className="empty-data-message">
+          <img src={EmptyIcon} alt="Không có dữ liệu" className="empty-state-icon" />
+          <span className="empty-state-text">Không có sản phẩm dịch vụ nào</span>
+        </div>
       )}
     </div>
   );

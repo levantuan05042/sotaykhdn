@@ -52,6 +52,7 @@ const DetailCategoryPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
+  const [groupSearchTerm, setGroupSearchTerm] = useState('');
   
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
   
@@ -78,7 +79,9 @@ const DetailCategoryPage: React.FC = () => {
     baseCurrentUsername === baseCreatorUsername
   );
 
-  const isReadOnly = !isLoggedIn || !isOwner;
+  // Phân tách quyền: Không phải người tạo vs Trạng thái Form chỉ xem
+  const isNotCreator = !isLoggedIn || !isOwner;
+  const isFormReadOnly = isNotCreator || categoryData?.status === 'PENDING_APPROVAL';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -149,7 +152,7 @@ const DetailCategoryPage: React.FC = () => {
   }, [id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReadOnly) return;
+    if (isFormReadOnly) return;
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -157,7 +160,7 @@ const DetailCategoryPage: React.FC = () => {
   const handleGoBack = () => navigate('/product-category');
 
   const handleUpdateCategory = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (isNotCreator || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.name.trim()) {
@@ -212,7 +215,7 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
-    if (isReadOnly || !id) return;
+    if (isFormReadOnly || !id) return;
     if (isActive === newActiveStatus) {
       setIsStatusOpen(false);
       return;
@@ -230,6 +233,8 @@ const DetailCategoryPage: React.FC = () => {
 
       if (response.ok) {
         setIsActive(newActiveStatus);
+        // Cập nhật lại dữ liệu gốc để nút Gửi duyệt/Lưu nháp không bị coi là dơ (dirty) khi chỉ đổi state hiển thị
+        setCategoryData((prev: any) => ({ ...prev, active: newActiveStatus }));
         toast.dismiss(toastId);
         renderCustomToast(newActiveStatus ? "Hiển thị danh mục thành công" : "Ẩn danh mục thành công");
       } else {
@@ -279,7 +284,7 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const handleDeleteCategory = () => {
-    if (isReadOnly || !id) return;
+    if (isNotCreator || !id) return;
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
         <div className="confirm-toast-body">
@@ -302,7 +307,7 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isReadOnly || !id) return;
+    if (isNotCreator || !id) return;
     try {
       setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_CATEGORY.DELETE(id), {
@@ -357,12 +362,15 @@ const DetailCategoryPage: React.FC = () => {
     isActive !== (categoryData?.active ?? true)
   );
   
-  const canSubmit = !isReadOnly && isDirty && formData.name.trim() !== '';
+  const canSubmit = !isNotCreator && isDirty && formData.name.trim() !== '';
+
+  const filteredGroups = groupOptions.filter(opt => opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase()));
 
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
-        {isReadOnly && (
+        {/* Banner chỉ hiển thị khi KHÔNG PHẢI LÀ NGƯỜI TẠO, không hiển thị khi PENDING_APPROVAL nếu là người tạo */}
+        {isNotCreator && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -398,7 +406,7 @@ const DetailCategoryPage: React.FC = () => {
           </div>
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isReadOnly ? (
+            {isNotCreator ? (
               <span></span>
             ) : (
               <>
@@ -410,11 +418,11 @@ const DetailCategoryPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className="btnDraft active" disabled={isReadOnly} onClick={() => handleUpdateCategory('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnDraft active" disabled={isNotCreator} onClick={() => handleUpdateCategory('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${!isReadOnly && formData.name.trim() && formData.groupId ? 'active' : 'disabled'}`} disabled={isReadOnly || !formData.name.trim() || !formData.groupId} onClick={() => handleUpdateCategory('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${!isNotCreator && formData.name.trim() && formData.groupId ? 'active' : 'disabled'}`} disabled={isNotCreator || !formData.name.trim() || !formData.groupId} onClick={() => handleUpdateCategory('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -454,11 +462,11 @@ const DetailCategoryPage: React.FC = () => {
                 <div className="custom-select-container">
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
-                    onClick={() => !isReadOnly && setIsOpen(!isOpen)}
-                    style={{ opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    onClick={() => !isFormReadOnly && setIsOpen(!isOpen)}
+                    style={{ opacity: isFormReadOnly ? 0.7 : 1, cursor: isFormReadOnly ? 'not-allowed' : 'pointer' }}
                   >
                     <span>{groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm sản phẩm"}</span>
-                    {!isReadOnly && (
+                    {!isFormReadOnly && (
                       <svg 
                         width="10" height="6" viewBox="0 0 10 6" fill="none" 
                         className={`arrow-icon ${isOpen ? 'up' : ''}`}
@@ -467,14 +475,28 @@ const DetailCategoryPage: React.FC = () => {
                       </svg>
                     )}
                   </div>
-                  {!isReadOnly && isOpen && (
-                    <div className="custom-options-list " style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                      {groupOptions.map((opt) => (
-                        <div key={opt.value} className={`custom-option ${formData.groupId === opt.value ? 'selected' : ''}`}
-                          onClick={() => { setFormData({...formData, groupId: opt.value}); setIsOpen(false); }}>
-                          <span>{opt.label}</span>
-                        </div>
-                      ))}
+                  {!isFormReadOnly && isOpen && (
+                    <div className="custom-options-list" style={{ minHeight: '250px', overflowY: 'auto', padding: 0 }}>
+                      <div style={{ padding: '8px', position: 'sticky', top: 0, background: '#fff', zIndex: 1, borderBottom: '1px solid #E5E7EB' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Tìm kiếm nhóm..." 
+                          value={groupSearchTerm} 
+                          onChange={(e) => setGroupSearchTerm(e.target.value)} 
+                          onClick={(e) => e.stopPropagation()} 
+                          style={{ width: '100%', padding: '8px 12px', border: '1px solid #D5D7DA', borderRadius: '6px', boxSizing: 'border-box', outline: 'none' }}
+                        />
+                      </div>
+                      {filteredGroups.length > 0 ? (
+                        filteredGroups.map((opt) => (
+                          <div key={opt.value} className={`custom-option ${formData.groupId === opt.value ? 'selected' : ''}`}
+                            onClick={() => { setFormData({...formData, groupId: opt.value}); setIsOpen(false); setGroupSearchTerm(''); }}>
+                            <span>{opt.label}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ padding: '12px', textAlign: 'center', color: '#6B7280' }}>Không tìm thấy nhóm</div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -487,9 +509,9 @@ const DetailCategoryPage: React.FC = () => {
                   className="input" 
                   value={formData.name} 
                   onChange={handleInputChange} 
-                  readOnly={isReadOnly}
-                  disabled={isReadOnly}
-                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
+                  readOnly={isFormReadOnly}
+                  disabled={isFormReadOnly}
+                  style={{ backgroundColor: isFormReadOnly ? '#F9FAFB' : '#FFF', cursor: isFormReadOnly ? 'not-allowed' : 'text' }}
                 />
               </div>
             </div>
@@ -507,17 +529,17 @@ const DetailCategoryPage: React.FC = () => {
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                 <div 
                   className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                  onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  onClick={() => !isFormReadOnly && setIsStatusOpen(v => !v)}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isFormReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isFormReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                  {!isReadOnly && (
+                  {!isFormReadOnly && (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                       <path d="M5 7.5L10 12.5L15 7.5"/>
                     </svg>
                   )}
                 </div>
-                {!isReadOnly && isStatusOpen && (
+                {!isFormReadOnly && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
                     <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(false)}>Ẩn</div>
                     <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(true)}>Hiển thị</div>

@@ -6,7 +6,6 @@ import axios from 'axios';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 
-
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
   
@@ -15,6 +14,9 @@ const AddCategoryPage: React.FC = () => {
   const groupRef = useRef<HTMLDivElement>(null);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
+  
+  // MỚI: Trạng thái tìm kiếm cho Nhóm sản phẩm
+  const [groupSearchTerm, setGroupSearchTerm] = useState('');
 
   // Trạng thái Dropdown Trạng thái hiển thị
   const [isStatusOpen, setIsStatusOpen] = useState(false); 
@@ -56,6 +58,7 @@ const AddCategoryPage: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (groupRef.current && !groupRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setGroupSearchTerm(''); // Xóa text tìm kiếm khi đóng
       }
       if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
         setIsStatusOpen(false);
@@ -129,6 +132,11 @@ const AddCategoryPage: React.FC = () => {
 
   const canSubmit = isFormDirty;
 
+  // MỚI: Lọc danh sách nhóm sản phẩm dựa trên từ khóa tìm kiếm
+  const filteredGroupOptions = groupOptions.filter(opt => 
+    opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
+  );
+
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
@@ -190,7 +198,8 @@ const AddCategoryPage: React.FC = () => {
               {/* DROPDOWN CHỌN NHÓM SẢN PHẨM */}
               <div className="formGroup" ref={groupRef}>
                 <label className="label">Nhóm sản phẩm *</label>
-                <div className="custom-select-container">
+                {/* Thêm position relative nếu file CSS chưa cấu hình để dropdown con neo theo nó */}
+                <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span>
                       {loadingGroups 
@@ -203,17 +212,62 @@ const AddCategoryPage: React.FC = () => {
                   </div>
 
                   {isOpen && (
-                    <div className="custom-options-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                      {groupOptions.length === 0 ? (
-                        <div className="custom-option disabled">Không có nhóm sản phẩm nào khả dụng</div>
-                      ) : (
-                        groupOptions.map((opt) => (
-                          <div key={opt.value} className={`custom-option ${formData.groupId === opt.value ? 'selected' : ''}`}
-                            onClick={() => { setFormData({...formData, groupId: opt.value}); setIsOpen(false); }}>
-                            <span>{opt.label}</span>
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: 'white',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      zIndex: 50,
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}>
+                      {/* Box tìm kiếm */}
+                      <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm nhóm..."
+                          value={groupSearchTerm}
+                          onChange={(e) => setGroupSearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()} // Chống đóng dropdown khi bấm vào ô input
+                          autoFocus
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '6px',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+
+                      {/* Danh sách */}
+                      <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', minHeight: 0, position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
+                        {loadingGroups ? (
+                          <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>Đang tải...</div>
+                        ) : filteredGroupOptions.length === 0 ? (
+                          <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>
+                            Không tìm thấy kết quả
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          filteredGroupOptions.map((opt) => (
+                            <div key={opt.value} className={`custom-option ${formData.groupId === opt.value ? 'selected' : ''}`}
+                              onClick={() => { 
+                                setFormData({...formData, groupId: opt.value}); 
+                                setIsOpen(false); 
+                                setGroupSearchTerm(''); // Xóa text khi đã chọn xong
+                              }}>
+                              <span>{opt.label}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

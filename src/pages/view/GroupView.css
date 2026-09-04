@@ -202,3 +202,28 @@
     grid-template-columns: repeat(5, 1fr); /* Danh mục: 5 items/hàng */
   }
 }
+
+/* =======================================
+   TRẠNG THÁI TRỐNG (EMPTY STATE)
+======================================= */
+.empty-data-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  width: 100%;
+}
+
+.empty-state-icon {
+  width: 212px;
+  height: 195px;
+  margin-bottom: 12px;
+  object-fit: contain;
+}
+
+.empty-state-text {
+  color: #9CA3AF;
+  font-size: 15px;
+  text-align: center;
+}

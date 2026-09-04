@@ -8,12 +8,12 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_OPTIONS = [
-  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Đã duyệt', value: 'ACTIVE' },
   { label: 'Lưu nháp', value: 'DRAFT' },
   { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
   { label: 'Từ chối', value: 'REJECTED' },
-  { label: 'Lưu trữ', value: 'ARCHIVED' }
+  // { label: 'Lưu trữ', value: 'ARCHIVED' }
 ];
 
 interface CategoryOption {

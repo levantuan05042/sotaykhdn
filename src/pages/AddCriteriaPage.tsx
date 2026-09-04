@@ -317,63 +317,99 @@ const AddCriteriaPage: React.FC = () => {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         borderRadius: '8px',
                         border: '1px solid #E5E7EB',
-                        minHeight: '250px',
-                        overflowY: 'auto'
+                        maxHeight: '300px',
+                        overflow: 'hidden',
+                        display: 'flex',
+                        flexDirection: 'column'
                       }}
                     >
-                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff', position: 'sticky', top: 0, zIndex: 2 }}>
+                      {/* Ô tìm kiếm cố định */}
+                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
                         <input
                           type="text"
                           className="input"
                           placeholder="Tìm kiếm nhóm sản phẩm..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          style={{ padding: '6px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #D1D5DB' }}
+                          style={{ padding: '6px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #D1D5DB', outline: 'none' }}
                         />
                       </div>
 
-                      {groupOptions.length > 0 && !searchTerm && (
-                        <div 
-                          className="custom-option select-all-option"
-                          onClick={handleToggleSelectAll}
-                          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB', fontWeight: '500' }}
-                        >
-                          <input 
-                            type="checkbox" 
-                            checked={isAllSelected}
-                            onChange={() => {}} 
-                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                          />
-                          <span style={{ fontSize: '14px', color: '#111827' }}>Tất cả nhóm sản phẩm</span>
-                        </div>
-                      )}
-
-                      <div>
-                        {filteredOptions.length === 0 ? (
-                          <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
-                            Không tìm thấy nhóm sản phẩm phù hợp
+                      {/* Danh sách cuộn */}
+                      <div style={{ overflowY: 'auto', flex: 1 }}>
+                        {groupOptions.length > 0 && !searchTerm && (
+                          <div 
+                            className="custom-option select-all-option"
+                            onClick={handleToggleSelectAll}
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB', fontWeight: '500', userSelect: 'none' }}
+                          >
+                            {/* Custom Checkbox Chọn Tất Cả */}
+                            <div 
+                              style={{
+                                width: '18px',
+                                height: '18px',
+                                borderRadius: '4px',
+                                border: isAllSelected ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
+                                backgroundColor: isAllSelected ? '#AE1C3F' : '#FFFFFF',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease',
+                                flexShrink: 0
+                              }}
+                            >
+                              {isAllSelected && (
+                                <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                                  <path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span style={{ fontSize: '14px', color: '#111827' }}>Tất cả nhóm sản phẩm</span>
                           </div>
-                        ) : (
-                          filteredOptions.map((opt) => {
-                            const isChecked = formData.groupIds.includes(opt.value);
-                            return (
-                              <div 
-                                key={opt.value} 
-                                className={`custom-option ${isChecked ? 'selected' : ''}`}
-                                onClick={() => handleToggleGroup(opt.value)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px' }}
-                              >
-                                <input 
-                                  type="checkbox" 
-                                  checked={isChecked}
-                                  onChange={() => {}} 
-                                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
-                                />
-                                <span style={{ fontSize: '14px', color: '#1F2937' }}>{opt.label}</span>
-                              </div>
-                            );
-                          })
                         )}
+
+                        <div>
+                          {filteredOptions.length === 0 ? (
+                            <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
+                              Không tìm thấy nhóm sản phẩm phù hợp
+                            </div>
+                          ) : (
+                            filteredOptions.map((opt) => {
+                              const isChecked = formData.groupIds.includes(opt.value);
+                              return (
+                                <div 
+                                  key={opt.value} 
+                                  className={`custom-option ${isChecked ? 'selected' : ''}`}
+                                  onClick={() => handleToggleGroup(opt.value)}
+                                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', userSelect: 'none' }}
+                                >
+                                  {/* Custom Checkbox Từng Option */}
+                                  <div 
+                                    style={{
+                                      width: '18px',
+                                      height: '18px',
+                                      borderRadius: '4px',
+                                      border: isChecked ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
+                                      backgroundColor: isChecked ? '#AE1C3F' : '#FFFFFF',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all 0.15s ease',
+                                      flexShrink: 0
+                                    }}
+                                  >
+                                    {isChecked && (
+                                      <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
+                                        <path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span style={{ fontSize: '14px', color: '#1F2937' }}>{opt.label}</span>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

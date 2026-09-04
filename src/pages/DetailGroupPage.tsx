@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
 import ProductInfoCard from '../components/ui/ProductInfoCard';
-import StatusBadge2 from '../components/ui/StatusBadge2'; // Import StatusBadge2
+import StatusBadge2 from '../components/ui/StatusBadge2';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -23,7 +23,6 @@ const formatDateTime = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
-// Hàm tách ID hệ thống (Được đồng bộ logic từ Category Page)
 const extractBaseId = (username: string) => {
   if (!username) return '';
   return username.split('_')[0].trim();
@@ -60,13 +59,12 @@ const DetailGroupPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
-
   const userMap = useMemo(() => getUserMap(), []);
 
   const currentUsername = getCurrentUsername();
   const isLoggedIn = Boolean(currentUsername);
 
-  // Xử lý username nguyên vẹn để map fullname (Giống Category)
+  // Xử lý thông tin người tạo
   const creatorField = productData?.createdBy || productData?.created_by || productData?.creator;
   let creatorUsername = '';
   if (typeof creatorField === 'object' && creatorField !== null) {
@@ -75,10 +73,10 @@ const DetailGroupPage: React.FC = () => {
     creatorUsername = String(creatorField).trim().toLowerCase();
   }
 
-  // Tách baseId để phân quyền
   const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
   const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
 
+  // Kiểm tra quyền sở hữu sản phẩm
   const isOwner = Boolean(
     isLoggedIn && 
     baseCurrentUsername && 
@@ -86,7 +84,8 @@ const DetailGroupPage: React.FC = () => {
     baseCurrentUsername === baseCreatorUsername
   );
 
-  const isReadOnly = !isLoggedIn || !isOwner;
+  // Điều kiện không cho phép chỉnh sửa: không phải chủ sở hữu, hoặc đang ở trạng thái PENDING_APPROVAL / ARCHIVED
+  const isInputDisabled = !isOwner || productData?.status === 'PENDING_APPROVAL' || productData?.status === 'ARCHIVED';
 
   const [formData, setFormData] = useState({
     name: '',
@@ -118,8 +117,22 @@ const DetailGroupPage: React.FC = () => {
     fetchProductDetails();
   }, [id]);
 
+  // Kiểm tra dữ liệu đã bị thay đổi so với dữ liệu gốc ban đầu hay chưa
+  const isModified = useMemo(() => {
+    if (!productData) return false;
+    const originalName = productData.name || '';
+    const originalSuperGroup = productData.superGroup || '';
+    const originalActive = productData.active ?? true;
+
+    return (
+      formData.name.trim() !== originalName.trim() ||
+      formData.superGroup !== originalSuperGroup ||
+      isActive !== originalActive
+    );
+  }, [formData, isActive, productData]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReadOnly) return;
+    if (isInputDisabled) return;
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -127,7 +140,7 @@ const DetailGroupPage: React.FC = () => {
   const handleGoBack = () => navigate('/product-groups');
 
   const handleUpdateGroup = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (isInputDisabled || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.name.trim()) {
@@ -182,7 +195,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const handleDeleteGroup = () => {
-    if (isReadOnly || !id) return;
+    if (isInputDisabled || !id) return;
 
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
@@ -216,7 +229,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isReadOnly || !id) return;
+    if (isInputDisabled || !id) return;
     try {
       setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DELETE(id), {
@@ -242,7 +255,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
-    if (isReadOnly || !id) return;
+    if (isInputDisabled || !id) return;
     
     if (newActiveStatus === isActive) {
       setIsStatusOpen(false);
@@ -384,7 +397,8 @@ const DetailGroupPage: React.FC = () => {
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
-        {isReadOnly && (
+        {/* Chỉ hiển thị banner nếu KHÔNG PHẢI người tạo (không hiển thị nếu là người tạo đang chờ duyệt) */}
+        {!isOwner && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -392,6 +406,7 @@ const DetailGroupPage: React.FC = () => {
             </span>
           </div>
         )}
+
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={handleGoBack}>
@@ -412,16 +427,14 @@ const DetailGroupPage: React.FC = () => {
                 {productData.name}
               </span>
 
-              {/* Sử dụng Component StatusBadge2 */}
               <div style={{ marginLeft: '12px', flexShrink: 0 }}>
                 <StatusBadge2 status={productData.status} />
               </div>
-
             </div>
           </div>
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {isReadOnly ? null : (
+            {!isOwner ? null : (
               <>
                 {productData.status === 'DRAFT' && (
                   <>
@@ -441,18 +454,31 @@ const DetailGroupPage: React.FC = () => {
                     </button>
                   </>
                 )}
+
+                {/* Khi ở trạng thái ĐÃ DUYỆT (ACTIVE), các nút chỉ sáng lên khi có sự thay đổi dữ liệu (isModified === true) */}
                 {productData.status === 'ACTIVE' && (
                   <>
-                    <button className="btnDraft active" onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button 
+                      className="btnDraft" 
+                      disabled={!isModified} 
+                      onClick={() => handleUpdateGroup('DRAFT')} 
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button 
+                      className="btnSubmit" 
+                      disabled={!isModified} 
+                      onClick={() => handleUpdateGroup('PENDING_APPROVAL')} 
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+                    >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
                   </>
                 )}
+
                 {productData.status === 'NEEDS_REVISION' && (
                   <>
                     <button className="btnDraft active" onClick={() => handleUpdateGroup('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -465,6 +491,7 @@ const DetailGroupPage: React.FC = () => {
                     </button>
                   </>
                 )}
+
                 {productData.status === 'ARCHIVED' && (
                   <button className="btnRestore active" onClick={() => handleUpdateGroup('ACTIVE')} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#115e59', color: '#ffffff', padding: '8px 16px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: '500' }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -487,11 +514,15 @@ const DetailGroupPage: React.FC = () => {
                 <div className="custom-select-container">
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
-                    onClick={() => !isReadOnly && setIsOpen(!isOpen)}
-                    style={{ opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    onClick={() => !isInputDisabled && setIsOpen(!isOpen)}
+                    style={{ 
+                      opacity: isInputDisabled ? 0.7 : 1, 
+                      cursor: isInputDisabled ? 'not-allowed' : 'pointer',
+                      backgroundColor: isInputDisabled ? '#F9FAFB' : '#FFF'
+                    }}
                   >
                     <span>{GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm lớn"}</span>
-                    {!isReadOnly && (
+                    {!isInputDisabled && (
                       <svg 
                         width="10" height="6" viewBox="0 0 10 6" fill="none" 
                         className={`arrow-icon ${isOpen ? 'up' : ''}`}
@@ -500,7 +531,7 @@ const DetailGroupPage: React.FC = () => {
                       </svg>
                     )}
                   </div>
-                  {!isReadOnly && isOpen && (
+                  {!isInputDisabled && isOpen && (
                     <div className="custom-options-list">
                       {GROUP_OPTIONS.map((opt) => (
                         <div key={opt.value} className={`custom-option ${formData.superGroup === opt.value ? 'selected' : ''}`}
@@ -521,9 +552,9 @@ const DetailGroupPage: React.FC = () => {
                   className="input" 
                   value={formData.name} 
                   onChange={handleInputChange} 
-                  readOnly={isReadOnly}
-                  disabled={isReadOnly}
-                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
+                  readOnly={isInputDisabled}
+                  disabled={isInputDisabled}
+                  style={{ backgroundColor: isInputDisabled ? '#F9FAFB' : '#FFF', cursor: isInputDisabled ? 'not-allowed' : 'text' }}
                 />
               </div>
 
@@ -541,17 +572,17 @@ const DetailGroupPage: React.FC = () => {
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                 <div 
                   className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                  onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  onClick={() => !isInputDisabled && setIsStatusOpen(v => !v)}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isInputDisabled ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isInputDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                  {!isReadOnly && (
+                  {!isInputDisabled && (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                       <path d="M5 7.5L10 12.5L15 7.5"/>
                     </svg>
                   )}
                 </div>
-                {!isReadOnly && isStatusOpen && (
+                {!isInputDisabled && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
                     <div 
                       className={`custom-option ${isActive === false ? 'selected' : ''}`} 

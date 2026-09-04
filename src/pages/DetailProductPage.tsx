@@ -446,7 +446,18 @@ const CriteriaModal: React.FC<{
   isOpen: boolean; onClose: () => void;
   criteria: Criterion[]; onToggle: (id: string) => void;
 }> = ({ isOpen, onClose, criteria, onToggle }) => {
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (isOpen) setSearch('');
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const filteredCriteria = criteria.filter(c => 
+    !c.isRequired && c.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1050, backdropFilter: 'blur(2px)' }}>
       <div style={{ backgroundColor: 'white', borderRadius: 12, width: 460, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
@@ -456,19 +467,36 @@ const CriteriaModal: React.FC<{
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
           </button>
         </div>
-        <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', maxHeight: 400, padding: '8px 0' }}>
-          {criteria.filter(c => !c.isRequired).map(c => (
-            <div key={c.id} onClick={() => onToggle(c.id)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', cursor: 'pointer', backgroundColor: c.isSelected ? '#FDF2F4' : 'transparent', transition: 'background-color 0.2s', borderBottom: '1px solid #F3F4F6' }}
-              className="figma-option-row">
-              <span style={{ fontSize: 15, fontWeight: c.isSelected ? 500 : 400, color: c.isSelected ? '#111827' : '#374151', userSelect: 'none' }}>{c.name}</span>
-              {c.isSelected && (
-                <svg width="16" height="16" viewBox="0 0 16 12" fill="none" style={{ flexShrink: 0 }}>
-                  <path d="M1.33334 6.00001L5.33334 10L14.6667 1.33334" stroke="#AE1C3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              )}
-            </div>
-          ))}
+        
+        {/* Khối Search trong Modal */}
+        <div style={{ padding: '12px 24px', borderBottom: '1px solid #E5E7EB' }}>
+          <input
+            type="text"
+            placeholder="Tìm tiêu chí..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box' }}
+            autoFocus
+          />
+        </div>
+
+        <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', maxHeight: 250, padding: '8px 0' }}>
+          {filteredCriteria.length > 0 ? (
+            filteredCriteria.map(c => (
+              <div key={c.id} onClick={() => onToggle(c.id)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', cursor: 'pointer', backgroundColor: c.isSelected ? '#FDF2F4' : 'transparent', transition: 'background-color 0.2s', borderBottom: '1px solid #F3F4F6' }}
+                className="figma-option-row">
+                <span style={{ fontSize: 15, fontWeight: c.isSelected ? 500 : 400, color: c.isSelected ? '#111827' : '#374151', userSelect: 'none' }}>{c.name}</span>
+                {c.isSelected && (
+                  <svg width="16" height="16" viewBox="0 0 16 12" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M1.33334 6.00001L5.33334 10L14.6667 1.33334" stroke="#AE1C3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: '16px', textAlign: 'center', color: '#6B7280', fontSize: '14px' }}>Không tìm thấy tiêu chí nào</div>
+          )}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#F9FAFB', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
           <button onClick={onClose}
@@ -504,6 +532,11 @@ const DetailProductPage: React.FC = () => {
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [showImageModal,    setShowImageModal]    = useState(false);
   const [showBatchModal,    setShowBatchModal]    = useState(false);
+
+  // Search States
+  const [groupSearch, setGroupSearch] = useState('');
+  const [categorySearch, setCategorySearch] = useState('');
+  const [operationSearch, setOperationSearch] = useState('');
 
   const [groupOptions,     setGroupOptions]     = useState<{ label: string; value: string }[]>([]);
   const [categoryOptions,  setCategoryOptions]  = useState<{ label: string; value: string }[]>([]);
@@ -566,8 +599,15 @@ const DetailProductPage: React.FC = () => {
   }
   const creatorUsername = rawCreatorUsername ? rawCreatorUsername.split('_')[0] : '';
 
+  // Logic quyền hiển thị - Khóa khi là PENDING_APPROVAL
   const isOwner = Boolean(isLoggedIn && currentUsername && creatorUsername && currentUsername === creatorUsername);
-  const isReadOnly = !isLoggedIn || !isOwner;
+  const isPendingApproval = productData?.status === 'PENDING_APPROVAL';
+  
+  // Khóa readOnly nếu không là chủ sở hữu HOẶC khi SP đang ở trạng thái chờ duyệt
+  const isReadOnly = !isLoggedIn || !isOwner || isPendingApproval;
+  
+  // Chỉ hiển thị banner báo quyền nếu người đó KHÔNG PHẢI chủ sở hữu
+  const showPermissionBanner = !isLoggedIn || !isOwner;
 
   const getCreatorDisplayName = () => {
     if (productData?.createdByFullName) return productData.createdByFullName;
@@ -584,7 +624,6 @@ const DetailProductPage: React.FC = () => {
     return '---';
   };
 
-  // Hàm chuyển đổi tên người kiểm duyệt (approverName) hiển thị Fullname giống group
   const getApproverDisplayName = () => {
     if (productData?.approvedByFullName) return productData.approvedByFullName;
     if (productData?.approvedBy && productData?.approvedBy === productData?.createdBy && productData?.createdByFullName) {
@@ -960,7 +999,7 @@ const DetailProductPage: React.FC = () => {
       <style>{`.ql-editor{word-break:break-word!important;overflow-wrap:break-word!important;white-space:pre-wrap!important;}`}</style>
 
       <div className="mainContainer">
-        {isReadOnly && (
+        {showPermissionBanner && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -1004,7 +1043,7 @@ const DetailProductPage: React.FC = () => {
                 </>)}
                 {productData.status === 'ACTIVE' && (<>
                   <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
-                  <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
+                  <button className={`btnSubmit ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'NEEDS_REVISION' && (<>
                   <button className="btnDraft active" onClick={() => handleUpdateProduct('NEEDS_REVISION')}>Lưu nháp</button>
@@ -1031,19 +1070,40 @@ const DetailProductPage: React.FC = () => {
                 <div className="custom-select-container" ref={groupRef}>
                   <div 
                     className={`select-custom ${isGroupOpen ? 'open' : ''}`} 
-                    onClick={() => !isReadOnly && setIsGroupOpen(v => !v)}
+                    onClick={() => {
+                      if (!isReadOnly) {
+                        setIsGroupOpen(v => !v);
+                        if (!isGroupOpen) setGroupSearch('');
+                      }
+                    }}
                     style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
                   >
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || 'Chọn nhóm'}</span>
                   </div>
                   {!isReadOnly && isGroupOpen && (
-                    <div className="custom-options-list">
-                      {groupOptions.map(o => (
-                        <div key={o.value} className={`custom-option ${formData.productGroupId === o.value ? 'selected' : ''}`}
-                          onClick={() => { setFormData({ productGroupId: o.value, productCategoryId: '', businessId: '' }); setIsGroupOpen(false); }}>
-                          {o.label}
-                        </div>
-                      ))}
+                    <div className="custom-options-list" style={{ padding: 0 }}>
+                      <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
+                        <input
+                          type="text"
+                          placeholder="Tìm nhóm sản phẩm..."
+                          value={groupSearch}
+                          onChange={e => setGroupSearch(e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          style={{ width: '100%', padding: '6px 10px', border: '1px solid #D1D5DB', borderRadius: '4px', outline: 'none', boxSizing: 'border-box' }}
+                          autoFocus
+                        />
+                      </div>
+                      <div style={{ minHeight: '250px'}}>
+                        {groupOptions.filter(o => o.label.toLowerCase().includes(groupSearch.toLowerCase())).map(o => (
+                          <div key={o.value} className={`custom-option ${formData.productGroupId === o.value ? 'selected' : ''}`}
+                            onClick={() => { setFormData({ productGroupId: o.value, productCategoryId: '', businessId: '' }); setIsGroupOpen(false); setGroupSearch(''); }}>
+                            {o.label}
+                          </div>
+                        ))}
+                        {groupOptions.filter(o => o.label.toLowerCase().includes(groupSearch.toLowerCase())).length === 0 && (
+                          <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1056,18 +1116,39 @@ const DetailProductPage: React.FC = () => {
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''}`} 
-                      onClick={() => !isReadOnly && setIsCategoryOpen(v => !v)}
+                      onClick={() => {
+                        if (!isReadOnly) {
+                          setIsCategoryOpen(v => !v);
+                          if (!isCategoryOpen) setCategorySearch('');
+                        }
+                      }}
                       style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
                     >
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục')}</span>
                     </div>
                     {!isReadOnly && isCategoryOpen && (
-                      <div className="custom-options-list">
-                        <div className="custom-option" onClick={() => { setFormData({ ...formData, productCategoryId: '', businessId: '' }); setIsCategoryOpen(false); }}><i>-- Bỏ chọn --</i></div>
-                        {categoryOptions.map(o => (
-                          <div key={o.value} className={`custom-option ${formData.productCategoryId === o.value ? 'selected' : ''}`}
-                            onClick={() => { setFormData({ ...formData, productCategoryId: o.value, businessId: '' }); setIsCategoryOpen(false); }}>{o.label}</div>
-                        ))}
+                      <div className="custom-options-list" style={{ padding: 0 }}>
+                        <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
+                          <input
+                            type="text"
+                            placeholder="Tìm danh mục sản phẩm..."
+                            value={categorySearch}
+                            onChange={e => setCategorySearch(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            style={{ width: '100%', padding: '6px 10px', border: '1px solid #D1D5DB', borderRadius: '4px', outline: 'none', boxSizing: 'border-box' }}
+                            autoFocus
+                          />
+                        </div>
+                        <div style={{ minHeight: '250px'}}>
+                          <div className="custom-option" onClick={() => { setFormData({ ...formData, productCategoryId: '', businessId: '' }); setIsCategoryOpen(false); setCategorySearch(''); }}><i>-- Bỏ chọn --</i></div>
+                          {categoryOptions.filter(o => o.label.toLowerCase().includes(categorySearch.toLowerCase())).map(o => (
+                            <div key={o.value} className={`custom-option ${formData.productCategoryId === o.value ? 'selected' : ''}`}
+                              onClick={() => { setFormData({ ...formData, productCategoryId: o.value, businessId: '' }); setIsCategoryOpen(false); setCategorySearch(''); }}>{o.label}</div>
+                          ))}
+                          {categoryOptions.filter(o => o.label.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 && (
+                            <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -1079,18 +1160,39 @@ const DetailProductPage: React.FC = () => {
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''}`} 
-                      onClick={() => !isReadOnly && setIsOperationOpen(v => !v)}
+                      onClick={() => {
+                        if (!isReadOnly) {
+                          setIsOperationOpen(v => !v);
+                          if (!isOperationOpen) setOperationSearch('');
+                        }
+                      }}
                       style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
                     >
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn nghiệp vụ')}</span>
                     </div>
                     {!isReadOnly && isOperationOpen && (
-                      <div className="custom-options-list">
-                        <div className="custom-option" onClick={() => { setFormData({ ...formData, businessId: '' }); setIsOperationOpen(false); }}><i>-- Bỏ chọn --</i></div>
-                        {operationOptions.map(o => (
-                          <div key={o.value} className={`custom-option ${formData.businessId === o.value ? 'selected' : ''}`}
-                            onClick={() => { setFormData({ ...formData, businessId: o.value }); setIsOperationOpen(false); }}>{o.label}</div>
-                        ))}
+                      <div className="custom-options-list" style={{ padding: 0 }}>
+                        <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
+                          <input
+                            type="text"
+                            placeholder="Tìm nghiệp vụ..."
+                            value={operationSearch}
+                            onChange={e => setOperationSearch(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            style={{ width: '100%', padding: '6px 10px', border: '1px solid #D1D5DB', borderRadius: '4px', outline: 'none', boxSizing: 'border-box' }}
+                            autoFocus
+                          />
+                        </div>
+                        <div style={{ minHeight: '250px'}}>
+                          <div className="custom-option" onClick={() => { setFormData({ ...formData, businessId: '' }); setIsOperationOpen(false); setOperationSearch(''); }}><i>-- Bỏ chọn --</i></div>
+                          {operationOptions.filter(o => o.label.toLowerCase().includes(operationSearch.toLowerCase())).map(o => (
+                            <div key={o.value} className={`custom-option ${formData.businessId === o.value ? 'selected' : ''}`}
+                              onClick={() => { setFormData({ ...formData, businessId: o.value }); setIsOperationOpen(false); setOperationSearch(''); }}>{o.label}</div>
+                          ))}
+                          {operationOptions.filter(o => o.label.toLowerCase().includes(operationSearch.toLowerCase())).length === 0 && (
+                            <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

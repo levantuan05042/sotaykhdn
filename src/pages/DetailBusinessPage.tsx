@@ -55,6 +55,9 @@ const DetailBusinessPage: React.FC = () => {
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  // State mới cho dropdown search
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+  
   const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('accessToken');
   
   const userMap = useMemo(() => getUserMap(), []);
@@ -80,12 +83,25 @@ const DetailBusinessPage: React.FC = () => {
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
+  
+  // Điều kiện khóa form: Nếu là người khác xem HOẶC trạng thái đang chờ duyệt
+  const isPending = businessData?.status === 'PENDING_APPROVAL';
+  const isFormDisabled = isReadOnly || isPending;
 
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     categoryId: ''
   });
+
+  // Kiểm tra xem dữ liệu có thay đổi so với bản gốc không
+  const hasChanges = businessData ? (
+    formData.name !== businessData.name ||
+    formData.categoryId !== businessData.categoryId
+  ) : false;
+
+  // Cập nhật điều kiện enable button: Phải có sự thay đổi dữ liệu
+  const isActionValid = !isReadOnly && formData.name.trim() !== '' && formData.categoryId !== '' && hasChanges;
 
   const getCreatorDisplayName = () => {
     if (businessData?.createdByFullName) return businessData.createdByFullName;
@@ -167,7 +183,7 @@ const DetailBusinessPage: React.FC = () => {
   }, [id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (isReadOnly) return;
+    if (isFormDisabled) return;
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
@@ -175,7 +191,7 @@ const DetailBusinessPage: React.FC = () => {
   const handleGoBack = () => navigate('/business-management');
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
-    if (isReadOnly || !id) return;
+    if (isFormDisabled || !id) return;
     if (isActive === newActiveStatus) {
       setIsStatusOpen(false);
       return;
@@ -243,7 +259,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (isFormDisabled || !id) return;
 
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.name.trim()) {
@@ -298,7 +314,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const handleDeleteBusiness = () => {
-    if (isReadOnly || !id) return;
+    if (isFormDisabled || !id) return;
 
     toast.custom((t) => (
       <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
@@ -322,7 +338,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isReadOnly || !id) return;
+    if (isFormDisabled || !id) return;
     try {
       setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DELETE(id), {
@@ -363,8 +379,6 @@ const DetailBusinessPage: React.FC = () => {
 
   if (loading) return <div className="loading">Đang tải dữ liệu nghiệp vụ...</div>;
   if (!businessData) return <div className="error">Không tìm thấy dữ liệu nghiệp vụ phù hợp.</div>;
-
-  const isActionValid = !isReadOnly && formData.name.trim() !== '' && formData.categoryId !== '';
 
   return (
     <div className="pageWrapper">
@@ -451,25 +465,61 @@ const DetailBusinessPage: React.FC = () => {
                 <label className="label">Danh mục sản phẩm thuộc về *</label>
                 <div className="custom-select-container" ref={categoryRef}>
                   <div 
-                    className={`select-custom ${isOpen ? 'open' : ''} ${isReadOnly ? 'disabled-view' : ''}`} 
-                    onClick={() => !isReadOnly && setIsOpen(!isOpen)}
-                    style={{ opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    className={`select-custom ${isOpen ? 'open' : ''} ${isFormDisabled ? 'disabled-view' : ''}`} 
+                    onClick={() => {
+                      if (!isFormDisabled) {
+                        setIsOpen(!isOpen);
+                        if (!isOpen) setCategorySearchTerm(''); // Reset search khi mở lại
+                      }
+                    }}
+                    style={{ opacity: isFormDisabled ? 0.7 : 1, cursor: isFormDisabled ? 'not-allowed' : 'pointer' }}
                   >
                     <span>{categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm"}</span>
-                    {!isReadOnly && (
+                    {!isFormDisabled && (
                       <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
                         <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </div>
-                  {!isReadOnly && isOpen && (
-                    <div className="custom-options-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                      {categoryOptions.map((opt) => (
-                        <div key={opt.value} className={`custom-option ${formData.categoryId === opt.value ? 'selected' : ''}`}
-                          onClick={() => { setFormData({...formData, categoryId: opt.value}); setIsOpen(false); }}>
-                          <span>{opt.label}</span>
-                        </div>
-                      ))}
+                  
+                  {!isFormDisabled && isOpen && (
+                    <div className="custom-options-list" style={{ minHeight: '250px', overflowY: 'auto' }}>
+                      <div className="dropdown-search-box" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm danh mục..."
+                          value={categorySearchTerm}
+                          onChange={(e) => setCategorySearchTerm(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            border: '1px solid #D5D7DA',
+                            boxSizing: 'border-box',
+                            fontSize: '14px',
+                            outline: 'none'
+                          }}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()} // Ngăn việc click vào ô search làm đóng dropdown
+                        />
+                      </div>
+                      <div style={{ padding: '4px 0' }}>
+                        {categoryOptions
+                          .filter(opt => opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase()))
+                          .map((opt) => (
+                            <div key={opt.value} className={`custom-option ${formData.categoryId === opt.value ? 'selected' : ''}`}
+                              onClick={() => { 
+                                setFormData({...formData, categoryId: opt.value}); 
+                                setIsOpen(false); 
+                                setCategorySearchTerm('');
+                              }}>
+                              <span>{opt.label}</span>
+                            </div>
+                          ))}
+                        {categoryOptions.filter(opt => opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())).length === 0 && (
+                           <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -483,9 +533,9 @@ const DetailBusinessPage: React.FC = () => {
                   className="input" 
                   value={formData.name} 
                   onChange={handleInputChange} 
-                  readOnly={isReadOnly}
-                  disabled={isReadOnly}
-                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
+                  readOnly={isFormDisabled}
+                  disabled={isFormDisabled}
+                  style={{ backgroundColor: isFormDisabled ? '#F9FAFB' : '#FFF', cursor: isFormDisabled ? 'not-allowed' : 'text' }}
                 />
               </div>
             </div>
@@ -503,17 +553,17 @@ const DetailBusinessPage: React.FC = () => {
                 <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                   <div 
                     className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                    onClick={() => !isReadOnly && setIsStatusOpen(!isStatusOpen)} 
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
+                    onClick={() => !isFormDisabled && setIsStatusOpen(!isStatusOpen)} 
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', background: isFormDisabled ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isFormDisabled ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
                   >
                     <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                    {!isReadOnly && (
+                    {!isFormDisabled && (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
                         <path d="M5 7.5L10 12.5L15 7.5" />
                       </svg>
                     )}
                   </div>
-                  {!isReadOnly && isStatusOpen && (
+                  {!isFormDisabled && isStatusOpen && (
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
                       <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(false)}>Ẩn</div>
                       <div className={`custom-option ${isActive === true ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(true)}>Hiển thị</div>

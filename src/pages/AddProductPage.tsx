@@ -9,7 +9,6 @@ import axios from 'axios';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 
-
 interface Criterion {
   id: string;
   name: string;
@@ -57,7 +56,6 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
       }
     });
 
-    // DỌN DẸP DOM: Tránh lỗi nhân đôi thanh công cụ trong React Strict Mode
     return () => {
       quillInstanceRef.current = null;
       if (editorRef.current) {
@@ -112,9 +110,6 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   );
 };
 
-
-
-// --- HÀM UTILS HỖ TRỢ CẮT ẢNH SỬ DỤNG CANVAS ---
 const createImage = (url: string): Promise<HTMLImageElement> =>
   new Promise((resolve, reject) => {
     const image = new Image();
@@ -160,7 +155,6 @@ async function getCroppedImg(
   });
 }
 
-// --- COMPONENT CHÍNH ---
 const AddProductPage: React.FC = () => {
   const navigate = useNavigate();
   
@@ -173,12 +167,17 @@ const AddProductPage: React.FC = () => {
   const categoryRef = useRef<HTMLDivElement>(null);
   const operationRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null); 
-  // REF DUY NHẤT CHO THẺ INPUT FILE
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [operationOptions, setOperationOptions] = useState<{ label: string; value: string }[]>([]);
+
+  // --- STATE TÌM KIẾM MỚI ---
+  const [groupSearchTerm, setGroupSearchTerm] = useState('');
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+  const [operationSearchTerm, setOperationSearchTerm] = useState('');
+  const [criteriaSearchTerm, setCriteriaSearchTerm] = useState('');
 
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
@@ -186,7 +185,6 @@ const AddProductPage: React.FC = () => {
 
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
 
-  // --- STATE UPLOAD & CẮT ẢNH ---
   const [showImageModal, setShowImageModal] = useState(false);
   const [, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -207,7 +205,6 @@ const AddProductPage: React.FC = () => {
     businessId: ''        
   });
 
-  // --- DỌN DẸP BỘ NHỚ KHI ĐÓNG MODAL / ĐỔI ẢNH ---
   useEffect(() => {
     return () => {
       if (previewUrl && previewUrl.startsWith('blob:')) {
@@ -218,10 +215,21 @@ const AddProductPage: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (groupRef.current && !groupRef.current.contains(event.target as Node)) setIsGroupOpen(false);
-      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) setIsCategoryOpen(false);
-      if (operationRef.current && !operationRef.current.contains(event.target as Node)) setIsOperationOpen(false);
-      if (statusRef.current && !statusRef.current.contains(event.target as Node)) setIsStatusOpen(false); 
+      if (groupRef.current && !groupRef.current.contains(event.target as Node)) {
+        setIsGroupOpen(false);
+        setGroupSearchTerm('');
+      }
+      if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+        setIsCategoryOpen(false);
+        setCategorySearchTerm('');
+      }
+      if (operationRef.current && !operationRef.current.contains(event.target as Node)) {
+        setIsOperationOpen(false);
+        setOperationSearchTerm('');
+      }
+      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+        setIsStatusOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -321,13 +329,11 @@ const AddProductPage: React.FC = () => {
     }));
   };
 
-  // --- LOGIC XỬ LÝ ẢNH MỚI ---
   const handleSelectFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Vui lòng chọn định dạng hình ảnh');
       return;
     }
-    // Thu hồi link blob cũ tránh leak bộ nhớ
     if (previewUrl && previewUrl.startsWith('blob:')) {
       URL.revokeObjectURL(previewUrl);
     }
@@ -341,7 +347,6 @@ const AddProductPage: React.FC = () => {
     if (e.target.files && e.target.files[0]) {
       handleSelectFile(e.target.files[0]); 
       setShowImageModal(true); 
-      // Reset input để chọn lại file cũ không bị lỗi
       e.target.value = '';
     }
   };
@@ -366,7 +371,6 @@ const AddProductPage: React.FC = () => {
     setIsUploading(true);
     
     try {
-      // Cách này không dùng fetch, tránh được lỗi CORS ở layer network
       const croppedFile = await getCroppedImg(previewUrl, croppedAreaPixels);
       
       if (!croppedFile) {
@@ -394,7 +398,7 @@ const AddProductPage: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
-};
+  };
 
   const handleGoBack = () => navigate('/products/processing');
 
@@ -442,7 +446,25 @@ const AddProductPage: React.FC = () => {
       toast.error(errMsg, { position: 'top-center' });
     }
   };
+
   const canSubmit = formData.productGroupId !== '';
+
+  // --- LỌC DANH SÁCH TÌM KIẾM ---
+  const filteredGroupOptions = groupOptions.filter(opt => 
+    opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
+  );
+  
+  const filteredCategoryOptions = categoryOptions.filter(opt => 
+    opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())
+  );
+  
+  const filteredOperationOptions = operationOptions.filter(opt => 
+    opt.label.toLowerCase().includes(operationSearchTerm.toLowerCase())
+  );
+  
+  const filteredCriteria = criteria.filter(c => 
+    !c.isRequired && c.name.toLowerCase().includes(criteriaSearchTerm.toLowerCase())
+  );
 
   return (
     <div className="pageWrapper">
@@ -498,40 +520,49 @@ const AddProductPage: React.FC = () => {
         {/* CONTENT GRID */}
         <div className="contentGrid">
           
-          {/* CỘT BÊN TRÁI: FORM NHẬP LIỆU */}
           <div className="leftCol">
             <div className="formCard" style={{ padding: '24px', borderRadius: '8px' }}>
               
-              {/* 1. PRODUCT GROUP */}
+              {/* 1. PRODUCT GROUP VỚI TÌM KIẾM */}
               <div className="formGroup" style={{ marginBottom: '16px' }}>
                 <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Nhóm sản phẩm (*)</label>
-                <div className="custom-select-container" ref={groupRef}>
+                <div className="custom-select-container" ref={groupRef} style={{ position: 'relative' }}>
                   <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(!isGroupOpen)} style={{ backgroundColor: 'white' }}>
                     <span>{loadingGroups ? "Đang tải..." : (groupOptions.find(o => o.value === formData.productGroupId)?.label || "Chọn nhóm")}</span>
                   </div>
                   {isGroupOpen && (
-                    <div className="custom-options-list">
-                      {groupOptions.map((opt) => (
-                        <div key={opt.value} className={`custom-option ${formData.productGroupId === opt.value ? 'selected' : ''}`}
-                          onClick={() => { 
-                            setFormData({ productGroupId: opt.value, productCategoryId: '', businessId: '' }); 
-                            setIsGroupOpen(false); 
-                          }}>
-                          {opt.label}
-                        </div>
-                      ))}
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
+                        <input type="text" placeholder="Tìm kiếm nhóm..." value={groupSearchTerm} onChange={(e) => setGroupSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
+                      </div>
+                      <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
+                        {filteredGroupOptions.length === 0 ? (
+                           <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                        ) : (
+                          filteredGroupOptions.map((opt) => (
+                            <div key={opt.value} className={`custom-option ${formData.productGroupId === opt.value ? 'selected' : ''}`}
+                              onClick={() => { 
+                                setFormData({ productGroupId: opt.value, productCategoryId: '', businessId: '' }); 
+                                setIsGroupOpen(false); 
+                                setGroupSearchTerm('');
+                              }}>
+                              {opt.label}
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* 2 & 3. PRODUCT CATEGORY & BUSINESS */}
+              {/* 2 & 3. PRODUCT CATEGORY & BUSINESS VỚI TÌM KIẾM */}
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: formData.productGroupId ? '#171717' : '#9CA3AF' }}>
                     Danh mục sản phẩm {!formData.productGroupId}
                   </label>
-                  <div className="custom-select-container" ref={categoryRef}>
+                  <div className="custom-select-container" ref={categoryRef} style={{ position: 'relative' }}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${!formData.productGroupId ? 'disabled' : ''}`} 
                       onClick={() => formData.productGroupId && setIsCategoryOpen(!isCategoryOpen)} 
@@ -540,18 +571,29 @@ const AddProductPage: React.FC = () => {
                       <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục")}</span>
                     </div>
                     {isCategoryOpen && formData.productGroupId && (
-                      <div className="custom-options-list">
-                        <div className="custom-option" onClick={() => { 
-                          setFormData({...formData, productCategoryId: '', businessId: ''}); 
-                          setIsCategoryOpen(false); 
-                        }}><i>-- Bỏ chọn --</i></div>
-                        {categoryOptions.map((opt) => (
-                          <div key={opt.value} className={`custom-option ${formData.productCategoryId === opt.value ? 'selected' : ''}`}
-                            onClick={() => { 
-                              setFormData({...formData, productCategoryId: opt.value, businessId: ''}); 
-                              setIsCategoryOpen(false); 
-                            }}>{opt.label}</div>
-                        ))}
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
+                          <input type="text" placeholder="Tìm kiếm danh mục..." value={categorySearchTerm} onChange={(e) => setCategorySearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
+                        </div>
+                        <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
+                          <div className="custom-option" onClick={() => { 
+                            setFormData({...formData, productCategoryId: '', businessId: ''}); 
+                            setIsCategoryOpen(false); 
+                            setCategorySearchTerm('');
+                          }}><i>-- Bỏ chọn --</i></div>
+                          {filteredCategoryOptions.length === 0 ? (
+                            <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                          ) : (
+                            filteredCategoryOptions.map((opt) => (
+                              <div key={opt.value} className={`custom-option ${formData.productCategoryId === opt.value ? 'selected' : ''}`}
+                                onClick={() => { 
+                                  setFormData({...formData, productCategoryId: opt.value, businessId: ''}); 
+                                  setIsCategoryOpen(false); 
+                                  setCategorySearchTerm('');
+                                }}>{opt.label}</div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -561,7 +603,7 @@ const AddProductPage: React.FC = () => {
                   <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: formData.productCategoryId ? '#171717' : '#9CA3AF' }}>
                     Nghiệp vụ {!formData.productCategoryId}
                   </label>
-                  <div className="custom-select-container" ref={operationRef}>
+                  <div className="custom-select-container" ref={operationRef} style={{ position: 'relative' }}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${!formData.productCategoryId ? 'disabled' : ''}`} 
                       onClick={() => formData.productCategoryId && setIsOperationOpen(!isOperationOpen)} 
@@ -570,12 +612,21 @@ const AddProductPage: React.FC = () => {
                       <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn nghiệp vụ")}</span>
                     </div>
                     {isOperationOpen && formData.productCategoryId && (
-                      <div className="custom-options-list">
-                        <div className="custom-option" onClick={() => { setFormData({...formData, businessId: ''}); setIsOperationOpen(false); }}><i>-- Bỏ chọn --</i></div>
-                        {operationOptions.map((opt) => (
-                          <div key={opt.value} className={`custom-option ${formData.businessId === opt.value ? 'selected' : ''}`}
-                            onClick={() => { setFormData({...formData, businessId: opt.value}); setIsOperationOpen(false); }}>{opt.label}</div>
-                        ))}
+                      <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
+                          <input type="text" placeholder="Tìm kiếm nghiệp vụ..." value={operationSearchTerm} onChange={(e) => setOperationSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
+                        </div>
+                        <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
+                          <div className="custom-option" onClick={() => { setFormData({...formData, businessId: ''}); setIsOperationOpen(false); setOperationSearchTerm(''); }}><i>-- Bỏ chọn --</i></div>
+                          {filteredOperationOptions.length === 0 ? (
+                            <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>Không tìm thấy kết quả</div>
+                          ) : (
+                            filteredOperationOptions.map((opt) => (
+                              <div key={opt.value} className={`custom-option ${formData.businessId === opt.value ? 'selected' : ''}`}
+                                onClick={() => { setFormData({...formData, businessId: opt.value}); setIsOperationOpen(false); setOperationSearchTerm(''); }}>{opt.label}</div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -625,12 +676,11 @@ const AddProductPage: React.FC = () => {
                 </div>
               ))}
 
-              {/* Nút Thêm tiêu chí */}
               {formData.productGroupId && (
                 <div style={{ textAlign: 'left', marginTop: '16px' }}>
                   <button 
                     type="button"
-                    onClick={() => setShowCriteriaModal(true)} 
+                    onClick={() => { setShowCriteriaModal(true); setCriteriaSearchTerm(''); }} 
                     style={{ color: '#10B981', background: 'none', border: 'none', fontWeight: 600, cursor: 'pointer', padding: '0' }}
                   >
                     + Thêm tiêu chí
@@ -638,7 +688,6 @@ const AddProductPage: React.FC = () => {
                 </div>
               )}
               
-              {/* KHU VỰC ẢNH MÔ TẢ ĐÃ ĐƯỢC LÀM GỌN */}
               <div className="formGroup" style={{ marginBottom: '20px', marginTop: '16px' }}>
                 <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>
                   Ảnh mô tả
@@ -646,7 +695,6 @@ const AddProductPage: React.FC = () => {
                 
                 {imageUrl ? (
                   <div className="product-image-wrapper" style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
-                    {/* SỬA: Đảm bảo src lấy ảnh qua Proxy bằng cách KHÔNG để domain localhost:8082 ở đây */}
                     <img 
                       src={imageUrl.startsWith('http') ? imageUrl : imageUrl} 
                       alt="Product" 
@@ -659,7 +707,6 @@ const AddProductPage: React.FC = () => {
                         type="button" 
                         className="overlay-btn" 
                         onClick={() => {
-                        // Thay vì hardcode, hãy tách chuỗi hoặc dùng URL object
                         const cleanPath = imageUrl.replace(/^(https?:\/\/[^\/]+)/, '');
                         setPreviewUrl(cleanPath); 
                         setShowImageModal(true);
@@ -706,7 +753,6 @@ const AddProductPage: React.FC = () => {
             </div>
           </div>
 
-          {/* CỘT BÊN PHẢI: TRẠNG THÁI HIỂN THỊ & BÌNH LUẬN */}
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
              <div 
                 className="formCard" 
@@ -790,7 +836,6 @@ const AddProductPage: React.FC = () => {
                 </div>
               </div>
 
-             {/* 2. CARD BÌNH LUẬN */}
              <div className="commentCard emptyComment">
               <div className="commentHeader">
                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -804,33 +849,48 @@ const AddProductPage: React.FC = () => {
         </div>
       </div>
 
-      {/* MODAL THÊM TIÊU CHÍ */}
+      {/* MODAL THÊM TIÊU CHÍ VỚI TÌM KIẾM */}
       {showCriteriaModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '12px', width: '460px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px 24px 16px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px 24px 16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#111827' }}>Thêm tiêu chí</h3>
               <button onClick={() => setShowCriteriaModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: '4px' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
             </div>
+            
+            <div style={{ padding: '0 24px 12px 24px', borderBottom: '1px solid #E5E7EB' }}>
+              <input 
+                type="text" 
+                placeholder="Tìm kiếm tiêu chí..." 
+                value={criteriaSearchTerm} 
+                onChange={(e) => setCriteriaSearchTerm(e.target.value)} 
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} 
+              />
+            </div>
+
             <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', maxHeight: '400px', padding: '8px 0' }}>
-              {criteria.filter(c => !c.isRequired).map((c) => (
-                <div
-                  key={c.id}
-                  onClick={() => toggleCriterionSelection(c.id)}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', cursor: 'pointer', backgroundColor: c.isSelected ? '#FDF2F4' : 'transparent', borderBottom: '1px solid #F3F4F6' }}
-                >
-                  <span style={{ fontSize: '15px', fontWeight: c.isSelected ? 500 : 400, color: c.isSelected ? '#111827' : '#374151', userSelect: 'none' }}>
-                    {c.name}
-                  </span>
-                  {c.isSelected && (
-                    <svg width="16" height="16" viewBox="0 0 16 12" fill="none">
-                      <path d="M1.33334 6.00001L5.33334 10L14.6667 1.33334" stroke="#AE1C3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-              ))}
+              {filteredCriteria.length === 0 ? (
+                 <div style={{ padding: '24px', textAlign: 'center', color: '#6B7280' }}>Không tìm thấy tiêu chí nào</div>
+              ) : (
+                filteredCriteria.map((c) => (
+                  <div
+                    key={c.id}
+                    onClick={() => toggleCriterionSelection(c.id)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', cursor: 'pointer', backgroundColor: c.isSelected ? '#FDF2F4' : 'transparent', borderBottom: '1px solid #F3F4F6' }}
+                  >
+                    <span style={{ fontSize: '15px', fontWeight: c.isSelected ? 500 : 400, color: c.isSelected ? '#111827' : '#374151', userSelect: 'none' }}>
+                      {c.name}
+                    </span>
+                    {c.isSelected && (
+                      <svg width="16" height="16" viewBox="0 0 16 12" fill="none">
+                        <path d="M1.33334 6.00001L5.33334 10L14.6667 1.33334" stroke="#AE1C3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
             <div style={{ padding: '16px 24px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#F9FAFB', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
               <button onClick={() => setShowCriteriaModal(false)} style={{ padding: '8px 20px', borderRadius: '6px', border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 500, cursor: 'pointer', fontSize: '14px' }}>
@@ -841,7 +901,6 @@ const AddProductPage: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL THÊM HÌNH ẢNH (TÍCH HỢP KHUNG CẮT ẢNH 16:9) */}
       {showImageModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}>
           <div style={{ backgroundColor: 'white', borderRadius: '12px', width: '600px', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
@@ -894,7 +953,6 @@ const AddProductPage: React.FC = () => {
                       onChange={(e) => setZoom(Number(e.target.value))}
                       style={{ flex: 1, accentColor: '#AE1C3F', cursor: 'pointer' }}
                     />
-                    {/* Trỏ về fileInputRef tổng thay vì tự render thẻ input */}
                     <button 
                       type="button"
                       onClick={() => fileInputRef.current?.click()}

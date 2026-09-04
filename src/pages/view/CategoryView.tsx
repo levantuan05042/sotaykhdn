@@ -6,6 +6,9 @@ import './GroupView.css';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 
+// TODO: Đảm bảo đường dẫn import này đúng với cấu trúc dự án của bạn
+import EmptyIcon from '../../assets/icon/khong_san_pham.svg'; 
+
 const GROUP_OPTIONS = [
   { label: 'Nhóm sản phẩm dịch vụ', value: 'SERVICE' },
   { label: 'Nhóm sản phẩm bảo hiểm', value: 'INSURANCE' },
@@ -166,8 +169,12 @@ const CategoryView: React.FC = () => {
          <BusinessSection key={bus.id} business={bus} onNavigate={handleNavigate} />
       ))}
 
+      {/* THAY ĐỔI MỚI: Giao diện Empty State khi không có dữ liệu */}
       {directProducts.length === 0 && businesses.length === 0 && (
-         <div className="state-message">Danh mục này chưa có dữ liệu sản phẩm.</div>
+         <div className="empty-data-message">
+           <img src={EmptyIcon} alt="Không có dữ liệu" className="empty-state-icon" />
+           <span className="empty-state-text">Không có sản phẩm dịch vụ nào</span>
+         </div>
       )}
     </div>
   );

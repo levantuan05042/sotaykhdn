@@ -15,6 +15,9 @@ const AddBusinessPage: React.FC = () => {
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   
+  // MỚI: Trạng thái tìm kiếm cho Danh mục sản phẩm
+  const [categorySearchTerm, setCategorySearchTerm] = useState('');
+  
   // Trạng thái Dropdown Trạng thái hiển thị
   const [isStatusOpen, setIsStatusOpen] = useState(false); 
   const statusRef = useRef<HTMLDivElement>(null); 
@@ -57,6 +60,7 @@ const AddBusinessPage: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setCategorySearchTerm(''); // Xóa text tìm kiếm khi đóng
       }
       if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
         setIsStatusOpen(false);
@@ -132,6 +136,11 @@ const AddBusinessPage: React.FC = () => {
 
   const canSubmit = isFormDirty && !isSubmitting; 
 
+  // MỚI: Lọc danh sách danh mục dựa trên từ khóa tìm kiếm
+  const filteredCategoryOptions = categoryOptions.filter(opt => 
+    opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())
+  );
+
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
@@ -190,7 +199,7 @@ const AddBusinessPage: React.FC = () => {
               {/* DROPDOWN CHỌN DANH MỤC SẢN PHẨM */}
               <div className="formGroup" ref={categoryRef}>
                 <label className="label">Danh mục sản phẩm *</label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span>
                       {loadingCategories 
@@ -203,17 +212,60 @@ const AddBusinessPage: React.FC = () => {
                   </div>
 
                   {isOpen && (
-                    <div className="custom-options-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                      {categoryOptions.length === 0 ? (
-                        <div className="custom-option disabled">Không có danh mục sản phẩm nào khả dụng</div>
-                      ) : (
-                        categoryOptions.map((opt) => (
-                          <div key={opt.value} className={`custom-option ${formData.productCategoryId === opt.value ? 'selected' : ''}`}
-                            onClick={() => { setFormData({...formData, productCategoryId: opt.value}); setIsOpen(false); }}>
-                            <span>{opt.label}</span>
+                    <div style={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: 0,
+                      right: 0,
+                      marginTop: '4px',
+                      backgroundColor: 'white',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+                      zIndex: 50,
+                      display: 'flex',
+                      flexDirection: 'column'
+                    }}>
+                      {/* Box tìm kiếm */}
+                      <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm danh mục..."
+                          value={categorySearchTerm}
+                          onChange={(e) => setCategorySearchTerm(e.target.value)}
+                          onClick={(e) => e.stopPropagation()} // Chống đóng dropdown
+                          autoFocus
+                          style={{
+                            width: '100%',
+                            padding: '8px 12px',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '6px',
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                            fontSize: '14px'
+                          }}
+                        />
+                      </div>
+                      <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', minHeight: 0, position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
+                        {loadingCategories ? (
+                          <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>Đang tải...</div>
+                        ) : filteredCategoryOptions.length === 0 ? (
+                          <div className="custom-option disabled" style={{ padding: '12px', color: '#6B7280', textAlign: 'center' }}>
+                            Không tìm thấy kết quả
                           </div>
-                        ))
-                      )}
+                        ) : (
+                          filteredCategoryOptions.map((opt) => (
+                            <div key={opt.value} className={`custom-option ${formData.productCategoryId === opt.value ? 'selected' : ''}`}
+                              onClick={() => { 
+                                setFormData({...formData, productCategoryId: opt.value}); 
+                                setIsOpen(false); 
+                                setCategorySearchTerm(''); // Xóa text khi đã chọn xong
+                              }}>
+                              <span>{opt.label}</span>
+                            </div>
+                          ))
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
