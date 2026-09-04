@@ -4,7 +4,7 @@ import axios from 'axios';
 import './ProductCategoryPage.css';
 import DataTable, { type Column } from '../components/ui/DataTable2';
 import StatusBadge2 from '../components/ui/StatusBadge2';
-import { API_ENDPOINTS } from '../config/apiConfig'; 
+import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_OPTIONS = [
@@ -144,7 +144,7 @@ const ProductCategoryPage: React.FC = () => {
     setData(prevData => prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d));
 
     try {
-      const response = await fetch(`http://localhost:8082/api/v1/product-category/${item.id}/active?active=${newActiveStatus}`, {
+      const response = await fetch(`${BASE_URL}/product-category/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });

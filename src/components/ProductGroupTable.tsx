@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductGroupTable.css';
 
@@ -56,7 +57,7 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
 
     try {
-      const response = await fetch(`http://localhost:8082/api/v1/product-groups/${item.id}/active?active=${newActiveStatus}`, {
+      const response = await fetch(`${BASE_URL}/product-groups/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'

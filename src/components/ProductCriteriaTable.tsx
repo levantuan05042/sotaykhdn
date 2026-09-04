@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductCriteriaTable.css'; 
 
@@ -76,7 +77,7 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
 
     try {
-      const response = await fetch(`http://localhost:8082/api/v1/criteria/${item.id}/active?active=${newActiveStatus}`, {
+      const response = await fetch(`${BASE_URL}/criteria/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json'

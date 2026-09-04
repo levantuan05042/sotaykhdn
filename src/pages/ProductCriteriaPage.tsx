@@ -4,7 +4,7 @@ import axios from 'axios';
 import './ProductCriteriaPage.css';
 import DataTable, { type Column } from '../components/ui/DataTable2';
 import StatusBadge2 from '../components/ui/StatusBadge2';
-import { API_ENDPOINTS } from '../config/apiConfig'; 
+import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_OPTIONS = [
@@ -157,7 +157,7 @@ const ProductCriteriaPage: React.FC = () => {
     );
 
     try {
-      const response = await fetch(`http://localhost:8082/api/v1/criteria/${item.id}/active?active=${newActiveStatus}`, {
+      const response = await fetch(`${BASE_URL}/criteria/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });

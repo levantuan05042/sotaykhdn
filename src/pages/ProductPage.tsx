@@ -5,7 +5,7 @@ import './ProductPage.css';
 import DataTable, { type Column } from '../components/ui/DataTable2';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ImportProductModal from '../components/ImportProductModal';
-import { API_ENDPOINTS } from '../config/apiConfig';
+import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
 
 const STATUS_OPTIONS = [
@@ -212,7 +212,7 @@ const ProductPage: React.FC = () => {
       prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
     );
     try {
-      const response = await fetch(`http://localhost:8082/api/v1/products/${item.id}/active?active=${newActiveStatus}`, {
+      const response = await fetch(`${BASE_URL}/products/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
