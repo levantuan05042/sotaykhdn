@@ -48,7 +48,8 @@ const MainLayout: React.FC = () => {
 
         <div className={styles['grid-main-wrapper']}>
           <main className={styles['grid-content']}>
-            <div className="page-body">
+            {/* Đã cập nhật class theo cú pháp CSS Module */}
+            <div className={styles['page-body']}>
               <Outlet />
             </div>
           </main>

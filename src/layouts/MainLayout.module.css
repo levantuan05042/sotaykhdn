@@ -1,8 +1,8 @@
-* {
+:global(*) {
   box-sizing: border-box;
 }
 
-body {
+:global(body) {
   margin: 0;
   padding: 0;
   height: 100vh;
@@ -110,30 +110,22 @@ body {
   }
 }
 
+/* --- Thay thế 2 khối @media cũ ở dưới cùng bằng đoạn này --- */
+
 @media (max-width: 1599px) and (min-width: 1280px) {
-  html {
+  .main-layout {
     zoom: 0.8;
-  }
-  body {
     height: 125vh;
     width: 125vw;
     overflow: hidden;
   }
-  .main-layout {
-    height: 125vh;
-  }
 }
 
 @media (max-width: 1279px) and (min-width: 993px) {
-  html {
+  .main-layout {
     zoom: 0.75;
-  }
-  body {
     height: 133.33vh;
     width: 133.33vw;
     overflow: hidden;
-  }
-  .main-layout {
-    height: 133.33vh;
   }
 }
