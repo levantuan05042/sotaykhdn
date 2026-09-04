@@ -359,11 +359,11 @@
   transition: background-color 0.15s, color 0.15s;
 }
 
-.dropdown-item svg {
+.dropdown-item img, .dropdown-item svg {
   flex-shrink: 0;
-  stroke: #404040;
+  width: 16px;
+  height: 16px;
 }
-
 .dropdown-item:hover {
   background-color: #F5F5F7;
 }

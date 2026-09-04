@@ -6,6 +6,12 @@ import './HeaderBar.css';
 import { type UserRole } from '../config/menuConfig';
 import { AUTH_SERVICE_LOGOUT_URL, API_ENDPOINTS } from '../config/apiConfig';
 
+// Import bộ icon mới
+import tracuuIcon from '../assets/icon/tracuu.svg';
+import qlNoidungIcon from '../assets/icon/ql-noidung.svg';
+import pheduyetnoidungIcon from '../assets/icon/pheduyetnoidung.svg';
+import dangxuatIcon from '../assets/icon/dangxuat.svg';
+
 const ROLE_LABELS: Record<UserRole, string> = {
   ESA08: 'Ban Ngân hàng số',
   ECV08: 'Cán bộ tra cứu',
@@ -34,6 +40,7 @@ export interface NotificationItem {
 }
 
 const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  // ... (Giữ nguyên nội dung MOCK_NOTIFICATIONS gốc)
   {
     groupId: 'mock-1',
     labelTitle: 'Sản phẩm mới cần được Phê duyệt',
@@ -230,13 +237,11 @@ const HeaderBar: React.FC = () => {
   };
 
   const handleNotificationItemClick = async (item: NotificationItem) => {
-    // Mark read locally
     setNotifications(prev =>
       prev.map(n => (n.groupId === item.groupId ? { ...n, isRead: true } : n))
     );
     setUnreadCount(prev => Math.max(0, prev - 1));
 
-    // Call API mark read
     try {
       await axios.put(API_ENDPOINTS.NOTIFICATIONS.MARK_READ(item.groupId));
     } catch (e) {
@@ -245,7 +250,6 @@ const HeaderBar: React.FC = () => {
 
     setIsNotiOpen(false);
 
-    // Redirect to object page if url exists
     if (item.url) {
       navigate(item.url);
     }
@@ -327,7 +331,7 @@ const HeaderBar: React.FC = () => {
 
       {/* Khối bên phải */}
       <div className="flex items-center space-x-6">
-        {/* Nút Thông báo với Badge & Dropdown */}
+        {/* Nút Thông báo */}
         <div className="notification-wrapper" ref={notiRef}>
           <button
             className={`notification-btn ${isNotiOpen ? 'active' : ''}`}
@@ -424,17 +428,14 @@ const HeaderBar: React.FC = () => {
             </div>
           </div>
 
-          {/* Menu Popup người dùng */}
+          {/* Menu Popup người dùng (Sử dụng icon được truyền vào) */}
           {isDropdownOpen && (
             <div className="user-dropdown-menu">
               <button
                 className={`dropdown-item ${role === 'VIEWER' ? 'active' : ''}`}
                 onClick={() => handleRoleSelect('VIEWER')}
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                <img src={tracuuIcon} alt="Tra cứu sản phẩm" />
                 <span>Tra cứu sản phẩm</span>
               </button>
 
@@ -443,12 +444,7 @@ const HeaderBar: React.FC = () => {
                   className={`dropdown-item ${role === 'ETN08' ? 'active' : ''}`}
                   onClick={() => handleRoleSelect('ETN08')}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
+                  <img src={qlNoidungIcon} alt="Quản lý nội dung" />
                   <span>Quản lý nội dung</span>
                 </button>
               )}
@@ -458,12 +454,7 @@ const HeaderBar: React.FC = () => {
                   className={`dropdown-item ${role === 'ETK08' ? 'active' : ''}`}
                   onClick={() => handleRoleSelect('ETK08')}
                 >
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                    <circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
+                  <img src={pheduyetnoidungIcon} alt="Kiểm duyệt nội dung" />
                   <span>Kiểm duyệt nội dung</span>
                 </button>
               )}
@@ -479,11 +470,7 @@ const HeaderBar: React.FC = () => {
                   window.location.href = `${AUTH_SERVICE_LOGOUT_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
                 }}
               >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
+                <img src={dangxuatIcon} alt="Đăng xuất" />
                 <span>Đăng xuất</span>
               </button>
             </div>

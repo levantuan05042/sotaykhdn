@@ -376,6 +376,57 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
 };
 
 /* =========================================
+   CRITERIA MODAL COMPONENT (GIỐNG DETAIL PRODUCT)
+========================================= */
+interface CriteriaModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  criteria: any[];
+  onToggle: (id: string) => void;
+}
+
+const CriteriaModal: React.FC<CriteriaModalProps> = ({ isOpen, onClose, criteria, onToggle }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1050, backdropFilter: 'blur(2px)' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: 12, width: 460, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)' }}>
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#111827' }}>Thêm tiêu chí</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 4 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', maxHeight: 400, padding: '8px 0' }}>
+          {criteria.filter(c => !c.required).map(c => {
+            const isSelected = c.isAdded || false;
+            return (
+              <div 
+                key={c.id} 
+                onClick={() => onToggle(c.id)}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 24px', cursor: 'pointer', backgroundColor: isSelected ? '#FDF2F4' : 'transparent', transition: 'background-color 0.2s', borderBottom: '1px solid #F3F4F6' }}
+              >
+                <span style={{ fontSize: 15, fontWeight: isSelected ? 500 : 400, color: isSelected ? '#111827' : '#374151', userSelect: 'none' }}>{c.tieuChi}</span>
+                {isSelected && (
+                  <svg width="16" height="16" viewBox="0 0 16 12" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M1.33334 6.00001L5.33334 10L14.6667 1.33334" stroke="#AE1C3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'flex-end', backgroundColor: '#F9FAFB', borderBottomLeftRadius: 12, borderBottomRightRadius: 12 }}>
+          <button onClick={onClose}
+            style={{ padding: '8px 20px', borderRadius: 6, border: '1px solid #D1D5DB', backgroundColor: 'white', color: '#374151', fontWeight: 500, cursor: 'pointer', fontSize: 14 }}>
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* =========================================
    QUILL EDITOR COMPONENT
 ========================================= */
 interface QuillEditorProps {
@@ -465,7 +516,6 @@ const BatchRequestDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Lấy trạng thái từ navigation state truyền vào màn hình detail (trạng thái chung của lô)
   const routeState = location.state as any;
   const externalStatus = routeState?.status || routeState?.requestStatus;
   const externalName = routeState?.name || routeState?.requestName || routeState?.title;
@@ -517,7 +567,6 @@ const BatchRequestDetailPage: React.FC = () => {
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Khởi tạo tên lô từ state ngoài truyền vào, nếu không có mới để mặc định
   const [batchName, setBatchName] = useState<string>(externalName || 'Chi tiết lô sản phẩm');
 
   const [quickViewProduct, setQuickViewProduct] = useState<any | null>(null);
@@ -533,6 +582,7 @@ const BatchRequestDetailPage: React.FC = () => {
   const [groupCache, setGroupCache] = useState<Record<string, GroupCacheData>>({});
 
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showCriteriaModal, setShowCriteriaModal] = useState(false); // Modal thêm tiêu chí giống DetailProduct
   const [previewImage, setPreviewImage] = useState('');   
   const [avatarFile, setAvatarFile] = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
@@ -551,7 +601,6 @@ const BatchRequestDetailPage: React.FC = () => {
   const isUserActionRef = useRef(false);
 
   const [addedOptionalIds, setAddedOptionalIds] = useState<string[]>([]);
-  const [showAddOptionalDropdown, setShowAddOptionalDropdown] = useState(false);
 
   const hasGlobalChanges = Object.keys(pendingUpdates).length > 0 || hasFormChanges;
 
@@ -562,7 +611,6 @@ const BatchRequestDetailPage: React.FC = () => {
     return new Date().toLocaleDateString('vi-VN'); 
   }, [products]);
 
-  // Ưu tiên trạng thái ngoài truyền vào từ List, nếu không có mới lấy fallback từ dữ liệu bên trong
   const batchStatus = useMemo(() => {
     if (externalStatus) return externalStatus;
     if (products.length > 0) return products[0].requestStatus || products[0].status;
@@ -585,7 +633,6 @@ const BatchRequestDetailPage: React.FC = () => {
         setProducts(data);
         setCurrentPage(1); 
         
-        // Cập nhật tên lô nếu chưa có tên ngoài truyền vào
         if (!externalName && data.length > 0 && data[0].requestName) {
           setBatchName(data[0].requestName);
         }
@@ -786,7 +833,6 @@ const BatchRequestDetailPage: React.FC = () => {
 
   const handleOpenQuickView = (product: any) => {
     isUserActionRef.current = false;
-    setShowAddOptionalDropdown(false);
     setGroupCache({}); 
     
     setQuickViewProduct(product);
@@ -971,9 +1017,26 @@ const BatchRequestDetailPage: React.FC = () => {
   const visibleOptionalCriteria = optionalCriteria.filter(
     c => !isHtmlEmpty(c.noiDung) || addedOptionalIds.includes(c.id)
   );
-  const hiddenOptionalCriteria = optionalCriteria.filter(
-    c => isHtmlEmpty(c.noiDung) && !addedOptionalIds.includes(c.id)
-  );
+
+  // Danh sách tiêu chí truyền vào modal thêm tiêu chí
+  const criteriaForModal = optionalCriteria.map(c => ({
+    ...c,
+    isAdded: addedOptionalIds.includes(c.id) || !isHtmlEmpty(c.noiDung)
+  }));
+
+  const handleToggleOptionalCriterion = (id: string) => {
+    setAddedOptionalIds(prev => {
+      const exists = prev.includes(id);
+      if (exists) {
+        // Xóa khỏi danh sách hiện và clear nội dung
+        handleDetailsChange(id, '');
+        return prev.filter(item => item !== id);
+      } else {
+        setHasFormChanges(true);
+        return [...prev, id];
+      }
+    });
+  };
 
   const renderCriterion = (criterion: any, isOptional = false, onRemove?: () => void) => (
     <div key={criterion.id} style={{ marginBottom: '16px' }}>
@@ -1291,11 +1354,12 @@ const BatchRequestDetailPage: React.FC = () => {
                   )}
                 </div>
 
-                {hiddenOptionalCriteria.length > 0 && canEdit && (
-                  <div style={{ position: 'relative', marginTop: '16px' }}>
+                {/* NÚT THÊM TIÊU CHÍ GIỐNG HỆT DETAIL PRODUCT PAGE */}
+                {optionalCriteria.length > 0 && canEdit && (
+                  <div style={{ marginTop: '16px' }}>
                     <button
                       type="button"
-                      onClick={() => setShowAddOptionalDropdown(!showAddOptionalDropdown)}
+                      onClick={() => setShowCriteriaModal(true)}
                       style={{
                         background: 'none',
                         border: '1px dashed #AE1C3F',
@@ -1315,45 +1379,6 @@ const BatchRequestDetailPage: React.FC = () => {
                     >
                       <span>+ Thêm tiêu chí</span>
                     </button>
-
-                    {showAddOptionalDropdown && (
-                      <div style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        marginTop: '4px',
-                        backgroundColor: '#FFFFFF',
-                        border: '1px solid #D1D5DB',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                        zIndex: 50,
-                        minWidth: '240px',
-                        maxHeight: '200px',
-                        overflowY: 'auto'
-                      }}>
-                        {hiddenOptionalCriteria.map(opt => (
-                          <div
-                            key={opt.id}
-                            onClick={() => {
-                              setAddedOptionalIds(prev => [...prev, opt.id]);
-                              setShowAddOptionalDropdown(false);
-                              setHasFormChanges(true);
-                            }}
-                            style={{
-                              padding: '10px 14px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              color: '#111827',
-                              borderBottom: '1px solid #F3F4F6',
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#FEF2F2'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#FFFFFF'}
-                          >
-                            {opt.tieuChi}
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -1401,6 +1426,13 @@ const BatchRequestDetailPage: React.FC = () => {
         isOpen={showImageModal}
         onClose={() => setShowImageModal(false)}
         onConfirm={handleImageConfirm}
+      />
+
+      <CriteriaModal
+        isOpen={showCriteriaModal}
+        onClose={() => setShowCriteriaModal(false)}
+        criteria={criteriaForModal}
+        onToggle={handleToggleOptionalCriterion}
       />
     </div>
   );
