@@ -16,14 +16,7 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  ACTIVE:           { label: 'Đang hoạt động',    className: 'status-active'   },
-  DRAFT:            { label: 'Lưu nháp',           className: 'status-draft'    },
-  NEEDS_REVISION:   { label: 'Yêu cầu chỉnh sửa', className: 'status-revision' },
-  PENDING_APPROVAL: { label: 'Chờ phê duyệt',      className: 'status-pending'  },
-  REJECTED:         { label: 'Từ chối',             className: 'status-rejected' },
-  ARCHIVED:         { label: 'Lưu trữ',             className: 'status-archived' },
-};
+
 
 // ─────────────────────────────────────────────
 // Types
@@ -958,7 +951,6 @@ const DetailProductPage: React.FC = () => {
   if (loading)      return <div className="loading">Đang tải dữ liệu sản phẩm...</div>;
   if (!productData) return <div className="error">Không tìm thấy dữ liệu sản phẩm phù hợp.</div>;
 
-  const currentStatus        = STATUS_MAP[productData.status] || { label: productData.status, className: '' };
   const productNameBreadcrumb = getCleanProductName(productData.name);
   const activeRequestId = productData?.requestId || productData?.batchRequestId || 'Lô ABC';
   const requestName = productData?.requestName || 'Tên yêu cầu';
