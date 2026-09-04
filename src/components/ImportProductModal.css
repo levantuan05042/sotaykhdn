@@ -51,7 +51,7 @@
   flex-direction: column;
   background: #FFFFFF;
   border-radius: var(--import-radius-lg);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--import-border); /* Thêm border thay cho shadow */
   animation: import-modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden; 
 }
@@ -148,7 +148,6 @@
   border-radius: 50%;
   background: #DCFCE7;
   color: var(--import-excel-dark);
-  box-shadow: 0 4px 14px rgba(33, 163, 102, 0.15);
   margin-bottom: 4px;
   transition: transform 0.2s ease;
 }
@@ -194,13 +193,11 @@
   border-radius: var(--import-radius-md);
   background: #FFFFFF;
   border: 1px solid var(--import-border);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.2s ease;
 }
 
 .import-file-card:hover {
   border-color: var(--import-border-strong);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .import-file-icon {
@@ -365,19 +362,16 @@
   background: var(--import-primary);
   border: 1px solid var(--import-primary);
   color: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(174, 28, 63, 0.25);
 }
 
 .import-btn-upload:hover:not(:disabled) {
   background: var(--import-primary-hover);
   border-color: var(--import-primary-hover);
-  box-shadow: 0 4px 12px rgba(174, 28, 63, 0.35);
   transform: translateY(-1px);
 }
 
 .import-btn-upload:disabled {
   background: var(--import-primary-disabled);
   border-color: var(--import-primary-disabled);
-  box-shadow: none;
   cursor: not-allowed;
 }

@@ -500,7 +500,7 @@ const AddProductPage: React.FC = () => {
           
           {/* CỘT BÊN TRÁI: FORM NHẬP LIỆU */}
           <div className="leftCol">
-            <div className="formCard" style={{ padding: '24px', backgroundColor: '#F9FAFB', borderRadius: '8px' }}>
+            <div className="formCard" style={{ padding: '24px', borderRadius: '8px' }}>
               
               {/* 1. PRODUCT GROUP */}
               <div className="formGroup" style={{ marginBottom: '16px' }}>
