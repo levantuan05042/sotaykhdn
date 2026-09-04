@@ -4,6 +4,7 @@ import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductCategoryTable.css';
+import { BASE_URL } from '../config/apiConfig';
 
 interface ProductCategory {
   id: string;
@@ -61,6 +62,11 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
     try {
       const response = await fetch(`${BASE_URL}/product-category/${item.id}/active?active=${newActiveStatus}`, {
+<<<<<<< HEAD
+=======
+
+        
+>>>>>>> 8b8f110a4366bf935dbd7c8eb40dc7f378d5d8a1
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
