@@ -7,7 +7,6 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 import { formatApprovedBy } from '../utils/formatUtils';
-import { BASE_URL } from '../config/apiConfig';
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -178,11 +177,7 @@ const ProductBusinessPage: React.FC = () => {
     );
 
     try {
-<<<<<<< HEAD
       const response = await fetch(`${BASE_URL}/business/${item.id}/active?active=${newActiveStatus}`, {
-=======
-      const response = await fetch(`${BASE_URL}/api/v1/business/${item.id}/active?active=${newActiveStatus}`, {
->>>>>>> 8b8f110a4366bf935dbd7c8eb40dc7f378d5d8a1
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });

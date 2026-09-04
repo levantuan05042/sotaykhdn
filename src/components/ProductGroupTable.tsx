@@ -4,7 +4,6 @@ import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
 import './ProductGroupTable.css';
-import { BASE_URL } from '../config/apiConfig';
 
 interface ProductGroup {
   id: any;

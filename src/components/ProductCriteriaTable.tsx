@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
-import './ProductCriteriaTable.css'; 
-import { BASE_URL } from '../config/apiConfig';
+import './ProductCriteriaTable.css';
 
 interface ProductGroup {
   id: string;
