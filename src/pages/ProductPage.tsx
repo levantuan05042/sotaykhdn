@@ -44,6 +44,33 @@ const formatDate = (dateString?: string | null) => {
   return date.toLocaleDateString('vi-VN');
 };
 
+const ImportAction: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        className="btn-import"
+        onClick={() => setIsOpen(true)}
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '36px', padding: '0 16px', backgroundColor: '#EBEAEF', border: 'none', borderRadius: '6px', color: '#374151', fontWeight: 500, cursor: 'pointer' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span>Import</span>
+      </button>
+
+      <ImportProductModal 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+        onSuccess={onSuccess} 
+      />
+    </>
+  );
+};
+
 const ProductPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,7 +91,6 @@ const ProductPage: React.FC = () => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const statusRef = useRef<HTMLDivElement>(null);
@@ -337,7 +363,7 @@ const ProductPage: React.FC = () => {
         <h2 className="page-title" style={{ margin: 0 }}>Quản lý sản phẩm</h2>
 
         <div className="header-actions" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-          <div className="dropdown-wrapper" ref={headerListMenuRef} style={{ position: 'relative' }}>
+          <div className="dropdown-wrapper" ref={headerListMenuRef} style={{ position: 'relative', zIndex: 99 }}>
             <button
               className="btn-dropdown"
               onClick={() => setOpenDropdown(openDropdown === 'listType' ? null : 'listType')}
@@ -350,7 +376,7 @@ const ProductPage: React.FC = () => {
             </button>
 
             {openDropdown === 'listType' && (
-              <div className="dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', minWidth: '240px', padding: '8px', backgroundColor: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '8px', zIndex: 10 }}>
+              <div className="dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', minWidth: '240px', padding: '8px', backgroundColor: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', borderRadius: '8px', zIndex: 9999 }}>
                 <div
                   className={`menu-item ${isOfficialPage ? 'selected' : ''}`}
                   onClick={() => { navigate('/products/official'); setOpenDropdown(null); }}
@@ -376,18 +402,7 @@ const ProductPage: React.FC = () => {
             )}
           </div>
 
-          <button
-            className="btn-import"
-            onClick={() => setIsImportModalOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '36px', padding: '0 16px', backgroundColor: '#EBEAEF', border: 'none', borderRadius: '6px', color: '#374151', fontWeight: 500, cursor: 'pointer' }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
-            <span>Import</span>
-          </button>
+          <ImportAction onSuccess={handleImportSuccess} />
 
           <button
             className="btn-add-new"
@@ -503,14 +518,6 @@ const ProductPage: React.FC = () => {
           emptyText="Không tìm thấy sản phẩm nào phù hợp."
         />
       </div>
-
-      {isImportModalOpen && (
-        <ImportProductModal 
-          isOpen={isImportModalOpen} 
-          onClose={() => setIsImportModalOpen(false)} 
-          onSuccess={handleImportSuccess} 
-        />
-      )}
     </div>
   );
 };
