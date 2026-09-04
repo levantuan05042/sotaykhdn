@@ -28,7 +28,7 @@ import { formatApprovedBy } from './formatUtils';
 
 export const getFullName = (
   rawName: string | null | undefined, 
-  userMap?: Record<string, string>
+  _userMap?: Record<string, string>
 ): string | null => {
   if (!rawName) return null;
   return formatApprovedBy(rawName);

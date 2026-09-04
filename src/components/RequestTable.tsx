@@ -34,6 +34,10 @@ const formatDate = (dateString: string) => {
   }
 };
 
+interface Props {
+  data: RequestItem[];
+}
+
 const RequestTable: React.FC<Props> = ({ data }) => {
   const navigate = useNavigate();
   const ITEMS_PER_PAGE = 10;
@@ -124,7 +128,7 @@ const RequestTable: React.FC<Props> = ({ data }) => {
 
         <tbody>
           {paginatedData.length > 0 ? (
-            paginatedData.map((item, index) => {
+            paginatedData.map((item: RequestItem, index: number) => {
               const plainTextName = stripHtml(item.requestName); 
               
               return (
