@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './ProductPage.css';
-import DataTable, { type Column } from '../components/ui/DataTable';
+import DataTable, { type Column } from '../components/ui/DataTable2';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ImportProductModal from '../components/ImportProductModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
