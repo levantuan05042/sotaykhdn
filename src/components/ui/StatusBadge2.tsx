@@ -3,10 +3,14 @@ import React from 'react';
 // Bảng màu chuẩn dùng cho toàn bộ hệ thống Sổ tay điện tử
 export const STATUS_MAP: Record<string, { bg: string; color: string; label: string }> = {
   DRAFT: { bg: '#BAE6FD', color: '#082F49', label: 'Lưu nháp' },
-  REJECTED: { bg: '#eae7ec', color: '#65636d', label: 'Từ chối' },
-  ACTIVE: { bg: '#e0f9ec', color: '#14532d', label: 'Đã duyệt' },
-  PENDING_APPROVAL: { bg: '#fed7aa', color: '#7c2d12', label: 'Chờ duyệt' },
-  NEEDS_REVISION: { bg: '#fff8b6', color: '#433d1f', label: 'Yêu cầu chỉnh sửa' },
+  REJECTED: { bg: '#EAE7EC', color: '#5C5962', label: 'Từ chối' },
+  ACTIVE: { bg: '#E0F9EC', color: '#14532D', label: 'Đã duyệt' },
+  COMPLETED: { bg: '#E0F9EC', color: '#14532D', label: 'Đã duyệt' },
+  APPROVED: { bg: '#E0F9EC', color: '#14532D', label: 'Đã duyệt' },
+  PENDING_APPROVAL: { bg: '#F7D8A7', color: '#7C2D12', label: 'Chờ duyệt' },
+  PENDING: { bg: '#F7D8A7', color: '#7C2D12', label: 'Chờ duyệt' },
+  NEEDS_REVISION: { bg: '#FFF8B6', color: '#433D1F', label: 'Yêu cầu chỉnh sửa' },
+  REVISION: { bg: '#FFF8B6', color: '#433D1F', label: 'Yêu cầu chỉnh sửa' },
   ARCHIVED: { bg: '#BAE6FD', color: '#0C4A6E', label: 'Lưu trữ' }
 };
 

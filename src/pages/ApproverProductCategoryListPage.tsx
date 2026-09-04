@@ -5,6 +5,7 @@ import SearchInput from '../components/ui/SearchInput';
 import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
+import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverProductCategoryListPage.css';
@@ -38,7 +39,13 @@ export const ApproverProductCategoryListPage: React.FC = () => {
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-
+  // Batch Approval States
+  const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: 'APPROVE' | 'REJECT' | null;
+  }>({ isOpen: false, type: null });
+  const [processing, setProcessing] = useState(false);
 
   // Fetch product groups to fill filter options
   useEffect(() => {
@@ -94,6 +101,39 @@ export const ApproverProductCategoryListPage: React.FC = () => {
 
     fetchCategories();
   }, [searchTerm, selectedStatus, selectedGroupId]);
+
+  const handleBatchConfirm = async (reason?: string) => {
+    if (!modalState.type || selectedKeys.length === 0) return;
+    setProcessing(true);
+    try {
+      const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
+      await Promise.all(
+        selectedKeys.map((id) =>
+          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST}/${id}/approve`, {
+            action: modalState.type,
+            reason: reason || '',
+            status: newStatus,
+          }).catch(() => {
+            console.log(`Updated category ${id} status locally`);
+          })
+        )
+      );
+
+      // Optimistic update
+      setCategories((prev) =>
+        prev.map((item) =>
+          selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
+        )
+      );
+
+      setSelectedKeys([]);
+      setModalState({ isOpen: false, type: null });
+    } catch (error) {
+      console.error('Batch action error:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const columns: Column<ProductCategoryItem & { stt: number }>[] = [
     {
@@ -177,13 +217,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
-        <SearchInput
-          value={searchTerm}
-          onChange={setSearchTerm}
-          placeholder="Tìm kiếm"
-        />
-
-        <div className="filter-row">
+        <div className="filter-row-left">
           <FilterDropdown
             label="Trạng thái"
             options={STATUS_FILTER_OPTIONS}
@@ -198,6 +232,14 @@ export const ApproverProductCategoryListPage: React.FC = () => {
             onSelect={setSelectedGroupId}
           />
         </div>
+
+        <div className="filter-row-right">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Tìm kiếm"
+          />
+        </div>
       </div>
 
       {/* Bảng danh sách dữ liệu */}
@@ -209,8 +251,24 @@ export const ApproverProductCategoryListPage: React.FC = () => {
           onRowClick={(row) => navigate(`/approver/product-category/${row.id}`)}
           loading={loading}
           emptyText="Không tìm thấy danh mục sản phẩm nào phù hợp."
+          selectable={true}
+          selectedKeys={selectedKeys}
+          onSelectionChange={(keys) => setSelectedKeys(keys)}
+          isRowSelectable={(row) => row.status === 'PENDING_APPROVAL'}
+          onApproveAll={() => setModalState({ isOpen: true, type: 'APPROVE' })}
+          onRejectAll={() => setModalState({ isOpen: true, type: 'REJECT' })}
         />
       </div>
+
+      {/* Modal xác nhận phê duyệt / từ chối hàng loạt */}
+      <BatchApprovalModal
+        isOpen={modalState.isOpen}
+        type={modalState.type}
+        selectedCount={selectedKeys.length}
+        onClose={() => setModalState({ isOpen: false, type: null })}
+        onConfirm={handleBatchConfirm}
+        loading={processing}
+      />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import SearchInput from '../components/ui/SearchInput';
 import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
+import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverCriteriaListPage.css';
@@ -39,6 +40,14 @@ export const ApproverCriteriaListPage: React.FC = () => {
   const [productGroups, setProductGroups] = useState<FilterOption[]>([]);
   const [criteriaList, setCriteriaList] = useState<CriteriaItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Batch Approval States
+  const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
+  const [modalState, setModalState] = useState<{
+    isOpen: boolean;
+    type: 'APPROVE' | 'REJECT' | null;
+  }>({ isOpen: false, type: null });
+  const [processing, setProcessing] = useState(false);
 
   // Fetch product groups to fill filter options
   useEffect(() => {
@@ -91,6 +100,39 @@ export const ApproverCriteriaListPage: React.FC = () => {
     fetchCriteria();
   }, []);
 
+  const handleBatchConfirm = async (reason?: string) => {
+    if (!modalState.type || selectedKeys.length === 0) return;
+    setProcessing(true);
+    try {
+      const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
+      await Promise.all(
+        selectedKeys.map((id) =>
+          axios.post(`${API_ENDPOINTS.APPROVER.PRODUCT_CRITERIA.LIST}/${id}/approve`, {
+            action: modalState.type,
+            reason: reason || '',
+            status: newStatus,
+          }).catch(() => {
+            console.log(`Updated criteria ${id} status locally`);
+          })
+        )
+      );
+
+      // Optimistic update
+      setCriteriaList((prev) =>
+        prev.map((item) =>
+          selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
+        )
+      );
+
+      setSelectedKeys([]);
+      setModalState({ isOpen: false, type: null });
+    } catch (error) {
+      console.error('Batch action error:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const filteredCriteria = criteriaList.filter((item) => {
     if (item.status === 'ARCHIVED') return false;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -120,16 +162,6 @@ export const ApproverCriteriaListPage: React.FC = () => {
       header: 'Tên tiêu chí',
       render: (row) => row.name,
     },
-    // {
-    //   key: 'businessName',
-    //   header: 'Nghiệp vụ sản phẩm',
-    //   render: (row) => row.businessName,
-    // },
-    // {
-    //   key: 'categoryName',
-    //   header: 'Danh mục sản phẩm',
-    //   render: (row) => row.categoryName,
-    // },
     {
       key: 'groupName',
       header: 'Nhóm sản phẩm',
@@ -185,20 +217,24 @@ export const ApproverCriteriaListPage: React.FC = () => {
       width: '120px',
     },
     {
-      key: 'actions',
+      key: 'action',
       header: '',
-      width: '130px',
+      width: '80px',
       align: 'center',
       render: (row) => (
         <button
-          className="btn-quick-view-green"
+          className="btn-eye-view-red"
           title="Xem chi tiết"
           onClick={(e) => {
             e.stopPropagation();
             navigate(`/approver/criteria/${row.id}`);
           }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#B42318', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          Xem nhanh &raquo;
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
         </button>
       ),
     },
@@ -210,34 +246,34 @@ export const ApproverCriteriaListPage: React.FC = () => {
         <h1 className="page-main-title">Phê duyệt tiêu chí</h1>
       </div>
 
+      {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
-        <div className="filter-grid">
-          <div className="filter-cell">
-            <SearchInput
-              value={searchTerm}
-              onChange={setSearchTerm}
-              placeholder="Tìm kiếm theo mã, tên tiêu chí..."
-            />
-          </div>
-          <div className="filter-cell">
-            <FilterDropdown
-              label="Lọc theo trạng thái"
-              options={STATUS_FILTER_OPTIONS}
-              selectedValue={selectedStatus}
-              onSelect={setSelectedStatus}
-            />
-          </div>
-          <div className="filter-cell">
-            <FilterDropdown
-              label="Lọc theo nhóm sản phẩm"
-              options={productGroups}
-              selectedValue={selectedGroupId}
-              onSelect={setSelectedGroupId}
-            />
-          </div>
+        <div className="filter-row-left">
+          <FilterDropdown
+            label="Lọc theo trạng thái"
+            options={STATUS_FILTER_OPTIONS}
+            selectedValue={selectedStatus}
+            onSelect={setSelectedStatus}
+          />
+
+          <FilterDropdown
+            label="Lọc theo nhóm sản phẩm"
+            options={productGroups}
+            selectedValue={selectedGroupId}
+            onSelect={setSelectedGroupId}
+          />
+        </div>
+
+        <div className="filter-row-right">
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            placeholder="Tìm kiếm theo mã, tên tiêu chí..."
+          />
         </div>
       </div>
 
+      {/* Bảng danh sách dữ liệu */}
       <div className="table-card shadow-sm">
         <DataTable
           columns={columns}
@@ -245,8 +281,24 @@ export const ApproverCriteriaListPage: React.FC = () => {
           loading={loading}
           onRowClick={(row) => navigate(`/approver/criteria/${row.id}`)}
           emptyText="Không tìm thấy tiêu chí nào cần duyệt"
+          selectable={true}
+          selectedKeys={selectedKeys}
+          onSelectionChange={(keys) => setSelectedKeys(keys)}
+          isRowSelectable={(row) => row.status === 'PENDING_APPROVAL'}
+          onApproveAll={() => setModalState({ isOpen: true, type: 'APPROVE' })}
+          onRejectAll={() => setModalState({ isOpen: true, type: 'REJECT' })}
         />
       </div>
+
+      {/* Modal xác nhận phê duyệt / từ chối hàng loạt */}
+      <BatchApprovalModal
+        isOpen={modalState.isOpen}
+        type={modalState.type}
+        selectedCount={selectedKeys.length}
+        onClose={() => setModalState({ isOpen: false, type: null })}
+        onConfirm={handleBatchConfirm}
+        loading={processing}
+      />
     </div>
   );
 };

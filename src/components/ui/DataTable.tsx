@@ -17,6 +17,12 @@ interface DataTableProps<T> {
   className?: string;
   onRowClick?: (row: T) => void;
   loading?: boolean;
+  selectable?: boolean;
+  selectedKeys?: (string | number)[];
+  onSelectionChange?: (selectedKeys: (string | number)[], selectedRows: T[]) => void;
+  isRowSelectable?: (row: T) => boolean;
+  onApproveAll?: () => void;
+  onRejectAll?: () => void;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -27,6 +33,12 @@ export function DataTable<T extends Record<string, any>>({
   className = '',
   onRowClick,
   loading = false,
+  selectable = false,
+  selectedKeys = [],
+  onSelectionChange,
+  isRowSelectable,
+  onApproveAll,
+  onRejectAll,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -46,6 +58,34 @@ export function DataTable<T extends Record<string, any>>({
   const endIndex = Math.min(startIndex + pageSize, totalRecords);
 
   const paginatedData = data.slice(startIndex, endIndex);
+
+  // Selection helpers
+  const selectableRowsInPage = paginatedData.filter(row => isRowSelectable ? isRowSelectable(row) : true);
+  const selectableKeysInPage = selectableRowsInPage.map((row) => {
+    const actualIdx = startIndex + paginatedData.indexOf(row);
+    return keyExtractor ? keyExtractor(row, actualIdx) : actualIdx;
+  });
+
+  const isAllPageSelected = selectableKeysInPage.length > 0 && selectableKeysInPage.every(k => selectedKeys.includes(k));
+
+  const handleToggleSelectAll = () => {
+    if (!onSelectionChange) return;
+    if (isAllPageSelected || selectedKeys.length > 0) {
+      const newKeys = selectedKeys.filter(k => !selectableKeysInPage.includes(k));
+      const newRows = data.filter((r, idx) => {
+        const key = keyExtractor ? keyExtractor(r, idx) : idx;
+        return newKeys.includes(key);
+      });
+      onSelectionChange(newKeys, newRows);
+    } else {
+      const combinedKeys = Array.from(new Set([...selectedKeys, ...selectableKeysInPage]));
+      const newRows = data.filter((r, idx) => {
+        const key = keyExtractor ? keyExtractor(r, idx) : idx;
+        return combinedKeys.includes(key);
+      });
+      onSelectionChange(combinedKeys, newRows);
+    }
+  };
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -71,30 +111,90 @@ export function DataTable<T extends Record<string, any>>({
     return pages;
   };
 
+  const effectiveColSpan = selectable ? columns.length + 1 : columns.length;
+
   return (
-    <div className={`data-table-wrapper-container ${className}`} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className={`data-table-wrapper-container ${className}`} style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       <div className="data-table-container">
         <table className="data-table">
           <thead>
-            <tr>
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  style={{
-                    width: col.width,
-                    textAlign: col.align || 'left',
-                  }}
-                >
-                  {col.header}
+            {selectable && selectedKeys.length > 0 ? (
+              <tr className="table-batch-header-row">
+                <th className="checkbox-cell">
+                  <div
+                    className="batch-minus-square-btn"
+                    onClick={handleToggleSelectAll}
+                    title="Bỏ chọn tất cả"
+                  >
+                    <svg width="10" height="2" viewBox="0 0 10 2" fill="none">
+                      <rect width="10" height="2" rx="1" fill="white" />
+                    </svg>
+                  </div>
                 </th>
-              ))}
-            </tr>
+                <th colSpan={columns.length} className="batch-header-actions-cell">
+                  <div className="batch-header-inline">
+                    <span className="batch-header-count">
+                      <strong>{selectedKeys.length} nội dung</strong> đang lựa chọn
+                    </span>
+                    {onApproveAll && (
+                      <button
+                        type="button"
+                        className="btn-batch-pill"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onApproveAll();
+                        }}
+                      >
+                        Duyệt tất cả
+                      </button>
+                    )}
+                    {onRejectAll && (
+                      <button
+                        type="button"
+                        className="btn-batch-pill"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRejectAll();
+                        }}
+                      >
+                        Từ chối tất cả
+                      </button>
+                    )}
+                  </div>
+                </th>
+              </tr>
+            ) : (
+              <tr>
+                {selectable && (
+                  <th className="checkbox-cell">
+                    <input
+                      type="checkbox"
+                      className="data-table-checkbox"
+                      checked={isAllPageSelected}
+                      disabled={selectableKeysInPage.length === 0}
+                      onChange={handleToggleSelectAll}
+                    />
+                  </th>
+                )}
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    style={{
+                      width: col.width,
+                      textAlign: col.align || 'left',
+                    }}
+                  >
+                    {col.header}
+                  </th>
+                ))}
+              </tr>
+            )}
           </thead>
           <tbody>
             {loading ? (
               <>
                 <tr className="table-loading-bar-row">
-                  <td colSpan={columns.length}>
+                  <td colSpan={effectiveColSpan}>
                     <div className="table-loading-bar">
                       <div className="loading-dots-pulse">
                         <span className="loading-dot-pulse-item"></span>
@@ -108,6 +208,11 @@ export function DataTable<T extends Record<string, any>>({
                 </tr>
                 {Array.from({ length: 6 }).map((_, rowIndex) => (
                   <tr key={`skeleton-row-${rowIndex}`}>
+                    {selectable && (
+                      <td className="checkbox-cell">
+                        <div className="table-skeleton-bar" style={{ width: '18px', margin: '0 auto' }} />
+                      </td>
+                    )}
                     {columns.map((col, colIdx) => (
                       <td key={`skeleton-cell-${colIdx}`} style={{ textAlign: col.align || 'left' }}>
                         <div
@@ -125,13 +230,40 @@ export function DataTable<T extends Record<string, any>>({
               paginatedData.map((row, index) => {
                 const actualIndex = startIndex + index;
                 const key = keyExtractor ? keyExtractor(row, actualIndex) : actualIndex;
+                const canSelect = isRowSelectable ? isRowSelectable(row) : true;
+                const isSelected = selectedKeys.includes(key);
+
                 return (
                   <tr 
                     key={key} 
                     onClick={() => onRowClick && onRowClick(row)}
                     style={{ cursor: onRowClick ? 'pointer' : 'default' }}
-                    className={onRowClick ? 'clickable-row' : ''}
+                    className={`${onRowClick ? 'clickable-row' : ''} ${isSelected ? 'row-selected' : ''}`}
                   >
+                    {selectable && (
+                      <td className="checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="data-table-checkbox"
+                          checked={isSelected}
+                          disabled={!canSelect}
+                          onChange={() => {
+                            if (!canSelect || !onSelectionChange) return;
+                            let newKeys: (string | number)[] = [];
+                            if (isSelected) {
+                              newKeys = selectedKeys.filter(k => k !== key);
+                            } else {
+                              newKeys = [...selectedKeys, key];
+                            }
+                            const newRows = data.filter((r, idx) => {
+                              const k = keyExtractor ? keyExtractor(r, idx) : idx;
+                              return newKeys.includes(k);
+                            });
+                            onSelectionChange(newKeys, newRows);
+                          }}
+                        />
+                      </td>
+                    )}
                     {columns.map((col) => (
                       <td
                         key={col.key}
@@ -147,7 +279,7 @@ export function DataTable<T extends Record<string, any>>({
               })
             ) : (
               <tr>
-                <td colSpan={columns.length} className="data-table-empty">
+                <td colSpan={effectiveColSpan} className="data-table-empty">
                   {emptyText}
                 </td>
               </tr>

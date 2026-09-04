@@ -20,18 +20,26 @@
 .filter-card {
   background-color: #F5F3F6;
   border-radius: 12px;
-  padding: 20px;
+  padding: 12px 20px;
   margin-bottom: 20px;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
   flex-shrink: 0;
 }
 
-.filter-row {
+.filter-row-left {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex: 1;
+}
+
+.filter-row-right {
+  width: 320px;
+  flex-shrink: 0;
 }
 
 .product-group-item-title {

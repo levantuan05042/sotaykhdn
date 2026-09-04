@@ -1,8 +1,9 @@
 .status-badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 4px 12px;
+  padding: 5px 16px;
   border-radius: 100px;
   font-family: 'Inter', sans-serif;
   font-size: 13px;
@@ -18,33 +19,33 @@
 
 /* Biến thể màu sắc tương ứng với ảnh thiết kế */
 .status-badge--pending {
-  background-color: #FFE8D6;
-  color: #C05621;
+  background-color: #F7D8A7;
+  color: #7C2D12;
 }
 
 .status-badge--completed {
-  background-color: #DCFCE7;
-  color: #15803D;
+  background-color: #E0F9EC;
+  color: #14532D;
 }
 
 .status-badge--revision {
-  background-color: #FEF9C3;
-  color: #854D0E;
+  background-color: #FFF8B6;
+  color: #433D1F;
 }
 
 .status-badge--rejected {
-  background-color: #FEE2E2;
-  color: #B91C1C;
+  background-color: #EAE7EC;
+  color: #5C5962;
 }
 
 .status-badge--draft {
-  background-color: #E0F2FE;
-  color: #0369A1;
+  background-color: #BAE6FD;
+  color: #082F49;
 }
 
 .status-badge--default {
-  background-color: #F3F4F6;
-  color: #4B5563;
+  background-color: #EAE7EC;
+  color: #5C5962;
 }
 
 /* Count Badge màu đỏ trên menu */

@@ -12,13 +12,14 @@ interface StatusBadgeProps {
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   PENDING: { label: 'Chờ duyệt', variant: 'pending' },
   PENDING_APPROVAL: { label: 'Chờ duyệt', variant: 'pending' },
-  COMPLETED: { label: 'Hoàn thành', variant: 'completed' },
-  ACTIVE: { label: 'Hoàn thành', variant: 'completed' },
-  APPROVED: { label: 'Hoàn thành', variant: 'completed' },
+  COMPLETED: { label: 'Đã duyệt', variant: 'completed' },
+  ACTIVE: { label: 'Đã duyệt', variant: 'completed' },
+  APPROVED: { label: 'Đã duyệt', variant: 'completed' },
   REVISION: { label: 'Yêu cầu chỉnh sửa', variant: 'revision' },
   NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', variant: 'revision' },
   REJECTED: { label: 'Từ chối', variant: 'rejected' },
   DRAFT: { label: 'Lưu nháp', variant: 'draft' },
+  REVIEWED: { label: 'Đã Review', variant: 'completed' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, className = '' }) => {

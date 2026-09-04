@@ -1,0 +1,88 @@
+.batch-approval-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FEF2F2;
+  border: 1px solid #FECDD3;
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  animation: fadeInDown 0.2s ease-in-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+.batch-approval-left {
+  display: flex;
+  align-items: center;
+}
+
+.batch-selected-badge {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #991B1B;
+}
+
+.batch-selected-badge strong {
+  color: #AE1C3F;
+  font-size: 15px;
+}
+
+.batch-approval-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-batch-approve {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #059669;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: background-color 0.15s, transform 0.15s;
+}
+
+.btn-batch-approve:hover {
+  background-color: #047857;
+  transform: translateY(-1px);
+}
+
+.btn-batch-reject {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.btn-batch-reject:hover {
+  background-color: #FEF2F2;
+  border-color: #F87171;
+  transform: translateY(-1px);
+}
