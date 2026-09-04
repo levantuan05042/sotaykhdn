@@ -203,7 +203,7 @@ const AddCategoryPage: React.FC = () => {
                   </div>
 
                   {isOpen && (
-                    <div className="custom-options-list">
+                    <div className="custom-options-list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
                       {groupOptions.length === 0 ? (
                         <div className="custom-option disabled">Không có nhóm sản phẩm nào khả dụng</div>
                       ) : (

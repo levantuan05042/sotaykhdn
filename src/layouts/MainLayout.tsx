@@ -1,60 +1,8 @@
-// import React from 'react';
-// import { Outlet } from 'react-router-dom';
-// import HeaderBar from '../components/HeaderBar';
-// import Sidebar from '../components/Sidebar';
-// import './MainLayout.css';
-// import { Toaster } from 'react-hot-toast';
-
-// const MainLayout: React.FC = () => {
-//   return (
-//     <div className="main-layout">
-//       <Toaster position="top-right" reverseOrder={false} />
-      
-//       {/* Header luôn cố định ở đỉnh */}
-//       <header className="grid-header">
-//         <HeaderBar />
-//       </header>
-
-//       {/* Container bọc phần Sidebar và Nội dung */}
-//       <div className="grid-container">
-        
-//         {/* Sidebar dính (sticky) trên màn hình */}
-//         <aside className="grid-sidebar">
-//           <Sidebar />
-//         </aside>
-
-//         {/* Vùng bên phải tự do cao lên theo nội dung */}
-//         <main className="grid-content">
-//           <div className="page-body">
-//             <Outlet /> 
-//           </div>
-//         </main>
-//       </div>
-
-//       {/* Footer nằm ngoài cùng, tự động chiếm 100% chiều ngang */}
-//       <footer className="grid-footer">
-//         <div className="footer-content">
-//           <div>
-//             © Bản quyền thuộc Agribank <br />
-//             Phiên bản 1.0 cập nhật 04/2026
-//           </div>
-//           <div className="footer-right">
-//             ✉ bannganhangso@agribank.com.vn <br />
-//             📞 0123456789 - Văn thư Ban NHS
-//           </div>
-//         </div>
-//       </footer>
-//     </div>
-//   );
-// };
-
-// export default MainLayout;
-
 import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
-import './MainLayout.css';
+import styles from './MainLayout.module.css'; // Đã dùng CSS Module
 import { Toaster } from 'react-hot-toast';
 import axios from 'axios';
 import { AUTH_ME_URL, BEADMIN_USERS_URL, AUTH_SERVICE_LOGIN_URL } from '../config/apiConfig';
@@ -193,32 +141,31 @@ const MainLayout: React.FC = () => {
     );
   }
 
-
   return (
-    <div className="main-layout">
+    <div className={styles['main-layout']}>
       <Toaster position="top-right" reverseOrder={false} />
 
-      <header className="grid-header">
+      <header className={styles['grid-header']}>
         <HeaderBar />
       </header>
-      <div className="grid-container">
-        <aside className="grid-sidebar">
+      
+      <div className={styles['grid-container']}>
+        <aside className={styles['grid-sidebar']}>
           <Sidebar />
         </aside>
 
-        {/* Chuyển footer vào trong main.grid-content */}
-        <main className="grid-content">
-          <div className="page-body">
+        <main className={styles['grid-content']}>
+          <div className={styles['page-body']}>
             <Outlet /> 
           </div>
 
-          <footer className="grid-footer">
-            <div className="footer-content">
+          <footer className={styles['grid-footer']}>
+            <div className={styles['footer-content']}>
               <div>
                 © Bản quyền thuộc Agribank <br />
                 Phiên bản 1.0 cập nhật 04/2026
               </div>
-              <div className="footer-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+              <div className={styles['footer-right']} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <img src={emailIcon} alt="Email" style={{ width: '16px', height: '16px' }} /> 
                   bannganhangso@agribank.com.vn

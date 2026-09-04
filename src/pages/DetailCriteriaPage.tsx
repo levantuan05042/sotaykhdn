@@ -6,15 +6,8 @@ import toast from 'react-hot-toast';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
-
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
-  DRAFT: { label: 'Lưu nháp', className: 'status-draft' },
-  NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', className: 'status-revision' },
-  PENDING_APPROVAL: { label: 'Chờ phê duyệt', className: 'status-pending' },
-  REJECTED: { label: 'Từ chối', className: 'status-rejected' },
-  ARCHIVED: { label: 'Lưu trữ', className: 'status-archived' },
-};
+import ProductInfoCard from '../components/ui/ProductInfoCard';
+import StatusBadge2 from '../components/ui/StatusBadge2';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -25,9 +18,9 @@ const formatDateTime = (dateString: string) => {
   return `${day}/${month}/${year}`;
 };
 
-const extractBaseId = (rawString: string) => {
-  if (!rawString) return '';
-  return String(rawString).split(/[-_]/)[0].trim().toLowerCase();
+const extractBaseId = (username: string) => {
+  if (!username) return '';
+  return username.split('_')[0];
 };
 
 const getCurrentUsername = () => {
@@ -39,10 +32,10 @@ const getCurrentUsername = () => {
         const parsed = JSON.parse(val);
         if (typeof parsed === 'object' && parsed !== null) {
           const u = parsed.username || parsed.userName || parsed.code || parsed.sub || parsed.userCode;
-          if (u) return extractBaseId(u);
+          if (u) return String(u).trim().toLowerCase();
         }
       } catch {
-        return extractBaseId(val);
+        return String(val).trim().toLowerCase();
       }
     }
   }
@@ -54,17 +47,18 @@ const DetailCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
   
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownListRef = useRef<HTMLDivElement>(null);
   const statusRef = useRef<HTMLDivElement>(null);
   
   const [isOpen, setIsOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [isInfoOpen, setIsInfoOpen] = useState(true);
   
   const [isActive, setIsActive] = useState(true);
   const [criteriaData, setCriteriaData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState<{ code: string; name: string; groupIds: string[]; isRequired: boolean }>({
     code: '',
@@ -73,6 +67,7 @@ const DetailCriteriaPage: React.FC = () => {
     isRequired: false
   });
 
+  const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
   const userMap = useMemo(() => getUserMap(), []);
 
   const currentUsername = getCurrentUsername();
@@ -81,33 +76,50 @@ const DetailCriteriaPage: React.FC = () => {
   const creatorField = criteriaData?.createdBy || criteriaData?.created_by || criteriaData?.creator;
   let creatorUsername = '';
   if (typeof creatorField === 'object' && creatorField !== null) {
-    const rawObjUsername = creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '';
-    creatorUsername = extractBaseId(rawObjUsername);
+    creatorUsername = (creatorField.username || creatorField.userName || creatorField.name || creatorField.code || '').trim().toLowerCase();
   } else if (creatorField !== undefined && creatorField !== null) {
-    creatorUsername = extractBaseId(creatorField);
+    creatorUsername = String(creatorField).trim().toLowerCase();
   }
+
+  const baseCreatorUsername = creatorUsername ? creatorUsername.split('_')[0] : '';
+  const baseCurrentUsername = currentUsername ? currentUsername.split('_')[0] : '';
 
   const isOwner = Boolean(
     isLoggedIn && 
-    currentUsername && 
-    creatorUsername && 
-    currentUsername === creatorUsername
+    baseCurrentUsername && 
+    baseCreatorUsername && 
+    baseCurrentUsername === baseCreatorUsername
   );
 
   const isReadOnly = !isLoggedIn || !isOwner;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        dropdownListRef.current && !dropdownListRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
-      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
+      if (statusRef.current && !statusRef.current.contains(target)) {
         setIsStatusOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm('');
+    }
+  }, [isOpen]);
+
+  const handleToggleDropdown = () => {
+    if (isReadOnly) return;
+    setIsOpen(!isOpen);
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -179,15 +191,26 @@ const DetailCriteriaPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const handleToggleGroup = (value: string, e: React.MouseEvent) => {
+  const handleToggleGroup = (value: string) => {
     if (isReadOnly) return;
-    e.stopPropagation(); 
     setFormData(prev => {
       const isSelected = prev.groupIds.includes(value);
       const updatedGroupIds = isSelected
         ? prev.groupIds.filter(item => item !== value)
         : [...prev.groupIds, value];
       return { ...prev, groupIds: updatedGroupIds };
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (isReadOnly) return;
+    setFormData(prev => {
+      if (prev.groupIds.length === groupOptions.length) {
+        return { ...prev, groupIds: [] };
+      } else {
+        const allIds = groupOptions.map(opt => String(opt.value));
+        return { ...prev, groupIds: allIds };
+      }
     });
   };
 
@@ -220,7 +243,6 @@ const DetailCriteriaPage: React.FC = () => {
 
     try {
       setLoading(true);
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.UPDATE(id), {
         method: 'POST',
         headers: { 
@@ -318,8 +340,6 @@ const DetailCriteriaPage: React.FC = () => {
     if (isReadOnly || !id) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      
       const response = await fetch(`/api/v1/criteria/${id}/active?active=${newActiveState}`, {
         method: 'GET',
         headers: { 
@@ -387,7 +407,6 @@ const DetailCriteriaPage: React.FC = () => {
     if (isReadOnly || !id) return;
     try {
       setLoading(true);
-      const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DELETE(id), {
         method: 'POST',
         headers: { 
@@ -435,8 +454,9 @@ const DetailCriteriaPage: React.FC = () => {
   const getCreatorDisplayName = () => {
     if (criteriaData?.createdByFullName) return criteriaData.createdByFullName;
     if (creatorUsername) {
-      const mapped = getFullName(creatorUsername, userMap);
-      if (mapped && mapped.toLowerCase() !== creatorUsername.toLowerCase()) return mapped;
+      const baseId = extractBaseId(creatorUsername);
+      const mapped = getFullName(baseId, userMap);
+      if (mapped && mapped.toLowerCase() !== baseId.toLowerCase()) return mapped;
     }
     return creatorUsername ? creatorUsername.toUpperCase() : '---';
   };
@@ -456,29 +476,35 @@ const DetailCriteriaPage: React.FC = () => {
     return '---';
   };
 
+  const getSelectedGroupsLabel = () => {
+    if (formData.groupIds.length === 0) return "Chọn nhóm sản phẩm";
+    if (formData.groupIds.length === groupOptions.length && groupOptions.length > 0) return "Tất cả nhóm sản phẩm";
+    
+    const selectedLabels = groupOptions
+      .filter(opt => formData.groupIds.includes(opt.value))
+      .map(opt => opt.label);
+
+    if (selectedLabels.length <= 3) {
+      return selectedLabels.join(', ');
+    }
+    
+    const firstThree = selectedLabels.slice(0, 3).join(', ');
+    const remainingCount = selectedLabels.length - 3;
+    return `${firstThree} và ${remainingCount} nhóm khác`;
+  };
+
   if (loading) return <div className="loading">Đang tải dữ liệu tiêu chí...</div>;
   if (!criteriaData) return <div className="error">Không tìm thấy dữ liệu tiêu chí sản phẩm phù hợp.</div>;
-
-  const currentStatus = STATUS_MAP[criteriaData.status] || { label: criteriaData.status, className: '' };
   
   const isFormValid = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0;
   const canSubmit = !isReadOnly && isFormValid;
   const canSaveDraft = !isReadOnly;
 
-  const selectedCount = formData.groupIds.length;
-  const totalCount = groupOptions.length;
-  let selectedGroupsText = "Chọn nhóm sản phẩm";
+  const filteredOptions = groupOptions.filter(opt => 
+    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  if (selectedCount > 0) {
-    if (selectedCount === totalCount && totalCount > 0) {
-      selectedGroupsText = "Tất cả nhóm sản phẩm";
-    } else {
-      selectedGroupsText = groupOptions
-        .filter(o => formData.groupIds.includes(o.value))
-        .map(o => o.label)
-        .join(', ');
-    }
-  }
+  const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
 
   return (
     <div className="pageWrapper">
@@ -513,10 +539,9 @@ const DetailCriteriaPage: React.FC = () => {
                 {criteriaData.name}
               </span>
 
-              <div className={`statusBadge ${currentStatus.className}`}>
-                <span className="dot"></span>
-                <span className="statusText">{currentStatus.label}</span>
-              </div>
+              {/* Sử dụng component StatusBadge2 */}
+              <StatusBadge2 status={criteriaData.status} />
+
             </div>
           </div>
 
@@ -603,101 +628,109 @@ const DetailCriteriaPage: React.FC = () => {
                 />
               </div>
 
+              {/* DROPDOWN CHỌN NHIỀU NHÓM SẢN PHẨM CẬP NHẬT TRỰC TIẾP*/}
               <div className="formGroup" ref={dropdownRef}>
-                <label className="label">Nhóm sản phẩm *</label>
-                <div className="custom-select-container" style={{ width: '100%', position: 'relative' }}>
+                <label className="label">Nhóm sản phẩm áp dụng *</label>
+                <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
-                    onClick={() => !isReadOnly && setIsOpen(!isOpen)}
+                    onClick={handleToggleDropdown}
                     style={{ 
                       opacity: isReadOnly ? 0.7 : 1, 
-                      cursor: isReadOnly ? 'not-allowed' : 'pointer',
-                      display: 'grid', 
-                      gridTemplateColumns: '1fr auto', 
-                      alignItems: 'center', 
-                      gap: '8px',
-                      width: '100%',
-                      boxSizing: 'border-box'
+                      cursor: isReadOnly ? 'not-allowed' : 'pointer'
                     }}
                   >
-                    <span 
-                      className="truncate-text" 
-                      title={selectedGroupsText}
-                      style={{ 
-                        display: 'block',
-                        width: '100%',
-                        whiteSpace: 'nowrap', 
-                        overflow: 'hidden', 
-                        textOverflow: 'ellipsis'
-                      }}
-                    >
-                      {selectedGroupsText}
+                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
+                      {getSelectedGroupsLabel()}
                     </span>
                     {!isReadOnly && (
-                      <svg 
-                        width="10" height="6" viewBox="0 0 10 6" fill="none" 
-                        className={`arrow-icon ${isOpen ? 'up' : ''}`}
-                      >
-                        <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
+                        <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
                     )}
                   </div>
-
+                  
+                  {/* DANH SÁCH DROPDOWN ĐẶT TRỰC TIẾP TẠI ĐÂY (Lồng trong custom-select-container) */}
                   {!isReadOnly && isOpen && (
-                    <div className="custom-options-list">
-                      {groupOptions.length > 0 && (() => {
-                        const isAllSelected = formData.groupIds.length === groupOptions.length;
-                        return (
-                          <div 
-                            className={`custom-option select-all-option ${isAllSelected ? 'selected' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setFormData(prev => ({
-                                ...prev,
-                                groupIds: isAllSelected ? [] : groupOptions.map(opt => String(opt.value))
-                              }));
-                            }}
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '10px',
-                              borderBottom: '1px solid #E3DFE6', 
-                              paddingBottom: '8px',
-                              marginBottom: '4px',
-                              fontWeight: '600' 
-                            }}
-                          >
-                            <div className="check-box" style={{ color: isAllSelected ? '#AE1C3F' : 'transparent', fontWeight: 'bold' }}>
-                              ✓
-                            </div>
-                            <span>Tất cả nhóm sản phẩm</span>
-                          </div>
-                        );
-                      })()}
+                    <div 
+                      ref={dropdownListRef}
+                      className="custom-options-list" 
+                      style={{ 
+                        position: 'absolute',
+                        top: 'calc(100% + 4px)',
+                        left: 0,
+                        right: 0,
+                        zIndex: 99,
+                        padding: 0, 
+                        background: '#fff',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB',
+                        minHeight: '250px',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff', position: 'sticky', top: 0, zIndex: 2 }}>
+                        <input
+                          type="text"
+                          className="input"
+                          placeholder="Tìm kiếm nhóm sản phẩm..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          style={{ padding: '6px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #D1D5DB' }}
+                        />
+                      </div>
 
-                      {groupOptions.map((opt) => {
-                        const isChecked = formData.groupIds.includes(String(opt.value));
-                        return (
-                          <div 
-                            key={opt.value} 
-                            className={`custom-option ${isChecked ? 'selected' : ''}`}
-                            onClick={(e) => handleToggleGroup(String(opt.value), e)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
-                          >
-                            <div className="check-box" style={{ color: isChecked ? '#AE1C3F' : 'transparent', fontWeight: 'bold' }}>
-                              ✓
-                            </div>
-                            <span>{opt.label}</span>
+                      {groupOptions.length > 0 && !searchTerm && (
+                        <div 
+                          className="custom-option select-all-option"
+                          onClick={handleToggleSelectAll}
+                          style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB', fontWeight: '500' }}
+                        >
+                          <input 
+                            type="checkbox" 
+                            checked={isAllSelected}
+                            onChange={() => {}} 
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                          <span style={{ fontSize: '14px', color: '#111827' }}>Tất cả nhóm sản phẩm</span>
+                        </div>
+                      )}
+
+                      <div>
+                        {filteredOptions.length === 0 ? (
+                          <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
+                            Không tìm thấy nhóm sản phẩm phù hợp
                           </div>
-                        );
-                      })}
+                        ) : (
+                          filteredOptions.map((opt) => {
+                            const isChecked = formData.groupIds.includes(opt.value);
+                            return (
+                              <div 
+                                key={opt.value} 
+                                className={`custom-option ${isChecked ? 'selected' : ''}`}
+                                onClick={() => handleToggleGroup(opt.value)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px' }}
+                              >
+                                <input 
+                                  type="checkbox" 
+                                  checked={isChecked}
+                                  onChange={() => {}} 
+                                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                />
+                                <span style={{ fontSize: '14px', color: '#1F2937' }}>{opt.label}</span>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* CHECKBOX BẮT BUỘC */}
-              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
+              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '15px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
                 <input 
                   type="checkbox" 
                   id="isRequired"
@@ -707,7 +740,7 @@ const DetailCriteriaPage: React.FC = () => {
                   disabled={isReadOnly}
                   style={{ width: '18px', height: '18px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
                 />
-                <label htmlFor="isRequired" style={{ fontSize: '14px', fontWeight: '500', color: '#3C393F', cursor: isReadOnly ? 'not-allowed' : 'pointer', userSelect: 'none' }}>
+                <label htmlFor="isRequired" style={{ fontSize: '14px', fontWeight: '500', color: '#374151', cursor: isReadOnly ? 'not-allowed' : 'pointer', userSelect: 'none' }}>
                   Đây là tiêu chí bắt buộc
                 </label>
               </div>
@@ -756,49 +789,13 @@ const DetailCriteriaPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Khối Thông tin nghiệp vụ */}
-            <div className="infoCard">
-              <div className="infoHeader" onClick={() => setIsInfoOpen(!isInfoOpen)}>
-                <span className="infoTitle">Thông tin nghiệp vụ</span>
-                <svg 
-                  className={`infoChevron ${isInfoOpen ? 'open' : ''}`} 
-                  width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"
-                >
-                  <path d="M5 7.5L10 12.5L15 7.5"/>
-                </svg>
-              </div>
-              
-              {isInfoOpen && (
-                <div className="infoContent">
-                  <div className="infoGrid">
-                    <div className="infoItem">
-                      <span className="infoLabel">Người tạo</span>
-                      <span className="infoValue">
-                        {getCreatorDisplayName()}
-                      </span>
-                    </div>
-                    <div className="infoItem">
-                      <span className="infoLabel">Người kiểm duyệt</span>
-                      <span className="infoValue">
-                        {getApproverDisplayName()}
-                      </span>
-                    </div>
-                    <div className="infoItem">
-                      <span className="infoLabel">Thời gian tạo</span>
-                      <span className="infoValue">
-                        {formatDateTime(criteriaData.createdAt)}
-                      </span>
-                    </div>
-                    <div className="infoItem">
-                      <span className="infoLabel">Phiên bản</span>
-                      <div className="versionBadge">
-                        Phiên bản {criteriaData.version ?? 0}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Sử dụng component ProductInfoCard để hiển thị thông tin nghiệp vụ và Fullname */}
+            <ProductInfoCard 
+              creatorName={getCreatorDisplayName()} 
+              approverName={getApproverDisplayName()} 
+              createdAt={formatDateTime(criteriaData.createdAt)} 
+              version={criteriaData.version ?? 0} 
+            />
 
             {/* Khối Bình luận phản hồi */}
             <div className="commentCard">

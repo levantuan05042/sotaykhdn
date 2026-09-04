@@ -1,7 +1,20 @@
 .pageWrapper {
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: 60px; /* Tạo khoảng trống ở đáy giúp cuộn thấy hoàn toàn nội dung cuối */
+  min-height: 100vh;
+  padding-bottom: 60px;
+  box-sizing: border-box;
+}
+
+.custom-options-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  background: #FFFFFF;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 150px !important;
+  overflow-y: auto !important;
   box-sizing: border-box;
 }

@@ -63,6 +63,17 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
   const ITEMS_PER_PAGE = 10;
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Style nền xanh nhạt cho tiêu đề cột (Header)
+  const highlightHeaderStyle: React.CSSProperties = {
+    backgroundColor: '#E6F4EA',
+    color: '#1E293B',
+  };
+
+  // Style nền xanh nhạt cho các ô dữ liệu (Cell)
+  const highlightCellStyle: React.CSSProperties = {
+    backgroundColor: '#F0F9F1',
+  };
+
   useEffect(() => {
     setCurrentPage(1);
   }, [data]);
@@ -100,9 +111,9 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
             <th>Sản phẩm</th>     
             <th className="col-group">Nhóm sản phẩm</th> 
             <th>Trạng thái</th>
-            <th className="col-highlight col-highlight-first">Tên yêu cầu</th>
-            <th className="col-highlight">Ghi chú</th>
-            <th className="col-highlight col-highlight-last">Ngày tạo</th>
+            <th className="col-highlight col-highlight-first" style={highlightHeaderStyle}>Tên yêu cầu</th>
+            <th className="col-highlight" style={highlightHeaderStyle}>Ghi chú</th>
+            <th className="col-highlight col-highlight-last" style={highlightHeaderStyle}>Ngày tạo</th>
             <th>Người tạo</th>
             <th>Người kiểm duyệt</th>
             <th>Phiên bản</th>
@@ -131,7 +142,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   <StatusBadge2 status={item.status} />
                 </td>
                 
-                <td className="col-highlight col-highlight-first">
+                <td className="col-highlight col-highlight-first" style={highlightCellStyle}>
                   <CellWithTooltip 
                     text={stripHtml(item.requestName)}
                     onClick={() => handleViewBatchDetail(item.requestId)}
@@ -143,13 +154,13 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   />
                 </td>
                 
-                <td className="col-highlight">
+                <td className="col-highlight" style={highlightCellStyle}>
                   <div className="col-highlight-content">
                     <CellWithTooltip text={item.notes} />
                   </div>
                 </td>
 
-                <td className="col-highlight col-highlight-last">
+                <td className="col-highlight col-highlight-last" style={highlightCellStyle}>
                   <CellWithTooltip text={formatDate(item.createdAt)} />
                 </td>
                 

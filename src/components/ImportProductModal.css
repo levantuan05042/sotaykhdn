@@ -1,5 +1,3 @@
-
-
 :root {
   --import-primary: #AE1C3F;
   --import-primary-hover: #881337;
@@ -15,8 +13,8 @@
   --import-bg-subtle: #F9FAFB;
   --import-bg-muted: #F3F4F6;
 
-  --import-accent-drag: #7C3AED;
-  --import-accent-drag-bg: #F5F3FF;
+  --import-accent-drag: #107C41;
+  --import-accent-drag-bg: #E8F5E9;
 
   --import-success: #16A34A;
   --import-success-bg: #DCFCE7;
@@ -26,113 +24,92 @@
   --import-excel-dark: #107C41;
   --import-excel-light: #21A366;
 
-  --import-radius-lg: 12px;
-  --import-radius-md: 8px;
+  --import-radius-lg: 16px;
+  --import-radius-md: 10px;
   --import-radius-sm: 6px;
 }
 
 /* ---------- Overlay & shell ---------- */
-
 .import-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(17, 24, 39, 0.45);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 16px;
-  animation: import-fade-in 0.15s ease-out;
+  animation: import-fade-in 0.2s ease-out;
 }
 
 .import-modal {
   width: 100%;   
   max-width: 582px;      
-  position: fixed; 
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  position: relative; 
   display: flex;
   flex-direction: column;
-  background: var(--Mauve-1, #FDFCFD);
-  border-radius: var(--Token-Border-border-radius-lg, 20px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.12), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
-  animation: import-modal-in 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  background: #FFFFFF;
+  border-radius: var(--import-radius-lg);
+  border: 1px solid var(--import-border); /* Thêm border thay cho shadow */
+  animation: import-modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden; 
 }
 
 @keyframes import-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(2px); }
 }
 
 @keyframes import-modal-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .import-modal-overlay,
-  .import-modal,
-  .import-progress-fill,
-  .import-status-icon svg {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
 /* ---------- Header ---------- */
-
 .import-modal-header {
   display: flex;
-  padding: 20px;
+  padding: 20px 24px;
   justify-content: space-between;
   align-items: center;
   align-self: stretch;
-  border-bottom: 1px solid var(--Mauve-6, #E3DFE6);
-  background: var(--Mauve-3, #F2EFF3);
-  border-radius: 20px 20px 0 0;
+  border-bottom: 1px solid var(--import-border);
+  background: #FFFFFF;
 }
 
 .import-modal-header h3 {
   margin: 0;
-  color: var(--Token-Text-Text_primary_color, #1A191B);
-  font-family: Inter, sans-serif;
-  font-size: 14px;
-  font-style: normal;
+  color: var(--import-text-heading);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
   font-weight: 600;
-  line-height: 20px;
+  line-height: 24px;
 }
 
 .import-modal-close-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 8px;
-  height: 8px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--import-text-muted);
   border-radius: var(--import-radius-sm);
   cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition: all 0.2s ease;
 }
 
 .import-modal-close-btn:hover:not(:disabled) {
   background: var(--import-bg-muted);
-  color: var(--import-text-heading);
+  color: var(--import-error);
+  transform: rotate(90deg);
 }
 
-.import-modal-close-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* ---------- Body ---------- */
-
+/* ---------- Body & Dropzone ---------- */
 .import-modal-body {
-  padding: 20px;
+  padding: 24px;
 }
 
 .import-dropzone {
@@ -141,58 +118,65 @@
   justify-content: center;
   align-items: center;
   align-self: stretch; 
-  gap: 8px; 
-  padding: 32px 100px; 
-  border: 1px solid var(--Green-9, #053E2B); 
-  border-radius: 8px; 
-  background: var(--Green-2, #F2FCF7); 
+  gap: 12px; 
+  padding: 40px 24px; 
+  border: 1.5px dashed #A7F3D0; 
+  border-radius: 12px; 
+  background: #F9FAFB; 
   text-align: center;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
+
+.import-dropzone:hover {
+  background: #F0FDF4;
+  border-color: var(--import-excel-light);
+}
+
 .import-dropzone.drag-active {
   border-color: var(--import-accent-drag);
   background: var(--import-accent-drag-bg);
+  transform: scale(0.99);
 }
 
 .import-dropzone-icon {
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 50px;
-  height: 50px;
-  aspect-ratio: 1/1;
-  padding: 10px;
-  gap: 10px;
-  border-radius: 100px;
-  background: var(--Green-4, #CCF4E0);
-  box-sizing: border-box; 
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #DCFCE7;
+  color: var(--import-excel-dark);
+  margin-bottom: 4px;
+  transition: transform 0.2s ease;
+}
+
+.import-dropzone:hover .import-dropzone-icon {
+  transform: translateY(-2px);
 }
 
 .import-dropzone-text {
   margin: 0;
-  color: var(--Token-Text-Text_primary_color, #1A191B);
+  color: var(--import-text-body);
   font-family: 'Inter', sans-serif;
-  font-size: 12px;
-  font-style: normal;
+  font-size: 13px;
   font-weight: 400;
-  line-height: normal;
 }
 
 .import-choose-file-btn {
-  display: block;      
-  margin: 8px auto 0;
+  display: inline-block;      
+  margin-top: 4px;
   cursor: pointer;
   border: none;
   background: none;
   padding: 0;
-  color: var(--Green-9, #053E2B);
+  color: var(--import-excel-dark);
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-  font-style: normal;
   font-weight: 600;
-  line-height: 20px;
   text-decoration: none;
-  text-underline-offset: 2px;
+  transition: opacity 0.2s;
 }
 
 .import-choose-file-btn:hover {
@@ -200,50 +184,26 @@
   opacity: 0.8;
 }
 
-.import-choose-file-btn:focus-visible,
-.import-template-link:focus-visible,
-.import-btn-cancel:focus-visible,
-.import-btn-upload:focus-visible,
-.import-modal-close-btn:focus-visible,
-.import-remove-file-btn:focus-visible {
-  outline: 2px solid var(--import-accent-drag);
-  outline-offset: 2px;
-}
-
-.import-file-type-badge {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 4px;
-  background: var(--import-excel-dark);
-  color: #FFFFFF;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  box-shadow: 0 0 0 2px #FFFFFF;
-}
-
-/* File card (đã chọn file) */
-
+/* ---------- File Card ---------- */
 .import-file-card {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  padding: 14px;
+  gap: 16px;
+  padding: 16px;
   border-radius: var(--import-radius-md);
-  background: var(--import-bg-subtle);
+  background: #FFFFFF;
   border: 1px solid var(--import-border);
+  transition: all 0.2s ease;
+}
+
+.import-file-card:hover {
+  border-color: var(--import-border-strong);
 }
 
 .import-file-icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -254,11 +214,11 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .import-file-name {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--import-text-heading);
   overflow: hidden;
@@ -267,38 +227,48 @@
 }
 
 .import-file-meta {
-  font-size: 12px;
+  font-size: 12.5px;
   color: var(--import-text-muted);
 }
 
 .import-success-text {
   color: var(--import-success);
-  font-weight: 500;
+  font-weight: 600;
 }
 
+/* ---------- Progress Bar ---------- */
 .import-progress-track {
-  margin-top: 2px;
-  height: 5px;
+  margin-top: 6px;
+  height: 6px;
   width: 100%;
-  border-radius: 3px;
-  background: var(--import-border);
+  border-radius: 4px;
+  background: var(--import-bg-muted);
   overflow: hidden;
 }
 
 .import-progress-fill {
   height: 100%;
   background: var(--import-primary);
-  border-radius: 3px;
-  transition: width 0.2s ease-out;
+  border-radius: 4px;
+  transition: width 0.3s ease-out;
+  background-image: linear-gradient(45deg, rgba(255,255,255,0.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.15) 75%, transparent 75%, transparent);
+  background-size: 1rem 1rem;
+  animation: progress-stripes 1s linear infinite;
 }
 
 .import-progress-fill.success {
   background: var(--import-success);
+  background-image: none;
+}
+
+@keyframes progress-stripes {
+  from { background-position: 1rem 0; }
+  to { background-position: 0 0; }
 }
 
 .import-status-icon {
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .import-remove-file-btn {
@@ -306,39 +276,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
-  background: transparent;
+  background: #F3F4F6;
   color: var(--import-text-muted);
   border-radius: 50%;
   cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition: all 0.2s ease;
 }
 
 .import-remove-file-btn:hover {
-  background: var(--import-bg-muted);
+  background: #FEE2E2;
   color: var(--import-error);
+  transform: scale(1.1);
 }
 
 .import-error-message {
-  margin: 10px 2px 0 2px;
-  font-size: 12.5px;
+  margin: 12px 2px 0 2px;
+  font-size: 13px;
   color: var(--import-error);
   line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* ---------- Footer ---------- */
-
 .import-modal-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 20px;
+  padding: 16px 24px;
   border-top: 1px solid var(--import-border);
+  background: #FAFAFA;
 }
 
 .import-template-link {
@@ -346,53 +319,43 @@
   background: none;
   padding: 0;
   cursor: pointer;
-  white-space: nowrap;
-  color: var(--Blue-500, #3B82F6);
+  color: #2563EB;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-  font-style: normal;
-  font-weight: 600;
-  line-height: 20px;
+  font-weight: 500;
   text-decoration: underline;
-  text-decoration-style: solid;
-  text-decoration-skip-ink: none;
-  text-underline-position: from-font;
+  transition: color 0.2s;
 }
 
 .import-template-link:hover {
-  opacity: 0.8;
+  color: #1D4ED8;
 }
 
 .import-modal-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .import-btn-cancel,
 .import-btn-upload {
-  height: 38px;
-  padding: 0 16px;
+  height: 40px;
+  padding: 0 20px;
   border-radius: var(--import-radius-sm);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease, opacity 0.12s ease;
+  transition: all 0.2s ease;
 }
 
 .import-btn-cancel {
-  background: #E3DFE6;
+  background: #FFFFFF;
   border: 1px solid var(--import-border-strong);
   color: var(--import-text-body);
 }
 
 .import-btn-cancel:hover:not(:disabled) {
   background: var(--import-bg-muted);
-}
-
-.import-btn-cancel:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .import-btn-upload {
@@ -404,49 +367,11 @@
 .import-btn-upload:hover:not(:disabled) {
   background: var(--import-primary-hover);
   border-color: var(--import-primary-hover);
+  transform: translateY(-1px);
 }
 
 .import-btn-upload:disabled {
   background: var(--import-primary-disabled);
   border-color: var(--import-primary-disabled);
   cursor: not-allowed;
-}
-
-
-.import-toast {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: #FFFFFF;
-  border: 1px solid var(--import-border);
-  border-left: 3px solid var(--import-success);
-  border-radius: var(--import-radius-md);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  font-size: 13px;
-  color: var(--import-text-body);
-  z-index: 1100;
-  animation: import-toast-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.import-toast.error {
-  border-left-color: var(--import-error);
-}
-
-@keyframes import-toast-in {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 480px) {
-  .import-modal-footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .import-modal-actions {
-    justify-content: flex-end;
-  }
 }

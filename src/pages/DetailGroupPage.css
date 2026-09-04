@@ -2,7 +2,9 @@
   display: flex;
   justify-content: center;
   background-color: #fcfcfc;
-  min-height: 100vh;
+  
+  width: 100%;
+  min-height: 100%;
 }
 
 .mainContainer {
@@ -11,7 +13,6 @@
   padding: 20px;
   flex-direction: column;
   align-items: flex-start;
-  gap: 20px;
   box-sizing: border-box;
 }
 
@@ -208,7 +209,7 @@
   border-radius: 12px;
   background: #F2EFF3;
   display: flex;
-  padding: 24px;
+  padding: 24px !important;
   flex-direction: column;
   gap: 20px;
   box-sizing: border-box;
@@ -338,7 +339,6 @@
   flex-shrink: 0;
   position: -webkit-sticky; 
   position: sticky;
-  top: 123px; 
   height: fit-content; 
 }
 
@@ -739,4 +739,28 @@
 
 .warning-btn-close:hover {
   background: #8e1734;
+}
+
+.permissionBanner {
+  display: flex;
+  align-items: flex-start; 
+  gap: 12px;
+  background-color: #fffbeb; 
+  border: 1px solid #fde68a; 
+  border-radius: 8px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); 
+}
+
+.permissionBanner svg {
+  flex-shrink: 0; 
+  margin-top: 1px; 
+}
+
+.permissionBannerText {
+  color: #92400e; 
+  font-size: 14px;
+  font-weight: 500; 
+  line-height: 1.5;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }

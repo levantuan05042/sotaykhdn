@@ -146,8 +146,6 @@ const AddCriteriaPage: React.FC = () => {
     await submitCriteriaData('DRAFT');
   };
 
-  // Gửi phê duyệt trực tiếp
-
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
     try {
@@ -263,7 +261,7 @@ const AddCriteriaPage: React.FC = () => {
         {/* CONTENT */}
         <div className="contentGrid">
           <div className="leftCol">
-            <div className="formCard">
+            <div className="formCard" style={{ overflow: 'visible', paddingBottom: '250px' }}>
 
               {/* INPUT MÃ TIÊU CHÍ */}
               <div className="formGroup">
@@ -294,7 +292,7 @@ const AddCriteriaPage: React.FC = () => {
               {/* DROPDOWN CHỌN NHIỀU NHÓM SẢN PHẨM */}
               <div className="formGroup" ref={dropdownRef}>
                 <label className="label">Nhóm sản phẩm áp dụng *</label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
                       {getSelectedGroupsLabel()}
@@ -305,8 +303,25 @@ const AddCriteriaPage: React.FC = () => {
                   </div>
 
                   {isOpen && (
-                    <div className="custom-options-list" style={{ padding: 0 }}>
-                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
+                    <div 
+                      className="custom-options-list" 
+                      style={{ 
+                        padding: 0, 
+                        zIndex: 999, 
+                        position: 'absolute', 
+                        top: '100%', 
+                        left: 0, 
+                        right: 0, 
+                        marginTop: '4px',
+                        background: '#fff',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        borderRadius: '8px',
+                        border: '1px solid #E5E7EB',
+                        minHeight: '250px',
+                        overflowY: 'auto'
+                      }}
+                    >
+                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff', position: 'sticky', top: 0, zIndex: 2 }}>
                         <input
                           type="text"
                           className="input"
@@ -333,7 +348,7 @@ const AddCriteriaPage: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="options-scroll-area" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                      <div>
                         {filteredOptions.length === 0 ? (
                           <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
                             Không tìm thấy nhóm sản phẩm phù hợp
@@ -383,7 +398,7 @@ const AddCriteriaPage: React.FC = () => {
             </div>
           </div>
           
-          <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '24px', alignSelf: 'flex-start' }}>
              <div 
                 className="formCard" 
                 style={{ 

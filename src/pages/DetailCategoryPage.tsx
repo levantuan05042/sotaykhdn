@@ -5,15 +5,8 @@ import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
-
-const STATUS_MAP: Record<string, { label: string; className: string }> = {
-  ACTIVE: { label: 'Đang hoạt động', className: 'status-active' },
-  DRAFT: { label: 'Lưu nháp', className: 'status-draft' },
-  NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', className: 'status-revision' },
-  PENDING_APPROVAL: { label: 'Chờ phê duyệt', className: 'status-pending' },
-  REJECTED: { label: 'Từ chối', className: 'status-rejected' },
-  ARCHIVED: { label: 'Lưu trữ', className: 'status-archived' },
-};
+import ProductInfoCard from '../components/ui/ProductInfoCard';
+import StatusBadge2 from '../components/ui/StatusBadge2';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -358,8 +351,6 @@ const DetailCategoryPage: React.FC = () => {
   if (loading) return <div className="loading">Đang tải dữ liệu danh mục...</div>;
   if (!categoryData) return <div className="error">Không tìm thấy dữ liệu danh mục sản phẩm phù hợp.</div>;
 
-  const currentStatus = STATUS_MAP[categoryData.status] || { label: categoryData.status, className: '' };
-  
   const isDirty = (
     formData.name !== (categoryData.name || '') || 
     formData.groupId !== (categoryData.groupId || '') ||
@@ -399,9 +390,9 @@ const DetailCategoryPage: React.FC = () => {
                 {categoryData.name}
               </span>
 
-              <div className={`statusBadge ${currentStatus.className}`}>
-                <span className="dot"></span>
-                <span className="statusText">{currentStatus.label}</span>
+              {/* Sử dụng Component StatusBadge2 */}
+              <div style={{ marginLeft: '12px', flexShrink: 0 }}>
+                <StatusBadge2 status={categoryData.status} />
               </div>
             </div>
           </div>
@@ -477,7 +468,7 @@ const DetailCategoryPage: React.FC = () => {
                     )}
                   </div>
                   {!isReadOnly && isOpen && (
-                    <div className="custom-options-list">
+                    <div className="custom-options-list " style={{ maxHeight: '150px', overflowY: 'auto' }}>
                       {groupOptions.map((opt) => (
                         <div key={opt.value} className={`custom-option ${formData.groupId === opt.value ? 'selected' : ''}`}
                           onClick={() => { setFormData({...formData, groupId: opt.value}); setIsOpen(false); }}>
@@ -535,40 +526,13 @@ const DetailCategoryPage: React.FC = () => {
               </div>
             </div>
 
-            {/* KHỐI THÔNG TIN SẢN PHẨM (MỚI THÊM) */}
-            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', border: '1px solid #E5E7EB', width: 340, boxSizing: 'border-box' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500 }}>Thông tin sản phẩm</span>
-                <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
-                  <path d="M1 7L6 2L11 7" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              
-              <div style={{ background: '#FFF', borderRadius: 8, padding: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Người tạo</div>
-                    <div style={{ color: '#1F2937', fontSize: 14, wordBreak: 'break-all' }}>{getCreatorDisplayName()}</div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Người kiểm duyệt</div>
-                    <div style={{ color: '#1F2937', fontSize: 14, wordBreak: 'break-all' }}>{getApproverDisplayName()}</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Thời gian tạo</div>
-                    <div style={{ color: '#1F2937', fontSize: 14 }}>{formatDateTime(categoryData.createdAt)}</div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ color: '#9CA3AF', fontSize: 13, marginBottom: 6 }}>Phiên bản</div>
-                    <div style={{ display: 'inline-flex', padding: '4px 12px', background: '#DCFCE7', color: '#166534', borderRadius: 100, fontSize: 13, fontWeight: 500 }}>
-                      Phiên bản {categoryData.version || 0}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* KHỐI THÔNG TIN SẢN PHẨM */}
+            <ProductInfoCard 
+              creatorName={getCreatorDisplayName()} 
+              approverName={getApproverDisplayName()} 
+              createdAt={formatDateTime(categoryData.createdAt)} 
+              version={categoryData.version || 0} 
+            />
 
             {/* BÌNH LUẬN PHẢN HỒI */}
             <div className="commentCard">
