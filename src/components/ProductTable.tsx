@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2'; 
 import './ProductTable.css'; 
+import { BASE_URL } from '../config/apiConfig';
 
 interface ProductCategory {
   id: string;
@@ -73,7 +74,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:8082/api/v1/products/${item.id}/active?active=${newActiveStatus}`,
+        `${BASE_URL}/products/${item.id}/active?active=${newActiveStatus}`,
         {
           method: 'GET', 
           headers: {
