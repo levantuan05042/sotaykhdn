@@ -168,7 +168,6 @@ const DetailCriteriaPage: React.FC = () => {
         }
 
       } catch (error) {
-        console.error("Lỗi khi khởi tạo dữ liệu:", error);
         toast.error("Không tìm thấy tiêu chí hoặc tiêu chí đã bị ẩn");
       } finally {
         if (isMounted) setLoading(false);
@@ -278,14 +277,13 @@ const DetailCriteriaPage: React.FC = () => {
         }
 
         renderCustomToast(message);
-        setTimeout(() => navigate('/criteria-management'), 1500);
+        setTimeout(() => navigate('/criteria-management'), 10);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi cập nhật:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -362,7 +360,6 @@ const DetailCriteriaPage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error("Lỗi cập nhật trạng thái:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
     } finally {
       setLoading(false);
@@ -372,35 +369,40 @@ const DetailCriteriaPage: React.FC = () => {
   const handleDeleteCriteria = () => {
     if (isReadOnly || !id) return;
 
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
-        <div className="confirm-toast-body">
-          <div className="confirm-toast-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-              <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+    toast.custom((t) =>
+      createPortal(
+        <div className="confirm-toast-overlay">
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
+            <div className="confirm-toast-body">
+              <div className="confirm-toast-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
+                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="confirm-toast-content">
+                <p className="confirm-toast-title">Xác nhận xóa</p>
+                <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa không? Hành động này không thể hoàn tác.</p>
+              </div>
+            </div>
+            <div className="confirm-toast-actions">
+              <button
+                className="confirm-btn-delete"
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  await executeDelete();
+                }}
+              >
+                Xóa
+              </button>
+              <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
+                Hủy
+              </button>
+            </div>
           </div>
-          <div className="confirm-toast-content">
-            <p className="confirm-toast-title">Xác nhận xóa tiêu chí</p>
-            <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa tiêu chí sản phẩm này không? Hành động này không thể hoàn tác.</p>
-          </div>
-        </div>
-        <div className="confirm-toast-actions">
-          <button 
-            className="confirm-btn-delete"
-            onClick={async () => {
-              toast.dismiss(t.id);
-              await executeDelete();
-            }}
-          >
-            Xóa
-          </button>
-          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
-            Hủy
-          </button>
-        </div>
-      </div>
-    ), { position: 'top-center', duration: Infinity });
+        </div>,
+        document.body
+      )
+    , { id: 'delete-confirm-toast', duration: Infinity });
   };
 
   const executeDelete = async () => {
@@ -417,14 +419,13 @@ const DetailCriteriaPage: React.FC = () => {
 
       if (response.ok) {
         renderCustomToast("Xóa tiêu chí sản phẩm thành công");
-        setTimeout(() => navigate('/criteria-management'), 1500);
+        setTimeout(() => navigate('/criteria-management'), 10);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi xóa tiêu chí:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -505,6 +506,8 @@ const DetailCriteriaPage: React.FC = () => {
   );
 
   const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
+  const isStatusActive = criteriaData?.status === 'ACTIVE';
+  const canChangeActiveStatus = !isReadOnly && isStatusActive;
 
   return (
     <div className="pageWrapper">
@@ -518,7 +521,6 @@ const DetailCriteriaPage: React.FC = () => {
           </div>
         )}
         
-        {/* HEADER & BREADCRUMB */}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={handleGoBack}>
@@ -539,13 +541,11 @@ const DetailCriteriaPage: React.FC = () => {
                 {criteriaData.name}
               </span>
 
-              {/* Sử dụng component StatusBadge2 */}
               <StatusBadge2 status={criteriaData.status} />
 
             </div>
           </div>
 
-          {/* ACTIONS CONTROLLER */}
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {!isReadOnly && (
               <>
@@ -595,7 +595,6 @@ const DetailCriteriaPage: React.FC = () => {
           </div>
         </div>
 
-        {/* CONTENT GRID */}
         <div className="contentGrid">
           <div className="leftCol">
             <div className="formCard">
@@ -670,7 +669,6 @@ const DetailCriteriaPage: React.FC = () => {
                         flexDirection: 'column'
                       }}
                     >
-                      {/* Ô tìm kiếm cố định */}
                       <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
                         <input
                           type="text"
@@ -682,7 +680,6 @@ const DetailCriteriaPage: React.FC = () => {
                         />
                       </div>
 
-                      {/* Danh sách cuộn độc lập */}
                       <div style={{ overflowY: 'auto', flex: 1 }}>
                         {groupOptions.length > 0 && !searchTerm && (
                           <div 
@@ -690,7 +687,6 @@ const DetailCriteriaPage: React.FC = () => {
                             onClick={handleToggleSelectAll}
                             style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB', fontWeight: '500', userSelect: 'none' }}
                           >
-                            {/* Custom Checkbox Chọn Tất Cả */}
                             <div 
                               style={{
                                 width: '18px',
@@ -730,7 +726,6 @@ const DetailCriteriaPage: React.FC = () => {
                                   onClick={() => handleToggleGroup(opt.value)}
                                   style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', userSelect: 'none' }}
                                 >
-                                  {/* Custom Checkbox Option */}
                                   <div 
                                     style={{
                                       width: '18px',
@@ -780,9 +775,8 @@ const DetailCriteriaPage: React.FC = () => {
             </div>
           </div>
 
-          {/* CỘT PHẢI */}
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB' }}>
+            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', opacity: isStatusActive ? 1 : 0.5, pointerEvents: isStatusActive ? 'auto' : 'none' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -792,17 +786,17 @@ const DetailCriteriaPage: React.FC = () => {
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                 <div 
                   className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                  onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  onClick={() => canChangeActiveStatus && setIsStatusOpen(v => !v)}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: !canChangeActiveStatus ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: !canChangeActiveStatus ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                  {!isReadOnly && (
+                  {canChangeActiveStatus && (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                       <path d="M5 7.5L10 12.5L15 7.5"/>
                     </svg>
                   )}
                 </div>
-                {!isReadOnly && isStatusOpen && (
+                {canChangeActiveStatus && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
                     <div 
                       className={`custom-option ${isActive === false ? 'selected' : ''}`} 
@@ -821,7 +815,6 @@ const DetailCriteriaPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Sử dụng component ProductInfoCard để hiển thị thông tin nghiệp vụ và Fullname */}
             <ProductInfoCard 
               creatorName={getCreatorDisplayName()} 
               approverName={getApproverDisplayName()} 
@@ -829,7 +822,6 @@ const DetailCriteriaPage: React.FC = () => {
               version={criteriaData.version ?? 0} 
             />
 
-            {/* Khối Bình luận phản hồi */}
             <div className="commentCard">
               <div className="commentHeader">
                 <svg width="20" height="20" viewBox="0 0 22 22" fill="none">

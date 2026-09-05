@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
+import StatusBadgeListRequest from './ui/StatusBadgeListRequest';
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -80,7 +81,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
   }, [data]);
 
   const activeData = useMemo(() => {
-    const allowedStatuses = ['DRAFT', 'PENDING_APPROVAL'];
+    const allowedStatuses = ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION'];
     return (data || []).filter(item => 
       allowedStatuses.includes(item.status?.toUpperCase())
     );
@@ -155,11 +156,28 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   />
                 </td>
                 
-                <td className="col-highlight" style={highlightCellStyle}>
-                  <div className="col-highlight-content">
-                    <CellWithTooltip text={item.notes} />
-                  </div>
+                <td>
+                  {(() => {
+                    const note = String(stripHtml(item.notes)).trim();
+
+                    return (
+                      <>
+                        <div>DEBUG:[{note}]</div>
+
+                        {note === '0' ? (
+                          <StatusBadgeListRequest status="NEEDS_REVISION" />
+                        ) : note === '1' ? (
+                          <StatusBadgeListRequest status="REJECTED" />
+                        ) : note.toLowerCase() === 'reviewed' ? (
+                          <StatusBadgeListRequest status="REVIEWED" />
+                        ) : (
+                          <CellWithTooltip text={note} />
+                        )}
+                      </>
+                    );
+                  })()}
                 </td>
+
 
                 <td className="col-highlight col-highlight-last" style={highlightCellStyle}>
                   <CellWithTooltip text={formatDate(item.createdAt)} />

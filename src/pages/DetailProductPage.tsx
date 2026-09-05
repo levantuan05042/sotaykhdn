@@ -10,17 +10,8 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 import ProductInfoCard from '../components/ui/ProductInfoCard';
-
 import StatusBadge2 from '../components/ui/StatusBadge2';
 
-// ─────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────
-
-
-// ─────────────────────────────────────────────
-// Types
-// ─────────────────────────────────────────────
 interface Criterion {
   id: string;
   name: string;
@@ -33,9 +24,6 @@ interface PixelCrop {
   x: number; y: number; width: number; height: number;
 }
 
-// ─────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────
 const serializeCriteriaForDiff = (list: Criterion[]) =>
   JSON.stringify(list.map(c => ({ name: c.name, value: c.value, isSelected: c.isSelected })));
 
@@ -108,9 +96,6 @@ const getCroppedBlob = async (src: string, px: PixelCrop): Promise<Blob> => {
   return new Promise(resolve => canvas.toBlob(b => resolve(b!), 'image/jpeg', 0.92));
 };
 
-// ─────────────────────────────────────────────
-// ImageModal
-// ─────────────────────────────────────────────
 interface ImageModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -303,9 +288,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
   );
 };
 
-// ─────────────────────────────────────────────
-// BatchApprovalModal
-// ─────────────────────────────────────────────
 interface BatchApprovalModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -365,9 +347,6 @@ const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose
   );
 };
 
-// ─────────────────────────────────────────────
-// QuillEditor
-// ─────────────────────────────────────────────
 interface QuillEditorProps {
   value: string;
   onChange: (content: string) => void;
@@ -439,9 +418,6 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   );
 };
 
-// ─────────────────────────────────────────────
-// CriteriaModal
-// ─────────────────────────────────────────────
 const CriteriaModal: React.FC<{
   isOpen: boolean; onClose: () => void;
   criteria: Criterion[]; onToggle: (id: string) => void;
@@ -468,7 +444,6 @@ const CriteriaModal: React.FC<{
           </button>
         </div>
         
-        {/* Khối Search trong Modal */}
         <div style={{ padding: '12px 24px', borderBottom: '1px solid #E5E7EB' }}>
           <input
             type="text"
@@ -509,9 +484,6 @@ const CriteriaModal: React.FC<{
   );
 };
 
-// ─────────────────────────────────────────────
-// DetailProductPage
-// ─────────────────────────────────────────────
 const DetailProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -532,8 +504,8 @@ const DetailProductPage: React.FC = () => {
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [showImageModal,    setShowImageModal]    = useState(false);
   const [showBatchModal,    setShowBatchModal]    = useState(false);
+  const [showDeleteModal,   setShowDeleteModal]   = useState(false);
 
-  // Search States
   const [groupSearch, setGroupSearch] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [operationSearch, setOperationSearch] = useState('');
@@ -557,7 +529,6 @@ const DetailProductPage: React.FC = () => {
   const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
 
-  // Helpers trích xuất username người tạo
   const getCurrentUsername = () => {
     const possibleKeys = ['currentUserUsername', 'username', 'userCode', 'userId', 'account', 'user', 'userInfo', 'currentUser'];
     for (const key of possibleKeys) {
@@ -599,14 +570,11 @@ const DetailProductPage: React.FC = () => {
   }
   const creatorUsername = rawCreatorUsername ? rawCreatorUsername.split('_')[0] : '';
 
-  // Logic quyền hiển thị - Khóa khi là PENDING_APPROVAL
   const isOwner = Boolean(isLoggedIn && currentUsername && creatorUsername && currentUsername === creatorUsername);
   const isPendingApproval = productData?.status === 'PENDING_APPROVAL';
   
-  // Khóa readOnly nếu không là chủ sở hữu HOẶC khi SP đang ở trạng thái chờ duyệt
   const isReadOnly = !isLoggedIn || !isOwner || isPendingApproval;
   
-  // Chỉ hiển thị banner báo quyền nếu người đó KHÔNG PHẢI chủ sở hữu
   const showPermissionBanner = !isLoggedIn || !isOwner;
 
   const getCreatorDisplayName = () => {
@@ -687,7 +655,6 @@ const DetailProductPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', h);
   }, []);
 
-  // Fetch dữ liệu sản phẩm & danh mục
   useEffect(() => {
     const init = async () => {
       if (!id) return;
@@ -860,7 +827,7 @@ const DetailProductPage: React.FC = () => {
           NEEDS_REVISION: 'Lưu thay đổi thành công (Trạng thái: Yêu cầu chỉnh sửa)',
         };
         renderCustomToast(msgs[status] || 'Cập nhật sản phẩm thành công');
-        setTimeout(() => navigate('/products/processing'), 2000);
+        setTimeout(() => navigate('/products/processing'), 10);
       } else {
         const err = await res.json();
         toast.error(err.message || 'Có lỗi xảy ra khi cập nhật sản phẩm', { position: 'top-center' });
@@ -920,7 +887,7 @@ const DetailProductPage: React.FC = () => {
       if (response.status === 200 || response.status === 204) {
         toast.success(`Gửi phê duyệt lô ${targetRequestName} thành công!`, { position: 'top-center' });
         setShowBatchModal(false);
-        setTimeout(() => navigate('/products/processing'), 1500);
+        setTimeout(() => navigate('/products/processing'), 500);
       }
     } catch (error: any) {
       console.error('Lỗi gửi phê duyệt theo lô:', error);
@@ -930,25 +897,7 @@ const DetailProductPage: React.FC = () => {
 
   const handleDeleteProduct = () => {
     if (isReadOnly || !id) return;
-    toast.custom(t => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
-        <div className="confirm-toast-body">
-          <div className="confirm-toast-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-              <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <div className="confirm-toast-content">
-            <p className="confirm-toast-title">Xác nhận xóa sản phẩm</p>
-            <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa sản phẩm này không? Hành động này không thể hoàn tác.</p>
-          </div>
-        </div>
-        <div className="confirm-toast-actions">
-          <button className="confirm-btn-delete" onClick={async () => { toast.dismiss(t.id); await executeDelete(); }}>Xóa</button>
-          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>Hủy</button>
-        </div>
-      </div>
-    ), { position: 'top-center', duration: Infinity });
+    setShowDeleteModal(true);
   };
 
   const executeDelete = async () => {
@@ -960,7 +909,7 @@ const DetailProductPage: React.FC = () => {
         method: 'POST',
         headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
-      if (res.ok) { renderCustomToast('Xóa sản phẩm thành công'); setTimeout(() => navigate('/products/processing'), 2000); }
+      if (res.ok) { renderCustomToast('Xóa sản phẩm thành công'); setTimeout(() => navigate('/products/processing'), 10); }
       else { const e = await res.json(); toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' }); setLoading(false); }
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
   };
@@ -993,6 +942,7 @@ const DetailProductPage: React.FC = () => {
   const productNameBreadcrumb = getCleanProductName(productData.name);
   const activeRequestId = productData?.requestId || productData?.batchRequestId || 'Lô ABC';
   const requestName = productData?.requestName || 'Tên yêu cầu';
+  const isStatusDisabled = isReadOnly || productData?.status !== 'ACTIVE';
 
   return (
     <div className="pageWrapper">
@@ -1008,7 +958,6 @@ const DetailProductPage: React.FC = () => {
           </div>
         )}
 
-        {/* ══ Header ══ */}
         <div className="header">
           <div className="headerLeft">
             <button className="btnBack" onClick={() => navigate(-1)}>
@@ -1057,14 +1006,11 @@ const DetailProductPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ══ Content Grid ══ */}
         <div className="contentGrid">
 
-          {/* ── LEFT ── */}
           <div className="leftCol">
             <div className="formCard">
 
-              {/* Nhóm sản phẩm */}
               <div className="formGroup" style={{ marginBottom: 16 }}>
                 <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nhóm sản phẩm (*)</label>
                 <div className="custom-select-container" ref={groupRef}>
@@ -1110,7 +1056,6 @@ const DetailProductPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', gap: 20 }}>
-                {/* Danh mục sản phẩm */}
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
@@ -1154,7 +1099,6 @@ const DetailProductPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Nghiệp vụ */}
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
@@ -1286,28 +1230,26 @@ const DetailProductPage: React.FC = () => {
             </div>
           </div>
 
-          {/* ── RIGHT Sidebar ── */}
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'static' }}>
               
-              {/* Trạng thái hiển thị */}
-              <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
+              <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box', opacity: productData?.status === 'ACTIVE' ? 1 : 0.5, transition: 'opacity 0.2s ease' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
+                  <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hoạt động</span>
                 </div>
                 <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                   <div 
                     className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                    onClick={() => !isReadOnly && setIsStatusOpen(v => !v)}
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'default' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                    onClick={() => !isStatusDisabled && setIsStatusOpen(v => !v)}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isStatusDisabled ? '#F9FAFB' : '#FFF', cursor: isStatusDisabled ? 'default' : 'pointer', width: '100%', boxSizing: 'border-box', opacity: isStatusDisabled ? 0.6 : 1 }}
                   >
                     <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                    {!isReadOnly && (
+                    {!isStatusDisabled && (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                         <path d="M5 7.5L10 12.5L15 7.5"/>
                       </svg>
                     )}
                   </div>
-                  {!isReadOnly && isStatusOpen && (
+                  {!isStatusDisabled && isStatusOpen && (
                     <div className="custom-options-list">
                       <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleToggleActive(false)}>Ẩn</div>
                       <div className={`custom-option ${isActive === true  ? 'selected' : ''}`} onClick={() => handleToggleActive(true)}>Hiển thị</div>
@@ -1323,7 +1265,6 @@ const DetailProductPage: React.FC = () => {
                 version={productData?.version || 1}
               />
 
-              {/* Bình luận phản hồi */}
               <div className="commentCard emptyComment">
                 <div className="commentHeader">
                   <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
@@ -1380,6 +1321,29 @@ const DetailProductPage: React.FC = () => {
         requestId={activeRequestId}
         requestName={requestName}
       />
+
+      {showDeleteModal && (
+        <div className="confirm-toast-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="confirm-toast-card" onClick={e => e.stopPropagation()}>
+            <div className="confirm-toast-body">
+              <div className="confirm-toast-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
+                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="confirm-toast-content">
+                <p className="confirm-toast-title">Xác nhận xóa </p>
+                <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa không? Hành động này không thể hoàn tác.</p>
+              </div>
+            </div>
+            <div className="confirm-toast-actions">
+              
+              <button className="confirm-btn-delete" onClick={async () => { setShowDeleteModal(false); await executeDelete(); }}>Xóa</button>
+              <button className="confirm-btn-cancel" onClick={() => setShowDeleteModal(false)}>Hủy</button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

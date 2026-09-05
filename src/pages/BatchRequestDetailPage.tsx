@@ -907,16 +907,24 @@ const BatchRequestDetailPage: React.FC = () => {
   const handleLocalSave = async () => {
     if (!quickViewProduct) return;
     
+    // Kiểm tra validate form
     const missingRequired = details.find(d => d.required && isHtmlEmpty(d.noiDung));
     if (!formData.name.trim() || missingRequired) {
       toast.error("Vui lòng điền đầy đủ các trường bắt buộc (*).", { position: 'top-center' });
       return;
     }
 
+    // Block giao diện khi đang lưu
+    setIsUpdating(true); 
+    
     try {
+      // 1. Lấy dữ liệu payload từ form
       const payload = await getPayloadFromCurrentForm();
-      setPendingUpdates(prev => ({ ...prev, [quickViewProduct.id]: payload }));
+      
+      // 2. GỌI API LƯU TRỰC TIẾP VÀO DB
+      await axios.post(API_ENDPOINTS.PRODUCT.UPDATE(quickViewProduct.id), payload);
 
+      // 3. Cập nhật state UI để bảng danh sách hiển thị thông tin mới ngay lập tức
       setProducts(prev => prev.map(p => {
         if (p.id !== quickViewProduct.id) return p;
 
@@ -942,10 +950,20 @@ const BatchRequestDetailPage: React.FC = () => {
         };
       }));
 
+      // 4. Xóa sản phẩm này khỏi danh sách pending (nếu có) để khi bấm Gửi ở header không bị gọi lại API thừa
+      setPendingUpdates(prev => {
+        const newPending = { ...prev };
+        delete newPending[quickViewProduct.id];
+        return newPending;
+      });
+
       setHasFormChanges(false);
-      toast.success("Đã lưu tạm thời!", { position: 'top-center' });
+      toast.success("Đã lưu thành công vào CSDL!", { position: 'top-center' });
     } catch (error: any) {
-      toast.error(error.message || "Có lỗi xảy ra khi lưu tạm.", { position: 'top-center' });
+      console.error("Lỗi khi lưu DB:", error);
+      toast.error(error.message || "Có lỗi xảy ra khi lưu vào hệ thống.", { position: 'top-center' });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -1178,6 +1196,10 @@ const BatchRequestDetailPage: React.FC = () => {
                             <StatusBadge2 status="NEEDS_REVISION" className="batch-status-badge" />
                           ) : String(item.notes) === '1' ? (
                             <StatusBadge2 status="REJECTED" className="batch-status-badge" />
+                          ) : String(item.notes) === '2' ? (
+                            '—'
+                          ) : String(item.notes) === 'REVIEWED' ? (
+                            <StatusBadge2 status="REVIEWED" className="batch-status-badge" />
                           ) : (
                             item.notes || '—'
                           )}

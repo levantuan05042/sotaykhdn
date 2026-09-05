@@ -1,6 +1,6 @@
 // import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 // import { useNavigate, useParams } from 'react-router-dom';
-// import './DetailProductsPage.css';
+// import './DetailProductsPage.module.css';
 // import toast from 'react-hot-toast';
 // import Quill from 'quill';
 // import 'quill/dist/quill.snow.css';

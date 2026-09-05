@@ -55,7 +55,6 @@ const DetailBusinessPage: React.FC = () => {
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
-  // State mới cho dropdown search
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
   
   const token = localStorage.getItem('token') || sessionStorage.getItem('token') || localStorage.getItem('accessToken');
@@ -84,9 +83,10 @@ const DetailBusinessPage: React.FC = () => {
 
   const isReadOnly = !isLoggedIn || !isOwner;
   
-  // Điều kiện khóa form: Nếu là người khác xem HOẶC trạng thái đang chờ duyệt
   const isPending = businessData?.status === 'PENDING_APPROVAL';
   const isFormDisabled = isReadOnly || isPending;
+  const isStatusActive = businessData?.status === 'ACTIVE';
+  const isDisplayStatusReadOnly = isReadOnly || !isStatusActive;
 
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [formData, setFormData] = useState({
@@ -94,13 +94,11 @@ const DetailBusinessPage: React.FC = () => {
     categoryId: ''
   });
 
-  // Kiểm tra xem dữ liệu có thay đổi so với bản gốc không
   const hasChanges = businessData ? (
     formData.name !== businessData.name ||
     formData.categoryId !== businessData.categoryId
   ) : false;
 
-  // Cập nhật điều kiện enable button: Phải có sự thay đổi dữ liệu
   const isActionValid = !isReadOnly && formData.name.trim() !== '' && formData.categoryId !== '' && hasChanges;
 
   const getCreatorDisplayName = () => {
@@ -173,7 +171,6 @@ const DetailBusinessPage: React.FC = () => {
           ]);
         }
       } catch (error) {
-        console.error("Lỗi khi khởi tạo dữ liệu nghiệp vụ:", error);
         toast.error("Không tìm thấy nghiệp vụ hoặc nghiệp vụ đã bị ẩn");
       } finally {
         setLoading(false);
@@ -191,7 +188,7 @@ const DetailBusinessPage: React.FC = () => {
   const handleGoBack = () => navigate('/business-management');
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
-    if (isFormDisabled || !id) return;
+    if (isDisplayStatusReadOnly || !id) return;
     if (isActive === newActiveStatus) {
       setIsStatusOpen(false);
       return;
@@ -208,6 +205,7 @@ const DetailBusinessPage: React.FC = () => {
 
       if (response.ok) {
         setIsActive(newActiveStatus);
+        setBusinessData((prev: any) => ({ ...prev, active: newActiveStatus }));
         toast.dismiss(toastId);
         renderCustomToast(newActiveStatus ? "Hiển thị nghiệp vụ thành công" : "Ẩn nghiệp vụ thành công");
       } else {
@@ -219,7 +217,6 @@ const DetailBusinessPage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error("Lỗi cập nhật trạng thái:", error);
       toast.error('Lỗi kết nối máy chủ', { id: toastId, position: 'top-center' });
     } finally {
       setIsStatusOpen(false);
@@ -300,14 +297,13 @@ const DetailBusinessPage: React.FC = () => {
           default: message = "Cập nhật nghiệp vụ thành công";
         }
         renderCustomToast(message);
-        setTimeout(() => navigate('/business-management'), 2000);
+        setTimeout(() => navigate('/business-management'), 10);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi cập nhật:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -316,25 +312,40 @@ const DetailBusinessPage: React.FC = () => {
   const handleDeleteBusiness = () => {
     if (isFormDisabled || !id) return;
 
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
-        <div className="confirm-toast-body">
-          <div className="confirm-toast-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-              <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+    toast.custom((t) =>
+      createPortal(
+        <div className="confirm-toast-overlay">
+          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
+            <div className="confirm-toast-body">
+              <div className="confirm-toast-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
+                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div className="confirm-toast-content">
+                <p className="confirm-toast-title">Xác nhận xóa</p>
+                <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa không? Hành động này không thể hoàn tác.</p>
+              </div>
+            </div>
+            <div className="confirm-toast-actions">
+              <button
+                className="confirm-btn-delete"
+                onClick={async () => {
+                  toast.dismiss(t.id);
+                  await executeDelete();
+                }}
+              >
+                Xóa
+              </button>
+              <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
+                Hủy
+              </button>
+            </div>
           </div>
-          <div className="confirm-toast-content">
-            <p className="confirm-toast-title">Xác nhận xóa nghiệp vụ</p>
-            <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa nghiệp vụ này không? Hành động này không thể hoàn tác.</p>
-          </div>
-        </div>
-        <div className="confirm-toast-actions">
-          <button className="confirm-btn-delete" onClick={async () => { toast.dismiss(t.id); await executeDelete(); }}>Xóa</button>
-          <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>Hủy</button>
-        </div>
-      </div>
-    ), { position: 'top-center', duration: Infinity });
+        </div>,
+        document.body
+      )
+    , { id: 'delete-confirm-toast', duration: Infinity });
   };
 
   const executeDelete = async () => {
@@ -348,14 +359,13 @@ const DetailBusinessPage: React.FC = () => {
 
       if (response.ok) {
         renderCustomToast("Xóa nghiệp vụ thành công");
-        setTimeout(() => navigate('/business-management'), 2000);
+        setTimeout(() => navigate('/business-management'), 10);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
         setLoading(false);
       }
     } catch (error) {
-      console.error("Lỗi xóa:", error);
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
       setLoading(false);
     }
@@ -469,7 +479,7 @@ const DetailBusinessPage: React.FC = () => {
                     onClick={() => {
                       if (!isFormDisabled) {
                         setIsOpen(!isOpen);
-                        if (!isOpen) setCategorySearchTerm(''); // Reset search khi mở lại
+                        if (!isOpen) setCategorySearchTerm('');
                       }
                     }}
                     style={{ opacity: isFormDisabled ? 0.7 : 1, cursor: isFormDisabled ? 'not-allowed' : 'pointer' }}
@@ -500,7 +510,7 @@ const DetailBusinessPage: React.FC = () => {
                             outline: 'none'
                           }}
                           autoFocus
-                          onClick={(e) => e.stopPropagation()} // Ngăn việc click vào ô search làm đóng dropdown
+                          onClick={(e) => e.stopPropagation()}
                         />
                       </div>
                       <div style={{ padding: '4px 0' }}>
@@ -542,7 +552,7 @@ const DetailBusinessPage: React.FC = () => {
           </div>
 
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-             <div className="formCard" style={{ borderRadius: '12px', background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: '340px', padding: '24px', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', border: '1px solid #E5E7EB' }}>
+             <div className="formCard" style={{ borderRadius: '12px', background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: '340px', padding: '24px', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', border: '1px solid #E5E7EB', opacity: isStatusActive ? 1 : 0.5, pointerEvents: isStatusActive ? 'auto' : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ color: '#1A191B', fontSize: '16px', fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -553,17 +563,17 @@ const DetailBusinessPage: React.FC = () => {
                 <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                   <div 
                     className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
-                    onClick={() => !isFormDisabled && setIsStatusOpen(!isStatusOpen)} 
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', background: isFormDisabled ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isFormDisabled ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
+                    onClick={() => !isDisplayStatusReadOnly && setIsStatusOpen(!isStatusOpen)} 
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', background: isDisplayStatusReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isDisplayStatusReadOnly ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
                   >
                     <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
-                    {!isFormDisabled && (
+                    {!isDisplayStatusReadOnly && (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}>
                         <path d="M5 7.5L10 12.5L15 7.5" />
                       </svg>
                     )}
                   </div>
-                  {!isFormDisabled && isStatusOpen && (
+                  {!isDisplayStatusReadOnly && isStatusOpen && (
                     <div className="custom-options-list" style={{ zIndex: 50 }}>
                       <div className={`custom-option ${isActive === false ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(false)}>Ẩn</div>
                       <div className={`custom-option ${isActive === true ? 'selected' : ''}`} onClick={() => handleUpdateDisplayStatus(true)}>Hiển thị</div>

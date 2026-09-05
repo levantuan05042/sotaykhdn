@@ -8,6 +8,7 @@ import ImportProductModal from '../components/ImportProductModal';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
 
+
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
   { label: 'Lưu nháp', value: 'DRAFT' },
@@ -246,7 +247,8 @@ const ProductPage: React.FC = () => {
 
   const getFilteredData = () => {
     if (isProcessingPage) {
-      const allowedStatuses = ['DRAFT', 'PENDING_APPROVAL'];
+      // Bổ sung thêm 'NEEDS_REVISION' vào mảng
+      const allowedStatuses = ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION'];
       return data.filter(item => allowedStatuses.includes(item.status?.toUpperCase()));
     }
     if (isRejectedPage) {
