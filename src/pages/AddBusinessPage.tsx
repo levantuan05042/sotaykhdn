@@ -198,7 +198,7 @@ const AddBusinessPage: React.FC = () => {
               
               {/* DROPDOWN CHỌN DANH MỤC SẢN PHẨM */}
               <div className="formGroup" ref={categoryRef}>
-                <label className="label">Danh mục sản phẩm *</label>
+                <label className="label"> Danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span>
@@ -273,7 +273,7 @@ const AddBusinessPage: React.FC = () => {
 
               {/* INPUT TÊN NGHIỆP VỤ */}
               <div className="formGroup">
-                <label className="label">Tên nghiệp vụ *</label>
+                <label className="label"> Tên nghiệp vụ sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 

@@ -7,7 +7,8 @@ import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 
-import { API_ENDPOINTS } from '../config/apiConfig';
+// Bổ sung thêm hàm toDisplayUrl (nếu có export từ apiConfig) để load ảnh giống ProductImageCard
+import { API_ENDPOINTS, toDisplayUrl } from '../config/apiConfig';
 
 interface Criterion {
   id: string;
@@ -236,7 +237,7 @@ const AddProductPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
-  const fetchActiveGroups = async () => {
+    const fetchActiveGroups = async () => {
       try {
         setLoadingGroups(true);
         const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
@@ -439,7 +440,7 @@ const AddProductPage: React.FC = () => {
     try {
       await axios.post(API_ENDPOINTS.PRODUCT.LIST, payload);
       toast.success(status === 'DRAFT' ? "Lưu nháp sản phẩm thành công" : "Gửi phê duyệt sản phẩm thành công", { position: 'top-center' });
-      setTimeout(() => navigate('//products/processing'), 2000);
+      setTimeout(() => navigate('/products/processing'), 2000);
     } catch (error: any) {
       console.error("Lỗi gửi request:", error);
       const errMsg = error.response?.data?.message || "Không thể kết nối đến server.";
@@ -525,7 +526,10 @@ const AddProductPage: React.FC = () => {
               
               {/* 1. PRODUCT GROUP VỚI TÌM KIẾM */}
               <div className="formGroup" style={{ marginBottom: '16px' }}>
-                <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>Nhóm sản phẩm (*)</label>
+                {/* HIỂN THỊ DẤU (*) MÀU ĐỎ */}
+                <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>
+                  Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span>
+                </label>
                 <div className="custom-select-container" ref={groupRef} style={{ position: 'relative' }}>
                   <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(!isGroupOpen)} style={{ backgroundColor: 'white' }}>
                     <span>{loadingGroups ? "Đang tải..." : (groupOptions.find(o => o.value === formData.productGroupId)?.label || "Chọn nhóm")}</span>
@@ -560,7 +564,7 @@ const AddProductPage: React.FC = () => {
               <div style={{ display: 'flex', gap: '20px' }}>
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: formData.productGroupId ? '#171717' : '#9CA3AF' }}>
-                    Danh mục sản phẩm {!formData.productGroupId}
+                    Danh mục sản phẩm
                   </label>
                   <div className="custom-select-container" ref={categoryRef} style={{ position: 'relative' }}>
                     <div 
@@ -601,7 +605,7 @@ const AddProductPage: React.FC = () => {
 
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: formData.productCategoryId ? '#171717' : '#9CA3AF' }}>
-                    Nghiệp vụ {!formData.productCategoryId}
+                    Nghiệp vụ
                   </label>
                   <div className="custom-select-container" ref={operationRef} style={{ position: 'relative' }}>
                     <div 
@@ -688,18 +692,56 @@ const AddProductPage: React.FC = () => {
                 </div>
               )}
               
-              <div className="formGroup" style={{ marginBottom: '20px', marginTop: '16px' }}>
-                <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>
-                  Ảnh mô tả
-                </label>
-                
+              <div 
+                className="product-image-card-container" 
+                style={{ 
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '16px',
+                  border: '1px solid #F3F4F6',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  padding: '20px 24px',
+                  boxSizing: 'border-box',
+                  width: 'fit-content', // Đổi từ '100%' thành 'fit-content'
+                  minWidth: '400px',    // Thêm minWidth để khung upload luôn giữ form đẹp
+                  marginBottom: '24px',
+                  marginTop: '24px' 
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
+                    Ảnh mô tả
+                  </h3>
+                </div>
+
                 {imageUrl ? (
-                  <div className="product-image-wrapper" style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
+                  <div 
+                    className="product-image-wrapper" 
+                    style={{ 
+                      position: 'relative', 
+                      width: '100%', 
+                      border: '1px solid #F3F4F6', 
+                      borderRadius: '12px', 
+                      backgroundColor: '#FAFAFA', 
+                      padding: '32px 16px', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      minHeight: '160px', 
+                      boxSizing: 'border-box'
+                    }}
+                  >
                     <img 
-                      src={imageUrl.startsWith('http') ? imageUrl : imageUrl} 
+                      src={typeof toDisplayUrl === 'function' ? toDisplayUrl(imageUrl) : (imageUrl.startsWith('http') ? imageUrl : imageUrl)} 
                       alt="Product" 
                       className="product-image" 
-                      style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 12, border: '1px solid #E5E7EB', display: 'block' }}
+                      style={{ 
+                        maxHeight: '260px', 
+                        maxWidth: '100%', 
+                        objectFit: 'contain', 
+                        borderRadius: '8px', 
+                        display: 'block' 
+                      }}
                     />
                     
                     <div className="image-overlay">
@@ -736,20 +778,39 @@ const AddProductPage: React.FC = () => {
                 ) : (
                   <button type="button" onClick={() => setShowImageModal(true)}
                     className="upload-placeholder"
-                    style={{width:'100%',maxWidth:420,aspectRatio:'16 / 9',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',border:'2px dashed #D1D5DB',borderRadius:12,background:'#F9FAFB',cursor:'pointer',color:'#6B7280',transition:'all 0.2s'}}
+                    style={{
+                      width:'100%',
+                      minHeight: '160px',
+                      display:'flex',
+                      flexDirection:'column',
+                      alignItems:'center',
+                      justifyContent:'center',
+                      border:'2px dashed #D1D5DB',
+                      borderRadius:12,
+                      background:'#F9FAFB',
+                      cursor:'pointer',
+                      color:'#6B7280',
+                      transition:'all 0.2s',
+                      padding: '32px 16px',
+                      boxSizing: 'border-box'
+                    }}
                     onMouseOver={e => {e.currentTarget.style.borderColor='#AE1C3F'; e.currentTarget.style.background='#FDF2F4';}}
                     onMouseOut={e => {e.currentTarget.style.borderColor='#D1D5DB'; e.currentTarget.style.background='#F9FAFB';}}>
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="3"/>
-                      <circle cx="8.5" cy="8.5" r="1.5"/>
-                      <polyline points="21 15 16 10 5 21"/>
-                    </svg>
-                      <p style={{ margin: '12px 0 4px', fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</p>
+                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                      </div>
+                      <p style={{ margin: '0 0 4px', fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</p>
                       <span style={{ color: '#10B981', fontWeight: 600, fontSize: '15px' }}>Chọn file</span>
                       <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tối đa 10MB</p>
                   </button>
                 )}
               </div>
+              {/* END IMAGE UPLOAD LAYOUT */}
+
             </div>
           </div>
 

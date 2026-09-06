@@ -132,7 +132,7 @@ const AddProductPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
-                <label className="label">Thuộc nhóm *</label>
+                <label className="label"> Thuộc nhóm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container">
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span>{GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm cấp trên"}</span>
@@ -154,7 +154,8 @@ const AddProductPage: React.FC = () => {
                 </div>
               </div>
               <div className="formGroup">
-                <label className="label">Tên nhóm sản phẩm</label>
+                <label className="label"> Tên nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
+                
                 <input 
                   type="text" 
                   name="name" 

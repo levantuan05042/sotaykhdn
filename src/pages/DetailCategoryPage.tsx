@@ -503,7 +503,7 @@ const DetailCategoryPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
-                <label className="label">Nhóm sản phẩm *</label>
+                <label className="label"> Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container">
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
@@ -547,7 +547,7 @@ const DetailCategoryPage: React.FC = () => {
                 </div>
               </div>
               <div className="formGroup">
-                <label className="label">Tên danh mục sản phẩm</label>
+                <label className="label"> Tên danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 

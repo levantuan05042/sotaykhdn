@@ -472,7 +472,7 @@ const DetailBusinessPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
-                <label className="label">Danh mục sản phẩm thuộc về *</label>
+                <label className="label"> Danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" ref={categoryRef}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''} ${isFormDisabled ? 'disabled-view' : ''}`} 
@@ -536,7 +536,7 @@ const DetailBusinessPage: React.FC = () => {
               </div>
 
               <div className="formGroup">
-                <label className="label">Tên nghiệp vụ</label>
+                <label className="label">Tên nghiệp vụ sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 

@@ -599,7 +599,7 @@ const DetailCriteriaPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
-                <label className="label">Mã tiêu chí *</label>
+                <label className="label"> Mã tiêu chí <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="code" 
@@ -613,7 +613,7 @@ const DetailCriteriaPage: React.FC = () => {
                 />
               </div>
               <div className="formGroup">
-                <label className="label">Tên tiêu chí *</label>
+                <label className="label"> Tên tiêu chí <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
@@ -628,7 +628,7 @@ const DetailCriteriaPage: React.FC = () => {
               </div>
 
               <div className="formGroup" ref={dropdownRef}>
-                <label className="label">Nhóm sản phẩm áp dụng *</label>
+                <label className="label"> Nhóm sản phẩm áp dụng <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 

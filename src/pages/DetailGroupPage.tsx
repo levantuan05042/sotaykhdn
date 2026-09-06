@@ -548,7 +548,7 @@ const DetailGroupPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
-                <label className="label">Thuộc nhóm lớn *</label>
+                <label className="label"> Thuộc nhóm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container">
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
@@ -583,7 +583,7 @@ const DetailGroupPage: React.FC = () => {
               </div>
 
               <div className="formGroup">
-                <label className="label">Tên nhóm sản phẩm</label>
+                <label className="label"> Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 

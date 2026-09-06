@@ -581,6 +581,8 @@
   gap: 16px;
   opacity: 0;
   transition: all 0.3s ease;
+  top: 0px !important;
+  right: 0px !important;
 }
 
 .product-image-wrapper:hover .image-overlay {

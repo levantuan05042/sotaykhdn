@@ -197,7 +197,7 @@ const AddCategoryPage: React.FC = () => {
               
               {/* DROPDOWN CHỌN NHÓM SẢN PHẨM */}
               <div className="formGroup" ref={groupRef}>
-                <label className="label">Nhóm sản phẩm *</label>
+                <label className="label"> Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 {/* Thêm position relative nếu file CSS chưa cấu hình để dropdown con neo theo nó */}
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
@@ -275,7 +275,7 @@ const AddCategoryPage: React.FC = () => {
 
               {/* INPUT TÊN DANH MỤC */}
               <div className="formGroup">
-                <label className="label">Tên danh mục sản phẩm *</label>
+                <label className="label"> Tên danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 

@@ -265,7 +265,7 @@ const AddCriteriaPage: React.FC = () => {
 
               {/* INPUT MÃ TIÊU CHÍ */}
               <div className="formGroup">
-                <label className="label">Mã tiêu chí *</label>
+                <label className="label"> Mã tiêu chí <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="code" 
@@ -278,7 +278,7 @@ const AddCriteriaPage: React.FC = () => {
 
               {/* INPUT TÊN TIÊU CHÍ */}
               <div className="formGroup">
-                <label className="label">Tên tiêu chí *</label>
+                <label className="label"> Tên tiêu chí <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
@@ -291,7 +291,7 @@ const AddCriteriaPage: React.FC = () => {
               
               {/* DROPDOWN CHỌN NHIỀU NHÓM SẢN PHẨM */}
               <div className="formGroup" ref={dropdownRef}>
-                <label className="label">Nhóm sản phẩm áp dụng *</label>
+                <label className="label"> Nhóm sản phẩm áp dụng<span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>

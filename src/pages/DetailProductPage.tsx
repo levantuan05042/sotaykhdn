@@ -11,6 +11,7 @@ import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
+import ProductImageCard2 from '../components/ui/ProductImageCard2';
 
 interface Criterion {
   id: string;
@@ -112,6 +113,7 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<PixelCrop | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
 
   useEffect(() => {
     if (isOpen) {
@@ -361,7 +363,8 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   const quillRef   = useRef<Quill | null>(null);
 
   useEffect(() => {
-    if (!editorRef.current || !toolbarRef.current || quillRef.current) return;
+    if (!editorRef.current || quillRef.current) return;
+    if (!readOnly && !toolbarRef.current) return;
     const quill = new Quill(editorRef.current, {
       theme: 'snow',
       placeholder: placeholder || 'Nhập nội dung chi tiết...',
@@ -612,12 +615,23 @@ const DetailProductPage: React.FC = () => {
   }, [productData?.imageUrl]);
 
   useEffect(() => {
+  console.log('productData=', productData);
+  console.log('imageUrl=', productData?.imageUrl);
+
+  if (productData?.imageUrl) {
+    const url = toDisplayUrl(productData.imageUrl);
+    console.log('displayUrl=', url);
+    setPreviewImage(url);
+  }
+}, [productData?.imageUrl]);
+
+  useEffect(() => {
     return () => { if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage); };
   }, [previewImage, avatarFile]);
 
   const handleImageConfirm = (file: File, blobUrl: string) => {
     if (isReadOnly) return;
-    if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage);
+
     setAvatarFile(file);
     setPreviewImage(blobUrl);
     setImageRemoved(false);
@@ -1012,7 +1026,9 @@ const DetailProductPage: React.FC = () => {
             <div className="formCard">
 
               <div className="formGroup" style={{ marginBottom: 16 }}>
-                <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nhóm sản phẩm (*)</label>
+                <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>
+                  Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span>
+                </label>
                 <div className="custom-select-container" ref={groupRef}>
                   <div 
                     className={`select-custom ${isGroupOpen ? 'open' : ''}`} 
@@ -1183,26 +1199,65 @@ const DetailProductPage: React.FC = () => {
               )}
             </div>
 
-            <div className="formGroup" style={{ marginBottom: 20, marginTop: 16 }}>
-              <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Ảnh mô tả</label>
+            {/* ------- PHẦN CẬP NHẬT ẢNH MÔ TẢ ĐÚNG YÊU CẦU CỦA BẠN ------- */}
+            <div
+              className="product-image-card-container formGroup"
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #F3F4F6',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                padding: '20px 24px',
+                boxSizing: 'border-box',
+                width: '100%',
+                marginBottom: '20px',
+                marginTop: '16px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
+                  Ảnh mô tả <span style={{ color: '#EF4444' }}>(*)</span>
+                </h3>
+              </div>
 
               {previewImage ? (
-                <div className="product-image-wrapper" style={{ position: 'relative', width: '100%', maxWidth: 420 }}>
-                  <img
-                    src={previewImage}
-                    alt="Product"
-                    className="product-image"
-                    style={{ width: '100%', aspectRatio: '16 / 9', objectFit: 'cover', borderRadius: 12, border: '1px solid #E5E7EB', display: 'block' }}
-                  />
+                <div 
+                  className="product-image-wrapper" 
+                  style={{ 
+                    position: 'relative', 
+                    width: '100%', 
+                    border: '1px solid #F3F4F6', 
+                    borderRadius: '12px', 
+                    backgroundColor: '#FAFAFA', 
+                    padding: '32px 16px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    minHeight: '160px', 
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <ProductImageCard2 imageUrl={previewImage} />
+                  
                   {!isReadOnly && (
-                    <div className="image-overlay" style={{ position: 'absolute', top: 10, right: 10, display: 'flex', gap: 8 }}>
-                      <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)}>
+                    <div className="image-overlay">
+                      <button 
+                        type="button" 
+                        className="overlay-btn" 
+                        onClick={() => setShowImageModal(true)}
+                      >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                         </svg>
                       </button>
-                      <button type="button" className="overlay-btn" onClick={handleRemoveImage}>
+                      
+                      <button 
+                        type="button" 
+                        className="overlay-btn" 
+                        onClick={handleRemoveImage}
+                      >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                           <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
                         </svg>
@@ -1211,23 +1266,72 @@ const DetailProductPage: React.FC = () => {
                   )}
                 </div>
               ) : (
-                !isReadOnly && (
-                  <button type="button" onClick={() => setShowImageModal(true)}
+                !isReadOnly ? (
+                  <button 
+                    type="button" 
+                    onClick={() => setShowImageModal(true)}
                     className="upload-placeholder"
-                    style={{ width: '100%', maxWidth: 420, aspectRatio: '16 / 9', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1.5px dashed #E5E7EB', borderRadius: 12, background: 'transparent', cursor: 'pointer', color: '#6B7280' }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    style={{
+                      width:'100%',
+                      minHeight: '160px',
+                      display:'flex',
+                      flexDirection:'column',
+                      alignItems:'center',
+                      justifyContent:'center',
+                      border:'2px dashed #D1D5DB',
+                      borderRadius:12,
+                      background:'#F9FAFB',
+                      cursor:'pointer',
+                      color:'#6B7280',
+                      transition:'all 0.2s',
+                      padding: '32px 16px',
+                      boxSizing: 'border-box'
+                    }}
+                    onMouseOver={e => {e.currentTarget.style.borderColor='#AE1C3F'; e.currentTarget.style.background='#FDF2F4';}}
+                    onMouseOut={e => {e.currentTarget.style.borderColor='#D1D5DB'; e.currentTarget.style.background='#F9FAFB';}}
+                  >
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
                       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                        <circle cx="8.5" cy="8.5" r="1.5"/>
-                        <polyline points="21 15 16 10 5 21"/>
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
                       </svg>
                     </div>
-                    <span style={{ marginTop: 10, fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</span>
-                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: 14 }}>Chọn file</span>
+                    <p style={{ margin: '0 0 4px', fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</p>
+                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: '15px' }}>Chọn file</span>
+                    <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tối đa 10MB</p>
                   </button>
+                ) : (
+                  <div 
+                    className="upload-placeholder-readonly"
+                    style={{
+                      width:'100%',
+                      minHeight: '160px',
+                      display:'flex',
+                      flexDirection:'column',
+                      alignItems:'center',
+                      justifyContent:'center',
+                      border:'1px solid #F3F4F6',
+                      borderRadius:12,
+                      background:'#FAFAFA',
+                      color:'#6B7280',
+                      padding: '32px 16px',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '8px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                    <span style={{ fontSize: '14px', color: '#6B7280', fontWeight: 500 }}>Chưa có ảnh</span>
+                  </div>
                 )
               )}
             </div>
+
           </div>
 
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'static' }}>

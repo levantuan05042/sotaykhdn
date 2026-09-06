@@ -73,9 +73,6 @@ const toDisplayUrl = (raw: string) => {
   return cleanPath; 
 };
 
-/* =========================================
-   CUSTOM DROPDOWN COMPONENT
-========================================= */
 interface CustomSelectProps {
   label?: string;
   value: string;
@@ -181,9 +178,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, plac
   );
 };
 
-/* =========================================
-   IMAGE CROP MODAL COMPONENT
-========================================= */
 interface ImageModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -375,9 +369,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
   );
 };
 
-/* =========================================
-   CRITERIA MODAL COMPONENT (GIỐNG DETAIL PRODUCT)
-========================================= */
 interface CriteriaModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -426,9 +417,6 @@ const CriteriaModal: React.FC<CriteriaModalProps> = ({ isOpen, onClose, criteria
   );
 };
 
-/* =========================================
-   QUILL EDITOR COMPONENT
-========================================= */
 interface QuillEditorProps {
   value: string;
   onChange: (content: string) => void;
@@ -508,9 +496,6 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   );
 };
 
-/* =========================================
-   MAIN BATCH DETAIL PAGE COMPONENT
-========================================= */
 const BatchRequestDetailPage: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
@@ -564,7 +549,7 @@ const BatchRequestDetailPage: React.FC = () => {
   );
 
   const [loading, setLoading] = useState(false);
-  const ITEMS_PER_PAGE = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   
   const [batchName, setBatchName] = useState<string>(externalName || 'Chi tiết lô sản phẩm');
@@ -582,7 +567,7 @@ const BatchRequestDetailPage: React.FC = () => {
   const [groupCache, setGroupCache] = useState<Record<string, GroupCacheData>>({});
 
   const [showImageModal, setShowImageModal] = useState(false);
-  const [showCriteriaModal, setShowCriteriaModal] = useState(false); // Modal thêm tiêu chí giống DetailProduct
+  const [showCriteriaModal, setShowCriteriaModal] = useState(false);
   const [previewImage, setPreviewImage] = useState('');   
   const [avatarFile, setAvatarFile] = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
@@ -815,11 +800,11 @@ const BatchRequestDetailPage: React.FC = () => {
     }
   };
 
-  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(products.length / itemsPerPage);
   const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return products.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [products, currentPage]);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return products.slice(startIndex, startIndex + itemsPerPage);
+  }, [products, currentPage, itemsPerPage]);
 
   const handleFormChange = (updates: any) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -907,24 +892,18 @@ const BatchRequestDetailPage: React.FC = () => {
   const handleLocalSave = async () => {
     if (!quickViewProduct) return;
     
-    // Kiểm tra validate form
     const missingRequired = details.find(d => d.required && isHtmlEmpty(d.noiDung));
     if (!formData.name.trim() || missingRequired) {
       toast.error("Vui lòng điền đầy đủ các trường bắt buộc (*).", { position: 'top-center' });
       return;
     }
 
-    // Block giao diện khi đang lưu
     setIsUpdating(true); 
     
     try {
-      // 1. Lấy dữ liệu payload từ form
       const payload = await getPayloadFromCurrentForm();
-      
-      // 2. GỌI API LƯU TRỰC TIẾP VÀO DB
       await axios.post(API_ENDPOINTS.PRODUCT.UPDATE(quickViewProduct.id), payload);
 
-      // 3. Cập nhật state UI để bảng danh sách hiển thị thông tin mới ngay lập tức
       setProducts(prev => prev.map(p => {
         if (p.id !== quickViewProduct.id) return p;
 
@@ -950,7 +929,6 @@ const BatchRequestDetailPage: React.FC = () => {
         };
       }));
 
-      // 4. Xóa sản phẩm này khỏi danh sách pending (nếu có) để khi bấm Gửi ở header không bị gọi lại API thừa
       setPendingUpdates(prev => {
         const newPending = { ...prev };
         delete newPending[quickViewProduct.id];
@@ -1036,7 +1014,6 @@ const BatchRequestDetailPage: React.FC = () => {
     c => !isHtmlEmpty(c.noiDung) || addedOptionalIds.includes(c.id)
   );
 
-  // Danh sách tiêu chí truyền vào modal thêm tiêu chí
   const criteriaForModal = optionalCriteria.map(c => ({
     ...c,
     isAdded: addedOptionalIds.includes(c.id) || !isHtmlEmpty(c.noiDung)
@@ -1046,7 +1023,6 @@ const BatchRequestDetailPage: React.FC = () => {
     setAddedOptionalIds(prev => {
       const exists = prev.includes(id);
       if (exists) {
-        // Xóa khỏi danh sách hiện và clear nội dung
         handleDetailsChange(id, '');
         return prev.filter(item => item !== id);
       } else {
@@ -1103,7 +1079,6 @@ const BatchRequestDetailPage: React.FC = () => {
     <div className="batch-detail-container">
       <Toaster position="top-right" reverseOrder={false} />
       
-      {/* HEADER */}
       <div className="batch-header">
         <div className="batch-header-left">
           <button onClick={() => navigate(-1)} className="batch-back-btn">
@@ -1150,10 +1125,7 @@ const BatchRequestDetailPage: React.FC = () => {
         </div>
       </div>
 
-      {/* WORKSPACE AREA */}
       <div className="batch-workspace">
-        
-        {/* TABLE SECTION */}
         <div className="batch-table-container">
           <div className="batch-table-scroll">
             <table className="batch-custom-table">
@@ -1176,7 +1148,12 @@ const BatchRequestDetailPage: React.FC = () => {
                   paginatedData.map((item) => {
                     const isSelected = quickViewProduct?.id === item.id;
                     return (
-                      <tr key={item.id} className={isSelected ? "batch-tr-selected" : ""}>
+                      <tr 
+                        key={item.id} 
+                        className={isSelected ? "batch-tr-selected" : ""}
+                        onClick={() => navigate(`/product/${item.id}`)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <td className="batch-table-td batch-table-td-name">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name || '—'}</span>
@@ -1197,7 +1174,7 @@ const BatchRequestDetailPage: React.FC = () => {
                           ) : String(item.notes) === '1' ? (
                             <StatusBadge2 status="REJECTED" className="batch-status-badge" />
                           ) : String(item.notes) === '2' ? (
-                            '—'
+                            <StatusBadge2 status="APPROVED" className="batch-status-badge" />
                           ) : String(item.notes) === 'REVIEWED' ? (
                             <StatusBadge2 status="REVIEWED" className="batch-status-badge" />
                           ) : (
@@ -1210,7 +1187,10 @@ const BatchRequestDetailPage: React.FC = () => {
                         >
                           <div className="batch-action-inner" style={{ justifyContent: 'center' }}>
                             <button
-                              onClick={() => handleOpenQuickView(item)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenQuickView(item);
+                              }}
                               className="btn-xem-nhanh"
                             >
                               Xem nhanh
@@ -1233,12 +1213,38 @@ const BatchRequestDetailPage: React.FC = () => {
             </table>
           </div>
 
-          {/* PAGINATION */}
           {!loading && products.length > 0 && (
             <div className="batch-pagination">
-              <span style={{ fontSize: '13px', color: '#6B7280' }}>
-                Hiển thị {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, products.length)} trên tổng số {products.length}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6B7280' }}>
+                <span>Hiển thị</span>
+                
+                <select 
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  style={{ 
+                    padding: '4px 8px', 
+                    fontSize: '13px', 
+                    borderRadius: '4px', 
+                    border: '1px solid #D1D5DB', 
+                    outline: 'none', 
+                    cursor: 'pointer', 
+                    color: '#374151', 
+                    backgroundColor: '#fff' 
+                  }}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+
+                <span>
+                  bản ghi/trang (Hiển thị {products.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, products.length)} trên {products.length} bản ghi)
+                </span>
+              </div>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
@@ -1256,7 +1262,6 @@ const BatchRequestDetailPage: React.FC = () => {
           )}
         </div>
 
-        {/* QUICK VIEW PANEL */}
         {quickViewProduct && (
           <div className="batch-quickview-panel" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             
@@ -1376,7 +1381,6 @@ const BatchRequestDetailPage: React.FC = () => {
                   )}
                 </div>
 
-                {/* NÚT THÊM TIÊU CHÍ GIỐNG HỆT DETAIL PRODUCT PAGE */}
                 {optionalCriteria.length > 0 && canEdit && (
                   <div style={{ marginTop: '16px' }}>
                     <button
