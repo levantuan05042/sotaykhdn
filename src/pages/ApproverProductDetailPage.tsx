@@ -5,6 +5,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import ProductImageCard from '../components/ui/ProductImageCard';
+import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import './ApproverProductDetailPage.css';
 
 /*
@@ -137,24 +139,7 @@ const getFallbackDetail = (id: string): MockProductDetail => ({
 });
 */
 
-interface EditorBlockProps {
-  label: string;
-  value: string;
-}
 
-const EditorBlock: React.FC<EditorBlockProps> = ({ label, value }) => {
-  return (
-    <div className="form-group">
-      <label className="form-label">{label}</label>
-      <div className="editor-container disabled-editor">
-        <div
-          className="editor-content-view"
-          dangerouslySetInnerHTML={{ __html: value }}
-        />
-      </div>
-    </div>
-  );
-};
 
 interface ApproverProductDetailPageProps {
   requestId?: string;
@@ -495,35 +480,20 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
             />
           </div>
 
-{/* Dynamic Criteria Fields */ }
+{/* Dynamic Criteria Fields */}
 {
   detail.details?.map((item: any, index: number) => (
-    <EditorBlock
+    <CriteriaRichBlock
       key={item.criteriaId || index}
-      label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
+      label={item.tieuChi}
+      isRequired={item.isRequired}
       value={item.noiDung || ''}
     />
   ))
 }
 
-{/* Last Field: Product Image */ }
-{
-  detail.imageUrl && (
-    <div className="form-group">
-      <label className="form-label">Ảnh sản phẩm</label>
-      <div className="quickview-image-container" style={{ width: '100%', boxSizing: 'border-box' }}>
-        <img
-          src={new URL(`../assets/${detail.imageUrl}`, import.meta.url).href}
-          alt="Ảnh sản phẩm"
-          className="quickview-product-img"
-          onError={(e) => {
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      </div>
-    </div>
-  )
-}
+{/* Last Field: Product Image */}
+<ProductImageCard imageUrl={detail.imageUrl} />
 
         </section >
 

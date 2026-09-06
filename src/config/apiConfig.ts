@@ -3,9 +3,29 @@ const getHost = () => (typeof window !== 'undefined' && window.location && windo
 const host = getHost();
 
 export const BASE_URL = `http://${host}:8082/api/v1`;
+export const FILE_BASE_URL = `http://${host}:8082`;
+export const LOCAL_IMAGE_STORAGE_PATH = 'E:/AGRIBANK/uploads'; // Đường dẫn thư mục lưu ảnh ở local ngoài dự án
 export const AUTH_SERVICE_LOGIN_URL = `http://${host}:8080/login`;
 export const AUTH_SERVICE_LOGOUT_URL = `http://${host}:8080/logout`;
 export const AUTH_SERVICE_BASE_URL = `http://${host}:8080/api/v1`;
+
+export const toDisplayUrl = (raw?: string | null): string => {
+  if (!raw) return '';
+  if (raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+
+  let cleanPath = raw.trim();
+  if (cleanPath.startsWith('files') && !cleanPath.startsWith('files/')) {
+    cleanPath = '/' + cleanPath;
+  }
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+  if (!cleanPath.startsWith('/files/')) {
+    cleanPath = `/files${cleanPath}`;
+  }
+  return `${FILE_BASE_URL}${cleanPath}`;
+};
 
 export const AUTH_ME_URL = `${BASE_URL}/auth/me`;
 export const BEADMIN_USERS_URL = (username: string, branchCode: string) => 

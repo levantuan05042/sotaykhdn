@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import ProductImageCard from '../components/ui/ProductImageCard';
+import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 
 interface CommentItem {
   id: string;
@@ -41,25 +43,7 @@ interface ProductDetail {
   comments: CommentItem[];
 }
 
-interface EditorBlockProps {
-  label: string;
-  value: string;
-}
 
-const EditorBlock: React.FC<EditorBlockProps> = ({ label, value }) => {
-  return (
-    <div className="form-group" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <label className="form-label" style={{ fontSize: '13px', fontWeight: 700, color: '#1A191B', textAlign: 'left' }}>{label}</label>
-      <div className="editor-container disabled-editor" style={{ border: '1px solid #D1D5DB', borderRadius: '12px', padding: '12px 20px', backgroundColor: '#ffffff', minHeight: '48px', boxSizing: 'border-box' }}>
-        <div 
-          className="editor-content-view"
-          style={{ fontSize: '14px', color: '#1A191B', textAlign: 'left', lineHeight: '1.5' }}
-          dangerouslySetInnerHTML={{ __html: value }}
-        />
-      </div>
-    </div>
-  );
-};
 
 export const ApproverProductSingleDetailPage: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -258,28 +242,15 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
       </div>
 
       {detail.details?.map((item: any, index: number) => (
-        <EditorBlock
+        <CriteriaRichBlock
           key={item.criteriaId || index}
-          label={`${item.tieuChi} ${item.isRequired ? '(*)' : ''}`}
+          label={item.tieuChi}
+          isRequired={item.isRequired}
           value={item.noiDung || ''}
         />
       ))}
 
-      {detail.imageUrl && (
-        <div className="formGroup">
-          <label className="formLabel">Ảnh sản phẩm</label>
-          <div className="quickview-image-container" style={{ width: '100%', display: 'flex', boxSizing: 'border-box', marginTop: '4px' }}>
-            <img 
-              src={new URL(`../assets/${detail.imageUrl}`, import.meta.url).href}
-              alt="Ảnh sản phẩm" 
-              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '12px', border: '1px solid #E5E7EB', objectFit: 'contain' }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          </div>
-        </div>
-      )}
+      <ProductImageCard imageUrl={detail.imageUrl} />
     </ApproverDetailWrapper>
   );
 };

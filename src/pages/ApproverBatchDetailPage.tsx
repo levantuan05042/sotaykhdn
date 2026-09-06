@@ -4,6 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import StatusBadge from '../components/ui/StatusBadge';
+import ProductImageCard from '../components/ui/ProductImageCard';
+import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import ApproverProductDetailPage from './ApproverProductDetailPage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
@@ -401,45 +403,16 @@ const ApproverBatchDetailPage: React.FC = () => {
 
                   {/* Dynamic Criteria from Backend */}
                   {quickViewDetails?.details?.map((detail: any) => (
-                    <div className="quickview-field" key={detail.id}>
-                      <label className="quickview-label">
-                        {detail.tieuChi} {detail.isRequired ? '(*)' : ''}
-                      </label>
-                      <div className="quickview-editor-mock">
-                        <div className="quickview-editor-toolbar">
-                          <span style={{ fontWeight: 'bold' }}>B</span>
-                          <span style={{ fontStyle: 'italic' }}>I</span>
-                          <span style={{ textDecoration: 'underline' }}>U</span>
-                          <span className="toolbar-sep" />
-                          <span>≡</span>
-                          <span>•=</span>
-                          <span>1=</span>
-                          <span>⊞</span>
-                        </div>
-                        <div 
-                          className="quickview-editor-html-content"
-                          dangerouslySetInnerHTML={{ __html: detail.noiDung || '—' }}
-                        />
-                      </div>
-                    </div>
+                    <CriteriaRichBlock
+                      key={detail.id || detail.criteriaId}
+                      label={detail.tieuChi}
+                      isRequired={detail.isRequired}
+                      value={detail.noiDung || ''}
+                    />
                   ))}
 
                   {/* Last Field: Product Image */}
-                  {quickViewDetails?.imageUrl && (
-                    <div className="quickview-field">
-                      <label className="quickview-label">Ảnh sản phẩm</label>
-                      <div className="quickview-image-container">
-                        <img 
-                          src={new URL(`../assets/${quickViewDetails.imageUrl}`, import.meta.url).href}
-                          alt="Ảnh sản phẩm" 
-                          className="quickview-product-img"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                  <ProductImageCard imageUrl={quickViewDetails?.imageUrl} />
                 </div>
 
                 {/* Bottom Feedback Box */}
