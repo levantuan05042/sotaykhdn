@@ -615,15 +615,10 @@ const DetailProductPage: React.FC = () => {
   }, [productData?.imageUrl]);
 
   useEffect(() => {
-  console.log('productData=', productData);
-  console.log('imageUrl=', productData?.imageUrl);
-
-  if (productData?.imageUrl) {
-    const url = toDisplayUrl(productData.imageUrl);
-    console.log('displayUrl=', url);
-    setPreviewImage(url);
-  }
-}, [productData?.imageUrl]);
+    if (productData?.imageUrl) {
+      setPreviewImage(productData.imageUrl);
+    }
+  }, [productData?.imageUrl]);
 
   useEffect(() => {
     return () => { if (avatarFile && previewImage.startsWith('blob:')) URL.revokeObjectURL(previewImage); };
