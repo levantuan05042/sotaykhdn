@@ -807,7 +807,7 @@ const DetailProductPage: React.FC = () => {
     );
   };
 
-  const requiredCriteria = criteria.filter(c => c.isSelected && c.isRequired);
+  // const requiredCriteria = criteria.filter(c => c.isSelected && c.isRequired);
   const optionalCriteria = criteria.filter(c => c.isSelected && !c.isRequired);
 
   return (
