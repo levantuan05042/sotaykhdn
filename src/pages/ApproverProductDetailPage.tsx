@@ -7,139 +7,8 @@ import { formatApprovedBy } from '../utils/formatUtils';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
 import ProductImageCard from '../components/ui/ProductImageCard';
 import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
+import StatusBadge from '../components/ui/StatusBadge';
 import './ApproverProductDetailPage.css';
-
-/*
-interface CommentItem {
-  id: string;
-  author: string;
-  avatar: string;
-  date: string;
-  content: string;
-}
-*/
-
-/*
-interface MockProductDetail {
-  id: string;
-  batch: string;
-  title: string;
-  productGroup: string;
-  productCategory: string;
-  business: string;
-  productName: string;
-  characteristics: string;
-  distributionChannel: string;
-  guidelineDocument: string;
-  utilities: string;
-  displayStatus: string;
-  comments: CommentItem[];
-}
-*/
-
-/*
-const MOCK_DETAILS_MAP: Record<string, MockProductDetail> = {
-  '1': {
-    id: '1',
-    batch: 'Lô 1250384',
-    title: 'Sản phẩm cho vay',
-    productGroup: 'Sản phẩm Cho vay',
-    productCategory: 'Tài khoản thanh toán',
-    business: 'Tài khoản thanh toán',
-    productName: 'Tài khoản thanh toán',
-    characteristics: `* Đặc tính chung:
-- Kỳ hạn gửi: Không kỳ hạn
-- Đồng tiền: VND và ngoại tệ
-- Số dư tối thiểu: Đối với khách hàng tổ chức
-+ Số dư tối thiểu bằng VND: 1.000.000 đồng (Một triệu đồng).
-+ Số dư tối thiểu bằng ngoại tệ: 100 đơn vị tiền tệ (Ví dụ: 100 USD, 100 EUR, v.v...).
-- Gửi và rút:
-+ Gửi: KH gửi tiền nhiều lần vào TK tại quầy giao dịch/CDM, chuyển khoản qua ATM/CDM, trên kênh điện tử, Ủy nhiệm chi...
-+ Rút: KH rút tiền nhiều lần bằng các phương tiện thanh toán.
-- Phí và lãi:
-+ Phí: Phí dịch vụ áp dụng theo biểu phí hiện hành của Agribank
-+ Lãi suất: Lãi suất thả nổi.
-* Cách tính và lãi: Trả lãi theo định kỳ hàng tháng vào tài khoản TGTT của khách hàng theo hình thức lãi nhập gốc. Agribank không tính và trả lãi trường hợp số dư bình quân tháng trên tài khoản TGTT nhỏ hơn số dư tối thiểu.`,
-    distributionChannel: 'Giao dịch lần đầu trực tiếp tại quầy, các lần tiếp theo có thể thực hiện trên nhiều kênh: ATM/CDM; kênh điện tử',
-    guidelineDocument: 'Quy định số 3325/QyĐ-NHNo-TCKT ngày 30/9/2024 của Tổng Giám đốc về mở và sử dụng tài khoản thanh toán.',
-    utilities: `- Không giới hạn số lần gửi, rút tại bất kỳ thời điểm nào dưới nhiều hình thức;
-- Sử dụng để thanh toán, chuyển khoản, thực hiện các giao dịch thanh toán không dùng tiền mặt;
-- Bảo mật số dư tiền gửi;
-- Dịch vụ thông tin tài khoản qua Mobile Banking, Internet Banking.
-- Chủ tài khoản thanh toán được ủy quyền trong sử dụng tài khoản thanh toán của mình theo quy định của pháp luật.
-- Chủ tài khoản được yêu cầu Agribank thực hiện các lệnh thanh toán hợp pháp, hợp lệ và được cung cấp thông tin về số dư và các giao dịch phát sinh trên tài khoản thanh toán của mình theo thỏa thuận với Agribank.
-- Được hưởng lãi suất tiền gửi không kỳ hạn áp dụng cho tài khoản thanh toán theo quy định của Agribank.`,
-    displayStatus: 'Ẩn',
-    comments: [
-      {
-        id: 'c1',
-        author: 'Nguyễn Hải Long',
-        avatar: 'https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92',
-        date: '11/04/2026',
-        content: 'Thiếu tên sản phẩm, mã sản phẩm. Thêm nhiều nội dung hơn cho phần tiêu chí "Kênh phân phối"'
-      },
-      {
-        id: 'c2',
-        author: 'Nguyễn Hải Long',
-        avatar: 'https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92',
-        date: '11/04/2026',
-        content: 'Thiếu tên sản phẩm, mã sản phẩm. Thêm nhiều nội dung hơn cho phần tiêu chí "Kênh phân phối"'
-      }
-    ]
-  },
-  '2': {
-    id: '2',
-    batch: 'Lô 1250385',
-    title: 'Danh mục huy động vốn',
-    productGroup: 'Sản phẩm Huy động',
-    productCategory: 'Tiền gửi tiết kiệm',
-    business: 'Huy động vốn doanh nghiệp',
-    productName: 'Tiền gửi có kỳ hạn',
-    characteristics: `* Đặc tính chung:
-- Kỳ hạn gửi: Từ 1 tháng đến 36 tháng
-- Đồng tiền: VND, USD, EUR
-- Số dư tối thiểu: 50.000.000 VND hoặc 2.000 USD.
-- Gửi tiền một lần, rút một lần hoặc nhiều lần theo quy định.`,
-    distributionChannel: 'Mở trực tiếp tại các phòng giao dịch/chi nhánh Agribank trên toàn quốc.',
-    guidelineDocument: 'Quy định số 1024/QyĐ-NHNo-TCKT ngày 15/5/2025 về tiền gửi tiết kiệm.',
-    utilities: `- Lãi suất cạnh tranh cố định theo kỳ hạn;
-- Cầm cố thẻ tiết kiệm để vay vốn khi có nhu cầu;
-- Bảo mật thông tin số dư tuyệt đối.`,
-    displayStatus: 'Ẩn',
-    comments: [
-      {
-        id: 'c3',
-        author: 'Nguyễn Hải Long',
-        avatar: 'https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92',
-        date: '12/04/2026',
-        content: 'Vui lòng bổ sung biểu phí rút trước hạn.'
-      }
-    ]
-  }
-};
-
-const getFallbackDetail = (id: string): MockProductDetail => ({
-  id,
-  batch: `Lô 125038${id}`,
-  title: `Sản phẩm yêu cầu số ${id}`,
-  productGroup: 'Sản phẩm Cho vay',
-  productCategory: 'Tài khoản thanh toán',
-  business: 'Tài khoản thanh toán',
-  productName: 'Sản phẩm dịch vụ mẫu',
-  characteristics: `* Đặc tính mẫu của sản phẩm:
-- Kỳ hạn: Không kỳ hạn
-- Loại tiền tệ áp dụng: VND
-- Hạn mức tối thiểu: 1.000.000 VND`,
-  distributionChannel: 'Hệ thống quầy giao dịch và ứng dụng ngân hàng số Agribank.',
-  guidelineDocument: 'Văn bản hướng dẫn số 9999/QyĐ-NHNo của Tổng Giám đốc.',
-  utilities: `- Thanh toán tiện lợi
-- Hỗ trợ trực tuyến 24/7`,
-  displayStatus: 'Ẩn',
-  comments: []
-});
-*/
-
-
 
 interface ApproverProductDetailPageProps {
   requestId?: string;
@@ -175,6 +44,10 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         setDetail(data);
         if (initialFeedback !== undefined) {
           setNewComment(initialFeedback);
+        } else if (data.comments && data.comments.length > 0) {
+          setNewComment(data.comments[data.comments.length - 1].comment || '');
+        } else if (data.rejectReason) {
+          setNewComment(data.rejectReason);
         }
       } catch (error) {
         console.error("Error fetching product detail:", error);
@@ -233,19 +106,6 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     });
   };
 
-  // const handleCriteriaChange = (criteriaId: string, value: string) => {
-  //   setDetail((prev: any) => {
-  //     if (!prev) return prev;
-  //     const updatedDetails = prev.details?.map((d: any) =>
-  //       d.id === criteriaId ? { ...d, noiDung: value } : d
-  //     );
-  //     return {
-  //       ...prev,
-  //       details: updatedDetails
-  //     };
-  //   });
-  // };
-
   const handleBack = () => {
     if (onClose) {
       onClose({
@@ -257,17 +117,151 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     }
   };
 
-  const handleSaveReview = (notesVal: string) => {
-    const label = notesVal === '0' ? 'Yêu cầu chỉnh sửa' : notesVal === '1' ? 'Từ chối' : 'Đồng ý/Duyệt';
-    toast.success(`Đã chọn trạng thái: ${label} (Nhấn Lưu ở màn ngoài để lưu chính thức)`);
+  const handleSaveReview = async (notesVal: string) => {
+    if ((notesVal === '1' || notesVal === '0') && !newComment.trim()) {
+      if (notesVal === '1') {
+        toast.error("Sản phẩm bị từ chối bắt buộc phải nhập nội dung comment!");
+      } else {
+        toast.error("Sản phẩm yêu cầu chỉnh sửa bắt buộc phải nhập nội dung comment!");
+      }
+      return;
+    }
 
-    setDetail((prev: any) => {
-      if (!prev) return prev;
-      return {
+    try {
+      const username = localStorage.getItem('currentUserUsername') || '';
+      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+      const approvedByStr = username ? `${username}_${branchCode}` : '';
+
+      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT.REVIEW(detail.id), {
+        notes: notesVal,
+        comment: newComment.trim(),
+        approvedBy: approvedByStr
+      });
+
+      setDetail((prev: any) => ({
         ...prev,
         notes: notesVal
+      }));
+
+      const labelMap: Record<string, string> = {
+        '0': 'Yêu cầu chỉnh sửa',
+        '1': 'Từ chối',
+        '2': 'Duyệt',
+        '3': 'Đã Review',
+        'REVIEWED': 'Đã Review'
       };
-    });
+      toast.success(`Đã lưu đánh giá (${labelMap[notesVal] || notesVal}) thành công!`);
+
+      if (onClose) {
+        onClose({ notes: notesVal, feedback: newComment.trim() });
+      }
+    } catch (error) {
+      console.error("Error saving review:", error);
+      toast.error("Không thể lưu đánh giá sản phẩm!");
+    }
+  };
+
+  const formatDateDDMMYYYY = (dateStr?: any) => {
+    if (!dateStr) return '—';
+    if (Array.isArray(dateStr)) {
+      const year = dateStr[0];
+      const month = String(dateStr[1]).padStart(2, '0');
+      const day = String(dateStr[2]).padStart(2, '0');
+      return `${day}/${month}/${year}`;
+    }
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return String(dateStr);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const renderNoteBadge = (notesValue: string | null) => {
+    if (notesValue === '0') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '5px 12px',
+          borderRadius: '9999px',
+          fontSize: '13px',
+          fontWeight: 600,
+          backgroundColor: '#FEF9C3',
+          color: '#854D0E'
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+          </svg>
+          Yêu cầu chỉnh sửa
+        </span>
+      );
+    }
+    if (notesValue === '1') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '5px 12px',
+          borderRadius: '9999px',
+          fontSize: '13px',
+          fontWeight: 600,
+          backgroundColor: '#FEE2E2',
+          color: '#991B1B'
+        }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+          </svg>
+          Từ chối
+        </span>
+      );
+    }
+    if (notesValue === '3' || notesValue === 'REVIEWED') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 14px',
+          borderRadius: '9999px',
+          fontSize: '13px',
+          fontWeight: 600,
+          backgroundColor: '#D1FAE5',
+          color: '#065F46'
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+          Đã review
+        </span>
+      );
+    }
+    if (notesValue === '2') {
+      return (
+        <span style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          padding: '6px 14px',
+          borderRadius: '9999px',
+          fontSize: '13px',
+          fontWeight: 600,
+          backgroundColor: '#D1FAE5',
+          color: '#065F46'
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9 12l2 2 4-4" />
+          </svg>
+          Đã duyệt
+        </span>
+      );
+    }
+    return <span style={{ color: '#8C8C8C' }}>Chưa có</span>;
   };
 
   if (loading || !detail) {
@@ -309,91 +303,77 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
             </svg>
             <span style={{ color: '#171717', fontWeight: 600 }}>{detail.name}</span>
           </div>
-
-          <span style={{ marginLeft: '12px', display: 'flex', alignItems: 'center' }}>
-            {detail.notes === '0' && (
-              <span className="note-badge note-badge--revision" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                </svg>
-                Yêu cầu chỉnh sửa
-              </span>
-            )}
-            {detail.notes === '1' && (
-              <span className="note-badge note-badge--rejected" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-                </svg>
-                Từ chối
-              </span>
-            )}
-            {detail.notes === '2' && (
-              <span className="note-badge note-badge--approved" style={{ padding: '4px 10px', fontSize: '12px' }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
-                Đã duyệt
-              </span>
-            )}
-            {!['0', '1', '2'].includes(detail.notes) && '—'}
-          </span>
         </div>
 
         <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {(detail.status === 'PENDING_APPROVAL' || detail.requestStatus === 'PENDING_APPROVAL') && (
-            <>
-              <button
-                className="btn-reject"
-                onClick={() => handleSaveReview('1')}
-                style={{ backgroundColor: '#ffffff', color: '#262626', border: '1px solid #d9d9d9', padding: '8px 24px', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-              >
-                Từ chối
-              </button>
-              {newComment.trim() !== '' ? (
+          {(detail.status === 'PENDING_APPROVAL' || detail.requestStatus === 'PENDING_APPROVAL') && (() => {
+            const origComment = (initialFeedback || detail?.comments?.[detail.comments.length - 1]?.comment || detail?.rejectReason || '').trim();
+            const currentComment = newComment.trim();
+            const isCommentModified = Boolean(currentComment && currentComment !== origComment);
+
+            return (
+              <>
                 <button
-                  className="btn-revision-request-yellow"
-                  onClick={() => handleSaveReview('0')}
+                  className="btn-reject"
+                  onClick={() => handleSaveReview('1')}
                   style={{
-                    backgroundColor: '#FEF08A',
-                    color: '#854D0E',
-                    border: '1px solid #FEF08A',
+                    backgroundColor: '#ffffff',
+                    color: '#171717',
+                    border: '1px solid #d9d9d9',
                     padding: '8px 24px',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontWeight: 600
                   }}
                 >
-                  Yêu cầu chỉnh sửa
+                  Từ chối
                 </button>
-              ) : (
-                <button
-                  className="btn-action-approve"
-                  onClick={() => handleSaveReview('2')}
-                  style={{
-                    backgroundColor: '#047857',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '8px 24px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
-                >
-                  Duyệt
-                </button>
-              )}
-            </>
-          )}
+
+                {isCommentModified ? (
+                  <button
+                    className="btn-revision-request-yellow"
+                    onClick={() => handleSaveReview('0')}
+                    style={{
+                      backgroundColor: '#FEF08A',
+                      color: '#854D0E',
+                      border: '1px solid #FEF08A',
+                      padding: '8px 24px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    Yêu cầu chỉnh sửa
+                  </button>
+                ) : (
+                  <button
+                    className="btn-action-approve"
+                    onClick={() => handleSaveReview('3')}
+                    style={{
+                      backgroundColor: '#053E2B',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '8px 24px',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontWeight: 600
+                    }}
+                  >
+                    Đã review
+                  </button>
+                )}
+              </>
+            );
+          })()}
         </div>
       </header>
 
-  {/* MAIN CONTAINER */ }
-  < main className = "detail-main-container" >
+      {/* MAIN CONTAINER */}
+      <main className="detail-main-container">
 
-    {/* LEFT COLUMN: FORM */ }
-    < section className = "detail-left-panel" >
-          
+        {/* LEFT COLUMN: FORM */}
+        <section className="detail-left-panel">
+
           <div className="form-group">
             <label className="form-label">
               Nhóm sản phẩm <span className="form-label-required">(*)</span>
@@ -433,7 +413,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                     ...prev,
                     productCategoryId: catId,
                     productCategoryName: catName,
-                    businessId: '', // Reset business when category changes
+                    businessId: '',
                     businessName: ''
                   }));
                 }}
@@ -480,142 +460,199 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
             />
           </div>
 
-{/* Dynamic Criteria Fields */}
-{
-  detail.details?.map((item: any, index: number) => (
-    <CriteriaRichBlock
-      key={item.criteriaId || index}
-      label={item.tieuChi}
-      isRequired={item.isRequired}
-      value={item.noiDung || ''}
-    />
-  ))
-}
+          {/* Dynamic Criteria Fields */}
+          {detail.details?.map((item: any, index: number) => (
+            <CriteriaRichBlock
+              key={item.criteriaId || index}
+              label={item.tieuChi}
+              isRequired={item.isRequired}
+              value={item.noiDung || ''}
+            />
+          ))}
 
-{/* Last Field: Product Image */}
-<ProductImageCard imageUrl={detail.imageUrl} />
+          {/* Last Field: Product Image */}
+          <ProductImageCard imageUrl={detail.imageUrl} />
 
-        </section >
+        </section>
 
-  {/* RIGHT COLUMN: INFO PANEL & COMMENTS */ }
-  < section className = "detail-right-panel" >
+        {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
+        <section className="detail-right-panel">
 
-    {/* Trạng thái hiển thị */ }
-    < div className = "right-card shadow-sm" >
-            <h3 className="right-card-title">
-              Trạng thái hiển thị
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="16" x2="12" y2="12"></line>
-                <line x1="12" y1="8" x2="12.01" y2="8"></line>
-              </svg>
-            </h3>
-            <select
-              className="form-select"
-              value={detail.active ? 'Hiển thị' : 'Ẩn'}
-              disabled
-              onChange={(e) => handleFieldChange('active', e.target.value === 'Hiển thị')}
-            >
-              <option value="Ẩn">Ẩn</option>
-              <option value="Hiển thị">Hiển thị</option>
-            </select>
-          </div >
+          {/* Trạng thái sản phẩm & Trạng thái hiển thị */}
+          <div className="right-card shadow-sm">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
+                  Trạng thái sản phẩm
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </h3>
+                <StatusBadge status={detail.requestStatus || detail.status || 'PENDING_APPROVAL'} />
+              </div>
 
-  {/* Thông tin sản phẩm */ }
-  < div className = "right-card shadow-sm" style = {{ marginTop: '16px' }}>
-            <h3 className="right-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+                <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
+                  Trạng thái hiển thị
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                  </svg>
+                </h3>
+                <select
+                  className="form-select"
+                  value={detail.active ? 'Hiển thị' : 'Ẩn'}
+                  disabled
+                  onChange={(e) => handleFieldChange('active', e.target.value === 'Hiển thị')}
+                >
+                  <option value="Ẩn">Ẩn</option>
+                  <option value="Hiển thị">Hiển thị</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Thông tin sản phẩm */}
+          <div className="right-card shadow-sm" style={{ marginTop: '16px' }}>
+            <h3 className="right-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0, fontSize: '15px', fontWeight: 600, color: '#171717' }}>
               <span>Thông tin sản phẩm</span>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
               </svg>
             </h3>
-            <div className="product-meta-grid" style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '16px',
+
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
               padding: '16px',
-              backgroundColor: '#F9FAFB',
+              backgroundColor: '#FFFFFF',
               border: '1px solid #E5E7EB',
               borderRadius: '8px',
               marginTop: '10px'
             }}>
-              <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Người tạo</span>
-                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
+              {/* Row 1: Người tạo & Người Phê duyệt */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#737373' }}>Người tạo</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#737373' }}>Người Phê duyệt</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
+                </div>
               </div>
-              <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Người kiểm duyệt</span>
-                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
+
+              {/* Row 2: Thời gian tạo & Phiên bản */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#737373' }}>Thời gian tạo</span>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>
+                    {detail.createdAt ? formatDateDDMMYYYY(detail.createdAt) : '—'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '12px', color: '#737373' }}>Phiên bản</span>
+                  <div>
+                    <span style={{
+                      backgroundColor: '#E6F4EA',
+                      color: '#047857',
+                      padding: '3px 10px',
+                      borderRadius: '9999px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      display: 'inline-block'
+                    }}>Phiên bản {detail.version || 1}</span>
+                  </div>
+                </div>
               </div>
-              <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Thời gian tạo</span>
-                <span className="meta-value" style={{ fontSize: '13px', fontWeight: 600, color: '#171717' }}>
-                  {detail.createdAt ? new Date(detail.createdAt).toLocaleDateString('vi-VN') : '—'}
+
+              {/* Divider */}
+              <div style={{ height: '1px', backgroundColor: '#F0F0F0', margin: '2px 0' }} />
+
+              {/* Row 3: Lượt xem & Lượt lưu */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#737373', fontSize: '12px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    <span>Lượt xem</span>
+                  </div>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#171717' }}>
+                    {detail.viewCount !== null && detail.viewCount !== undefined ? detail.viewCount : 'Chưa có'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#737373', fontSize: '12px' }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Lượt lưu</span>
+                  </div>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#171717' }}>
+                    {detail.savedCount !== null && detail.savedCount !== undefined ? detail.savedCount : 0}
+                  </span>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div style={{ height: '1px', backgroundColor: '#F0F0F0', margin: '2px 0' }} />
+
+              {/* Row 4: Thuộc yêu cầu */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '12px', color: '#737373' }}>Thuộc yêu cầu</span>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: '#053E2B', textDecoration: 'underline', cursor: 'pointer' }}>
+                  {detail.requestName || '—'}
                 </span>
               </div>
-              <div className="meta-item" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span className="meta-label" style={{ fontSize: '11px', color: '#737373' }}>Phiên bản</span>
-                <span className="version-tag" style={{
-                  backgroundColor: '#DEF7EC',
-                  color: '#03543F',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  alignSelf: 'flex-start',
-                  marginTop: '2px'
-                }}>Phiên bản {detail.version || 1}</span>
-              </div>
-            </div>
-          </div >
 
-  {/* Bình luận */ }
-  < div className = "comments-container shadow-sm" style = {{ marginTop: '16px' }}>
-            <h2 className="comments-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
+              {/* Row 5: Thời gian tạo yêu cầu */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '12px', color: '#737373' }}>Thời gian tạo yêu cầu</span>
+                <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>
+                  {detail.requestCreatedAt ? formatDateDDMMYYYY(detail.requestCreatedAt) : '—'}
+                </span>
+              </div>
+
+              {/* Row 6: Ghi chú */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <span style={{ fontSize: '12px', color: '#737373' }}>Ghi chú</span>
+                <div>{renderNoteBadge(detail.notes)}</div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* Bình luận phản hồi */}
+          <div className="comments-container shadow-sm" style={{ marginTop: '16px' }}>
+            <h2 className="comments-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#AE1C3F', fontSize: '15px', fontWeight: 700 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#AE1C3F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>
-              <span>Bình luận</span>
+              <span>Bình luận phản hồi</span>
             </h2>
-
-            <div className="comments-list">
-              {detail.comments && detail.comments.map((comment: any) => {
-                const dateStr = comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('vi-VN') : '—';
-                return (
-                  <div className="comment-item" key={comment.id}>
-                    <div className="comment-meta">
-                      <div className="comment-avatar">
-                        <img src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92" alt="Avatar" />
-                      </div>
-                      <div className="comment-author-info">
-                        <span className="comment-author">{comment.createdBy || 'Cán bộ duyệt'}</span>
-                        <span className="comment-date">{dateStr}</span>
-                      </div>
-                    </div>
-                    <div className="comment-body">
-                      {comment.comment}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
 
             <div className="comment-input-area">
               <textarea
                 className="comment-textarea"
-                rows={3}
-                placeholder="Nhập nội dung phản hồi mới..."
+                rows={4}
+                placeholder="Nhập nội dung bình luận phản hồi..."
                 value={newComment}
                 disabled={detail.status !== 'PENDING_APPROVAL' && detail.requestStatus !== 'PENDING_APPROVAL'}
                 onChange={(e) => setNewComment(e.target.value)}
               />
             </div>
-          </div >
+          </div>
 
-        </section >
+        </section>
 
-      </main >
-    </div >
+      </main>
+    </div>
   );
 };
 

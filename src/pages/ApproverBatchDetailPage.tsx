@@ -38,6 +38,12 @@ const ApproverBatchDetailPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
 
+  const getApprovedByStr = () => {
+    const username = localStorage.getItem('currentUserUsername') || '';
+    const branchCode = localStorage.getItem('currentUserBranchCode') || '';
+    return username ? `${username}_${branchCode}` : '';
+  };
+
   useEffect(() => {
     if (!requestId) return;
     const fetchBatchAndProducts = async () => {
@@ -60,7 +66,7 @@ const ApproverBatchDetailPage: React.FC = () => {
             business: item.businessName || '—',
             notes: item.notes || null,
             characteristics: characItem ? characItem.noiDung : '',
-            feedback: item.notes === '0' ? lastComment : '',
+            feedback: (item.notes === '0' || item.notes === '1') ? lastComment : (lastComment || ''),
             originalFeedback: lastComment,
           };
         });
@@ -99,6 +105,7 @@ const ApproverBatchDetailPage: React.FC = () => {
       }
     }
   };
+
   const [userRole, setUserRole] = useState<string>(() => {
     return localStorage.getItem('userRole') || 'ETN08';
   });
@@ -115,9 +122,7 @@ const ApproverBatchDetailPage: React.FC = () => {
 
   const handleRejectBatchSubmit = async (commentText: string) => {
     try {
-      const username = localStorage.getItem('currentUserUsername') || '';
-      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
-      const approvedByStr = username ? `${username}_${branchCode}` : '';
+      const approvedByStr = getApprovedByStr();
       await axios.post(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: 'REJECTED',
         approvedBy: approvedByStr,
@@ -142,6 +147,11 @@ const ApproverBatchDetailPage: React.FC = () => {
       toast.error(`Sản phẩm "${missingComment.name}" yêu cầu chỉnh sửa bắt buộc phải nhập nội dung góp ý!`);
       return;
     }
+    const missingRejectComment = products.find(p => p.notes === '1' && !p.feedback?.trim());
+    if (missingRejectComment) {
+      toast.error(`Sản phẩm "${missingRejectComment.name}" bị từ chối bắt buộc phải nhập nội dung góp ý!`);
+      return;
+    }
     setIsApproveConfirmOpen(true);
   };
 
@@ -151,9 +161,7 @@ const ApproverBatchDetailPage: React.FC = () => {
     const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'ACTIVE';
 
     try {
-      const username = localStorage.getItem('currentUserUsername') || '';
-      const branchCode = localStorage.getItem('currentUserBranchCode') || '';
-      const approvedByStr = username ? `${username}_${branchCode}` : '';
+      const approvedByStr = getApprovedByStr();
       await axios.post(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.UPDATE_STATUS(requestId!), {
         status: targetStatus,
         approvedBy: approvedByStr,
@@ -174,7 +182,49 @@ const ApproverBatchDetailPage: React.FC = () => {
       toast.error("Không thể phê duyệt lô sản phẩm!");
     }
   };
-  const handleAction = (type: 'DRAFT' | 'SEND' | 'REJECT' | 'REVISION' | 'REVIEWED') => {
+
+  // Hard Save single product evaluation (lưu cứng)
+  const handleSaveProductReview = async (productId: string, targetNotes: string, commentText: string) => {
+    if ((targetNotes === '1' || targetNotes === '0') && !commentText.trim()) {
+      if (targetNotes === '1') {
+        toast.error("Sản phẩm bị từ chối bắt buộc phải nhập nội dung comment!");
+      } else {
+        toast.error("Sản phẩm yêu cầu chỉnh sửa bắt buộc phải nhập nội dung comment!");
+      }
+      return false;
+    }
+
+    try {
+      const approvedByStr = getApprovedByStr();
+      await axios.post(API_ENDPOINTS.APPROVER.PRODUCT.REVIEW(productId), {
+        notes: targetNotes,
+        comment: commentText.trim(),
+        approvedBy: approvedByStr
+      });
+
+      // Update state
+      setProducts(prev => prev.map(p => p.id === productId ? { ...p, notes: targetNotes, feedback: commentText } : p));
+      if (quickViewProduct?.id === productId) {
+        setQuickViewProduct(prev => prev ? { ...prev, notes: targetNotes, feedback: commentText } : null);
+      }
+
+      const labelMap: Record<string, string> = {
+        '0': 'Yêu cầu chỉnh sửa',
+        '1': 'Từ chối',
+        '2': 'Duyệt',
+        '3': 'Đã Review',
+        'REVIEWED': 'Đã Review'
+      };
+      toast.success(`Đã lưu đánh giá (${labelMap[targetNotes] || targetNotes}) cho sản phẩm thành công!`);
+      return true;
+    } catch (error) {
+      console.error("Error saving product review:", error);
+      toast.error("Không thể lưu đánh giá sản phẩm!");
+      return false;
+    }
+  };
+
+  const handleAction = async (type: 'DRAFT' | 'SEND' | 'REJECT' | 'REVISION' | 'REVIEWED') => {
     switch (type) {
       case 'DRAFT':
         toast.success('Đã lưu bản nháp lô sản phẩm thành công!');
@@ -184,32 +234,67 @@ const ApproverBatchDetailPage: React.FC = () => {
         break;
       case 'REJECT':
         if (quickViewProduct) {
-          toast.success(`Đã TỪ CHỐI sản phẩm: ${quickViewProduct.name}`);
-          setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { ...p, notes: '1' } : p));
+          await handleSaveProductReview(quickViewProduct.id, '1', quickViewProduct.feedback || '');
         }
         break;
       case 'REVISION':
         if (quickViewProduct) {
-          toast.success(`Đã YÊU CẦU CHỈNH SỬA sản phẩm: ${quickViewProduct.name}`);
-          setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { ...p, notes: '0' } : p));
+          await handleSaveProductReview(quickViewProduct.id, '0', quickViewProduct.feedback || '');
         }
         break;
       case 'REVIEWED':
         if (quickViewProduct) {
-          toast.success(`Đã xác nhận REVIEW sản phẩm: ${quickViewProduct.name}`);
-          const currentTrim = (quickViewProduct.feedback || '').trim();
-          const origTrim = (quickViewProduct.originalFeedback || '').trim();
-          const isMod = Boolean(currentTrim && currentTrim !== origTrim);
-          setProducts(prev => prev.map(p => p.id === quickViewProduct.id ? { 
-            ...p, 
-            notes: 'REVIEWED',
-            feedback: isMod ? p.feedback : ''
-          } : p));
+          await handleSaveProductReview(quickViewProduct.id, '3', quickViewProduct.feedback || '');
         }
         break;
       default:
         break;
     }
+  };
+
+  const renderNoteBadge = (notesValue: string | null) => {
+    if (notesValue === '0') {
+      return (
+        <span className="note-badge note-badge--revision">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+          </svg>
+          Yêu cầu chỉnh sửa
+        </span>
+      );
+    }
+    if (notesValue === '1') {
+      return (
+        <span className="note-badge note-badge--rejected">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+          </svg>
+          Từ chối
+        </span>
+      );
+    }
+    if (notesValue === '3' || notesValue === 'REVIEWED') {
+      return (
+        <span className="note-badge note-badge--reviewed">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Đã review
+        </span>
+      );
+    }
+    if (notesValue === '2') {
+      return (
+        <span className="note-badge note-badge--approved">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Đã duyệt
+        </span>
+      );
+    }
+    return '—';
   };
 
   if (loading && !batchRequest) {
@@ -284,7 +369,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                 <th>Nhóm sản phẩm</th>
                 <th>Danh mục sản phẩm</th>
                 <th>Nghiệp vụ</th>
-                <th>Trạng thái</th>
+                <th>Ghi chú</th>
                 <th style={{ width: '80px', textAlign: 'center' }}></th>
               </tr>
             </thead>
@@ -302,42 +387,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                     <td>{p.group}</td>
                     <td>{p.category}</td>
                     <td>{p.business}</td>
-                    <td>
-                      {p.notes === '0' && (
-                        <span className="note-badge note-badge--revision">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
-                          </svg>
-                          Yêu cầu sửa
-                        </span>
-                      )}
-                      {p.notes === '1' && (
-                        <span className="note-badge note-badge--rejected">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                          </svg>
-                          Từ chối
-                        </span>
-                      )}
-                      {p.notes === 'REVIEWED' && (
-                        <span className="note-badge note-badge--reviewed">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                          Đã Review
-                        </span>
-                      )}
-                      {p.notes === '2' && batchRequest?.status === 'ACTIVE' && (
-                        <span className="note-badge note-badge--approved">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '4px'}}>
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                          Đã duyệt
-                        </span>
-                      )}
-                      {(p.notes !== '0' && p.notes !== '1' && p.notes !== 'REVIEWED' && (p.notes !== '2' || batchRequest?.status !== 'ACTIVE')) && '—'}
-                    </td>
+                    <td>{renderNoteBadge(p.notes)}</td>
                     <td align="center">
                       <div className="action-buttons-group">
                         <button
@@ -417,36 +467,16 @@ const ApproverBatchDetailPage: React.FC = () => {
 
                 {/* Bottom Feedback Box */}
                 <div className="quickview-card quickview-card--green-border">
-                  {/* <label className="quickview-label">Ý kiến phản hồi gần nhất</label>
-                  <div style={{ 
-                    padding: '10px 12px', 
-                    backgroundColor: '#F9FAFB', 
-                    borderRadius: '6px', 
-                    fontSize: '13px', 
-                    color: '#4B5563', 
-                    border: '1px solid #E5E7EB', 
-                    marginBottom: '12px',
-                    textAlign: 'left'
-                  }}>
-                    {quickViewDetails?.comments && quickViewDetails.comments.length > 0 ? (
-                      <div>
-                        <p style={{ margin: '0 0 4px 0', fontWeight: 500, color: '#1F2937' }}>
-                          {quickViewDetails.comments[quickViewDetails.comments.length - 1].comment}
-                        </p>
-                        <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
-                          Gửi bởi: {quickViewDetails.comments[quickViewDetails.comments.length - 1].createdBy}
-                        </span>
-                      </div>
-                    ) : (
-                      <span style={{ fontStyle: 'italic', color: '#9CA3AF' }}>Chưa có ý kiến phản hồi nào.</span>
-                    )}
-                  </div> */}
-
-                  <label className="quickview-label">Nội dung yêu cầu chỉnh sửa (nếu có)</label>
+                  <label className="quickview-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#AE1C3F', fontSize: '14px', fontWeight: 700 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AE1C3F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>Bình luận phản hồi</span>
+                  </label>
                   <textarea 
                     className="quickview-feedback-textarea"
                     rows={3}
-                    placeholder="Nhập nội dung yêu cầu chỉnh sửa..."
+                    placeholder="Nhập nội dung bình luận phản hồi..."
                     value={quickViewProduct.feedback}
                     disabled={batchRequest?.status !== 'PENDING_APPROVAL'}
                     onChange={(e) => {
