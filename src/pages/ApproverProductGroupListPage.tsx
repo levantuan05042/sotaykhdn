@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
@@ -22,11 +22,10 @@ interface ProductGroupItem {
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Lưu nháp', value: 'DRAFT' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Hoàn thành', value: 'ACTIVE' },
-  { label: 'Từ chối', value: 'REJECTED' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Từ chối', value: 'REJECTED' },
 ];
 
 const SUPER_GROUP_FILTER_OPTIONS: FilterOption[] = [
@@ -39,8 +38,8 @@ const SUPER_GROUP_FILTER_OPTIONS: FilterOption[] = [
 export const ApproverProductGroupListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedGroupType, setSelectedGroupType] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedGroupTypes, setSelectedGroupTypes] = useState<string[]>([]);
   const [productGroups, setProductGroups] = useState<ProductGroupItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -59,13 +58,14 @@ export const ApproverProductGroupListPage: React.FC = () => {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST, {
           params: {
             keyword: searchTerm || undefined,
-            status: selectedStatus || undefined,
-            types: selectedGroupType || undefined,
+            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+            types: selectedGroupTypes.length ? selectedGroupTypes : undefined,
             forApproval: true,
           },
+          paramsSerializer: { indexes: null },
         });
 
-        const mapped: ProductGroupItem[] = response.data.map((item: any, index: number) => {
+        let mapped: ProductGroupItem[] = response.data.map((item: any, index: number) => {
           return {
             id: item.id,
             stt: index + 1,
@@ -78,6 +78,10 @@ export const ApproverProductGroupListPage: React.FC = () => {
           };
         });
 
+        if (selectedStatuses.length > 1) {
+          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+        }
+
         setProductGroups(mapped);
       } catch (error) {
         console.error('Error fetching product groups from backend:', error);
@@ -87,7 +91,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
     };
 
     fetchProductGroups();
-  }, [searchTerm, selectedStatus, selectedGroupType]);
+  }, [searchTerm, selectedStatuses, selectedGroupTypes]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -196,20 +200,49 @@ export const ApproverProductGroupListPage: React.FC = () => {
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
-        <div className="filter-row-left">
-          <FilterDropdown
-            label="Trạng thái"
-            options={STATUS_FILTER_OPTIONS}
-            selectedValue={selectedStatus}
-            onSelect={setSelectedStatus}
-          />
+        <div className="dropdown-group-container">
+          <div className="dropdown-row">
+            <FilterDropdown
+              label="Trạng thái"
+              options={STATUS_FILTER_OPTIONS}
+              multiple
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+            />
 
-          <FilterDropdown
-            label="Nhóm sản phẩm"
-            options={SUPER_GROUP_FILTER_OPTIONS}
-            selectedValue={selectedGroupType}
-            onSelect={setSelectedGroupType}
-          />
+            <FilterDropdown
+              label="Nhóm sản phẩm"
+              options={SUPER_GROUP_FILTER_OPTIONS}
+              multiple
+              selectedValues={selectedGroupTypes}
+              onChange={setSelectedGroupTypes}
+            />
+          </div>
+
+          {(selectedStatuses.length > 0 || selectedGroupTypes.length > 0) && (
+            <div className="selected-filters-row">
+              {selectedStatuses.map((val) => {
+                const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedStatuses(selectedStatuses.filter((s) => s !== val))}
+                  />
+                );
+              })}
+              {selectedGroupTypes.map((val) => {
+                const opt = SUPER_GROUP_FILTER_OPTIONS.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedGroupTypes(selectedGroupTypes.filter((t) => t !== val))}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="filter-row-right">

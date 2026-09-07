@@ -32,9 +32,12 @@
 
 .filter-row-left {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  column-gap: 16px;
+  row-gap: 10px;
   flex: 1;
+  min-width: 0;
 }
 
 .filter-row-right {
