@@ -5,12 +5,20 @@ import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import './ApproverCriteriaDetailPage.css';
 
 interface CommentItem {
   id: string;
   createdBy: string;
   createdAt: string;
   content: string;
+}
+
+interface ProductGroupItem {
+  id: string;
+  name: string;
+  status?: string | null;
+  active?: boolean;
 }
 
 interface CriteriaDetail {
@@ -24,12 +32,31 @@ interface CriteriaDetail {
   approvedBy: string;
   createdAt: string;
   version: number;
-  groupName: string;
+  productGroups: ProductGroupItem[];
   categoryName: string;
   businessName: string;
   superGroupName: string;
   comments: CommentItem[];
 }
+
+const normalizeProductGroups = (item: any): ProductGroupItem[] => {
+  const rawGroups = Array.isArray(item?.productGroups)
+    ? item.productGroups
+    : (item?.productGroups && typeof item.productGroups === 'object' ? Object.values(item.productGroups) : []);
+  const fromApi = rawGroups
+    .filter((g: any) => g && (!g.status || String(g.status).toUpperCase() === 'ACTIVE'))
+    .map((g: any) => ({
+      id: String(g.id ?? g.name ?? ''),
+      name: g.name || '---',
+      status: g.status,
+      active: g.active,
+    }));
+  if (fromApi.length > 0) return fromApi;
+  if (item?.groupName && item.groupName !== '---') {
+    return [{ id: 'groupName', name: item.groupName }];
+  }
+  return [];
+};
 
 export const ApproverCriteriaDetailPage: React.FC = () => {
   const { criteriaId } = useParams<{ criteriaId: string }>();
@@ -56,7 +83,7 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
         approvedBy: critData.approvedByFullName || critData.approvedBy || '---',
         createdAt: critData.createdAt,
         version: critData.version || 1,
-        groupName: critData.groupName || '---',
+        productGroups: normalizeProductGroups(critData),
         categoryName: critData.categoryName || '---',
         businessName: critData.businessName || '---',
         superGroupName: critData.superGroupName || '---',
@@ -158,12 +185,21 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
 
       <div className="formGroup">
         <label className="formLabel">Nhóm sản phẩm <span className="required-asterisk">(*)</span></label>
-        <input 
-          type="text" 
-          className="formInput readonly" 
-          value={detail.groupName} 
-          readOnly 
-        />
+        <div className="approver-criteria-groups-box" aria-readonly="true">
+          {detail.productGroups.length > 0 ? (
+            detail.productGroups.map((g, index) => (
+              <span
+                key={g.id || `${g.name}-${index}`}
+                className={`approver-criteria-group-chip${g.active === false ? ' is-hidden' : ''}`}
+              >
+                {g.name}
+                {g.active === false && <span className="approver-criteria-group-hidden">Đang ẩn</span>}
+              </span>
+            ))
+          ) : (
+            <span className="approver-criteria-groups-empty">---</span>
+          )}
+        </div>
       </div>
 
       <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px', cursor: 'not-allowed' }}>

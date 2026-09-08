@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import toast from 'react-hot-toast';
 import SearchInput from '../components/ui/SearchInput';
 import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
@@ -25,7 +26,8 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
   { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Hoàn thành', value: 'COMPLETED' },
+  { label: 'Đã duyệt', value: 'ACTIVE' },
   { label: 'Từ chối', value: 'REJECTED' },
 ];
 
@@ -51,61 +53,65 @@ const ApproverRequestListPage: React.FC = () => {
     window.dispatchEvent(event);
   }, [requests]);
 
-  useEffect(() => {
-    const fetchRequests = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST, {
-          params: {
-            keyword: searchTerm || undefined,
-            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
-            startDate: startDate || undefined,
-            endDate: endDate || undefined,
-            forApproval: true,
-          },
-        });
+  const fetchRequests = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST, {
+        params: {
+          keyword: searchTerm || undefined,
+          status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+          forApproval: true,
+        },
+      });
 
-        let mapped: RequestItem[] = response.data.map((item: any, index: number) => {
-          let formattedDate = '---';
-          if (item.createdAt) {
-            const d = new Date(item.createdAt);
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            formattedDate = `${day}/${month}/${year}`;
-          }
-
-          return {
-            id: item.requestId,
-            stt: index + 1,
-            title: item.requestName || '---',
-            status: item.status || 'DRAFT',
-            createdAt: formattedDate,
-            creator: item.createdByFullName || item.createdBy || '---',
-            approver: item.approvedByFullName || item.approvedBy || '---',
-          };
-        });
-
-        if (selectedStatuses.length > 1) {
-          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+      let mapped: RequestItem[] = response.data.map((item: any, index: number) => {
+        let formattedDate = '---';
+        if (item.createdAt) {
+          const d = new Date(item.createdAt);
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          formattedDate = `${day}/${month}/${year}`;
         }
 
-        setRequests(mapped);
-      } catch (error) {
-        console.error('Error fetching requests from backend:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+        return {
+          id: item.requestId,
+          stt: index + 1,
+          title: item.requestName || '---',
+          status: item.status || 'DRAFT',
+          createdAt: formattedDate,
+          creator: item.createdByFullName || item.createdBy || '---',
+          approver: item.approvedByFullName || item.approvedBy || '---',
+        };
+      });
 
-    fetchRequests();
+      if (selectedStatuses.length > 1) {
+        mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+      }
+
+      setRequests(mapped);
+    } catch (error) {
+      console.error('Error fetching requests from backend:', error);
+    } finally {
+      setLoading(false);
+    }
   }, [searchTerm, selectedStatuses, startDate, endDate]);
 
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
   const handleBatchConfirm = async (reason?: string) => {
-    if (!modalState.type || selectedKeys.length === 0) return;
+    const actionType = modalState.type;
+    if (!actionType || selectedKeys.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một lô để xử lý.');
+      return;
+    }
     setProcessing(true);
     try {
-      const newStatus = modalState.type === 'APPROVE' ? 'ACTIVE' : 'REJECTED';
+      const requestStatus = actionType === 'APPROVE' ? 'COMPLETED' : 'REJECTED';
       const username = localStorage.getItem('currentUserUsername') || '';
       const branchCode = localStorage.getItem('currentUserBranchCode') || '';
       const approvedByStr = username ? `${username}_${branchCode}` : '';
@@ -114,24 +120,27 @@ const ApproverRequestListPage: React.FC = () => {
       await Promise.all(
         selectedKeys.map((id) =>
           axios.post(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.UPDATE_STATUS(String(id)), {
-            status: newStatus,
+            status: requestStatus,
             approvedBy: approvedByStr,
             productReviews: reviews,
           })
         )
       );
 
-      // Optimistic update
-      setRequests((prev) =>
-        prev.map((item) =>
-          selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
-        )
+      toast.success(
+        actionType === 'APPROVE'
+          ? `Đã phê duyệt hoàn thành ${selectedKeys.length} lô sản phẩm.`
+          : `Đã từ chối và hoàn thành ${selectedKeys.length} lô sản phẩm.`
       );
-
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
-    } catch (error) {
+      await fetchRequests();
+    } catch (error: any) {
       console.error('Batch action error:', error);
+      const apiMessage = error?.response?.data?.message || error?.response?.data || error?.message;
+      toast.error(typeof apiMessage === 'string' && apiMessage.trim()
+        ? apiMessage
+        : 'Không thể xử lý hàng loạt. Vui lòng thử lại.');
     } finally {
       setProcessing(false);
     }

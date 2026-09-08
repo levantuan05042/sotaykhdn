@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import './RejectReasonPopup.css';
 
 interface RejectReasonPopupProps {
@@ -24,12 +25,12 @@ export const RejectReasonPopup: React.FC<RejectReasonPopupProps> = ({
     setReason('');
   };
 
-  return (
+  return createPortal(
     <div className="custom-popup-overlay" onClick={onClose}>
       <div className="custom-popup-card" onClick={(e) => e.stopPropagation()}>
         <div className="custom-popup-header">
           <span className="custom-popup-title">{title}</span>
-          <button className="custom-popup-close-btn" onClick={onClose} title="Đóng">✕</button>
+          <button type="button" className="custom-popup-close-btn" onClick={onClose} title="Đóng">✕</button>
         </div>
         <div className="custom-popup-body">
           <label className="custom-popup-label">Nội dung từ chối (*)</label>
@@ -42,8 +43,9 @@ export const RejectReasonPopup: React.FC<RejectReasonPopupProps> = ({
           />
         </div>
         <div className="custom-popup-footer">
-          <button className="custom-popup-btn-cancel" onClick={onClose}>Hủy</button>
+          <button type="button" className="custom-popup-btn-cancel" onClick={onClose}>Hủy</button>
           <button
+            type="button"
             className={`custom-popup-btn-submit ${reason.trim() ? 'active' : 'disabled'}`}
             disabled={!reason.trim()}
             onClick={handleSubmit}
@@ -52,7 +54,8 @@ export const RejectReasonPopup: React.FC<RejectReasonPopupProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

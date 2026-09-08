@@ -12,7 +12,7 @@ interface StatusBadgeProps {
 const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   PENDING: { label: 'Chờ duyệt', variant: 'pending' },
   PENDING_APPROVAL: { label: 'Chờ duyệt', variant: 'pending' },
-  COMPLETED: { label: 'Đã duyệt', variant: 'completed' },
+  COMPLETED: { label: 'Hoàn thành', variant: 'completed' },
   ACTIVE: { label: 'Đã duyệt', variant: 'completed' },
   APPROVED: { label: 'Đã duyệt', variant: 'completed' },
   REVISION: { label: 'Yêu cầu chỉnh sửa', variant: 'revision' },

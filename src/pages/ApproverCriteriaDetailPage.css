@@ -1,1 +1,50 @@
-/* Layout styles moved to src/components/ApproverDetailWrapper.css */
+.approver-criteria-groups-box {
+  box-sizing: border-box;
+  min-height: 48px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #D1D5DB;
+  background-color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.approver-criteria-groups-empty {
+  font-size: 14px;
+  color: #9CA3AF;
+}
+
+.approver-criteria-group-chip {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #F5F3F6;
+  color: #1A191B;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.approver-criteria-group-chip.is-hidden {
+  opacity: 0.65;
+  color: #6B7280;
+}
+
+.approver-criteria-group-hidden {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6B7280;
+  background: #E5E7EB;
+  border-radius: 999px;
+  padding: 1px 7px;
+}

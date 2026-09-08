@@ -156,9 +156,9 @@ const ApproverBatchDetailPage: React.FC = () => {
   };
 
   const handleApproveBatchSubmit = async () => {
-    // Determine status: if there's any product with notes === '0', it's NEEDS_REVISION, otherwise ACTIVE
+    // Determine status: if there's any product with notes === '0', it's NEEDS_REVISION, otherwise COMPLETED
     const hasRevision = products.some(p => p.notes === '0');
-    const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'ACTIVE';
+    const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'COMPLETED';
 
     try {
       const approvedByStr = getApprovedByStr();

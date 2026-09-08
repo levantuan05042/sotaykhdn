@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import './BatchApprovalModal.css';
 
 interface BatchApprovalModalProps {
@@ -35,7 +36,7 @@ export const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div className="batch-modal-overlay" onClick={handleClose} role="presentation">
       <div className="batch-modal-card" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         {/* Header */}
@@ -95,7 +96,8 @@ export const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

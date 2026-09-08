@@ -28,10 +28,15 @@
   font-size: 14px;
 }
 
+.data-table thead {
+  position: relative;
+  z-index: 20;
+}
+
 .data-table th {
   position: sticky !important;
   top: 0 !important;
-  z-index: 10;
+  z-index: 21;
   background-color: #F5F3F6;
   color: #171717;
   font-weight: 600;
@@ -100,23 +105,25 @@
   color: #171717 !important;
   padding: 10px 16px !important;
   border-bottom: 1px solid #E5E0E7 !important;
+  z-index: 30 !important;
 }
 
 .batch-minus-square-btn {
   width: 18px;
   height: 18px;
-  background-color: #171717;
+  background-color: #B42318;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   margin: 0 auto;
-  transition: opacity 0.15s;
+  transition: background-color 0.15s, opacity 0.15s;
 }
 
 .batch-minus-square-btn:hover {
-  opacity: 0.85;
+  background-color: #912018;
+  opacity: 1;
 }
 
 .batch-header-actions-cell {
@@ -141,6 +148,8 @@
 }
 
 .btn-batch-pill {
+  position: relative;
+  z-index: 31;
   background-color: #E6E1E8;
   color: #353238;
   border: none;
@@ -425,7 +434,7 @@
 .data-table tbody tr:hover {
   background-color: #FAF8FA;
   position: relative;
-  z-index: 99999;
+  z-index: 1;
 }
 
 .custom-tooltip-container:hover .custom-tooltip {

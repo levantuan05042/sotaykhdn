@@ -5,7 +5,7 @@ export const STATUS_MAP: Record<string, { bg: string; color: string; label: stri
   DRAFT: { bg: '#BAE6FD', color: '#082F49', label: 'Lưu nháp' },
   REJECTED: { bg: '#EAE7EC', color: '#5C5962', label: 'Từ chối' },
   ACTIVE: { bg: '#E0F9EC', color: '#14532D', label: 'Đã duyệt' },
-  COMPLETED: { bg: '#E0F9EC', color: '#14532D', label: 'Đã duyệt' },
+  COMPLETED: { bg: '#E0F9EC', color: '#14532D', label: 'Hoàn thành' },
   APPROVED: { bg: '#E0F9EC', color: '#14532D', label: 'Đã duyệt' },
   PENDING_APPROVAL: { bg: '#F7D8A7', color: '#7C2D12', label: 'Chờ duyệt' },
   PENDING: { bg: '#F7D8A7', color: '#7C2D12', label: 'Chờ duyệt' },
