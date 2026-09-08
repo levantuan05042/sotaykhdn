@@ -7,17 +7,27 @@ export interface ChildCounts {
   products?: number;
   criteria?: number;
   total?: number;
+  pendingOrRevisionCount?: number;
 }
 
 export interface CascadeHideModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void | Promise<void>;
-  itemTypeLabel: string; // e.g. "nhóm sản phẩm", "danh mục", "nghiệp vụ", "tiêu chí"
+  itemTypeLabel: string;
   itemName: string;
   counts: ChildCounts;
   isProcessing?: boolean;
 }
+
+const buildHideSummary = (counts: ChildCounts): string => {
+  const parts: string[] = [];
+  if (counts.categories) parts.push(`${counts.categories} danh mục`);
+  if (counts.businesses) parts.push(`${counts.businesses} nghiệp vụ`);
+  if (counts.products) parts.push(`${counts.products} sản phẩm`);
+  if (parts.length === 0) return 'Các thành phần bên trong sẽ được ẩn cùng lúc.';
+  return `${parts.join(', ')} bên trong sẽ được ẩn cùng lúc`;
+};
 
 export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
   isOpen,
@@ -45,8 +55,7 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.45)',
-        backdropFilter: 'blur(3px)',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
         zIndex: 2147483647,
         display: 'flex',
         alignItems: 'center',
@@ -61,167 +70,119 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
       <div
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: '14px',
+          borderRadius: '12px',
           width: '100%',
-          maxWidth: '520px',
-          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
-          padding: '24px',
+          maxWidth: '420px',
+          boxShadow: '0 20px 40px rgba(0, 0, 0, 0.18)',
+          padding: '28px 32px 24px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
+          alignItems: 'center',
+          textAlign: 'center',
+          gap: '12px',
           animation: 'cascadePopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header Icon + Title */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-          <div
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '10px',
-              backgroundColor: '#FEF3C7',
-              color: '#D97706',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-              <line x1="12" y1="9" x2="12" y2="13"></line>
-              <line x1="12" y1="17" x2="12.01" y2="17"></line>
-            </svg>
-          </div>
-
-          <div style={{ flex: 1 }}>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#111827', lineHeight: '1.35' }}>
-              Xác nhận ẩn {itemTypeLabel}
-            </h3>
-            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#6B7280' }}>
-              "{itemName}"
-            </p>
-          </div>
+        <div
+          aria-hidden
+          style={{
+            width: '48px',
+            height: '48px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <path
+              d="M24 6L44 41H4L24 6Z"
+              fill="#F5C518"
+            />
+            <path
+              d="M24 19V28"
+              stroke="#1A191B"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+            <circle cx="24" cy="33.5" r="1.6" fill="#1A191B" />
+          </svg>
         </div>
 
-        {/* Content & Details list */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <p style={{ margin: 0, fontSize: '14px', color: '#374151', lineHeight: '1.5' }}>
-            Đối tượng này hiện đang có các thành phần trực thuộc đang hoạt động:
-          </p>
+        <h3
+          style={{
+            margin: '4px 0 0',
+            fontSize: '16px',
+            fontWeight: 700,
+            color: '#1A191B',
+            lineHeight: 1.4,
+            fontFamily: 'Inter, sans-serif',
+          }}
+        >
+          Ẩn {itemTypeLabel} "{itemName}"
+        </h3>
 
-          <div
-            style={{
-              backgroundColor: '#FFFBEB',
-              border: '1px solid #FDE68A',
-              borderRadius: '8px',
-              padding: '12px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-            }}
-          >
-            {counts.categories !== undefined && counts.categories > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#92400E', fontWeight: 500 }}>📁 Danh mục sản phẩm:</span>
-                <span style={{ fontWeight: 700, color: '#B45309', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '4px' }}>
-                  {counts.categories}
-                </span>
-              </div>
-            )}
-            {counts.businesses !== undefined && counts.businesses > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#92400E', fontWeight: 500 }}>📑 Mảng nghiệp vụ:</span>
-                <span style={{ fontWeight: 700, color: '#B45309', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '4px' }}>
-                  {counts.businesses}
-                </span>
-              </div>
-            )}
-            {counts.products !== undefined && counts.products > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#92400E', fontWeight: 500 }}>📦 Sản phẩm:</span>
-                <span style={{ fontWeight: 700, color: '#B45309', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '4px' }}>
-                  {counts.products}
-                </span>
-              </div>
-            )}
-            {counts.criteria !== undefined && counts.criteria > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '13px' }}>
-                <span style={{ color: '#92400E', fontWeight: 500 }}>📋 Tiêu chí áp dụng:</span>
-                <span style={{ fontWeight: 700, color: '#B45309', backgroundColor: '#FEF3C7', padding: '2px 8px', borderRadius: '4px' }}>
-                  {counts.criteria}
-                </span>
-              </div>
-            )}
-          </div>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '14px',
+            color: '#6B7280',
+            lineHeight: 1.5,
+            fontFamily: 'Inter, sans-serif',
+            maxWidth: '340px',
+          }}
+        >
+          {buildHideSummary(counts)}
+        </p>
 
-          <div
-            style={{
-              backgroundColor: '#F0FDF4',
-              border: '1px solid #BBF7D0',
-              borderRadius: '8px',
-              padding: '10px 14px',
-              fontSize: '12px',
-              color: '#166534',
-              lineHeight: '1.5',
-            }}
-          >
-            <strong>Lưu ý:</strong> Khi xác nhận ẩn, các thành phần trực thuộc vẫn hiện trong danh sách quản trị (tối màu, chỉ xem, không sửa). Chúng không xuất hiện ở kênh tra cứu. Khi bạn hiển thị lại {itemTypeLabel} này, hệ thống sẽ phục hồi đúng trạng thái hiệu lực trước khi ẩn.
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '12px',
+            width: '100%',
+            marginTop: '8px',
+          }}
+        >
           <button
+            type="button"
             onClick={onClose}
             disabled={isProcessing}
             style={{
-              padding: '9px 18px',
-              borderRadius: '6px',
-              border: '1px solid #D1D5DB',
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: '8px',
+              border: '1px solid #E5E7EB',
               backgroundColor: '#FFFFFF',
-              color: '#374151',
+              color: '#AE1C3F',
               fontSize: '14px',
-              fontWeight: 500,
+              fontWeight: 600,
               cursor: isProcessing ? 'not-allowed' : 'pointer',
-              transition: 'background-color 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProcessing) e.currentTarget.style.backgroundColor = '#F3F4F6';
-            }}
-            onMouseLeave={(e) => {
-              if (!isProcessing) e.currentTarget.style.backgroundColor = '#FFFFFF';
+              fontFamily: 'Inter, sans-serif',
             }}
           >
             Hủy
           </button>
 
           <button
+            type="button"
             onClick={onConfirm}
             disabled={isProcessing}
             style={{
-              padding: '9px 20px',
-              borderRadius: '6px',
+              flex: 1,
+              padding: '10px 16px',
+              borderRadius: '8px',
               border: 'none',
-              backgroundColor: '#D97706',
+              backgroundColor: '#AE1C3F',
               color: '#FFFFFF',
               fontSize: '14px',
               fontWeight: 600,
               cursor: isProcessing ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              transition: 'background-color 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              if (!isProcessing) e.currentTarget.style.backgroundColor = '#B45309';
-            }}
-            onMouseLeave={(e) => {
-              if (!isProcessing) e.currentTarget.style.backgroundColor = '#D97706';
+              opacity: isProcessing ? 0.7 : 1,
+              fontFamily: 'Inter, sans-serif',
             }}
           >
-            {isProcessing ? 'Đang xử lý...' : 'Xác nhận ẩn tất cả'}
+            {isProcessing ? 'Đang xử lý...' : 'Xác nhận'}
           </button>
         </div>
       </div>
@@ -232,7 +193,7 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
           to { opacity: 1; }
         }
         @keyframes cascadePopIn {
-          from { opacity: 0; transform: scale(0.95) translateY(6px); }
+          from { opacity: 0; transform: scale(0.96) translateY(6px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
       `}</style>

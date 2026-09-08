@@ -573,10 +573,13 @@ const DetailProductPage: React.FC = () => {
     return currentBase === creatorBase && currentBase.length > 0;
   }, [isLoggedIn, currentUsername, creatorUsername]);
 
-  const isRejected = productData?.status === 'REJECTED';
+  const productStatus = String(productData?.status || '').toUpperCase();
+  const isRejected = productStatus === 'REJECTED';
+  const isApproved =
+    productStatus === 'ACTIVE' || productStatus === 'APPROVED' || productStatus === 'COMPLETED';
   const isCascadeLocked = isCascadeHidden(productData);
-  const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked;
-  const isDisplayStatusDisabled = isReadOnly || productData?.status !== 'ACTIVE';
+  const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked || isApproved;
+  const isDisplayStatusDisabled = isReadOnly || productStatus !== 'ACTIVE';
 
   useEffect(() => {
     if (productData?.imageUrl) setPreviewImage(toDisplayUrl(productData.imageUrl));
@@ -935,7 +938,7 @@ const DetailProductPage: React.FC = () => {
       <style>{`.ql-editor{word-break:break-word!important;overflow-wrap:break-word!important;white-space:pre-wrap!important;}`}</style>
 
       <div className="mainContainer">
-        {isReadOnly && (
+        {isReadOnly && !isApproved && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -1009,7 +1012,7 @@ const DetailProductPage: React.FC = () => {
         </div>
 
         <div className="contentGrid">
-          <div className="leftCol">
+          <div className="leftCol" style={isApproved ? { opacity: 0.72, pointerEvents: 'none' } : undefined}>
             {/* Bọc TẤT CẢ trong 1 formCard duy nhất */}
             <div className="formCard">
               

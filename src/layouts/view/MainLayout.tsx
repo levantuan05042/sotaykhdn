@@ -10,7 +10,13 @@ const MainLayout: React.FC = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Tự động đóng sidebar khi chuyển tuyến đường
+  // Gắn class để /view co 80% trên desktop/laptop < 1600px (giống Ctrl -)
+  useEffect(() => {
+    document.documentElement.classList.add('view-app');
+    return () => {
+      document.documentElement.classList.remove('view-app');
+    };
+  }, []);
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);

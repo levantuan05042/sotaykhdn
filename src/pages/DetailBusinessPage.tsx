@@ -10,10 +10,20 @@ import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
+import {
+  displaySuccessMessage,
+  getHideBlockedByPendingCopy,
+  hasPendingOrRevisionChildren,
+  notifyIfCannotShowChild,
+  showDisplayStatusFromApi,
+  showErrorToast,
+  showSuccessToast,
+} from '../utils/appToast';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -92,12 +102,13 @@ const DetailBusinessPage: React.FC = () => {
   );
 
   const isCascadeLocked = isCascadeHidden(businessData);
-  const isReadOnly = !isLoggedIn || !isOwner || isCascadeLocked;
+  const isOwnerLocked = !isLoggedIn || !isOwner;
+  const isReadOnly = isOwnerLocked || isCascadeLocked;
   
   const isPending = businessData?.status === 'PENDING_APPROVAL';
   const isFormDisabled = isReadOnly || isPending;
   const isStatusActive = businessData?.status === 'ACTIVE';
-  const isDisplayStatusReadOnly = isReadOnly || !isStatusActive;
+  const isDisplayStatusReadOnly = isOwnerLocked || !isStatusActive;
 
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [formData, setFormData] = useState({
@@ -114,6 +125,7 @@ const DetailBusinessPage: React.FC = () => {
 
   const canSaveDraft = !isReadOnly && (businessData?.status === 'DRAFT' || hasChanges) && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '';
   const canSubmit = !isReadOnly && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '' && (formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId) !== '' && (businessData?.status === 'DRAFT' || hasChanges);
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!isReadOnly && hasChanges));
 
   const getCreatorDisplayName = () => {
     if (businessData?.createdByFullName) return businessData.createdByFullName;
@@ -237,6 +249,12 @@ const DetailBusinessPage: React.FC = () => {
   const handleGoBack = () => navigate('/business-management');
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
+    if (newActiveStatus) {
+      if (await notifyIfCannotShowChild('nghiệp vụ', businessData?.name, businessData)) {
+        setIsStatusOpen(false);
+        return;
+      }
+    }
     if (isDisplayStatusReadOnly || !id) return;
     if (isActive === newActiveStatus) {
       setIsStatusOpen(false);
@@ -248,6 +266,12 @@ const DetailBusinessPage: React.FC = () => {
         const res = await fetch(`/api/v1/business/${id}/children-count`);
         const resJson = await res.json();
         const counts: ChildCounts = resJson?.data || {};
+        if (hasPendingOrRevisionChildren(counts)) {
+          const copy = getHideBlockedByPendingCopy('business', businessData?.name);
+          showErrorToast(copy.title, copy.description);
+          setIsStatusOpen(false);
+          return;
+        }
         if (counts.total && counts.total > 0) {
           setCascadeCounts(counts);
           setShowCascadeModal(true);
@@ -277,9 +301,9 @@ const DetailBusinessPage: React.FC = () => {
         setIsActive(newActive);
         setBusinessData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
-        renderCustomToast(newActive ? "Hiển thị thành công" : "Ẩn thành công");
+        showSuccessToast(displaySuccessMessage(newActive, 'nghiệp vụ', businessData?.name));
       } else {
-        toast.error(errorData.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
+        showDisplayStatusFromApi(errorData);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
@@ -382,6 +406,7 @@ const DetailBusinessPage: React.FC = () => {
           default: message = "Cập nhật thành công";
         }
         renderCustomToast(message);
+        allowLeave();
         setTimeout(() => navigate('/business-management'), 400);
       } else {
         const errorData = await response.json();
@@ -411,6 +436,7 @@ const DetailBusinessPage: React.FC = () => {
       if (response.ok) {
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
+        allowLeave();
         setTimeout(() => navigate('/business-management'), 400);
       } else {
         const errorData = await response.json();
@@ -775,6 +801,7 @@ const DetailBusinessPage: React.FC = () => {
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}
       />
+      {dialog}
     </div>
   );
 };

@@ -229,8 +229,7 @@
 
 /* =======================================
    CHUẨN HOÁ RESPONSIVE THEO BREAKPOINTS FIGMA
-   - XL (>1600px): Area 1214px | 4 sản phẩm/hàng | 5 danh mục/hàng
-   - LG (1280-1599px): Area 722px | 2 sản phẩm/hàng | 3 danh mục/hàng
+   - XL (>=1280px, và <1600px sẽ zoom 80%): Area 1214px | 4 sản phẩm/hàng | 5 danh mục/hàng
    - MD (768-1023px): Area 722px | 2 sản phẩm/hàng | 3 danh mục/hàng
    - SM (375-767px): Area 358px | 1 sản phẩm/hàng | 2 danh mục/hàng
 ======================================= */
@@ -297,12 +296,12 @@
   }
 }
 
-/* MD & LG: Tablet & Desktop Medium (768px - 1599px) */
-@media (min-width: 768px) and (max-width: 1599px) {
+/* MD: Tablet (768px - 1279px) */
+@media (min-width: 768px) and (max-width: 1279px) {
   .content-area {
     max-width: 722px;
-    padding-left: 24px;   /* Thêm padding 24px cho Tablet */
-    padding-right: 24px;  /* Thêm padding 24px cho Tablet */
+    padding-left: 24px;
+    padding-right: 24px;
   }
   .categories-grid {
     grid-template-columns: repeat(3, 1fr);
@@ -313,8 +312,8 @@
   }
 }
 
-/* XL: Desktop Large (>1600px) */
-@media (min-width: 1600px) {
+/* XL: Desktop / laptop (>=1280px). Dưới 1600px layout này được zoom 80% giống Ctrl -. */
+@media (min-width: 1280px) {
   .content-area {
     max-width: 1214px;
   }

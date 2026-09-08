@@ -1,4 +1,4 @@
-import React, { useState, useRef, useLayoutEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 export interface FilterOption {
@@ -108,6 +108,21 @@ export const TableColumnFilterDropdown: React.FC<TableColumnFilterDropdownProps>
       window.removeEventListener('scroll', updatePosition, true);
     };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      if (!target) return;
+      if (localButtonRef.current?.contains(target)) return;
+      if (target.closest('.table-filter-dropdown-menu')) return;
+      onToggle();
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen, onToggle]);
 
   return (
     <div className="dropdown-wrapper" ref={wrapperRef} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0, whiteSpace: 'nowrap' }}>

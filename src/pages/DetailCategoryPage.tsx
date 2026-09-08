@@ -9,10 +9,20 @@ import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
+import {
+  displaySuccessMessage,
+  getHideBlockedByPendingCopy,
+  hasPendingOrRevisionChildren,
+  notifyIfCannotShowChild,
+  showDisplayStatusFromApi,
+  showErrorToast,
+  showSuccessToast,
+} from '../utils/appToast';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -92,7 +102,7 @@ const DetailCategoryPage: React.FC = () => {
   const isCascadeLocked = isCascadeHidden(categoryData);
   const isFormReadOnly = isNotCreator || categoryData?.status === 'PENDING_APPROVAL' || isCascadeLocked;
   const isStatusActive = categoryData?.status === 'ACTIVE';
-  const isDisplayStatusReadOnly = isNotCreator || !isStatusActive || isCascadeLocked;
+  const isDisplayStatusReadOnly = isNotCreator || !isStatusActive;
   const hideEditActions = isNotCreator || isCascadeLocked;
 
   const [formData, setFormData] = useState({
@@ -169,6 +179,8 @@ const DetailCategoryPage: React.FC = () => {
       isActive !== (categoryData?.active ?? true)
     );
   }, [formData, isActive, categoryData]);
+
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!hideEditActions && isDirty));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
   useEffect(() => {
@@ -308,6 +320,7 @@ const DetailCategoryPage: React.FC = () => {
           default: message = "Cập nhật thành công";
         }
         renderCustomToast(message);
+        allowLeave();
         setTimeout(() => navigate('/product-category'), 400);
       } else {
         const errorData = await response.json();
@@ -321,6 +334,12 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
+    if (newActiveStatus) {
+      if (await notifyIfCannotShowChild('danh mục', categoryData?.name, categoryData)) {
+        setIsStatusOpen(false);
+        return;
+      }
+    }
     if (isDisplayStatusReadOnly || !id) return;
     if (isActive === newActiveStatus) {
       setIsStatusOpen(false);
@@ -328,11 +347,16 @@ const DetailCategoryPage: React.FC = () => {
     }
 
     if (!newActiveStatus) {
-      // Đang muốn ẩn: kiểm tra con (nghiệp vụ, sản phẩm)
       try {
         const res = await fetch(`/api/v1/product-category/${id}/children-count`);
         const resJson = await res.json();
         const counts: ChildCounts = resJson?.data || {};
+        if (hasPendingOrRevisionChildren(counts)) {
+          const copy = getHideBlockedByPendingCopy('category', categoryData?.name);
+          showErrorToast(copy.title, copy.description);
+          setIsStatusOpen(false);
+          return;
+        }
         if (counts.total && counts.total > 0) {
           setCascadeCounts(counts);
           setShowCascadeModal(true);
@@ -365,9 +389,9 @@ const DetailCategoryPage: React.FC = () => {
         setIsActive(newActive);
         setCategoryData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
-        renderCustomToast(newActive ? "Hiển thị thành công" : "Ẩn thành công");
+        showSuccessToast(displaySuccessMessage(newActive, 'danh mục', categoryData?.name));
       } else {
-        toast.error(data.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
+        showDisplayStatusFromApi(data);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
@@ -394,6 +418,7 @@ const DetailCategoryPage: React.FC = () => {
       if (response.ok) {
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
+        allowLeave();
         setTimeout(() => navigate('/product-category'), 400);
       } else {
         const errorData = await response.json();
@@ -767,6 +792,7 @@ const DetailCategoryPage: React.FC = () => {
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}
       />
+      {dialog}
     </div>
   );
 };

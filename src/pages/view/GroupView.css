@@ -182,29 +182,18 @@
   }
 }
 
-/* 3. Màn hình LG (Desktop: 1280px - 1599px) */
+/* 3. Desktop / laptop (>=1280px): layout XL; dưới 1600px được zoom 80% giống Ctrl - */
 @media (min-width: 1280px) {
-  .group-view { padding: 40px 60px; } /* Căn lề rộng giống UI cũ */
+  .group-view { padding: 40px 60px; }
   
   .products-grid {
-    grid-template-columns: repeat(2, 1fr); /* Sản phẩm: 2 items/hàng */
+    grid-template-columns: repeat(4, 1fr);
     gap: 24px;
   }
   
   .categories-grid {
-    grid-template-columns: repeat(3, 1fr); /* Danh mục: 3 items/hàng */
+    grid-template-columns: repeat(5, 1fr);
     gap: 24px;
-  }
-}
-
-/* 4. Màn hình XL (Desktop Large: >= 1600px) */
-@media (min-width: 1600px) {
-  .products-grid {
-    grid-template-columns: repeat(4, 1fr); /* Sản phẩm: 4 items/hàng */
-  }
-  
-  .categories-grid {
-    grid-template-columns: repeat(5, 1fr); /* Danh mục: 5 items/hàng */
   }
 }
 

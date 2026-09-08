@@ -10,10 +10,17 @@ import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked } from '../utils/formatUtils';
+import {
+  displaySuccessMessage,
+  notifyIfCannotShowChild,
+  showDisplayStatusFromApi,
+  showSuccessToast,
+} from '../utils/appToast';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -104,7 +111,8 @@ const DetailCriteriaPage: React.FC = () => {
   );
 
   const isCascadeLocked = isCriteriaFullyLocked(criteriaData);
-  const isReadOnly = !isLoggedIn || !isOwner || isCascadeLocked;
+  const isOwnerLocked = !isLoggedIn || !isOwner;
+  const isReadOnly = isOwnerLocked || isCascadeLocked;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -220,6 +228,8 @@ const DetailCriteriaPage: React.FC = () => {
       currentGroups !== origGroups
     );
   }, [formData, criteriaData]);
+
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!isReadOnly && isFormModified));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
   useEffect(() => {
@@ -415,6 +425,7 @@ const DetailCriteriaPage: React.FC = () => {
         }
 
         renderCustomToast(message);
+        allowLeave();
         setTimeout(() => navigate('/criteria-management'), 400);
       } else {
         const errorData = await response.json();
@@ -428,7 +439,14 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const handleToggleActive = async (newActiveState: boolean) => {
-    if (isReadOnly || !id) return;
+    if (newActiveState) {
+      if (await notifyIfCannotShowChild('tiêu chí', criteriaData?.name, criteriaData)) {
+        setIsStatusOpen(false);
+        return;
+      }
+    }
+    if (isOwnerLocked || !id) return;
+
     if (isActive === newActiveState) {
       setIsStatusOpen(false);
       return;
@@ -468,9 +486,9 @@ const DetailCriteriaPage: React.FC = () => {
         setIsActive(newActive);
         setCriteriaData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
-        renderCustomToast(newActive ? "Hiển thị thành công" : "Ẩn thành công");
+        showSuccessToast(displaySuccessMessage(newActive, 'tiêu chí', criteriaData?.name));
       } else {
-        toast.error(errorData.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
+        showDisplayStatusFromApi(errorData);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
@@ -500,6 +518,7 @@ const DetailCriteriaPage: React.FC = () => {
       if (response.ok) {
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
+        allowLeave();
         setTimeout(() => navigate('/criteria-management'), 400);
       } else {
         const errorData = await response.json();
@@ -598,7 +617,8 @@ const DetailCriteriaPage: React.FC = () => {
 
   const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
   const isStatusActive = criteriaData?.status === 'ACTIVE';
-  const canChangeActiveStatus = !isReadOnly && isStatusActive;
+  const canChangeActiveStatus = !isOwnerLocked && isStatusActive;
+  const shownActive = isCascadeLocked ? false : isActive;
 
   return (
     <div className="pageWrapper">
@@ -891,7 +911,7 @@ const DetailCriteriaPage: React.FC = () => {
                   onClick={() => canChangeActiveStatus && setIsStatusOpen(v => !v)}
                   style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: !canChangeActiveStatus ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: !canChangeActiveStatus ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
-                  <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
+                  <span style={{ color: '#1A191B', fontWeight: 500 }}>{shownActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                   {canChangeActiveStatus && (
                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                       <path d="M5 7.5L10 12.5L15 7.5"/>
@@ -901,13 +921,13 @@ const DetailCriteriaPage: React.FC = () => {
                 {canChangeActiveStatus && isStatusOpen && (
                   <div className="custom-options-list" style={{ zIndex: 50 }}>
                     <div 
-                      className={`custom-option ${isActive === false ? 'selected' : ''}`} 
+                      className={`custom-option ${shownActive === false ? 'selected' : ''}`} 
                       onClick={() => handleToggleActive(false)}
                     >
                       Ẩn
                     </div>
                     <div 
-                      className={`custom-option ${isActive === true  ? 'selected' : ''}`} 
+                      className={`custom-option ${shownActive === true  ? 'selected' : ''}`} 
                       onClick={() => handleToggleActive(true)}
                     >
                       Hiển thị
@@ -1057,6 +1077,7 @@ const DetailCriteriaPage: React.FC = () => {
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}
       />
+      {dialog}
     </div>
   );
 };

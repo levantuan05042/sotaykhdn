@@ -9,6 +9,7 @@ import axios from 'axios';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 
 interface Criterion {
@@ -458,6 +459,14 @@ const AddProductPage: React.FC = () => {
 
   const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isFormDirty =
+    formData.productGroupId !== '' ||
+    formData.productCategoryId !== '' ||
+    formData.businessId !== '' ||
+    Boolean(imageUrl) ||
+    isActive !== true ||
+    criteria.some(c => c.value.trim());
+  const { allowLeave, dialog } = useUnsavedChangesGuard(isFormDirty);
 
   const onSaveDraftClick = () => {
     setConfirmAction('DRAFT');
@@ -517,6 +526,7 @@ const AddProductPage: React.FC = () => {
       await axios.post(API_ENDPOINTS.PRODUCT.LIST, payload);
       toast.success(status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công", { position: 'top-center' });
       setConfirmAction(null);
+      allowLeave();
       setTimeout(() => navigate('/products/processing'), 500);
     } catch (error: any) {
       console.error("Lỗi gửi request:", error);
@@ -1327,6 +1337,7 @@ const AddProductPage: React.FC = () => {
         confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         loading={isSubmitting}
       />
+      {dialog}
     </div>
   );
 };

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -108,6 +109,7 @@ const AddCategoryPage: React.FC = () => {
       const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
       renderCustomToast(message);
       setConfirmAction(null);
+      allowLeave();
       setTimeout(() => navigate('/product-category'), 400);
 
     } catch (error: any) {
@@ -143,6 +145,7 @@ const AddCategoryPage: React.FC = () => {
     formData.name.trim() !== '' || 
     formData.groupId !== '' || 
     isActive !== true;
+  const { allowLeave, dialog } = useUnsavedChangesGuard(isFormDirty);
 
   const canSaveDraft = !isSubmitting;
   const canSubmit = isFormDirty && formData.name.trim() !== '' && formData.groupId !== '' && !isSubmitting;
@@ -411,6 +414,7 @@ const AddCategoryPage: React.FC = () => {
         confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         loading={isSubmitting}
       />
+      {dialog}
     </div>
   );
 };

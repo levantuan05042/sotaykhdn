@@ -286,12 +286,18 @@
   width: 100%;
 }
 
-.table-placeholder th,
-.table-placeholder td {
+.table-placeholder th {
   display: table-cell !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.table-placeholder td {
+  display: table-cell !important;
+  overflow: hidden;
+  white-space: normal;
+  vertical-align: middle;
 }
 
 .table-placeholder thead th {
@@ -367,12 +373,17 @@
 }
 
 .truncate-text {
-  display: block;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
   text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 20px;
+  max-height: 40px;
   cursor: help;
-  max-width: 150px;
 }
 
 .btn-view-detail {

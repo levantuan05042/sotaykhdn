@@ -70,8 +70,26 @@ export const isCriteriaFullyLocked = (
   return groups.every((g) => g?.active === false);
 };
 
-export const getCascadeRowClassName = (item?: { cascadeHiddenBy?: string | null; productGroups?: any } | null): string =>
-  isCriteriaFullyLocked(item) ? 'row-cascade-hidden' : '';
+/** CHA đang ẩn: không cho hiện CON. */
+export const isParentHidden = (
+  item?: {
+    cascadeHiddenBy?: string | null;
+    groupActive?: boolean | null;
+    categoryActive?: boolean | null;
+    businessActive?: boolean | null;
+    productGroups?: any;
+  } | null
+): boolean => {
+  if (!item) return false;
+  if (Boolean(item.cascadeHiddenBy)) return true;
+  if (item.groupActive === false) return true;
+  if (item.categoryActive === false) return true;
+  if (item.businessActive === false) return true;
+  return isCriteriaFullyLocked(item);
+};
+
+export const getCascadeRowClassName = (_item?: { cascadeHiddenBy?: string | null; productGroups?: any } | null): string =>
+  '';
 
 export const CASCADE_LOCK_MESSAGE =
   'Bản ghi này đang bị ẩn theo đối tượng cha nên chỉ xem, không thể chỉnh sửa.';

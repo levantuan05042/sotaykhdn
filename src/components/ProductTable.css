@@ -284,11 +284,17 @@
 }
 
 .truncate-text {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 20px;
+  max-height: 40px;
   width: 100%;
-  white-space: nowrap;     
-  overflow: hidden;         
-  text-overflow: ellipsis;  
 }
 
 .custom-tooltip {

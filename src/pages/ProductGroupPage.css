@@ -271,12 +271,18 @@
   width: 100%;
 }
 
-.table-placeholder th,
-.table-placeholder td {
+.table-placeholder th {
   display: table-cell !important;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.table-placeholder td {
+  display: table-cell !important;
+  overflow: hidden;
+  white-space: normal;
+  vertical-align: middle;
 }
 
 .table-placeholder thead th {

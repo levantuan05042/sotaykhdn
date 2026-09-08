@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 const AddCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -164,6 +165,7 @@ const AddCriteriaPage: React.FC = () => {
       const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
       renderCustomToast(message);
       setConfirmAction(null);
+      allowLeave();
       setTimeout(() => navigate('/criteria-management'), 400);
 
     } catch (error: any) {
@@ -195,6 +197,14 @@ const AddCriteriaPage: React.FC = () => {
       </div>
     ), { position: 'top-center' });
   };
+
+  const isFormDirty =
+    formData.code.trim() !== '' ||
+    formData.name.trim() !== '' ||
+    formData.groupIds.length > 0 ||
+    formData.required ||
+    isActive !== true;
+  const { allowLeave, dialog } = useUnsavedChangesGuard(isFormDirty);
 
   const canSaveDraft = !isSubmitting;
   const canSubmit = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0 && !isSubmitting;
@@ -513,6 +523,7 @@ const AddCriteriaPage: React.FC = () => {
         confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         loading={isSubmitting}
       />
+      {dialog}
     </div>
   );
 };
