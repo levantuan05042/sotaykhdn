@@ -160,7 +160,7 @@ const MainLayout: React.FC = () => {
             <div className={styles['footer-content']}>
               <div>
                 © Bản quyền thuộc Agribank <br />
-                Phiên bản 1.0 cập nhật 04/2026
+                Phiên bản 1.1 cập nhật 08/09/2026
               </div>
               <div className={styles['footer-right']} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
