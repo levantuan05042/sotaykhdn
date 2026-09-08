@@ -4,6 +4,7 @@ export const STATUS_MAP: Record<string, { bg: string; color: string; label: stri
   DRAFT: { bg: '#BAE6FD', color: '#082F49', label: 'Lưu nháp' },
   REJECTED: { bg: '#eae7ec', color: '#65636d', label: 'Từ chối' },
   ACTIVE: { bg: '#e0f9ec', color: '#14532d', label: 'Hoàn thành' },
+  COMPLETED: { bg: '#e0f9ec', color: '#14532d', label: 'Hoàn thành' },
   PENDING_APPROVAL: { bg: '#fed7aa', color: '#7c2d12', label: 'Chờ duyệt' },
   NEEDS_REVISION: { bg: '#fff8b6', color: '#433d1f', label: 'Yêu cầu chỉnh sửa' },
   ARCHIVED: { bg: '#BAE6FD', color: '#0C4A6E', label: 'Lưu trữ' },

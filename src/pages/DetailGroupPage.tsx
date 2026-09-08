@@ -9,9 +9,18 @@ import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import {
+  displaySuccessMessage,
+  getHideBlockedByPendingCopy,
+  hasPendingOrRevisionChildren,
+  showDisplayStatusFromApi,
+  showErrorToast,
+  showSuccessToast,
+} from '../utils/appToast';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -138,6 +147,8 @@ const DetailGroupPage: React.FC = () => {
       isActive !== originalActive
     );
   }, [formData, isActive, productData]);
+
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(isOwner && isModified));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
   useEffect(() => {
@@ -270,6 +281,7 @@ const DetailGroupPage: React.FC = () => {
           default: message = "Cập nhật thành công";
         }
         renderCustomToast(message);
+        allowLeave();
         setTimeout(() => navigate('/product-groups'), 400);
       } else {
         const errorData = await response.json();
@@ -299,6 +311,7 @@ const DetailGroupPage: React.FC = () => {
       if (response.ok) {
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
+        allowLeave();
         setTimeout(() => navigate('/product-groups'), 400);
       } else {
         const errorData = await response.json();
@@ -320,11 +333,16 @@ const DetailGroupPage: React.FC = () => {
     }
 
     if (!newActiveStatus) {
-      // Đang muốn ẩn: kiểm tra số lượng con
       try {
         const res = await fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id)}/children-count`);
         const resJson = await res.json();
         const counts: ChildCounts = resJson?.data || {};
+        if (hasPendingOrRevisionChildren(counts)) {
+          const copy = getHideBlockedByPendingCopy('group', productData?.name);
+          showErrorToast(copy.title, copy.description);
+          setIsStatusOpen(false);
+          return;
+        }
         if (counts.total && counts.total > 0) {
           setCascadeCounts(counts);
           setShowCascadeModal(true);
@@ -357,9 +375,9 @@ const DetailGroupPage: React.FC = () => {
       if (response.ok) {
         setIsActive(newActive);
         setShowCascadeModal(false);
-        toast.success(newActive ? "Hiển thị thành công" : "Ẩn thành công", { position: 'top-center' });
+        showSuccessToast(displaySuccessMessage(newActive, 'Nhóm sản phẩm', productData?.name));
       } else {
-        toast.error(data.message || 'Không thể cập nhật trạng thái', { position: 'top-center' });
+        showDisplayStatusFromApi(data);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
@@ -779,6 +797,7 @@ const DetailGroupPage: React.FC = () => {
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}
       />
+      {dialog}
     </div>
   );
 };

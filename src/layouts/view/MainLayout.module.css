@@ -134,3 +134,35 @@
     margin-top: 8px;
   }
 }
+
+/*
+ * Desktop / PC / laptop dưới 1600px: thu 80% giống Ctrl -.
+ * Bù 125vw/125vh để sau zoom vẫn kín màn hình.
+ * html.view-app được gắn khi vào /view (gỡ khi rời trang).
+ */
+@media (max-width: 1599px) and (min-width: 1024px) {
+  :global(html.view-app) {
+    zoom: 0.8;
+    overflow: hidden;
+  }
+
+  :global(html.view-app body),
+  :global(html.view-app #root) {
+    margin: 0;
+    width: 125vw;
+    height: 125vh;
+    overflow: hidden;
+  }
+
+  .main-layout {
+    width: 100%;
+    height: 125vh;
+    overflow: hidden;
+  }
+
+  .grid-container {
+    height: auto !important;
+    flex: 1;
+    min-height: 0;
+  }
+}

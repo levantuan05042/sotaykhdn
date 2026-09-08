@@ -9,6 +9,7 @@ import 'react-easy-crop/react-easy-crop.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import StatusBadge2 from '../components/ui/StatusBadgeListRequest';
 import './BatchRequestDetailPage.css';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 const extractUsername = (rawName: string | null | undefined): string => {
   if (!rawName) return '';
@@ -617,6 +618,7 @@ const BatchRequestDetailPage: React.FC = () => {
 
   const canEdit = isEditableStatus && isOwner;
   const isReadOnly = !canEdit;
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(canEdit && hasGlobalChanges));
 
   const isQuickViewRejected = Boolean(
     quickViewProduct && (
@@ -1008,6 +1010,7 @@ const BatchRequestDetailPage: React.FC = () => {
       setPendingUpdates({});
       setHasFormChanges(false);
       toast.success("Đã lưu nháp thành công!", { position: 'top-center' });
+      allowLeave();
       setTimeout(() => window.location.reload(), 1000);
     } catch (error: any) {
       console.error(error);
@@ -1194,7 +1197,11 @@ const BatchRequestDetailPage: React.FC = () => {
                       <tr 
                         key={item.id} 
                         className={isSelected ? "batch-tr-selected" : ""}
-                        onClick={() => navigate(`/product/${item.id}`, { state: { requestName: batchName || externalName, requestId } })}
+                        onClick={() => {
+                          navigate(`/product/${item.id}`, {
+                            state: { requestName: batchName || externalName, requestId },
+                          });
+                        }}
                         style={{ cursor: 'pointer' }}
                       >
                         <td className="batch-table-td batch-table-td-name">
@@ -1220,6 +1227,8 @@ const BatchRequestDetailPage: React.FC = () => {
                             <StatusBadge2 status="APPROVED" className="batch-status-badge" />
                           ) : String(item.notes) === 'REVIEWED' ? (
                             <StatusBadge2 status="REVIEWED" className="batch-status-badge" />
+                          ) : item.status ? (
+                            <StatusBadge2 status={String(item.status).toUpperCase()} className="batch-status-badge" />
                           ) : (
                             item.notes || '—'
                           )}
@@ -1535,6 +1544,7 @@ const BatchRequestDetailPage: React.FC = () => {
         criteria={criteriaForModal}
         onToggle={handleToggleOptionalCriterion}
       />
+      {dialog}
     </div>
   );
 };

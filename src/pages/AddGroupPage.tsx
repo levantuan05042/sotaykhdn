@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -61,6 +62,7 @@ const AddProductPage: React.FC = () => {
       const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
       renderCustomToast(message);
       setConfirmAction(null);
+      allowLeave();
       setTimeout(() => navigate('/product-groups'), 400);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra', { position: 'top-center' });
@@ -90,7 +92,8 @@ const AddProductPage: React.FC = () => {
     ), { position: 'top-center' });
   };
   
-  const isDirty = formData.name.trim() !== '' || formData.superGroup !== '' || isActive !== true; 
+  const isDirty = formData.name.trim() !== '' || formData.superGroup !== '' || isActive !== true;
+  const { allowLeave, dialog } = useUnsavedChangesGuard(isDirty);
   const canSaveDraft = !isSubmitting;
   const canSubmit = isDirty && formData.name.trim() !== '' && formData.superGroup !== '' && !isSubmitting; 
 
@@ -292,6 +295,7 @@ const AddProductPage: React.FC = () => {
         confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         loading={isSubmitting}
       />
+      {dialog}
     </div>
   );
 };

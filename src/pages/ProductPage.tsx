@@ -10,8 +10,14 @@ import CellWithTooltip from '../components/ui/CellWithTooltip';
 import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdown';
 import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
-import { formatApprovedBy, getCascadeRowClassName, isCascadeHidden } from '../utils/formatUtils';
+import { formatApprovedBy, getCascadeRowClassName } from '../utils/formatUtils';
 import hotToast from 'react-hot-toast';
+import {
+  displaySuccessMessage,
+  notifyIfCannotShowChild,
+  showDisplayStatusFromApi,
+  showSuccessToast,
+} from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 
 
@@ -229,12 +235,9 @@ const ProductPage: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (target?.closest?.('.table-filter-dropdown-menu')) return;
-      if (
-        filterSectionRef.current && !filterSectionRef.current.contains(event.target as Node) &&
-        headerListMenuRef.current && !headerListMenuRef.current.contains(event.target as Node)
-      ) {
-        setOpenDropdown(null);
-      }
+      if (target?.closest?.('.dropdown-wrapper')) return;
+      if (headerListMenuRef.current?.contains(event.target as Node)) return;
+      setOpenDropdown(null);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -316,8 +319,10 @@ const ProductPage: React.FC = () => {
   };
 
   const handleToggleActive = async (item: any, currentActive: boolean) => {
-    if (isCascadeHidden(item)) return;
     const newActiveStatus = !currentActive;
+    if (newActiveStatus && await notifyIfCannotShowChild('Sản phẩm', item.name, item)) {
+      return;
+    }
     setData(prevData =>
       prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
     );
@@ -326,8 +331,15 @@ const ProductPage: React.FC = () => {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
-      if (!response.ok) throw new Error('Failed');
-      hotToast.success(newActiveStatus ? 'Hiển thị thành công' : 'Ẩn thành công', { position: 'top-center' });
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        setData(prevData =>
+          prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
+        );
+        showDisplayStatusFromApi(errJson, 'Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!');
+        return;
+      }
+      showSuccessToast(displaySuccessMessage(newActiveStatus, 'Sản phẩm', item.name));
     } catch (error) {
       setData(prevData =>
         prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
@@ -338,11 +350,10 @@ const ProductPage: React.FC = () => {
 
   const renderActiveToggle = (item: any) => {
     const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
-    const isCascadeLocked = isCascadeHidden(item);
-    const isDisabled = disabledStatuses.includes(item.status?.toUpperCase()) || isCascadeLocked;
+    const isDisabled = disabledStatuses.includes(item.status?.toUpperCase());
     const isActive = item.active || false;
     return (
-      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()} title={isCascadeLocked ? 'Đang bị ẩn theo đối tượng cha' : undefined}>
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
         <label className="toggle-switch">
           <input
             type="checkbox"
@@ -353,7 +364,7 @@ const ProductPage: React.FC = () => {
           <span className="toggle-slider"></span>
         </label>
         <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
-          {isCascadeLocked ? 'Ẩn theo cha' : (isActive ? 'Hiện' : 'Ẩn')}
+          {isActive ? 'Hiện' : 'Ẩn'}
         </span>
       </div>
     );
@@ -754,7 +765,7 @@ const ProductPage: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#AE1C3F',
+                  color: '#84828E',
                   cursor: 'pointer',
                   fontSize: '12px',
                   fontWeight: 600,

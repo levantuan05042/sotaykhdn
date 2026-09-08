@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './RequestListPage.css';
@@ -82,7 +83,10 @@ const RequestListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState(searchParams.get('keyword') || '');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(searchParams.get('status') || null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(() => {
+    const raw = searchParams.get('status');
+    return raw ? raw.split(',').map((s) => s.trim()).filter(Boolean) : [];
+  });
   const [startDate, setStartDate] = useState<string>(searchParams.get('startDate') || ''); 
   const [endDate, setEndDate] = useState<string>(searchParams.get('endDate') || '');    
 
@@ -104,9 +108,10 @@ const RequestListPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(cached?.currentPage ?? 1);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const statusRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLDivElement>(null);
+  const timeBtnRef = useRef<HTMLButtonElement>(null);
   const filterSectionRef = useRef<HTMLDivElement>(null);
+  const [dropdownCoords, setDropdownCoords] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     setCachedPageState('request-list', {
@@ -126,11 +131,11 @@ const RequestListPage: React.FC = () => {
   useEffect(() => {
     const params: Record<string, string> = {};
     if (searchTerm.trim()) params.keyword = searchTerm.trim();
-    if (selectedStatus) params.status = selectedStatus;
+    if (selectedStatuses.length > 0) params.status = selectedStatuses.join(',');
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
     setSearchParams(params, { replace: true });
-  }, [searchTerm, selectedStatus, startDate, endDate, setSearchParams]);
+  }, [searchTerm, selectedStatuses, startDate, endDate, setSearchParams]);
 
   useEffect(() => {
     if (openDropdown === 'time') {
@@ -150,7 +155,6 @@ const RequestListPage: React.FC = () => {
       const response = await axios.get(API_ENDPOINTS.PRODUCT_REQUESTS.LIST, {
         params: {
           keyword: searchTerm.trim() || undefined,
-          status: selectedStatus || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
         }
@@ -198,7 +202,7 @@ const RequestListPage: React.FC = () => {
   useEffect(() => {
     const handler = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(handler);
-  }, [searchTerm, selectedStatus, startDate, endDate]);
+  }, [searchTerm, startDate, endDate]);
 
   // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
   useEffect(() => {
@@ -220,17 +224,47 @@ const RequestListPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [searchTerm, selectedStatus, startDate, endDate]);
+  }, [searchTerm, startDate, endDate]);
+
+  useLayoutEffect(() => {
+    if (openDropdown !== 'time') {
+      setDropdownCoords(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const btn = timeBtnRef.current;
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const menuWidth = 640;
+      let left = rect.left;
+      if (left + menuWidth > window.innerWidth - 16) {
+        left = Math.max(16, window.innerWidth - menuWidth - 16);
+      }
+      setDropdownCoords({
+        top: rect.bottom + 6,
+        left: Math.max(16, left),
+      });
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [openDropdown]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
-      if (target?.closest?.('.table-filter-dropdown-menu') || target?.closest?.('.date-picker-dropdown')) return;
       if (
-        filterSectionRef.current && !filterSectionRef.current.contains(event.target as Node)
-      ) {
-        setOpenDropdown(null);
-      }
+        target?.closest?.('.table-filter-dropdown-menu') ||
+        target?.closest?.('.date-picker-dropdown') ||
+        target?.closest?.('.dropdown-wrapper')
+      ) return;
+      setOpenDropdown(null);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -261,6 +295,10 @@ const RequestListPage: React.FC = () => {
 
   const getFilteredData = () => {
     return data.filter(item => {
+      if (selectedStatuses.length > 0) {
+        const status = String(item.status || '');
+        if (!selectedStatuses.includes(status)) return false;
+      }
       if (selectedTypes.length > 0) {
         const matchesType = selectedTypes.some(t => (t === 'batch' && item.isBatch) || (t === 'single' && !item.isBatch));
         if (!matchesType) return false;
@@ -401,7 +439,7 @@ const RequestListPage: React.FC = () => {
       days.push({ dateStr: formatDateString(d), dayNum: i, isCurrentMonth: true });
     }
 
-    const remainingCells = 42 - days.length;
+    const remainingCells = (7 - (days.length % 7)) % 7;
     for (let i = 1; i <= remainingCells; i++) {
       const d = new Date(year, month + 1, i);
       days.push({ dateStr: formatDateString(d), dayNum: i, isCurrentMonth: false });
@@ -421,24 +459,24 @@ const RequestListPage: React.FC = () => {
   const rightDays = getDaysForMonth(rightYear, rightMonth);
 
   const renderCalendarGrid = (days: Array<{ dateStr: string; dayNum: number; isCurrentMonth: boolean }>, monthLabel: string, showPrevArrow: boolean, showNextArrow: boolean) => (
-    <div style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+    <div className="calendar-month">
+      <div className="calendar-month-header">
         {showPrevArrow ? (
-          <button onClick={() => setCalendarViewDate(new Date(leftYear, leftMonth - 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '4px' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+          <button type="button" onClick={() => setCalendarViewDate(new Date(leftYear, leftMonth - 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '2px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
-        ) : <div style={{ width: 16 }} />}
-        <span style={{ fontWeight: 600, fontSize: '14px', color: '#111827' }}>{monthLabel}</span>
+        ) : <div style={{ width: 14 }} />}
+        <span style={{ fontWeight: 600, fontSize: '13px', color: '#111827' }}>{monthLabel}</span>
         {showNextArrow ? (
-          <button onClick={() => setCalendarViewDate(new Date(leftYear, leftMonth + 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '4px' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+          <button type="button" onClick={() => setCalendarViewDate(new Date(leftYear, leftMonth + 1, 1))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', padding: '2px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
           </button>
-        ) : <div style={{ width: 16 }} />}
+        ) : <div style={{ width: 14 }} />}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', marginBottom: '8px', fontSize: '12px', fontWeight: 600, color: '#4B5563' }}>
+      <div className="calendar-weekdays">
         <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: '4px', textAlign: 'center' }}>
+      <div className="calendar-days">
         {days.map((item, idx) => {
           const isStart = tempStartDate === item.dateStr;
           const isEnd = tempEndDate === item.dateStr;
@@ -599,36 +637,36 @@ const RequestListPage: React.FC = () => {
         <div className="dropdown-group-container">
           <FilterScrollContainer className="dropdown-row">
             {/* Trạng thái */}
-            <div className="dropdown-wrapper" ref={statusRef} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')} style={{ whiteSpace: 'nowrap' }}>
-                <span>Trạng thái</span>
-                <svg className={`chevron-icon ${openDropdown === 'status' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {openDropdown === 'status' && (
-                <div className="dropdown-menu">
-                  {STATUS_OPTIONS.map(opt => (
-                    <div key={opt.value} className={`menu-item ${selectedStatus === opt.value ? 'selected' : ''}`}
-                      onClick={() => { setSelectedStatus(opt.value); setOpenDropdown(null); }}>
-                      <span>{opt.label}</span>
-                      {selectedStatus === opt.value && <i className="check-icon">✔</i>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <TableColumnFilterDropdown
+              label="Trạng thái"
+              options={STATUS_OPTIONS}
+              selectedValues={selectedStatuses}
+              onSelectValues={setSelectedStatuses}
+              isOpen={openDropdown === 'status'}
+              onToggle={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+            />
 
             {/* Thời gian */}
             <div className="dropdown-wrapper" ref={timeRef} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0, whiteSpace: 'nowrap' }}>
-              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')} style={{ whiteSpace: 'nowrap' }}>
+              <button
+                type="button"
+                ref={timeBtnRef}
+                className="btn-dropdown"
+                onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')}
+                style={{ whiteSpace: 'nowrap' }}
+              >
                 <span>Thời gian</span>
                 <svg className={`chevron-icon ${openDropdown === 'time' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </button>
-              {openDropdown === 'time' && (
-                <div className="dropdown-menu date-picker-dropdown">
+              {openDropdown === 'time' && dropdownCoords && createPortal(
+                <div
+                  className="dropdown-menu date-picker-dropdown"
+                  style={{ position: 'fixed', top: dropdownCoords.top, left: dropdownCoords.left, zIndex: 999999 }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="date-picker-body">
                     <div className="date-preset-sidebar">
                       {DATE_PRESETS.map((preset) => (
@@ -646,7 +684,8 @@ const RequestListPage: React.FC = () => {
                     <button className="btn-cancel" onClick={handleCancelDate}>Hủy</button>
                     <button className="btn-apply" onClick={handleSaveDate}>Áp dụng</button>
                   </div>
-                </div>
+                </div>,
+                document.body
               )}
             </div>
 
@@ -686,7 +725,13 @@ const RequestListPage: React.FC = () => {
           </FilterScrollContainer>
 
           <div className="selected-filters-row">
-            {selectedStatus && <FilterTag label={getStatusLabel(selectedStatus)} onRemove={() => setSelectedStatus(null)} />}
+            {selectedStatuses.map((val) => (
+              <FilterTag
+                key={val}
+                label={getStatusLabel(val)}
+                onRemove={() => setSelectedStatuses((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
             {(startDate || endDate) && (
               <FilterTag 
                 label={`${startDate ? formatUIDate(startDate) : ''} - ${endDate ? formatUIDate(endDate) : ''}`} 
@@ -714,21 +759,21 @@ const RequestListPage: React.FC = () => {
                 onRemove={() => setSelectedApprovers((prev) => prev.filter((v) => v !== val))}
               />
             ))}
-            {(selectedTypes.length > 0 || selectedCreators.length > 0 || selectedApprovers.length > 0 || selectedStatus || startDate || endDate) && (
+            {(selectedTypes.length > 0 || selectedCreators.length > 0 || selectedApprovers.length > 0 || selectedStatuses.length > 0 || startDate || endDate) && (
               <button
                 type="button"
                 onClick={() => {
                   setSelectedTypes([]);
                   setSelectedCreators([]);
                   setSelectedApprovers([]);
-                  setSelectedStatus(null);
+                  setSelectedStatuses([]);
                   setStartDate('');
                   setEndDate('');
                 }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#AE1C3F',
+                  color: '#84828E',
                   cursor: 'pointer',
                   fontSize: '12px',
                   fontWeight: 600,

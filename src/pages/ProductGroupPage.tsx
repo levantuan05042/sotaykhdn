@@ -11,6 +11,14 @@ import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import toast from 'react-hot-toast';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import {
+  displaySuccessMessage,
+  getHideBlockedByPendingCopy,
+  hasPendingOrRevisionChildren,
+  showDisplayStatusFromApi,
+  showErrorToast,
+  showSuccessToast,
+} from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 
 const STATUS_OPTIONS = [
@@ -190,9 +198,8 @@ const ProductGroupPage: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (target?.closest?.('.table-filter-dropdown-menu')) return;
-      if (filterSectionRef.current && !filterSectionRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null);
-      }
+      if (target?.closest?.('.dropdown-wrapper')) return;
+      setOpenDropdown(null);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -247,10 +254,14 @@ const ProductGroupPage: React.FC = () => {
 
   const handleToggleActive = async (item: ProductGroupItem, currentActive: boolean) => {
     if (currentActive) {
-      // Đang muốn ẩn: Kiểm tra xem có con đang hoạt động không
       try {
         const res = await axios.get(`${BASE_URL}/product-groups/${item.id}/children-count`);
         const counts: ChildCounts = res.data?.data || {};
+        if (hasPendingOrRevisionChildren(counts)) {
+          const copy = getHideBlockedByPendingCopy('group', item.name);
+          showErrorToast(copy.title, copy.description);
+          return;
+        }
         if (counts.total && counts.total > 0) {
           setCascadeTarget(item);
           setCascadeCounts(counts);
@@ -261,10 +272,8 @@ const ProductGroupPage: React.FC = () => {
         console.warn("Lỗi kiểm tra số lượng con, tiếp tục thử ẩn:", err);
       }
 
-      // Không có con: Ẩn trực tiếp
       await executeToggleActive(item, false, false);
     } else {
-      // Đang muốn hiển thị lại: Phục hồi trực tiếp
       await executeToggleActive(item, true, false);
     }
   };
@@ -276,7 +285,8 @@ const ProductGroupPage: React.FC = () => {
       const res = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.message || 'Không thể thay đổi trạng thái');
+        showDisplayStatusFromApi(errJson);
+        return;
       }
 
       setData(prevData => 
@@ -284,7 +294,7 @@ const ProductGroupPage: React.FC = () => {
       );
       setShowCascadeModal(false);
       setCascadeTarget(null);
-      toast.success(newActive ? 'Hiển thị thành công' : 'Ẩn thành công', { position: 'top-center' });
+      showSuccessToast(displaySuccessMessage(newActive, 'Nhóm sản phẩm', item.name));
 
       if (cascade) {
         fetchData();
@@ -292,10 +302,6 @@ const ProductGroupPage: React.FC = () => {
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực:", error);
       toast.error(error.message || 'Không thể cập nhật hiệu lực', { position: 'top-center' });
-      // Revert if error
-      setData(prevData => 
-        prevData.map(d => d.id === item.id ? { ...d, active: !newActive } : d)
-      );
     } finally {
       setIsCascadeProcessing(false);
     }
@@ -515,7 +521,7 @@ const ProductGroupPage: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#AE1C3F',
+                  color: '#84828E',
                   cursor: 'pointer',
                   fontSize: '12px',
                   fontWeight: 600,

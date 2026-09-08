@@ -11,11 +11,18 @@ import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils'; 
+import {
+  displaySuccessMessage,
+  notifyIfCannotShowChild,
+  showDisplayStatusFromApi,
+  showSuccessToast,
+} from '../utils/appToast'; 
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 
@@ -608,8 +615,14 @@ const DetailProductPage: React.FC = () => {
       toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${missingRequiredCriterion.name}`, { position: 'top-center' });
       return;
     }
-    const isBatch = productData?.requestId || productData?.batchRequestId;
-    if (isBatch) {
+    const productStatus = String(productData?.status || '').toUpperCase();
+    const requestStatus = String(
+      productData?.requestStatus || productData?.productRequest?.status || ''
+    ).toUpperCase();
+    const batchAlreadyApproved = requestStatus === 'ACTIVE' || requestStatus === 'COMPLETED';
+    const isBatch = Boolean(productData?.requestId || productData?.batchRequestId);
+    // Lô đã duyệt / sản phẩm đã duyệt: tạo phiên bản mới như sản phẩm lẻ, không gửi lại cả lô
+    if (isBatch && productStatus !== 'ACTIVE' && productStatus !== 'ARCHIVED' && !batchAlreadyApproved) {
       setShowBatchModal(true);
       return;
     }
@@ -779,6 +792,7 @@ const DetailProductPage: React.FC = () => {
   const isFormDirty     = formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
   const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
   const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!isReadOnly && isDirty));
 
   // Tự động cập nhật dữ liệu sản phẩm khi DB thay đổi nếu không đang chỉnh sửa dở dang
   useEffect(() => {
@@ -987,6 +1001,7 @@ const DetailProductPage: React.FC = () => {
           NEEDS_REVISION: 'Lưu nháp thành công',
         };
         renderCustomToast(msgs[status] || 'Cập nhật thành công');
+        allowLeave();
         setTimeout(() => navigate('/products/processing'), 400);
       } else {
         const err = await res.json();
@@ -997,7 +1012,11 @@ const DetailProductPage: React.FC = () => {
   };
 
   const handleToggleActive = async (newActiveStatus: boolean) => {
-    if (isReadOnly || !id) return;
+    if (newActiveStatus && await notifyIfCannotShowChild('Sản phẩm', productData?.name, productData)) {
+      setIsStatusOpen(false);
+      return;
+    }
+    if (!isLoggedIn || !isOwner || isPendingApproval || isRejected || !id) return;
     setIsActive(newActiveStatus);
     setIsStatusOpen(false);
     
@@ -1009,10 +1028,10 @@ const DetailProductPage: React.FC = () => {
       });
       
       if (res.ok) {
-        renderCustomToast(newActiveStatus ? 'Hiển thị thành công' : 'Ẩn thành công');
+        showSuccessToast(displaySuccessMessage(newActiveStatus, 'Sản phẩm', productData?.name));
       } else {
         const err = await res.json();
-        toast.error(err.message || 'Lỗi khi thay đổi trạng thái hiển thị', { position: 'top-center' });
+        showDisplayStatusFromApi(err, 'Lỗi khi thay đổi trạng thái hiển thị');
         setIsActive(!newActiveStatus);
       }
     } catch (e) {
@@ -1047,6 +1066,7 @@ const DetailProductPage: React.FC = () => {
       if (response.status === 200 || response.status === 204) {
         toast.success(`Gửi phê duyệt lô ${targetRequestName} thành công!`, { position: 'top-center' });
         setShowBatchModal(false);
+        allowLeave();
         setTimeout(() => navigate('/products/processing'), 500);
       }
     } catch (error: any) {
@@ -1072,6 +1092,7 @@ const DetailProductPage: React.FC = () => {
       if (res.ok) { 
         setShowDeleteModal(false);
         renderCustomToast('Xóa thành công'); 
+        allowLeave();
         setTimeout(() => navigate('/products/processing'), 400); 
       }
       else { const e = await res.json(); toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' }); setLoading(false); }
@@ -1106,7 +1127,7 @@ const DetailProductPage: React.FC = () => {
   const productNameBreadcrumb = getCleanProductName(productData.name);
   const activeRequestId = productData?.requestId || productData?.batchRequestId || 'Lô ABC';
   const requestName = productData?.requestName || 'Tên yêu cầu';
-  const isStatusDisabled = isReadOnly || productData?.status !== 'ACTIVE';
+  const isStatusDisabled = !isLoggedIn || !isOwner || isPendingApproval || isRejected || productData?.status !== 'ACTIVE';
 
   return (
     <div className="pageWrapper">
@@ -1937,6 +1958,7 @@ const DetailProductPage: React.FC = () => {
         versionItem={previewVersionItem}
       />
 
+      {dialog}
     </div>
   );
 };

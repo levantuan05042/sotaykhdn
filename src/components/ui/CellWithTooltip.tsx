@@ -116,9 +116,13 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
       onMouseLeave={handleMouseLeave}
       style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%', ...style }}
     >
-      <span 
-        className="truncate-text" 
-        style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: style?.justifyContent || 'flex-start' }}
+      <span
+        className="truncate-text"
+        style={{
+          flex: 1,
+          minWidth: 0,
+          textAlign: style?.justifyContent === 'center' ? 'center' : style?.justifyContent === 'flex-end' ? 'right' : undefined,
+        }}
       >
         {displayContent}
       </span>

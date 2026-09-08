@@ -8,9 +8,18 @@ import CellWithTooltip from '../components/ui/CellWithTooltip';
 import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdown';
 import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
-import { formatApprovedBy, getCascadeRowClassName, isCascadeHidden } from '../utils/formatUtils';
+import { formatApprovedBy, getCascadeRowClassName } from '../utils/formatUtils';
 import toast from 'react-hot-toast';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import {
+  displaySuccessMessage,
+  getHideBlockedByPendingCopy,
+  hasPendingOrRevisionChildren,
+  notifyIfCannotShowChild,
+  showDisplayStatusFromApi,
+  showErrorToast,
+  showSuccessToast,
+} from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 
 const STATUS_OPTIONS = [
@@ -206,9 +215,8 @@ const ProductBusinessPage: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Element;
       if (target?.closest?.('.table-filter-dropdown-menu')) return;
-      if (filterSectionRef.current && !filterSectionRef.current.contains(event.target as Node)) {
-        setOpenDropdown(null);
-      }
+      if (target?.closest?.('.dropdown-wrapper')) return;
+      setOpenDropdown(null);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -290,26 +298,30 @@ const ProductBusinessPage: React.FC = () => {
   };
 
   const handleToggleActive = async (item: ProductBusinessItem, currentActive: boolean) => {
-    if (isCascadeHidden(item)) return;
-    if (currentActive) {
-      // Đang muốn ẩn: Kiểm tra xem có sản phẩm con không
-      try {
-        const res = await axios.get(`${BASE_URL}/product-business/${item.id}/children-count`);
-        const counts: ChildCounts = res.data?.data || {};
-        if (counts.total && counts.total > 0) {
-          setCascadeTarget(item);
-          setCascadeCounts(counts);
-          setShowCascadeModal(true);
-          return;
-        }
-      } catch (err) {
-        console.warn("Lỗi kiểm tra con nghiệp vụ:", err);
-      }
-
-      await executeToggleActive(item, false, false);
-    } else {
+    if (!currentActive) {
+      if (await notifyIfCannotShowChild('nghiệp vụ', item.name, item)) return;
       await executeToggleActive(item, true, false);
+      return;
     }
+    try {
+      const res = await axios.get(`${BASE_URL}/product-business/${item.id}/children-count`);
+      const counts: ChildCounts = res.data?.data || {};
+      if (hasPendingOrRevisionChildren(counts)) {
+        const copy = getHideBlockedByPendingCopy('business', item.name);
+        showErrorToast(copy.title, copy.description);
+        return;
+      }
+      if (counts.total && counts.total > 0) {
+        setCascadeTarget(item);
+        setCascadeCounts(counts);
+        setShowCascadeModal(true);
+        return;
+      }
+    } catch (err) {
+      console.warn("Lỗi kiểm tra con nghiệp vụ:", err);
+    }
+
+    await executeToggleActive(item, false, false);
   };
 
   const executeToggleActive = async (item: ProductBusinessItem, newActive: boolean, cascade: boolean) => {
@@ -322,7 +334,8 @@ const ProductBusinessPage: React.FC = () => {
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.message || 'Không thể thay đổi trạng thái');
+        showDisplayStatusFromApi(errJson);
+        return;
       }
 
       setData(prevData => 
@@ -330,7 +343,7 @@ const ProductBusinessPage: React.FC = () => {
       );
       setShowCascadeModal(false);
       setCascadeTarget(null);
-      toast.success(newActive ? 'Hiển thị thành công' : 'Ẩn thành công', { position: 'top-center' });
+      showSuccessToast(displaySuccessMessage(newActive, 'nghiệp vụ', item.name));
 
       if (cascade) {
         fetchData();
@@ -338,9 +351,6 @@ const ProductBusinessPage: React.FC = () => {
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực sản phẩm:", error);
       toast.error(error.message || 'Không thể cập nhật hiệu lực', { position: 'top-center' });
-      setData(prevData => 
-        prevData.map(d => d.id === item.id ? { ...d, active: !newActive } : d)
-      );
     } finally {
       setIsCascadeProcessing(false);
     }
@@ -348,12 +358,11 @@ const ProductBusinessPage: React.FC = () => {
 
   const renderActiveToggle = (item: ProductBusinessItem) => {
     const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
-    const isCascadeLocked = isCascadeHidden(item);
-    const isDisabled = disabledStatuses.includes(item.status) || isCascadeLocked;
+    const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.active || false;
 
     return (
-      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()} title={isCascadeLocked ? 'Đang bị ẩn theo đối tượng cha' : undefined}>
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
         <label className="toggle-switch">
           <input 
             type="checkbox" 
@@ -364,7 +373,7 @@ const ProductBusinessPage: React.FC = () => {
           <span className="toggle-slider"></span>
         </label>
         <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
-          {isCascadeLocked ? 'Ẩn theo cha' : (isActive ? 'Hiện' : 'Ẩn')}
+          {isActive ? 'Hiện' : 'Ẩn'}
         </span>
       </div>
     );
@@ -595,7 +604,7 @@ const ProductBusinessPage: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#AE1C3F',
+                  color: '#84828E',
                   cursor: 'pointer',
                   fontSize: '12px',
                   fontWeight: 600,
