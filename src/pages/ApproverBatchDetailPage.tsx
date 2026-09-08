@@ -319,7 +319,7 @@ const ApproverBatchDetailPage: React.FC = () => {
           <h2 className="batch-breadcrumb-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>{batchRequest?.name || 'Lô sản phẩm'}</span>
             <span style={{ color: '#8c8c8c', fontSize: '14px' }}>&rsaquo;</span>
-            <StatusBadge status={batchRequest?.status || 'PENDING_APPROVAL'} />
+            <StatusBadge status={batchRequest?.status === 'ACTIVE' || batchRequest?.status === 'APPROVED' ? 'COMPLETED' : (batchRequest?.status || 'PENDING_APPROVAL')} />
           </h2>
         </div>
 

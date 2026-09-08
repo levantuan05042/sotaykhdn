@@ -27,9 +27,16 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
   { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
   { label: 'Hoàn thành', value: 'COMPLETED' },
-  { label: 'Đã duyệt', value: 'ACTIVE' },
   { label: 'Từ chối', value: 'REJECTED' },
 ];
+
+const toBatchListStatus = (status?: string | null) => {
+  const value = (status || 'DRAFT').toUpperCase();
+  if (value === 'ACTIVE' || value === 'APPROVED') {
+    return 'COMPLETED';
+  }
+  return value;
+};
 
 const ApproverRequestListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -80,7 +87,7 @@ const ApproverRequestListPage: React.FC = () => {
           id: item.requestId,
           stt: index + 1,
           title: item.requestName || '---',
-          status: item.status || 'DRAFT',
+          status: toBatchListStatus(item.status),
           createdAt: formattedDate,
           creator: item.createdByFullName || item.createdBy || '---',
           approver: item.approvedByFullName || item.approvedBy || '---',
