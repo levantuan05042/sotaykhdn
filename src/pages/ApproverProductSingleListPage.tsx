@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
@@ -24,15 +24,15 @@ const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
   { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Đã duyệt', value: 'ACTIVE' },
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
   { label: 'Từ chối', value: 'REJECTED' },
 ];
 
 export const ApproverProductSingleListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [productGroups, setProductGroups] = useState<FilterOption[]>([]);
@@ -74,12 +74,13 @@ export const ApproverProductSingleListPage: React.FC = () => {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.SINGLE_FOR_APPROVAL, {
           params: {
             keyword: searchTerm || undefined,
-            status: selectedStatus || undefined,
-            types: selectedGroupId || undefined,
+            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+            types: selectedGroupIds.length ? selectedGroupIds : undefined,
           },
+          paramsSerializer: { indexes: null },
         });
 
-        const mapped: ProductItem[] = response.data.map((item: any, index: number) => {
+        let mapped: ProductItem[] = response.data.map((item: any, index: number) => {
           let formattedDate = '---';
           if (item.createdAt) {
             const d = new Date(item.createdAt);
@@ -100,6 +101,10 @@ export const ApproverProductSingleListPage: React.FC = () => {
           };
         });
 
+        if (selectedStatuses.length > 1) {
+          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+        }
+
         setProducts(mapped);
       } catch (error) {
         console.error('Error fetching single products:', error);
@@ -109,7 +114,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
     };
 
     fetchProducts();
-  }, [searchTerm, selectedStatus, selectedGroupId]);
+  }, [searchTerm, selectedStatuses, selectedGroupIds]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -211,20 +216,49 @@ export const ApproverProductSingleListPage: React.FC = () => {
 
       {/* Filter and Search Section */}
       <div className="filter-card shadow-sm">
-        <div className="filter-row-left">
-          <FilterDropdown
-            label="Trạng thái"
-            options={STATUS_FILTER_OPTIONS}
-            selectedValue={selectedStatus}
-            onSelect={setSelectedStatus}
-          />
+        <div className="dropdown-group-container">
+          <div className="dropdown-row">
+            <FilterDropdown
+              label="Trạng thái"
+              options={STATUS_FILTER_OPTIONS}
+              multiple
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+            />
 
-          <FilterDropdown
-            label="Loại nội dung"
-            options={productGroups}
-            selectedValue={selectedGroupId}
-            onSelect={setSelectedGroupId}
-          />
+            <FilterDropdown
+              label="Loại nội dung"
+              options={productGroups}
+              multiple
+              selectedValues={selectedGroupIds}
+              onChange={setSelectedGroupIds}
+            />
+          </div>
+
+          {(selectedStatuses.length > 0 || selectedGroupIds.length > 0) && (
+            <div className="selected-filters-row">
+              {selectedStatuses.map((val) => {
+                const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedStatuses(selectedStatuses.filter((s) => s !== val))}
+                  />
+                );
+              })}
+              {selectedGroupIds.map((val) => {
+                const opt = productGroups.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedGroupIds(selectedGroupIds.filter((id) => id !== val))}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="filter-row-right">

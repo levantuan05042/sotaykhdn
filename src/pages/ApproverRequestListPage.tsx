@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -23,17 +23,16 @@ export interface RequestItem {
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Lưu nháp', value: 'DRAFT' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Hoàn thành', value: 'ACTIVE' },
-  { label: 'Từ chối', value: 'REJECTED' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Từ chối', value: 'REJECTED' },
 ];
 
 const ApproverRequestListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [requests, setRequests] = useState<RequestItem[]>([]);
@@ -59,14 +58,14 @@ const ApproverRequestListPage: React.FC = () => {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST, {
           params: {
             keyword: searchTerm || undefined,
-            status: selectedStatus || undefined,
+            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
             startDate: startDate || undefined,
             endDate: endDate || undefined,
             forApproval: true,
           },
         });
 
-        const mapped: RequestItem[] = response.data.map((item: any, index: number) => {
+        let mapped: RequestItem[] = response.data.map((item: any, index: number) => {
           let formattedDate = '---';
           if (item.createdAt) {
             const d = new Date(item.createdAt);
@@ -87,6 +86,10 @@ const ApproverRequestListPage: React.FC = () => {
           };
         });
 
+        if (selectedStatuses.length > 1) {
+          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+        }
+
         setRequests(mapped);
       } catch (error) {
         console.error('Error fetching requests from backend:', error);
@@ -96,7 +99,7 @@ const ApproverRequestListPage: React.FC = () => {
     };
 
     fetchRequests();
-  }, [searchTerm, selectedStatus, startDate, endDate]);
+  }, [searchTerm, selectedStatuses, startDate, endDate]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -199,22 +202,40 @@ const ApproverRequestListPage: React.FC = () => {
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
-        <div className="filter-row-left">
-          <FilterDropdown
-            label="Trạng thái"
-            options={STATUS_FILTER_OPTIONS}
-            selectedValue={selectedStatus}
-            onSelect={setSelectedStatus}
-          />
+        <div className="dropdown-group-container">
+          <div className="dropdown-row">
+            <FilterDropdown
+              label="Trạng thái"
+              options={STATUS_FILTER_OPTIONS}
+              multiple
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+            />
 
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onSave={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-            }}
-          />
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onSave={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+            />
+          </div>
+
+          {selectedStatuses.length > 0 && (
+            <div className="selected-filters-row">
+              {selectedStatuses.map((val) => {
+                const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedStatuses(selectedStatuses.filter((s) => s !== val))}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="filter-row-right">

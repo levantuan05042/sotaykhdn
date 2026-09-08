@@ -6,11 +6,25 @@ export interface FilterOption {
   value: string;
 }
 
+export const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
+  <div className="filter-tag">
+    <span>{label}</span>
+    <button type="button" className="btn-remove-tag" onClick={onRemove} aria-label={`Bỏ chọn ${label}`}>
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+        <path d="M15 5L5 15M5 5L15 15" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </button>
+  </div>
+);
+
 interface FilterDropdownProps {
   label: string;
   options?: FilterOption[];
   selectedValue?: string | null;
   onSelect?: (value: string | null) => void;
+  selectedValues?: string[];
+  onChange?: (values: string[]) => void;
+  multiple?: boolean;
   customContent?: React.ReactNode;
   className?: string;
 }
@@ -20,11 +34,16 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   options,
   selectedValue,
   onSelect,
+  selectedValues,
+  onChange,
+  multiple = false,
   customContent,
   className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const multiSelected = selectedValues ?? [];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -36,51 +55,62 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedOption = options?.find((opt) => opt.value === selectedValue);
-  const buttonLabel = selectedOption ? selectedOption.label : label;
+  const isOptionSelected = (value: string) => {
+    if (!value) return false;
+    if (multiple) return multiSelected.includes(value);
+    return selectedValue === value;
+  };
+
+  const handleOptionClick = (value: string) => {
+    if (multiple) {
+      if (!value) {
+        onChange?.([]);
+        return;
+      }
+      const next = multiSelected.includes(value)
+        ? multiSelected.filter((v) => v !== value)
+        : [...multiSelected, value];
+      onChange?.(next);
+      return;
+    }
+
+    onSelect?.(selectedValue === value || !value ? null : value);
+    setIsOpen(false);
+  };
 
   return (
-    <div className={`filter-dropdown-wrapper ${className}`} ref={dropdownRef}>
+    <div className={`dropdown-wrapper filter-dropdown-wrapper ${className}`} ref={dropdownRef}>
       <button
-        className={`filter-dropdown-btn ${isOpen ? 'active' : ''} ${selectedValue ? 'has-value' : ''}`}
+        className={`btn-dropdown filter-dropdown-btn ${isOpen ? 'active' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
         type="button"
       >
-        <span>{buttonLabel}</span>
+        <span>{label}</span>
         <svg
-          className={`chevron-icon ${isOpen ? 'open' : ''}`}
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
+          className={`chevron-icon ${isOpen ? 'rotate open' : ''}`}
+          width="20"
+          height="20"
+          viewBox="0 0 20 20"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         >
-          <polyline points="6 9 12 15 18 9" />
+          <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {isOpen && (
-        <div className="filter-dropdown-menu">
+        <div className="dropdown-menu filter-dropdown-menu">
           {customContent ? (
             customContent
           ) : (
             options?.map((opt) => (
-              <button
-                key={opt.value}
-                className={`filter-menu-item ${selectedValue === opt.value ? 'selected' : ''}`}
-                onClick={() => {
-                  if (onSelect) {
-                    onSelect(selectedValue === opt.value ? null : opt.value);
-                  }
-                  setIsOpen(false);
-                }}
+              <div
+                key={opt.value || '__all__'}
+                className={`menu-item filter-menu-item ${isOptionSelected(opt.value) ? 'selected' : ''}`}
+                onClick={() => handleOptionClick(opt.value)}
               >
                 <span>{opt.label}</span>
-                {selectedValue === opt.value && <span className="check-mark">✓</span>}
-              </button>
+                {isOptionSelected(opt.value) && <i className="check-icon check-mark">✔</i>}
+              </div>
             ))
           )}
         </div>

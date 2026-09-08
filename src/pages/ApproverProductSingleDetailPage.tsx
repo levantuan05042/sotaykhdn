@@ -264,7 +264,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
               ) : (
                 <button
                   className="btn-action-approve"
-                  onClick={() => handleSaveReview('3')}
+                  onClick={() => handleSaveReview('2')}
                   style={{
                     backgroundColor: '#053E2B',
                     color: '#ffffff',
@@ -275,7 +275,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
                     fontWeight: 600
                   }}
                 >
-                  Đã review
+                  Duyệt
                 </button>
               )}
             </>

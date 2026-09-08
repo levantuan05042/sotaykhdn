@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
@@ -23,18 +23,17 @@ interface ProductCategoryItem {
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Lưu nháp', value: 'DRAFT' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Hoàn thành', value: 'ACTIVE' },
-  { label: 'Từ chối', value: 'REJECTED' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Từ chối', value: 'REJECTED' },
 ];
 
 export const ApproverProductCategoryListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [productGroups, setProductGroups] = useState<FilterOption[]>([]);
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -71,13 +70,14 @@ export const ApproverProductCategoryListPage: React.FC = () => {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST, {
           params: {
             keyword: searchTerm || undefined,
-            status: selectedStatus || undefined,
-            types: selectedGroupId || undefined,
+            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+            types: selectedGroupIds.length ? selectedGroupIds : undefined,
             forApproval: true,
           },
+          paramsSerializer: { indexes: null },
         });
 
-        const mapped: ProductCategoryItem[] = response.data.map((item: any, index: number) => {
+        let mapped: ProductCategoryItem[] = response.data.map((item: any, index: number) => {
           return {
             id: item.id,
             stt: index + 1,
@@ -91,6 +91,10 @@ export const ApproverProductCategoryListPage: React.FC = () => {
           };
         });
 
+        if (selectedStatuses.length > 1) {
+          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+        }
+
         setCategories(mapped);
       } catch (error) {
         console.error('Error fetching categories from backend:', error);
@@ -100,7 +104,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     };
 
     fetchCategories();
-  }, [searchTerm, selectedStatus, selectedGroupId]);
+  }, [searchTerm, selectedStatuses, selectedGroupIds]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -214,20 +218,49 @@ export const ApproverProductCategoryListPage: React.FC = () => {
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
-        <div className="filter-row-left">
-          <FilterDropdown
-            label="Trạng thái"
-            options={STATUS_FILTER_OPTIONS}
-            selectedValue={selectedStatus}
-            onSelect={setSelectedStatus}
-          />
+        <div className="dropdown-group-container">
+          <div className="dropdown-row">
+            <FilterDropdown
+              label="Trạng thái"
+              options={STATUS_FILTER_OPTIONS}
+              multiple
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+            />
 
-          <FilterDropdown
-            label="Nhóm sản phẩm"
-            options={productGroups}
-            selectedValue={selectedGroupId}
-            onSelect={setSelectedGroupId}
-          />
+            <FilterDropdown
+              label="Nhóm sản phẩm"
+              options={productGroups}
+              multiple
+              selectedValues={selectedGroupIds}
+              onChange={setSelectedGroupIds}
+            />
+          </div>
+
+          {(selectedStatuses.length > 0 || selectedGroupIds.length > 0) && (
+            <div className="selected-filters-row">
+              {selectedStatuses.map((val) => {
+                const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedStatuses(selectedStatuses.filter((s) => s !== val))}
+                  />
+                );
+              })}
+              {selectedGroupIds.map((val) => {
+                const opt = productGroups.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedGroupIds(selectedGroupIds.filter((id) => id !== val))}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="filter-row-right">

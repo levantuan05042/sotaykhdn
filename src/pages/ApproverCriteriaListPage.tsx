@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
@@ -26,17 +26,17 @@ interface CriteriaItem {
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Hoàn thành', value: 'ACTIVE' },
-  { label: 'Từ chối', value: 'REJECTED' },
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
+  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
+  { label: 'Đang hoạt động', value: 'ACTIVE' },
+  { label: 'Từ chối', value: 'REJECTED' },
 ];
 
 export const ApproverCriteriaListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
   const [productGroups, setProductGroups] = useState<FilterOption[]>([]);
   const [criteriaList, setCriteriaList] = useState<CriteriaItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -134,8 +134,12 @@ export const ApproverCriteriaListPage: React.FC = () => {
     if (item.status === 'ARCHIVED') return false;
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !selectedStatus ? true : item.status === selectedStatus;
-    const matchesGroup = !selectedGroupId ? true : true;
+    const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
+    const matchesGroup = selectedGroupIds.length === 0
+      || selectedGroupIds.some((id) => {
+        const group = productGroups.find((g) => g.value === id);
+        return group ? item.groupName === group.label : false;
+      });
     return matchesSearch && matchesStatus && matchesGroup;
   }).map((item, index) => ({
     ...item,
@@ -245,20 +249,49 @@ export const ApproverCriteriaListPage: React.FC = () => {
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
-        <div className="filter-row-left">
-          <FilterDropdown
-            label="Lọc theo trạng thái"
-            options={STATUS_FILTER_OPTIONS}
-            selectedValue={selectedStatus}
-            onSelect={setSelectedStatus}
-          />
+        <div className="dropdown-group-container">
+          <div className="dropdown-row">
+            <FilterDropdown
+              label="Lọc theo trạng thái"
+              options={STATUS_FILTER_OPTIONS}
+              multiple
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+            />
 
-          <FilterDropdown
-            label="Lọc theo nhóm sản phẩm"
-            options={productGroups}
-            selectedValue={selectedGroupId}
-            onSelect={setSelectedGroupId}
-          />
+            <FilterDropdown
+              label="Lọc theo nhóm sản phẩm"
+              options={productGroups}
+              multiple
+              selectedValues={selectedGroupIds}
+              onChange={setSelectedGroupIds}
+            />
+          </div>
+
+          {(selectedStatuses.length > 0 || selectedGroupIds.length > 0) && (
+            <div className="selected-filters-row">
+              {selectedStatuses.map((val) => {
+                const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedStatuses(selectedStatuses.filter((s) => s !== val))}
+                  />
+                );
+              })}
+              {selectedGroupIds.map((val) => {
+                const opt = productGroups.find((o) => o.value === val);
+                return (
+                  <FilterTag
+                    key={val}
+                    label={opt ? opt.label : val}
+                    onRemove={() => setSelectedGroupIds(selectedGroupIds.filter((id) => id !== val))}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="filter-row-right">
