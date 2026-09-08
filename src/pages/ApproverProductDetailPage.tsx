@@ -565,7 +565,9 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                       fontSize: '12px',
                       fontWeight: 600,
                       display: 'inline-block'
-                    }}>Phiên bản {detail.version || 1}</span>
+                    }}>
+                      {detail.version !== null && detail.version !== undefined ? `Phiên bản ${detail.version}` : '---'}
+                    </span>
                   </div>
                 </div>
               </div>

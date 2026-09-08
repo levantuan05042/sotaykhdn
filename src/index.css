@@ -9,3 +9,34 @@
 body {
   @apply bg-[#F9FAFB] font-sans;
 }
+
+/* Quill Dropdown Pickers Fix & Global Content Formatting */
+.ql-snow .ql-picker.ql-expanded .ql-picker-options {
+  z-index: 1000 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16) !important;
+  border-radius: 6px !important;
+  border: 1px solid #D1D5DB !important;
+}
+
+.ql-snow .ql-color-picker .ql-picker-options {
+  padding: 6px 8px !important;
+  width: 172px !important;
+}
+
+.ql-align-center { text-align: center !important; }
+.ql-align-right { text-align: right !important; }
+.ql-align-justify { text-align: justify !important; }
+.ql-align-left { text-align: left !important; }
+
+.ql-indent-1 { padding-left: 2em !important; }
+.ql-indent-2 { padding-left: 4em !important; }
+.ql-indent-3 { padding-left: 6em !important; }
+.ql-indent-4 { padding-left: 8em !important; }
+.ql-indent-5 { padding-left: 10em !important; }
+.ql-indent-6 { padding-left: 12em !important; }
+.ql-indent-7 { padding-left: 14em !important; }
+.ql-indent-8 { padding-left: 16em !important; }
+
+sub { vertical-align: sub !important; font-size: 0.75em !important; line-height: 0 !important; }
+sup { vertical-align: super !important; font-size: 0.75em !important; line-height: 0 !important; }

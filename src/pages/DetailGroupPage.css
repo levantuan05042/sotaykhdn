@@ -505,11 +505,13 @@
   justify-content: space-between;
   background: #ffffff;
   padding: 10px 20px;
-  border-radius: 0px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
   border: 1px solid #e5e7eb;
-  min-width:300px;
+  min-width: 300px;
   pointer-events: auto;
+  position: relative;
+  z-index: 10000000;
   animation: slideInRight 0.3s ease-out;
 }
 
@@ -647,8 +649,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 99999;
-  pointer-events: none;
+  z-index: 10000000;
+  background-color: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+  pointer-events: auto;
 }
 
 .warning-toast-card {

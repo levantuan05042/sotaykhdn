@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
+import CellWithTooltip from './ui/CellWithTooltip';
 import './ProductCriteriaTable.css';
 
 interface ProductGroup {
@@ -21,8 +22,12 @@ interface ProductCriteria {
   createdAt: string;
   updatedAt: string;
   active?: boolean;
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;  
 }
 
@@ -30,15 +35,6 @@ interface Props {
   data: ProductCriteria[];
   onToggleActive?: (id: any, newActiveStatus: boolean) => void;
 }
-
-const STATUS_OPTIONS = [
-  { label: 'Đang hoạt động', value: 'ACTIVE' },
-  { label: 'Lưu nháp', value: 'DRAFT' },
-  { label: 'Yêu cầu chỉnh sửa', value: 'NEEDS_REVISION' },
-  { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
-  { label: 'Từ chối', value: 'REJECTED' },
-  { label: 'Lưu trữ', value: 'ARCHIVED' }
-];
 
 const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
@@ -142,6 +138,18 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
   return (
     <div className="product-table-container">
       <table className="product-table table-text-base">
+        <colgroup>
+          <col style={{ width: '80px' }} />
+          <col style={{ width: '140px' }} />
+          <col style={{ width: '220px' }} />
+          <col style={{ width: '180px' }} />
+          <col style={{ width: '210px' }} />
+          <col style={{ width: '140px' }} />
+          <col style={{ width: '200px' }} />
+          <col style={{ width: '200px' }} />
+          <col style={{ width: '140px' }} />
+          <col style={{ width: '80px' }} />
+        </colgroup>
         <thead>
           <tr>
             <th className="px-40 rounded-l-12 w-24">STT</th>
@@ -168,7 +176,6 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
                 ? activeGroups.map(group => group.name).join(', ')
                 : '---';
 
-              const statusText = STATUS_OPTIONS.find(opt => opt.value === item.status)?.label || item.status;
               const serialNumber = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
 
               return (
@@ -213,46 +220,29 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
                   </td>
 
                   <td>
-                    <div className="custom-tooltip-container">
-                      <StatusBadge2 status={item.status} />
-                      <div className="custom-tooltip">{statusText}</div>
-                    </div>
+                    <StatusBadge2 status={item.status} />
                   </td>
 
                   <td>
-                    <div className="custom-tooltip-container">
-                      {renderActiveToggle(item)}
-                      <div className="custom-tooltip">{item.active ? 'Hiện' : 'Ẩn'}</div>
-                    </div>
+                    {renderActiveToggle(item)}
                   </td>
 
                   <td>
-                    <div className="custom-tooltip-container">
-                      <span className="truncate-text">{formatApprovedBy(item.createdByFullName)}</span>
-                      <div className="custom-tooltip">{formatApprovedBy(item.createdByFullName)}</div>
-                    </div>
+                    <CellWithTooltip text={formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy)} />
                   </td>
 
                   <td>
-                    <div className="custom-tooltip-container">
-                      <span className="truncate-text">{formatApprovedBy(item.approvedBy)}</span>
-                      <div className="custom-tooltip">{formatApprovedBy(item.approvedBy)}</div>
-                    </div>
+                    <CellWithTooltip text={formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy)} />
                   </td>
 
                   <td>
-                    <div className="custom-tooltip-container">
-                      <span className="truncate-text" style={{ color: '#053E2B', fontWeight: 600 }}>
-                        {item.version ? `Phiên bản ${item.version}` : '---'}
-                      </span>
-                      <div className="custom-tooltip">
-                        {item.version ? `Phiên bản ${item.version}` : '---'}
-                      </div>
-                    </div>
+                    <span style={{ color: '#053E2B', fontWeight: 600 }}>
+                      {item.version ? `Phiên bản ${item.version}` : '---'}
+                    </span>
                   </td>
 
                   <td className="px-40 text-right">
-                    <div className="custom-tooltip-container" style={{ justifyContent: 'flex-end' }}>
+                    <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'flex-end' }}>
                       <button
                         className="btn-view-detail"
                         onClick={(e) => {
@@ -275,8 +265,7 @@ const ProductCriteriaTable: React.FC<Props> = ({ data, onToggleActive }) => {
                           <circle cx="12" cy="12" r="3" />
                         </svg>
                       </button>
-                      <div className="custom-tooltip">Xem chi tiết</div>
-                    </div>
+                    </CellWithTooltip>
                   </td>
                 </tr>
               );

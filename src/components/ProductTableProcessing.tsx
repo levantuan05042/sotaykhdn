@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
 import StatusBadgeListRequest from './ui/StatusBadgeListRequest';
+import { CellWithTooltip } from './ui/CellWithTooltip';
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -17,37 +17,18 @@ interface ProductCategory {
   createdAt?: string | null;   
   status: string;
   active?: boolean;       
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;
 }
 
 interface Props {
   data: ProductCategory[];
 }
-
-interface CellWithTooltipProps {
-  text?: string | null;
-  style?: React.CSSProperties;
-  onClick?: () => void;
-}
-
-const CellWithTooltip: React.FC<CellWithTooltipProps> = ({ text, style, onClick }) => {
-  const content = text && text.trim() !== '' ? text : '---';
-
-  if (content === '---') {
-    return <span style={style}>{content}</span>;
-  }
-
-  return (
-    <div className="truncate-wrapper" onClick={onClick}>
-      <span className="truncate-text" style={style}>
-        {content}
-      </span>
-      <span className="custom-tooltip">{content}</span>
-    </div>
-  );
-};
 
 const stripHtml = (htmlString?: string | null) => {
   if (!htmlString) return '';
@@ -112,7 +93,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
             <th>STT</th>
             <th>Sản phẩm</th>     
             <th className="col-group">Nhóm sản phẩm</th> 
-            <th>Trạng thái</th>
+            <th className="col-status">Trạng thái</th>
             <th className="col-highlight col-highlight-first" style={highlightHeaderStyle}>Tên yêu cầu</th>
             <th className="col-highlight" style={highlightHeaderStyle}>Ghi chú</th>
             <th className="col-highlight col-highlight-last" style={highlightHeaderStyle}>Ngày tạo</th>
@@ -140,7 +121,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   <CellWithTooltip text={item.productGroupName} />
                 </td>
                 
-                <td>
+                <td className="col-status">
                   <StatusBadge2 status={item.status} />
                 </td>
                 
@@ -160,21 +141,11 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   {(() => {
                     const note = String(stripHtml(item.notes)).trim();
 
-                    return (
-                      <>
-                        <div>DEBUG:[{note}]</div>
-
-                        {note === '0' ? (
-                          <StatusBadgeListRequest status="NEEDS_REVISION" />
-                        ) : note === '1' ? (
-                          <StatusBadgeListRequest status="REJECTED" />
-                        ) : note.toLowerCase() === 'reviewed' ? (
-                          <StatusBadgeListRequest status="REVIEWED" />
-                        ) : (
-                          <CellWithTooltip text={note} />
-                        )}
-                      </>
-                    );
+                    if (note === '0') return <StatusBadgeListRequest status="NEEDS_REVISION" />;
+                    if (note === '1') return <StatusBadgeListRequest status="REJECTED" />;
+                    if (note === '2') return <StatusBadgeListRequest status="APPROVED" />;
+                    if (note.toLowerCase() === 'reviewed' || note === '3') return <StatusBadgeListRequest status="REVIEWED" />;
+                    return <CellWithTooltip text={note || '---'} />;
                   })()}
                 </td>
 
@@ -184,31 +155,32 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                 </td>
                 
                 <td>
-                  <CellWithTooltip text={formatApprovedBy(item.createdByFullName)} />
+                  <CellWithTooltip text={item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy || '---'} />
                 </td>
                 
                 <td>
-                  <CellWithTooltip text={formatApprovedBy(item.approvedBy)} />
+                  <CellWithTooltip text={item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy || '---'} />
                 </td>
                 
                 <td>
                   <CellWithTooltip 
-                    text={item.version ? `Phiên bản ${item.version}` : ''} 
+                    text={item.version ? `Phiên bản ${item.version}` : '---'} 
                     style={{ fontWeight: 600 }} 
                   />
                 </td>
 
                 <td>
-                  <button
-                    className="btn-action-view"
-                    onClick={() => handleViewDetail(item.id)}
-                    title="Xem chi tiết"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
+                  <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'center' }}>
+                    <button
+                      className="btn-action-view"
+                      onClick={() => handleViewDetail(item.id)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </CellWithTooltip>
                 </td>
               </tr>
             ))

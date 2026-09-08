@@ -65,7 +65,21 @@ function App() {
   return (
     <>
       {/* THÊM TOASTER Ở CẤP CAO NHẤT */}
-      <Toaster position="top-center" reverseOrder={false} />
+      <Toaster 
+        position="top-center" 
+        reverseOrder={false}
+        containerStyle={{
+          zIndex: 9999999,
+          pointerEvents: 'none',
+        }}
+        toastOptions={{
+          duration: 3500,
+          style: {
+            zIndex: 9999999,
+            pointerEvents: 'auto',
+          }
+        }}
+      />
 
       <BrowserRouter>
         <Routes>

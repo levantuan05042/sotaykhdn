@@ -56,7 +56,6 @@
   background-color: #FFFFFF;
   color: #374151;
   border: 1px solid #D1D5DB;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .btn-import:hover {
@@ -67,13 +66,11 @@
 .btn-add-new {
   background-color: #AE1C3F;
   color: #FFFFFF;
-  box-shadow: 0 2px 4px rgba(174, 28, 63, 0.2);
 }
 
 .btn-add-new:hover {
   background-color: #8e1734;
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px rgba(174, 28, 63, 0.3);
 }
 
 .btn-dropdown {
@@ -148,7 +145,6 @@
   background-color: #FFFFFF;
   padding: 16px 20px;
   gap: 20px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 }
 
 .dropdown-group-container {
@@ -161,7 +157,9 @@
 .dropdown-row {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 12px 20px;
+  min-height: 36px;
+  flex-wrap: nowrap;
 }
 
 /* Thanh tìm kiếm */
@@ -207,7 +205,6 @@
   overflow: hidden;     
   min-height: 0;  
   padding: 0px !important;    
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
 .table-placeholder > div {
@@ -263,6 +260,19 @@
 }
 .toggle-switch input:checked + .toggle-slider { background-color: #10B981; }
 .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); }
+.toggle-switch input:disabled + .toggle-slider {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background-color: #9CA3AF;
+}
+.toggle-switch input:disabled + .toggle-slider:before {
+  cursor: not-allowed;
+  background-color: #E5E7EB;
+}
+.toggle-label.disabled-text {
+  color: #9CA3AF;
+  cursor: not-allowed;
+}
 
 /* Nút Action trong Bảng */
 .btn-view-detail {
@@ -272,4 +282,14 @@
 .btn-view-detail:hover {
   color: #AE1C3F !important;
   transform: scale(1.1);
+}
+
+/* --- Lớp nền màu xanh cho 3 cột: Tên yêu cầu, Ghi chú, Ngày tạo --- */
+.table-processing-highlight table th:nth-child(5),
+.table-processing-highlight table td:nth-child(5),
+.table-processing-highlight table th:nth-child(6),
+.table-processing-highlight table td:nth-child(6),
+.table-processing-highlight table th:nth-child(7),
+.table-processing-highlight table td:nth-child(7) {
+  background-color: #F2FCF7 !important; /* Màu xanh lơ pastel giống UI */
 }

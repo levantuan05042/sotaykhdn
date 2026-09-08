@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
+import { getRandomAvatar } from '../utils/avatarUtils';
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import VersionDetailModal from '../components/ui/VersionDetailModal';
+import type { VersionItem } from '../components/ui/ProductInfoCard';
+import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -56,6 +61,11 @@ const DetailGroupPage: React.FC = () => {
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false); 
   const [productData, setProductData] = useState<any>(null);
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'NEEDS_REVISION' | 'PENDING_APPROVAL' | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCascadeModal, setShowCascadeModal] = useState(false);
+  const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
+  const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -129,6 +139,41 @@ const DetailGroupPage: React.FC = () => {
     );
   }, [formData, isActive, productData]);
 
+  // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
+  useEffect(() => {
+    if (!id) return;
+    const refetchStatus = async () => {
+      if (isModified) return;
+      try {
+        const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id));
+        if (response.ok) {
+          const data = await response.json();
+          setProductData(data);
+          setFormData({
+            name: data.name || '',
+            superGroup: data.superGroup || ''
+          });
+          setIsActive(data.active ?? true);
+        }
+      } catch (e) {}
+    };
+
+    const interval = setInterval(refetchStatus, 5000);
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        refetchStatus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [id, isModified]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isInputDisabled) return;
     const { name, value } = e.target;
@@ -137,10 +182,55 @@ const DetailGroupPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-groups');
 
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [priorConflict, setPriorConflict] = useState<PriorVersionInfo | null>(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<string | null>(null);
+  const [isDeletingPrior, setIsDeletingPrior] = useState(false);
+  const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+
+  const findPriorConflictVersion = () => {
+    if (!productData?.versions || productData.versions.length <= 1) return null;
+    return productData.versions.find(
+      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL')
+    ) || null;
+  };
+
+  const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus(status);
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction(status);
+  };
+
+  const onSubmitClick = () => {
+    if (!formData.name.trim()) {
+      toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
+      return;
+    }
+    if (!formData.superGroup) {
+      toast.error("Vui lòng chọn loại nhóm lớn", { position: 'top-center' });
+      setIsOpen(true);
+      return;
+    }
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus('PENDING_APPROVAL');
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction('PENDING_APPROVAL');
+  };
+
   const handleUpdateGroup = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isInputDisabled || !id) return;
 
-    if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
+    if (status === 'PENDING_APPROVAL') {
       if (!formData.name.trim()) {
         toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
         return;
@@ -162,7 +252,7 @@ const DetailGroupPage: React.FC = () => {
         },
         body: JSON.stringify({
           name: formData.name || productData.name,
-          superGroup: formData.superGroup || productData.superGroup,
+          superGroup: formData.superGroup || productData.superGroup || 'SERVICE',
           active: isActive,
           status
         }),
@@ -171,16 +261,16 @@ const DetailGroupPage: React.FC = () => {
       if (response.ok) {
         let message = '';
         switch (status) {
-          case 'DRAFT': 
+          case 'DRAFT':
           case 'NEEDS_REVISION':
-            message = "Lưu nháp nhóm sản phẩm thành công"; break;
-          case 'ARCHIVED': message = "Lưu trữ nhóm sản phẩm thành công"; break;
-          case 'ACTIVE': message = "Kích hoạt nhóm sản phẩm hoạt động trở lại thành công"; break;
-          case 'PENDING_APPROVAL': message = "Gửi phê duyệt nhóm sản phẩm thành công"; break;
-          default: message = "Cập nhật nhóm sản phẩm thành công";
+            message = "Lưu nháp thành công"; break;
+          case 'ARCHIVED': message = "Lưu trữ thành công"; break;
+          case 'ACTIVE': message = "Hiển thị thành công"; break;
+          case 'PENDING_APPROVAL': message = "Gửi phê duyệt thành công"; break;
+          default: message = "Cập nhật thành công";
         }
         renderCustomToast(message);
-        setTimeout(() => navigate('/product-groups'), 10);
+        setTimeout(() => navigate('/product-groups'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
@@ -194,83 +284,9 @@ const DetailGroupPage: React.FC = () => {
 
   const handleDeleteGroup = () => {
     if (isInputDisabled || !id) return;
-
-    toast.custom((t) => 
-      createPortal(
-        <div className="confirm-toast-overlay">
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
-            <div className="confirm-toast-body">
-              <div className="confirm-toast-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="confirm-toast-content">
-                <p className="confirm-toast-title">Xác nhận xóa</p>
-                <p className="confirm-toast-desc">Bạn có chắc chắn muốn không? Hành động này không thể hoàn tác.</p>
-              </div>
-            </div>
-            <div className="confirm-toast-actions">
-              <button 
-                className="confirm-btn-delete"
-                onClick={async () => {
-                  toast.dismiss(t.id);
-                  await executeDelete();
-                }}
-              >
-                Xóa
-              </button>
-              <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    , { id: 'delete-confirm-toast', duration: Infinity });
+    setShowDeleteModal(true);
   };
 
-  // const executeDelete = async () => {
-  //   if (isInputDisabled || !id) return;
-  //   try {
-  //     setLoading(true);
-  //     const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DELETE(id), {
-  //       method: 'POST',
-  //       headers: { 
-  //         'Content-Type': 'application/json',
-  //         ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  //       }
-  //     });
-
-  //     if (response.ok) {
-  //       toast.custom((t) => 
-  //         createPortal(
-  //           <div className="warning-toast-wrapper">
-  //             <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`} style={{ padding: '32px', width: '360px' }}>
-  //               <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#E0F9EC', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
-  //                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#12B76A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-  //                   <polyline points="20 6 9 17 4 12"></polyline>
-  //                 </svg>
-  //               </div>
-  //               <h3 style={{ margin: 0, color: '#1F2937', fontSize: '18px', fontWeight: 600, textAlign: 'center' }}>Xóa nhóm sản phẩm thành công</h3>
-  //             </div>
-  //           </div>,
-  //           document.body
-  //         )
-  //       , { duration: 2000, id: 'delete-success' });
-
-  //       setTimeout(() => navigate('/product-groups'), 2000);
-  //     } else {
-  //       const errorData = await response.json();
-  //       toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
-  //       setLoading(false);
-  //     }
-  //   } catch (error) {
-  //     toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-  //     setLoading(false);
-  //   }
-  // };
   const executeDelete = async () => {
     if (isInputDisabled || !id) return;
     try {
@@ -281,8 +297,9 @@ const DetailGroupPage: React.FC = () => {
       });
 
       if (response.ok) {
-        renderCustomToast("Xóa nghiệp vụ thành công");
-        setTimeout(() => navigate('/product-groups'), 10);
+        setShowDeleteModal(false);
+        renderCustomToast("Xóa thành công");
+        setTimeout(() => navigate('/product-groups'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
@@ -302,10 +319,31 @@ const DetailGroupPage: React.FC = () => {
       return;
     }
 
-    try {
-      setLoading(true);
-      const url = `${API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id)}/active?active=${newActiveStatus}`;
+    if (!newActiveStatus) {
+      // Đang muốn ẩn: kiểm tra số lượng con
+      try {
+        const res = await fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id)}/children-count`);
+        const resJson = await res.json();
+        const counts: ChildCounts = resJson?.data || {};
+        if (counts.total && counts.total > 0) {
+          setCascadeCounts(counts);
+          setShowCascadeModal(true);
+          setIsStatusOpen(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Lỗi kiểm tra con:", err);
+      }
+      await executeToggleActive(false, false);
+    } else {
+      await executeToggleActive(true, false);
+    }
+  };
 
+  const executeToggleActive = async (newActive: boolean, cascade: boolean) => {
+    setIsCascadeProcessing(true);
+    try {
+      const url = `${API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id || '')}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -317,22 +355,17 @@ const DetailGroupPage: React.FC = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setIsActive(newActiveStatus);
-        setIsStatusOpen(false);
-        toast.success("Cập nhật trạng thái hiển thị thành công", { position: 'top-center' });
+        setIsActive(newActive);
+        setShowCascadeModal(false);
+        toast.success(newActive ? "Hiển thị thành công" : "Ẩn thành công", { position: 'top-center' });
       } else {
-        if (!newActiveStatus) { 
-          renderCannotHideToast(formData.name || productData.name);
-        } else {
-          toast.error(data.message || 'Không thể cập nhật trạng thái', { position: 'top-center' });
-        }
-        setIsStatusOpen(false);
+        toast.error(data.message || 'Không thể cập nhật trạng thái', { position: 'top-center' });
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setIsStatusOpen(false);
     } finally {
-      setLoading(false);
+      setIsCascadeProcessing(false);
+      setIsStatusOpen(false);
     }
   };
 
@@ -355,51 +388,6 @@ const DetailGroupPage: React.FC = () => {
         </button>
       </div>
     ), { position: 'top-center' });
-  };
-
-  const renderCannotHideToast = (groupName: string) => {
-    toast.custom((t) => 
-      createPortal(
-        <div className="warning-toast-wrapper">
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
-            <div className="warning-toast-icon-container">
-              <div className="warning-bg-outer"></div>
-              <div className="warning-bg-inner"></div>
-              <svg 
-                className="warning-toast-icon" 
-                width="40" height="40" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" 
-                  fill="#EAB308"
-                />
-                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
-                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
-              </svg>
-            </div>
-            
-            <h3 className="warning-toast-title">
-              Không thể ẩn nhóm: "{groupName}"
-            </h3>
-            <p className="warning-toast-desc">
-              Nhóm sản phẩm này đang chứa các danh mục hoặc sản phẩm bên trong.
-            </p>
-            
-            <div className="warning-toast-actions">
-              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    , { duration: Infinity, id: 'cannot-hide-toast' }); 
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu nhóm sản phẩm...</div>;
@@ -483,11 +471,11 @@ const DetailGroupPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className="btnDraft active" onClick={() => handleUpdateGroup('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnDraft active" onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnSubmit active" onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -499,7 +487,7 @@ const DetailGroupPage: React.FC = () => {
                     <button 
                       className="btnDraft" 
                       disabled={!isModified} 
-                      onClick={() => handleUpdateGroup('DRAFT')} 
+                      onClick={() => onSaveDraftClick('DRAFT')} 
                       style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -508,7 +496,7 @@ const DetailGroupPage: React.FC = () => {
                     <button 
                       className="btnSubmit" 
                       disabled={!isModified} 
-                      onClick={() => handleUpdateGroup('PENDING_APPROVAL')} 
+                      onClick={onSubmitClick} 
                       style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -519,11 +507,11 @@ const DetailGroupPage: React.FC = () => {
 
                 {productData.status === 'NEEDS_REVISION' && (
                   <>
-                    <button className="btnDraft active" onClick={() => handleUpdateGroup('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnDraft active" onClick={() => onSaveDraftClick('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className="btnSubmit active" onClick={() => handleUpdateGroup('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnSubmit active" onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -655,7 +643,13 @@ const DetailGroupPage: React.FC = () => {
               creatorName={getCreatorDisplayName()} 
               approverName={getApproverDisplayName()} 
               createdAt={formatDateTime(productData.createdAt)} 
-              version={productData.version} 
+              version={productData.version}
+              versions={productData.versions || []}
+              currentId={id}
+              onSelectVersion={(v) => {
+                setPreviewVersionItem(v);
+                setShowVersionModal(true);
+              }}
             />
 
             <div className="commentCard">
@@ -671,7 +665,7 @@ const DetailGroupPage: React.FC = () => {
                     <React.Fragment key={c.id || index}>
                       <div className="commentItem">
                         <div className="userInfo">
-                          <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
+                          <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
                           <div style={{ flex: 1 }}>
                             <div className="userHeader">
                               <span className="userName">
@@ -695,6 +689,96 @@ const DetailGroupPage: React.FC = () => {
         </div>
 
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (confirmAction) {
+            const act = confirmAction;
+            setConfirmAction(null);
+            handleUpdateGroup(act);
+          }
+        }}
+        variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp nhóm sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt nhóm sản phẩm không?'}
+        confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+      />
+
+      <DuplicateVersionModal
+        isOpen={showDuplicateModal}
+        itemName={productData?.name || 'nhóm sản phẩm này'}
+        priorVersion={priorConflict}
+        isProcessing={isDeletingPrior}
+        onCancel={() => {
+          setShowDuplicateModal(false);
+          setPriorConflict(null);
+          setPendingTargetStatus(null);
+        }}
+        onViewPrior={() => {
+          if (priorConflict) {
+            setShowDuplicateModal(false);
+            setPreviewVersionItem(priorConflict as any);
+            setShowVersionModal(true);
+          }
+        }}
+        onConfirm={async () => {
+          if (!priorConflict) return;
+          try {
+            setIsDeletingPrior(true);
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const delRes = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DELETE(priorConflict.id), {
+              method: 'POST',
+              headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+            });
+            if (delRes.ok) {
+              toast.success('Đã xóa phiên bản trùng lặp trước đó');
+              setShowDuplicateModal(false);
+              const target = pendingTargetStatus;
+              setPriorConflict(null);
+              setPendingTargetStatus(null);
+              if (target) {
+                handleUpdateGroup(target as any);
+              }
+            } else {
+              const err = await delRes.json();
+              toast.error(err.message || 'Không thể xóa phiên bản cũ', { position: 'top-center' });
+            }
+          } catch (e) {
+            toast.error('Lỗi khi xóa phiên bản cũ', { position: 'top-center' });
+          } finally {
+            setIsDeletingPrior(false);
+          }
+        }}
+      />
+
+      <VersionDetailModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+        itemType="group"
+        versionItem={previewVersionItem}
+      />
+
+      <ActionConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={executeDelete}
+        variant="delete"
+        title="Xác nhận xóa"
+        desc="Bạn có chắc chắn muốn xóa nhóm sản phẩm này không? Hành động này không thể hoàn tác."
+        confirmText="Xóa"
+      />
+
+      <CascadeHideModal
+        isOpen={showCascadeModal}
+        onClose={() => setShowCascadeModal(false)}
+        onConfirm={() => executeToggleActive(false, true)}
+        itemTypeLabel="nhóm sản phẩm"
+        itemName={formData.name || productData?.name || ''}
+        counts={cascadeCounts}
+        isProcessing={isCascadeProcessing}
+      />
     </div>
   );
 };

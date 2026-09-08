@@ -4,6 +4,7 @@ import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -21,6 +22,8 @@ const AddProductPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false); 
   const statusRef = useRef<HTMLDivElement>(null); 
   const [isActive, setIsActive] = useState<boolean>(true);
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -28,29 +31,41 @@ const AddProductPage: React.FC = () => {
   };
   const handleGoBack = () => navigate('/product-groups');
 
-  const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
+  const onSaveDraftClick = () => {
+    setConfirmAction('DRAFT');
+  };
+
+  const onSubmitClick = () => {
     if (!formData.name.trim()) {
-        toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
-        return;
+      toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
+      return;
     }
     if (!formData.superGroup) {
-        toast.error("Vui lòng chọn nhóm cấp trên", { position: 'top-center' });
-        setIsOpen(true);
-        return;
+      toast.error("Vui lòng chọn nhóm cấp trên", { position: 'top-center' });
+      setIsOpen(true);
+      return;
     }
+    setConfirmAction('PENDING_APPROVAL');
+  };
 
+  const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     try {
-        await axios.post(API_ENDPOINTS.PRODUCT_GROUPS.LIST, { 
-            ...formData, 
-            active: isActive, 
-            status
-        });
+      setIsSubmitting(true);
+      await axios.post(API_ENDPOINTS.PRODUCT_GROUPS.LIST, { 
+        name: formData.name.trim() || undefined,
+        superGroup: formData.superGroup || 'SERVICE', 
+        active: isActive, 
+        status
+      });
 
-        const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
-        renderCustomToast(message);
-        setTimeout(() => navigate('/product-groups'), 250);
+      const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
+      renderCustomToast(message);
+      setConfirmAction(null);
+      setTimeout(() => navigate('/product-groups'), 400);
     } catch (error: any) {
-        toast.error(error.response?.data?.message || 'Có lỗi xảy ra', { position: 'top-center' });
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra', { position: 'top-center' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -76,7 +91,8 @@ const AddProductPage: React.FC = () => {
   };
   
   const isDirty = formData.name.trim() !== '' || formData.superGroup !== '' || isActive !== true; 
-  const canSubmit = isDirty; 
+  const canSaveDraft = !isSubmitting;
+  const canSubmit = isDirty && formData.name.trim() !== '' && formData.superGroup !== '' && !isSubmitting; 
 
   return (
     <div className="pageWrapper">
@@ -105,9 +121,9 @@ const AddProductPage: React.FC = () => {
 
           <div className="headerRight">
             <button 
-              className={`btnDraft ${canSubmit ? 'active' : 'disabled'}`} 
-              disabled={!canSubmit} 
-              onClick={() => handleCreateProduct('DRAFT')}
+              className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} 
+              disabled={!canSaveDraft} 
+              onClick={onSaveDraftClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -118,7 +134,7 @@ const AddProductPage: React.FC = () => {
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
               disabled={!canSubmit} 
-              onClick={() => handleCreateProduct('PENDING_APPROVAL')}
+              onClick={onSubmitClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -265,6 +281,17 @@ const AddProductPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && handleCreateProduct(confirmAction)}
+        variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp nhóm sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt nhóm sản phẩm không?'}
+        confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        loading={isSubmitting}
+      />
     </div>
   );
 };

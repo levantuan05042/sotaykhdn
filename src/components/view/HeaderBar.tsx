@@ -6,6 +6,8 @@ import styles from './HeaderBar.module.css';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import { AUTH_SERVICE_LOGOUT_URL } from '../../config/apiConfig';
 import { type UserRole } from '../../config/menuConfig';
+import { getUserAvatar } from '../../utils/avatarUtils';
+import { addRecentSearch, clearRecentSearches, getRecentSearches } from '../../utils/userHistoryStorage';
 
 import tracuuIcon from '../../assets/icon/tracuu.svg';
 import qlNoidungIcon from '../../assets/icon/ql-noidung.svg';
@@ -58,6 +60,13 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   const [displayName, setDisplayName] = useState<string>(() => {
     return localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh';
   });
+  const [userAvatar] = useState<string>(() => {
+    const username =
+      localStorage.getItem('currentUserUsername') ||
+      localStorage.getItem('username') ||
+      localStorage.getItem('currentUserFullName');
+    return getUserAvatar(username);
+  });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleRoleSelect = (newRole: UserRole) => {
@@ -77,34 +86,20 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
   const saveRecentSearch = (keyword: string) => {
     if (!keyword.trim()) return;
-    const stored = localStorage.getItem('recentSearches');
-    let searches: string[] = stored ? JSON.parse(stored) : [];
-
-    searches = searches.filter(item => item.toLowerCase() !== keyword.toLowerCase());
-    searches.unshift(keyword);
-    searches = searches.slice(0, 10);
-
-    localStorage.setItem('recentSearches', JSON.stringify(searches));
+    setRecentSearches(addRecentSearch(keyword));
   };
 
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
     saveRecentSearch(searchQuery);
-    const updated = localStorage.getItem('recentSearches');
-    if (updated) {
-      setRecentSearches(JSON.parse(updated));
-    }
     setShowDropdown(false);
     setIsMobileSearchOpen(false);
     navigate(`/view/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem('recentSearches');
-    if (stored) {
-      setRecentSearches(JSON.parse(stored));
-    }
-  }, []);
+    setRecentSearches(getRecentSearches());
+  }, [displayName]);
 
   useEffect(() => {
     const keyword = searchQuery.trim();
@@ -262,7 +257,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                         className={styles['clear-history-btn']}
                         onClick={(e) => {
                           e.stopPropagation();
-                          localStorage.removeItem('recentSearches');
+                          clearRecentSearches();
                           setRecentSearches([]);
                           setShowDropdown(false);
                         }}
@@ -406,11 +401,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                 <p className={styles['user-role']}>{ROLE_LABELS[role] || 'Tra cứu sản phẩm'}</p>
               </div>
               <div className={styles['avatar-wrapper']}>
-                <div className={styles['avatar-container']}>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles['avatar-icon']}>
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
+                <div
+                  className={styles['avatar-container']}
+                  style={{ padding: 0, overflow: 'hidden', width: '40px', height: '40px', cursor: 'pointer', borderRadius: '50%' }}
+                  title="Nhấp để mở menu quyền"
+                >
+                  <img src={userAvatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

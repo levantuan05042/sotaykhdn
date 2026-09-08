@@ -16,7 +16,10 @@ interface DataTableProps<T> {
   emptyText?: string;
   className?: string;
   onRowClick?: (row: T) => void;
+  getRowClassName?: (row: T) => string;
   loading?: boolean;
+  page?: number;
+  onPageChange?: (page: number) => void;
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -26,21 +29,36 @@ export function DataTable<T extends Record<string, any>>({
   emptyText = 'Không tìm thấy kết quả phù hợp',
   className = '',
   onRowClick,
+  getRowClassName,
   loading = false,
+  page,
+  onPageChange,
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Reset to page 1 when data changes
+  const isControlled = page !== undefined;
+  const activePage = isControlled ? page : currentPage;
+
+  const changePage = (newPage: number) => {
+    setCurrentPage(newPage);
+    if (onPageChange) {
+      onPageChange(newPage);
+    }
+  };
+
+  // Reset to page 1 when data changes only if uncontrolled
   useEffect(() => {
-    setCurrentPage(1);
-  }, [data]);
+    if (!isControlled) {
+      setCurrentPage(1);
+    }
+  }, [data, isControlled]);
 
   const totalRecords = data.length;
   const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
   // Safeguard current page
-  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const safeCurrentPage = Math.min(Math.max(1, activePage), totalPages);
   
   const startIndex = totalRecords === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalRecords);
@@ -130,7 +148,7 @@ export function DataTable<T extends Record<string, any>>({
                     key={key} 
                     onClick={() => onRowClick && onRowClick(row)}
                     style={{ cursor: onRowClick ? 'pointer' : 'default' }}
-                    className={onRowClick ? 'clickable-row' : ''}
+                    className={[onRowClick ? 'clickable-row' : '', getRowClassName ? getRowClassName(row) : ''].filter(Boolean).join(' ')}
                   >
                     {columns.map((col) => (
                       <td
@@ -164,7 +182,7 @@ export function DataTable<T extends Record<string, any>>({
             value={pageSize}
             onChange={(e) => {
               setPageSize(Number(e.target.value));
-              setCurrentPage(1);
+              changePage(1);
             }}
           >
             <option value={5}>5</option>
@@ -179,7 +197,7 @@ export function DataTable<T extends Record<string, any>>({
           <button 
             className="pagination-btn"
             disabled={safeCurrentPage === 1}
-            onClick={() => setCurrentPage(v => Math.max(1, v - 1))}
+            onClick={() => changePage(Math.max(1, safeCurrentPage - 1))}
           >
             &lsaquo;
           </button>
@@ -192,7 +210,7 @@ export function DataTable<T extends Record<string, any>>({
               <button
                 key={`page-${p}`}
                 className={`pagination-btn ${safeCurrentPage === p ? 'active' : ''}`}
-                onClick={() => setCurrentPage(p as number)}
+                onClick={() => changePage(p as number)}
               >
                 {p}
               </button>
@@ -202,7 +220,7 @@ export function DataTable<T extends Record<string, any>>({
           <button 
             className="pagination-btn"
             disabled={safeCurrentPage === totalPages}
-            onClick={() => setCurrentPage(v => Math.min(totalPages, v + 1))}
+            onClick={() => changePage(Math.min(totalPages, safeCurrentPage + 1))}
           >
             &rsaquo;
           </button>

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import StatusBadge2 from './ui/StatusBadge2';
+import { CellWithTooltip } from './ui/CellWithTooltip';
 import './ProductTable.css'; 
 
 interface ProductCategory {
@@ -12,37 +13,18 @@ interface ProductCategory {
   productGroupName: string | null;
   status: string;
   active?: boolean;       
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;
 }
 
 interface Props {
   data: ProductCategory[];
 }
-
-interface CellWithTooltipProps {
-  text?: string | null;
-  style?: React.CSSProperties;
-  className?: string;
-}
-
-const CellWithTooltip: React.FC<CellWithTooltipProps> = ({ text, style, className }) => {
-  const content = text && text.trim() !== '' ? text : '---';
-
-  if (content === '---') {
-    return <span style={style} className={className}>{content}</span>;
-  }
-
-  return (
-    <div className="truncate-wrapper">
-      <span className={`truncate-text ${className || ''}`} style={style}>
-        {content}
-      </span>
-      <span className="custom-tooltip">{content}</span>
-    </div>
-  );
-};
 
 const stripHtml = (htmlString?: string | null) => {
   if (!htmlString) return '';
@@ -83,7 +65,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
             <th className="col-group">Nhóm sản phẩm</th> 
             <th className="col-category">Danh mục sản phẩm</th> 
             <th className="col-business">Nghiệp vụ</th> 
-            <th>Trạng thái</th>
+            <th className="col-status">Trạng thái</th>
             <th>Hiệu lực</th>
             <th>Người tạo</th>
             <th>Người kiểm duyệt</th>
@@ -114,38 +96,47 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                 <td className="col-business">
                   <CellWithTooltip text={item.businessName} />
                 </td>
-                <td>
+                <td className="col-status">
                   <StatusBadge2 status={item.status} />
                 </td>
-                <td>
-                  {item.active ? (
-                    <CellWithTooltip text="Đang hiển thị" className="text-success" />
-                  ) : (
-                    <CellWithTooltip text="Đã ẩn" className="text-danger" />
-                  )}
+                <td onClick={(e) => e.stopPropagation()}>
+                  <div className="toggle-wrapper">
+                    <label className="toggle-switch">
+                      <input 
+                        type="checkbox" 
+                        checked={item.active || false} 
+                        disabled={true}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                    <span className="toggle-label disabled-text">
+                      {item.active ? 'Hiện' : 'Ẩn'}
+                    </span>
+                  </div>
                 </td>
                 <td>
-                  <CellWithTooltip text={formatApprovedBy(item.createdByFullName)} />
+                  <CellWithTooltip text={formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy)} />
                 </td>
                 <td>
-                  <CellWithTooltip text={formatApprovedBy(item.approvedBy)} />
+                  <CellWithTooltip text={formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy)} />
                 </td>
                 <td>
-                  <CellWithTooltip 
-                    text={item.version ? `Phiên bản ${item.version}` : ''} 
-                    style={{ fontWeight: 600 }} 
-                  />
+                  <span style={{ fontWeight: 600 }}>
+                    {item.version ? `Phiên bản ${item.version}` : '---'}
+                  </span>
                 </td>
                 <td>
-                  <button
-                    className="btn-action-view"
-                    onClick={() => handleViewDetail(item.id)}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
+                  <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'center' }}>
+                    <button
+                      className="btn-action-view"
+                      onClick={() => handleViewDetail(item.id)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </CellWithTooltip>
                 </td>
               </tr>
             ))

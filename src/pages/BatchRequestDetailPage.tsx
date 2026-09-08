@@ -80,9 +80,10 @@ interface CustomSelectProps {
   placeholder: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  isRejected?: boolean;
 }
 
-const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, placeholder, onChange, disabled = false }) => {
+const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, placeholder, onChange, disabled = false, isRejected = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -98,9 +99,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, plac
 
   const selectedOption = options.find(o => String(o.id) === String(value));
 
+  const isDark = isRejected || disabled;
+
   return (
     <div style={{ position: 'relative', marginBottom: '16px' }} ref={dropdownRef}>
-      {label && <label className="batch-form-label">{label}</label>}
+      {label && <label className="batch-form-label" style={{ color: isRejected ? '#4B5563' : undefined }}>{label}</label>}
       
       <div 
         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -110,10 +113,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, plac
           justifyContent: 'space-between', 
           alignItems: 'center',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: disabled ? '#F9FAFB' : '#FFFFFF',
-          borderColor: isOpen ? '#AE1C3F' : '#D1D5DB',
-          boxShadow: isOpen ? '0 0 0 3px rgba(174, 28, 63, 0.12)' : 'none',
-          opacity: disabled ? 0.8 : 1,
+          backgroundColor: isRejected ? '#E5E7EB' : (disabled ? '#F3F4F6' : '#FFFFFF'),
+          borderColor: isRejected ? '#9CA3AF' : (isOpen ? '#AE1C3F' : '#D1D5DB'),
+          boxShadow: isOpen && !disabled ? '0 0 0 3px rgba(174, 28, 63, 0.12)' : 'none',
+          opacity: isDark ? 0.75 : 1,
           backgroundImage: disabled ? 'none' : undefined
         }}
       >
@@ -423,9 +426,10 @@ interface QuillEditorProps {
   placeholder?: string;
   hasError?: boolean;
   readOnly?: boolean; 
+  isRejected?: boolean;
 }
 
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly = false }) => {
+const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly = false, isRejected = false }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<Quill | null>(null);
@@ -462,13 +466,17 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
     }
   }, [readOnly]);
 
+  const isDark = isRejected || readOnly;
+
   return (
     <div
       style={{
-        backgroundColor: readOnly ? '#F9FAFB' : '#fff', borderRadius: '6px', overflow: 'hidden',
+        backgroundColor: isDark ? '#E5E7EB' : '#fff', borderRadius: '6px',
         border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB',
         boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none',
         transition: 'all 0.2s ease',
+        opacity: isDark ? 0.8 : 1,
+        position: 'relative',
       }}
     >
       <div 
@@ -478,20 +486,22 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
           borderTop: 'none', borderLeft: 'none', borderRight: 'none', 
           padding: '6px 10px', 
           backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB',
-          display: readOnly ? 'none' : 'block'
+          display: readOnly ? 'none' : 'block',
+          borderTopLeftRadius: '6px',
+          borderTopRightRadius: '6px',
         }}
       >
         <span className="ql-formats">
-          <button className="ql-bold" />
-          <button className="ql-italic" />
-          <button className="ql-underline" />
+          <button className="ql-bold" title="In đậm (Bold)" />
+          <button className="ql-italic" title="In nghiêng (Italic)" />
+          <button className="ql-underline" title="Gạch chân (Underline)" />
         </span>
         <span className="ql-formats">
-          <button className="ql-list" value="ordered" />
-          <button className="ql-list" value="bullet" />
+          <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
+          <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
         </span>
       </div>
-      <div ref={editorRef} style={{ minHeight: '140px', fontSize: '13px', border: 'none', color: readOnly ? '#374151' : 'inherit' }} />
+      <div ref={editorRef} style={{ minHeight: '140px', fontSize: '13px', border: 'none', color: isDark ? '#4B5563' : 'inherit', cursor: isDark ? 'not-allowed' : 'text', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }} />
     </div>
   );
 };
@@ -608,26 +618,58 @@ const BatchRequestDetailPage: React.FC = () => {
   const canEdit = isEditableStatus && isOwner;
   const isReadOnly = !canEdit;
 
+  const isQuickViewRejected = Boolean(
+    quickViewProduct && (
+      String(quickViewProduct.status || '').toUpperCase() === 'REJECTED' ||
+      String(quickViewProduct.notes || '') === '1' ||
+      String(quickViewProduct.notes || '').toUpperCase() === 'REJECTED' ||
+      normalizedBatchStatus === 'REJECTED'
+    )
+  );
+
+  const canEditQuickView = canEdit && !isQuickViewRejected;
+
   useEffect(() => {
-    const fetchBatchDetails = async () => {
+    const fetchBatchDetails = async (isBackground = false) => {
       if (!requestId) return;
-      setLoading(true);
+      if (!isBackground) setLoading(true);
       try {
         const response = await axios.get(`${API_ENDPOINTS.PRODUCT.LIST2}/${encodeURIComponent(requestId)}/products`);
         const data = response.data || [];
         setProducts(data);
-        setCurrentPage(1); 
+        if (!isBackground) setCurrentPage(1); 
         
         if (!externalName && data.length > 0 && data[0].requestName) {
           setBatchName(data[0].requestName);
         }
       } catch (error) {
-        toast.error('Không thể tải dữ liệu danh sách sản phẩm!', { position: 'top-center' });
+        if (!isBackground) {
+          toast.error('Không thể tải dữ liệu danh sách sản phẩm!', { position: 'top-center' });
+        }
       } finally {
-        setLoading(false);
+        if (!isBackground) setLoading(false);
       }
     };
     fetchBatchDetails();
+
+    const interval = setInterval(() => {
+      fetchBatchDetails(true);
+    }, 5000);
+
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchBatchDetails(true);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
   }, [requestId, externalName]);
 
   useEffect(() => {
@@ -1035,10 +1077,10 @@ const BatchRequestDetailPage: React.FC = () => {
   const renderCriterion = (criterion: any, isOptional = false, onRemove?: () => void) => (
     <div key={criterion.id} style={{ marginBottom: '16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-        <label className="batch-form-label" style={{ marginBottom: 0 }}>
+        <label className="batch-form-label" style={{ marginBottom: 0, color: isQuickViewRejected ? '#4B5563' : undefined }}>
           {criterion.tieuChi} {criterion.required && <span style={{ color: '#EF4444', marginLeft: '4px' }}>(*)</span>}
         </label>
-        {isOptional && onRemove && canEdit && (
+        {isOptional && onRemove && canEditQuickView && (
           <button
             type="button"
             onClick={onRemove}
@@ -1068,9 +1110,10 @@ const BatchRequestDetailPage: React.FC = () => {
       </div>
       <QuillEditor
         value={criterion.noiDung}
-        hasError={criterion.required && isHtmlEmpty(criterion.noiDung)}
+        hasError={!isQuickViewRejected && criterion.required && isHtmlEmpty(criterion.noiDung)}
         onChange={(value) => handleDetailsChange(criterion.id, value)}
-        readOnly={!canEdit}
+        readOnly={!canEditQuickView}
+        isRejected={isQuickViewRejected}
       />
     </div>
   );
@@ -1151,7 +1194,7 @@ const BatchRequestDetailPage: React.FC = () => {
                       <tr 
                         key={item.id} 
                         className={isSelected ? "batch-tr-selected" : ""}
-                        onClick={() => navigate(`/product/${item.id}`)}
+                        onClick={() => navigate(`/product/${item.id}`, { state: { requestName: batchName || externalName, requestId } })}
                         style={{ cursor: 'pointer' }}
                       >
                         <td className="batch-table-td batch-table-td-name">
@@ -1271,13 +1314,37 @@ const BatchRequestDetailPage: React.FC = () => {
                   onClick={() => setQuickViewProduct(null)} 
                   className="batch-close-btn"
                 >✕</button>
+
+                {isQuickViewRejected && (
+                  <div style={{
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #FECACA',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    marginBottom: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    color: '#991B1B',
+                    fontSize: '13px',
+                    fontWeight: 500
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    <span>Sản phẩm này có trạng thái <strong>Từ chối</strong>, không thể chỉnh sửa.</span>
+                  </div>
+                )}
                 
                 <CustomSelect
                   label="Nhóm sản phẩm"
                   value={formData.productGroupId}
                   options={groupOptions}
                   placeholder="Chưa chọn"
-                  disabled={!canEdit}
+                  disabled={!canEditQuickView}
+                  isRejected={isQuickViewRejected}
                   onChange={(val) => handleGroupChange(val)}
                 />
                 
@@ -1288,7 +1355,8 @@ const BatchRequestDetailPage: React.FC = () => {
                       value={formData.productCategoryId}
                       options={categoryOptions}
                       placeholder="Chưa chọn"
-                      disabled={!canEdit || !formData.productGroupId}
+                      disabled={!canEditQuickView || !formData.productGroupId}
+                      isRejected={isQuickViewRejected}
                       onChange={(val) => {
                         handleFormChange({ productCategoryId: val, businessId: '' });
                       }}
@@ -1300,7 +1368,8 @@ const BatchRequestDetailPage: React.FC = () => {
                       value={formData.businessId}
                       options={operationOptions}
                       placeholder="Chưa chọn"
-                      disabled={!canEdit || !formData.productCategoryId}
+                      disabled={!canEditQuickView || !formData.productCategoryId}
+                      isRejected={isQuickViewRejected}
                       onChange={(val) => handleFormChange({ businessId: val })}
                     />
                   </div>
@@ -1342,8 +1411,9 @@ const BatchRequestDetailPage: React.FC = () => {
                         src={previewImage}
                         alt="Product"
                         className="product-image"
+                        style={{ opacity: isQuickViewRejected ? 0.75 : 1 }}
                       />
-                      {canEdit && (
+                      {canEditQuickView && (
                         <div className="image-overlay">
                           <button type="button" className="overlay-btn" onClick={() => setShowImageModal(true)} title="Đổi ảnh">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -1360,9 +1430,9 @@ const BatchRequestDetailPage: React.FC = () => {
                       )}
                     </div>
                   ) : (
-                    !canEdit ? (
-                      <div className="upload-placeholder disabled">
-                         <span style={{ fontSize: 14, color: '#9CA3AF' }}>Không có ảnh mô tả</span>
+                    !canEditQuickView ? (
+                      <div className="upload-placeholder disabled" style={{ backgroundColor: isQuickViewRejected ? '#E5E7EB' : '#F9FAFB', cursor: 'not-allowed' }}>
+                         <span style={{ fontSize: 14, color: isQuickViewRejected ? '#6B7280' : '#9CA3AF' }}>Không có ảnh mô tả</span>
                       </div>
                     ) : (
                       <button type="button" onClick={() => setShowImageModal(true)} className="upload-placeholder">
@@ -1381,7 +1451,7 @@ const BatchRequestDetailPage: React.FC = () => {
                   )}
                 </div>
 
-                {optionalCriteria.length > 0 && canEdit && (
+                {optionalCriteria.length > 0 && canEditQuickView && (
                   <div style={{ marginTop: '16px' }}>
                     <button
                       type="button"
@@ -1435,8 +1505,13 @@ const BatchRequestDetailPage: React.FC = () => {
                 <div className="batch-card-box" style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', marginBottom: 0 }}>
                   <button 
                     onClick={handleLocalSave}
-                    disabled={!hasFormChanges || isUpdating}
+                    disabled={!hasFormChanges || isUpdating || isQuickViewRejected}
                     className="btn-primary-action"
+                    style={isQuickViewRejected ? { 
+                      opacity: 0.5, 
+                      cursor: 'not-allowed', 
+                      backgroundColor: '#9CA3AF' 
+                    } : undefined}
                   >
                     Lưu
                   </button>

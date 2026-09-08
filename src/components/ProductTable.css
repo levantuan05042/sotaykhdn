@@ -81,6 +81,7 @@
 .col-group { min-width: 180px; }
 .col-category { min-width: 180px; }
 .col-business { min-width: 200px; }
+.col-status { min-width: 210px; width: 210px; }
 .col-creator { min-width: 150px; }
 .col-reviewer { min-width: 150px; }
 
@@ -251,7 +252,18 @@
 
 .toggle-switch input:disabled + .toggle-slider {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.6;
+  background-color: #9CA3AF;
+}
+
+.toggle-switch input:disabled + .toggle-slider:before {
+  cursor: not-allowed;
+  background-color: #E5E7EB;
+}
+
+.toggle-label.disabled-text {
+  color: #9CA3AF;
+  cursor: not-allowed;
 }
 
 .toggle-label {
@@ -287,7 +299,7 @@
   padding: 8px 12px;
   border-radius: 6px;
   position: absolute;
-  z-index: 9999;
+  z-index: 2147483647 !important;
   bottom: 100%;
   left: 0;
   opacity: 0;
@@ -301,6 +313,10 @@
   font-weight: 400;
   margin-bottom: 8px;
   pointer-events: none;
+}
+
+.truncate-wrapper:hover {
+  z-index: 2147483647 !important;
 }
 
 .custom-tooltip::after {

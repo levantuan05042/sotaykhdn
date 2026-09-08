@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './DetailProductsPage.module.css';
 import toast from 'react-hot-toast';
 import Quill from 'quill';
@@ -11,6 +11,10 @@ import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import StatusBadgeListRequest from '../components/ui/StatusBadgeListRequest';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
+import VersionDetailModal from '../components/ui/VersionDetailModal';
+import type { VersionItem } from '../components/ui/ProductInfoCard';
+import { getRandomAvatar } from '../utils/avatarUtils';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
 
 interface Criterion {
   id: string;
@@ -31,7 +35,29 @@ interface PixelCrop {
 // Helpers
 // ─────────────────────────────────────────────
 const serializeCriteriaForDiff = (list: Criterion[]) =>
-  JSON.stringify(list.map(c => ({ name: c.name, value: c.value, isSelected: c.isSelected })));
+  JSON.stringify(list.filter(c => c.isSelected).map(c => ({ id: c.id, name: c.name, value: c.value })));
+
+const stripHtml = (htmlString?: string | null) => {
+  if (!htmlString) return '';
+  return String(htmlString).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+};
+
+const getVersionStatusBadge = (status?: string) => {
+  switch (status) {
+    case 'ACTIVE':
+      return { bg: '#E0F9EC', text: '#14532D', label: 'Đang áp dụng' };
+    case 'DRAFT':
+      return { bg: '#F3F4F6', text: '#4B5563', label: 'Bản nháp' };
+    case 'PENDING_APPROVAL':
+      return { bg: '#FEF3C7', text: '#92400E', label: 'Chờ duyệt' };
+    case 'REJECTED':
+      return { bg: '#FEE2E2', text: '#991B1B', label: 'Từ chối' };
+    case 'ARCHIVED':
+      return { bg: '#EFF6FF', text: '#1E40AF', label: 'Lưu trữ' };
+    default:
+      return { bg: '#F3F4F6', text: '#4B5563', label: status || '---' };
+  }
+};
 
 const isHtmlEmpty = (html: string) => {
   if (!html) return true;
@@ -405,31 +431,40 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   }, [value, readOnly]);
 
   return (
-    <div style={{ backgroundColor: readOnly ? '#F9FAFB' : '#fff', borderRadius: 8, overflow: 'hidden', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease' }}>
+    <div style={{ backgroundColor: readOnly ? '#F9FAFB' : '#fff', borderRadius: 8, border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease', position: 'relative' }}>
       {!readOnly && (
-        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
+        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB', borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
           <span className="ql-formats">
-            <button className="ql-bold"/><button className="ql-italic"/>
-            <button className="ql-underline"/><button className="ql-strike"/>
+            <button className="ql-bold" title="In đậm (Bold)" />
+            <button className="ql-italic" title="In nghiêng (Italic)" />
+            <button className="ql-underline" title="Gạch chân (Underline)" />
+            <button className="ql-strike" title="Gạch ngang chữ (Strikethrough)" />
           </span>
           <span className="ql-formats">
-            <button className="ql-list" value="ordered"/>
-            <button className="ql-list" value="bullet"/>
+            <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
+            <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
           </span>
           <span className="ql-formats">
-            <button className="ql-script" value="sub"/>
-            <button className="ql-script" value="super"/>
+            <button className="ql-script" value="sub" title="Chỉ số dưới (Subscript)" />
+            <button className="ql-script" value="super" title="Chỉ số trên (Superscript - m²)" />
           </span>
           <span className="ql-formats">
-            <button className="ql-indent" value="-1"/>
-            <button className="ql-indent" value="+1"/>
+            <button className="ql-indent" value="-1" title="Giảm thụt lề (Outdent)" />
+            <button className="ql-indent" value="+1" title="Tăng thụt lề (Indent)" />
           </span>
-          <span className="ql-formats"><select className="ql-color"/><select className="ql-background"/></span>
-          <span className="ql-formats"><select className="ql-align"/></span>
-          <span className="ql-formats"><button className="ql-clean"/></span>
+          <span className="ql-formats">
+            <select className="ql-color" title="Màu chữ" />
+            <select className="ql-background" title="Màu nền highlight" />
+          </span>
+          <span className="ql-formats">
+            <select className="ql-align" title="Căn lề văn bản" />
+          </span>
+          <span className="ql-formats">
+            <button className="ql-clean" title="Xóa toàn bộ định dạng" />
+          </span>
         </div>
       )}
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#FAFAFA' : 'transparent' }}/>
+      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#FAFAFA' : 'transparent', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
     </div>
   );
 };
@@ -482,11 +517,14 @@ const CriteriaModal: React.FC<{
 const DetailProductPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const routeState = (location.state || {}) as { requestName?: string; requestId?: string };
 
   const groupRef     = useRef<HTMLDivElement>(null);
   const categoryRef  = useRef<HTMLDivElement>(null);
   const operationRef = useRef<HTMLDivElement>(null);
   const statusRef    = useRef<HTMLDivElement>(null);
+  const versionDropdownRef = useRef<HTMLDivElement>(null);
 
   const [isGroupOpen,       setIsGroupOpen]       = useState(false);
   const [isCategoryOpen,    setIsCategoryOpen]    = useState(false);
@@ -510,6 +548,11 @@ const DetailProductPage: React.FC = () => {
 
   const [criteria,         setCriteria]         = useState<Criterion[]>([]);
   const [originalCriteria, setOriginalCriteria] = useState<Criterion[]>([]);
+  const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
+  const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+  const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false);
+  const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
+  const [showVersionModal, setShowVersionModal] = useState(false);
 
   const [previewImage, setPreviewImage] = useState('');   
   const [avatarFile,   setAvatarFile]   = useState<File | null>(null); 
@@ -530,7 +573,9 @@ const DetailProductPage: React.FC = () => {
     return currentBase === creatorBase && currentBase.length > 0;
   }, [isLoggedIn, currentUsername, creatorUsername]);
 
-  const isReadOnly = !isLoggedIn || !isOwner;
+  const isRejected = productData?.status === 'REJECTED';
+  const isCascadeLocked = isCascadeHidden(productData);
+  const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked;
   const isDisplayStatusDisabled = isReadOnly || productData?.status !== 'ACTIVE';
 
   useEffect(() => {
@@ -578,6 +623,7 @@ const DetailProductPage: React.FC = () => {
       if (categoryRef.current  && !categoryRef.current.contains(e.target as Node))  setIsCategoryOpen(false);
       if (operationRef.current && !operationRef.current.contains(e.target as Node)) setIsOperationOpen(false);
       if (statusRef.current    && !statusRef.current.contains(e.target as Node))    setIsStatusOpen(false);
+      if (versionDropdownRef.current && !versionDropdownRef.current.contains(e.target as Node)) setIsVersionDropdownOpen(false);
     };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -618,6 +664,7 @@ const DetailProductPage: React.FC = () => {
             value:      item.noiDung || item.value || '',
           }));
           setOriginalCriteria(JSON.parse(JSON.stringify(mapped)));
+          setCriteria(mapped);
         }
       } catch (e) {
         console.error(e);
@@ -651,24 +698,58 @@ const DetailProductPage: React.FC = () => {
       try {
         const r = await fetch(`${API_ENDPOINTS.PRODUCT_CRITERIA.LIST}?types=${formData.productGroupId}&status=ACTIVE&active=true`);
         if (!r.ok) return;
-        const data = await r.json();
-        const isOrig = productData && formData.productGroupId === productData.productGroupId;
+        const resData = await r.json();
+        const data = Array.isArray(resData) ? resData : (resData?.content || resData?.data || []);
+        const isOrig = formData.productGroupId === (productData?.productGroupId || '');
+        const saved = isOrig ? originalCriteria : [];
 
-        setCriteria(
-          data.map((item: any) => {
-            const name  = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '');
-            const isReq = checkIsRequired(item);
-            let isSelected = isReq, finalValue = '';
-            if (isOrig) {
-              const m = originalCriteria.find(o => o.name === name);
-              if (m) { isSelected = true; finalValue = m.value; }
-            }
-            return { id: String(item.id || item.criteriaId), name, isRequired: isReq, isSelected: isReq ? true : isSelected, value: finalValue };
-          }).sort((a: Criterion, b: Criterion) => Number(b.isRequired) - Number(a.isRequired))
-        );
+        const catalog: Criterion[] = data.map((item: any) => {
+          const name = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '').trim();
+          return {
+            id: String(item.id || item.criteriaId),
+            name,
+            isRequired: checkIsRequired(item),
+            isSelected: false,
+            value: '',
+          };
+        });
+
+        const merged: Criterion[] = [];
+        const usedIds = new Set<string>();
+        const usedNames = new Set<string>();
+
+        for (const s of saved) {
+          const fromCatalog = catalog.find(c =>
+            c.id === s.id || c.name.trim().toLowerCase() === s.name.trim().toLowerCase()
+          );
+          const id = fromCatalog?.id || s.id;
+          const name = fromCatalog?.name || s.name;
+          merged.push({
+            id,
+            name,
+            isRequired: fromCatalog?.isRequired ?? s.isRequired,
+            isSelected: true,
+            value: s.value,
+          });
+          usedIds.add(id);
+          usedNames.add(name.trim().toLowerCase());
+        }
+
+        for (const c of catalog) {
+          if (usedIds.has(c.id) || usedNames.has(c.name.trim().toLowerCase())) continue;
+          merged.push({
+            ...c,
+            isSelected: c.isRequired,
+            value: '',
+          });
+          usedIds.add(c.id);
+          usedNames.add(c.name.trim().toLowerCase());
+        }
+
+        setCriteria(merged);
       } catch (e) { console.error(e); }
     })();
-  }, [formData.productGroupId, productData, originalCriteria]);
+  }, [formData.productGroupId, originalCriteria]);
 
   const handleCriterionValueChange = (id: string, v: string) => {
     if (isReadOnly) return;
@@ -678,6 +759,51 @@ const DetailProductPage: React.FC = () => {
   const toggleCriterionSelection = (id: string) => {
     if (isReadOnly) return;
     setCriteria(prev => prev.map(c => c.id !== id ? c : (c.isRequired ? c : { ...c, isSelected: !c.isSelected })));
+  };
+
+  const moveCriterion = (draggedId: string, targetId: string) => {
+    if (isReadOnly || draggedId === targetId) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const dragIdx = selected.findIndex(c => c.id === draggedId);
+      const targetIdx = selected.findIndex(c => c.id === targetId);
+      if (dragIdx === -1 || targetIdx === -1) return prev;
+      const reorderedSelected = [...selected];
+      const [movedItem] = reorderedSelected.splice(dragIdx, 1);
+      reorderedSelected.splice(targetIdx, 0, movedItem);
+      return [...reorderedSelected, ...unselected];
+    });
+  };
+
+  const moveCriterionUp = (id: string) => {
+    if (isReadOnly) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const idx = selected.findIndex(c => c.id === id);
+      if (idx <= 0) return prev;
+      const reorderedSelected = [...selected];
+      const temp = reorderedSelected[idx];
+      reorderedSelected[idx] = reorderedSelected[idx - 1];
+      reorderedSelected[idx - 1] = temp;
+      return [...reorderedSelected, ...unselected];
+    });
+  };
+
+  const moveCriterionDown = (id: string) => {
+    if (isReadOnly) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const idx = selected.findIndex(c => c.id === id);
+      if (idx === -1 || idx >= selected.length - 1) return prev;
+      const reorderedSelected = [...selected];
+      const temp = reorderedSelected[idx];
+      reorderedSelected[idx] = reorderedSelected[idx + 1];
+      reorderedSelected[idx + 1] = temp;
+      return [...reorderedSelected, ...unselected];
+    });
   };
 
   const isFormDirty     = productName !== (productData?.name || '') || formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
@@ -767,7 +893,16 @@ const DetailProductPage: React.FC = () => {
           ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công', PENDING_APPROVAL: 'Gửi phê duyệt sản phẩm thành công',
         };
         renderCustomToast(msgs[status] || 'Cập nhật sản phẩm thành công');
-        setTimeout(() => navigate(-1), 1000);
+        setTimeout(() => {
+          const backRequestId = routeState?.requestId || productData?.requestId;
+          if (backRequestId) {
+            navigate(`/products/batch/${backRequestId}`, {
+              state: { requestName: stripHtml(routeState?.requestName || productData?.requestName), requestId: backRequestId },
+            });
+          } else {
+            navigate(-1);
+          }
+        }, 1000);
       } else {
         const err = await res.json();
         toast.error(err.message || 'Có lỗi xảy ra khi cập nhật sản phẩm', { position: 'top-center' });
@@ -779,41 +914,21 @@ const DetailProductPage: React.FC = () => {
   if (loading)      return <div className="loading" style={{ padding: 40, textAlign: 'center' }}>Đang tải dữ liệu sản phẩm...</div>;
   if (!productData) return <div className="error" style={{ padding: 40, textAlign: 'center' }}>Không tìm thấy dữ liệu sản phẩm phù hợp.</div>;
 
-  const renderCriterionField = (criterion: Criterion) => {
-    const hasErr = criterion.isRequired && isHtmlEmpty(criterion.value);
-    return (
-      <div key={criterion.id} className="formGroup" style={{ marginTop: 24, marginBottom: 24 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          {!criterion.isRequired && !isReadOnly && (
-            <button type="button" onClick={() => toggleCriterionSelection(criterion.id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#9CA3AF', transition: 'color 0.2s' }}
-              onMouseOver={e => e.currentTarget.style.color = '#EF4444'}
-              onMouseOut={e => e.currentTarget.style.color = '#9CA3AF'}
-              title="Bỏ tiêu chí này">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-              </svg>
-            </button>
-          )}
-          <label className="label" style={{ fontWeight: 600, margin: 0 }}>
-            {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
-          </label>
-        </div>
-        <QuillEditor
-          value={criterion.value}
-          placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
-          hasError={hasErr}
-          readOnly={isReadOnly}
-          onChange={v => handleCriterionValueChange(criterion.id, v)}
-        />
-      </div>
-    );
-  };
+  const selectedCriteria = criteria.filter(c => c.isSelected);
+  const requestNameDisplay = stripHtml(routeState?.requestName || productData?.requestName) || 'Quay lại';
+  const requestIdForBack = routeState?.requestId || productData?.requestId;
+  const versions: VersionItem[] = productData?.versions || [];
+  const hasMultipleVersions = versions.length > 0;
 
-  // const requiredCriteria = criteria.filter(c => c.isSelected && c.isRequired);
-  const optionalCriteria = criteria.filter(c => c.isSelected && !c.isRequired);
+  const handleBack = () => {
+    if (requestIdForBack) {
+      navigate(`/products/batch/${requestIdForBack}`, {
+        state: { requestName: requestNameDisplay, requestId: requestIdForBack, name: requestNameDisplay },
+      });
+      return;
+    }
+    navigate(-1);
+  };
 
   return (
     <div className="pageWrapper">
@@ -824,18 +939,22 @@ const DetailProductPage: React.FC = () => {
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
-              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+              {isCascadeLocked
+                ? CASCADE_LOCK_MESSAGE
+                : 'Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.'}
             </span>
           </div>
         )}
 
         <div className="header">
           <div className="headerLeft">
-            <button className="btnBack" onClick={() => navigate(-1)}>
+            <button className="btnBack" onClick={handleBack} title={requestNameDisplay}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
-              <span className="breadcrumbText">Quay lại</span>
+              <span className="breadcrumbText" style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {requestNameDisplay}
+              </span>
             </button>
             
             <div className="breadcrumb">
@@ -970,9 +1089,221 @@ const DetailProductPage: React.FC = () => {
 
               {formData.productGroupId && (
                 <>
-                  {optionalCriteria.map(renderCriterionField)}
+                  {selectedCriteria.map((criterion, idx, arr) => {
+                    const hasErr = !isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value);
+                    const isDraggingThis = draggedCriterionId === criterion.id;
+                    const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
+
+                    return (
+                      <div
+                        key={criterion.id}
+                        className="formGroup criterion-card"
+                        onDragOver={(e) => {
+                          if (isReadOnly) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          if (dragOverCriterionId !== criterion.id) {
+                            setDragOverCriterionId(criterion.id);
+                          }
+                        }}
+                        onDragLeave={() => {
+                          if (dragOverCriterionId === criterion.id) {
+                            setDragOverCriterionId(null);
+                          }
+                        }}
+                        onDrop={(e) => {
+                          if (isReadOnly) return;
+                          e.preventDefault();
+                          if (draggedCriterionId && draggedCriterionId !== criterion.id) {
+                            moveCriterion(draggedCriterionId, criterion.id);
+                          }
+                          setDraggedCriterionId(null);
+                          setDragOverCriterionId(null);
+                        }}
+                        style={{
+                          marginTop: 16,
+                          marginBottom: 20,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 10,
+                          border: isDragOverThis ? '2px dashed #B01E3E' : '1px solid #E5E7EB',
+                          padding: 16,
+                          opacity: isDraggingThis ? 0.45 : 1,
+                          transform: isDraggingThis ? 'scale(0.99)' : 'none',
+                          transition: 'all 0.15s ease',
+                          boxShadow: isDragOverThis ? '0 4px 12px rgba(176, 30, 62, 0.15)' : '0 1px 2px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {!isReadOnly && (
+                              <div
+                                draggable={true}
+                                onDragStart={(e) => {
+                                  e.stopPropagation();
+                                  e.dataTransfer.setData('text/plain', criterion.id);
+                                  e.dataTransfer.effectAllowed = 'move';
+                                  const card = (e.currentTarget as HTMLElement).closest('.criterion-card') as HTMLElement;
+                                  if (card && e.dataTransfer.setDragImage) {
+                                    e.dataTransfer.setDragImage(card, 20, 20);
+                                  }
+                                  setDraggedCriterionId(criterion.id);
+                                }}
+                                onDragEnd={(e) => {
+                                  e.stopPropagation();
+                                  setDraggedCriterionId(null);
+                                  setDragOverCriterionId(null);
+                                }}
+                                title="Nhấn giữ để kéo di chuyển tiêu chí"
+                                style={{
+                                  cursor: 'grab',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: '#6B7280',
+                                  padding: 4,
+                                  borderRadius: 4,
+                                  userSelect: 'none',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                                  e.currentTarget.style.color = '#111827';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.backgroundColor = 'transparent';
+                                  e.currentTarget.style.color = '#6B7280';
+                                }}
+                                onMouseDown={(e) => {
+                                  e.currentTarget.style.cursor = 'grabbing';
+                                }}
+                                onMouseUp={(e) => {
+                                  e.currentTarget.style.cursor = 'grab';
+                                }}
+                              >
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                                  <circle cx="9" cy="5" r="2" />
+                                  <circle cx="9" cy="12" r="2" />
+                                  <circle cx="9" cy="19" r="2" />
+                                  <circle cx="15" cy="5" r="2" />
+                                  <circle cx="15" cy="12" r="2" />
+                                  <circle cx="15" cy="19" r="2" />
+                                </svg>
+                              </div>
+                            )}
+
+                            <span
+                              style={{
+                                backgroundColor: '#F3F4F6',
+                                color: '#374151',
+                                borderRadius: 4,
+                                padding: '2px 7px',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                border: '1px solid #E5E7EB',
+                                userSelect: 'none',
+                              }}
+                              title={`Tiêu chí thứ ${idx + 1}`}
+                            >
+                              #{idx + 1}
+                            </span>
+
+                            <label className="label" style={{ fontWeight: 600, margin: 0, fontSize: 14, color: '#1F2937' }}>
+                              {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
+                            </label>
+                          </div>
+
+                          {!isReadOnly && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <button
+                                type="button"
+                                onClick={() => moveCriterionUp(criterion.id)}
+                                disabled={idx === 0}
+                                title={idx === 0 ? 'Đang ở vị trí đầu tiên' : 'Di chuyển lên trên'}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 26,
+                                  height: 26,
+                                  border: '1px solid #D1D5DB',
+                                  borderRadius: 4,
+                                  backgroundColor: '#FFFFFF',
+                                  color: idx === 0 ? '#D1D5DB' : '#374151',
+                                  cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                                  padding: 0,
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                                  <path d="M5 12.5L10 7.5L15 12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => moveCriterionDown(criterion.id)}
+                                disabled={idx === arr.length - 1}
+                                title={idx === arr.length - 1 ? 'Đang ở vị trí cuối cùng' : 'Di chuyển xuống dưới'}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 26,
+                                  height: 26,
+                                  border: '1px solid #D1D5DB',
+                                  borderRadius: 4,
+                                  backgroundColor: '#FFFFFF',
+                                  color: idx === arr.length - 1 ? '#D1D5DB' : '#374151',
+                                  cursor: idx === arr.length - 1 ? 'not-allowed' : 'pointer',
+                                  padding: 0,
+                                }}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                                  <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              </button>
+                              {!criterion.isRequired && (
+                                <button
+                                  type="button"
+                                  onClick={() => toggleCriterionSelection(criterion.id)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: 4,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    color: '#9CA3AF',
+                                    marginLeft: 4,
+                                  }}
+                                  onMouseOver={(e) => (e.currentTarget.style.color = '#EF4444')}
+                                  onMouseOut={(e) => (e.currentTarget.style.color = '#9CA3AF')}
+                                  title="Bỏ tiêu chí này"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    <line x1="10" y1="11" x2="10" y2="17" />
+                                    <line x1="14" y1="11" x2="14" y2="17" />
+                                  </svg>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div draggable={false} onDragStart={(e) => e.stopPropagation()}>
+                          <QuillEditor
+                            value={criterion.value}
+                            placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
+                            hasError={hasErr}
+                            readOnly={isReadOnly}
+                            onChange={(v) => handleCriterionValueChange(criterion.id, v)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                   {!isReadOnly && (
-                    <div style={{ textAlign: 'left', marginTop: optionalCriteria.length ? 8 : 0 }}>
+                    <div style={{ textAlign: 'left', marginTop: selectedCriteria.length ? 8 : 0 }}>
                       <button 
                         type="button" 
                         onClick={() => setShowCriteriaModal(true)} 
@@ -1238,12 +1569,107 @@ const DetailProductPage: React.FC = () => {
                     <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Thời gian tạo</div>
                     <div style={{ color: '#1A191B', fontSize: '14px', fontWeight: 500 }}>{formatDateTime(productData?.createdAt)}</div>
                   </div>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1 }} ref={versionDropdownRef}>
                     <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Phiên bản</div>
-                    <div>
-                      <span style={{ display: 'inline-block', padding: '2px 10px', background: '#E6F4EA', color: '#137333', borderRadius: '12px', fontSize: '12px', fontWeight: 500 }}>
-                        {productData?.version !== undefined ? `Phiên bản ${productData.version}` : 'Phiên bản 1'}
+                    <div style={{ position: 'relative' }}>
+                      <span
+                        onClick={() => {
+                          if (hasMultipleVersions) setIsVersionDropdownOpen(v => !v);
+                        }}
+                        title={hasMultipleVersions ? 'Nhấn để chọn xem phiên bản khác' : undefined}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '2px 10px',
+                          background: '#E6F4EA',
+                          color: '#137333',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: hasMultipleVersions ? 'pointer' : 'default',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {productData?.version !== undefined && productData?.version !== null && String(productData.version).trim() !== '' && String(productData.version).toLowerCase() !== 'null'
+                          ? `Phiên bản ${productData.version}`
+                          : '---'}
+                        {hasMultipleVersions && (
+                          <svg
+                            width="12" height="12" viewBox="0 0 20 20" fill="none"
+                            style={{ transform: isVersionDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                          >
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#14532D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </span>
+
+                      {isVersionDropdownOpen && hasMultipleVersions && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            right: 0,
+                            minWidth: 270,
+                            maxWidth: 340,
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: 10,
+                            border: '1px solid #E5E7EB',
+                            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.05)',
+                            zIndex: 2000,
+                            padding: '6px 0',
+                          }}
+                        >
+                          <div style={{ padding: '8px 14px 6px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Lịch sử phiên bản ({versions.length})</span>
+                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>Chọn để xem</span>
+                          </div>
+                          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                            {versions.map((v) => {
+                              const isCurrent = id ? v.id === id : String(v.version) === String(productData?.version);
+                              const badge = getVersionStatusBadge(v.status);
+                              const versionDisplay = (v.version !== null && v.version !== undefined && String(v.version).trim() !== '' && String(v.version).toLowerCase() !== 'null')
+                                ? `Phiên bản ${v.version}`
+                                : (v.status === 'DRAFT' ? 'Bản nháp' : '---');
+                              return (
+                                <div
+                                  key={v.id}
+                                  onClick={() => {
+                                    setIsVersionDropdownOpen(false);
+                                    setPreviewVersionItem(v);
+                                    setShowVersionModal(true);
+                                  }}
+                                  style={{
+                                    padding: '10px 14px',
+                                    cursor: 'pointer',
+                                    backgroundColor: isCurrent ? '#FDF2F4' : 'transparent',
+                                    borderBottom: '1px solid #F9FAFB',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 4,
+                                  }}
+                                  onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#F9FAFB'; }}
+                                  onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <span style={{ fontSize: 13, fontWeight: isCurrent ? 700 : 600, color: isCurrent ? '#AE1C3F' : '#111827' }}>{versionDisplay}</span>
+                                      {isCurrent && (
+                                        <span style={{ fontSize: 10, backgroundColor: '#AE1C3F', color: '#FFF', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Đang xem</span>
+                                      )}
+                                    </div>
+                                    <span style={{ fontSize: 11, backgroundColor: badge.bg, color: badge.text, borderRadius: 100, padding: '2px 8px', fontWeight: 500 }}>{badge.label}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6B7280' }}>
+                                    <span>{v.createdByFullName || '---'}</span>
+                                    <span>{formatDateTime(v.createdAt)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1252,8 +1678,15 @@ const DetailProductPage: React.FC = () => {
 
                 <div>
                   <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Thuộc yêu cầu</div>
-                  <a href="#request" onClick={(e) => e.preventDefault()} style={{ color: '#137333', fontSize: '14px', fontWeight: 500, textDecoration: 'underline' }}>
-                    {productData?.requestName || productData?.requestCode || '—'}
+                  <a
+                    href="#request"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleBack();
+                    }}
+                    style={{ color: '#137333', fontSize: '14px', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    {stripHtml(productData?.requestName || productData?.requestCode) || '—'}
                   </a>
                 </div>
 
@@ -1291,7 +1724,7 @@ const DetailProductPage: React.FC = () => {
                       <React.Fragment key={c.id || i}>
                         <div className="commentItem">
                           <div className="userInfo">
-                            <img src={c.avatarUrl || 'https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png'} className="avatar" alt="avatar"/>
+                            <img src={c.avatarUrl || getRandomAvatar(c.createdBy || i)} className="avatar" alt="avatar"/>
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
                                 <span className="userName" style={isLatest ? { fontWeight: 700, color: '#111827' } : undefined}>{c.createdBy || 'Người kiểm duyệt'}</span>
@@ -1320,6 +1753,12 @@ const DetailProductPage: React.FC = () => {
 
       <CriteriaModal isOpen={showCriteriaModal} onClose={() => setShowCriteriaModal(false)} criteria={criteria} onToggle={toggleCriterionSelection} />
       <ImageModal isOpen={showImageModal} onClose={() => setShowImageModal(false)} onConfirm={handleImageConfirm} />
+      <VersionDetailModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+        itemType="product"
+        versionItem={previewVersionItem}
+      />
     </div>
   );
 };

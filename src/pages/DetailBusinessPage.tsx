@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
+import { getRandomAvatar } from '../utils/avatarUtils';
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import VersionDetailModal from '../components/ui/VersionDetailModal';
+import type { VersionItem } from '../components/ui/ProductInfoCard';
+import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -52,6 +58,10 @@ const DetailBusinessPage: React.FC = () => {
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCascadeModal, setShowCascadeModal] = useState(false);
+  const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
+  const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
@@ -81,7 +91,8 @@ const DetailBusinessPage: React.FC = () => {
     baseCurrentUsername === baseCreatorUsername
   );
 
-  const isReadOnly = !isLoggedIn || !isOwner;
+  const isCascadeLocked = isCascadeHidden(businessData);
+  const isReadOnly = !isLoggedIn || !isOwner || isCascadeLocked;
   
   const isPending = businessData?.status === 'PENDING_APPROVAL';
   const isFormDisabled = isReadOnly || isPending;
@@ -94,12 +105,15 @@ const DetailBusinessPage: React.FC = () => {
     categoryId: ''
   });
 
+  const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION' | null>(null);
+
   const hasChanges = businessData ? (
     formData.name !== businessData.name ||
     formData.categoryId !== businessData.categoryId
   ) : false;
 
-  const isActionValid = !isReadOnly && formData.name.trim() !== '' && formData.categoryId !== '' && hasChanges;
+  const canSaveDraft = !isReadOnly && (businessData?.status === 'DRAFT' || hasChanges) && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '';
+  const canSubmit = !isReadOnly && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '' && (formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId) !== '' && (businessData?.status === 'DRAFT' || hasChanges);
 
   const getCreatorDisplayName = () => {
     if (businessData?.createdByFullName) return businessData.createdByFullName;
@@ -179,6 +193,41 @@ const DetailBusinessPage: React.FC = () => {
     initPageData();
   }, [id]);
 
+  // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
+  useEffect(() => {
+    if (!id) return;
+    const refetchStatus = async () => {
+      if (hasChanges) return;
+      try {
+        const detailRes = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DETAIL(id));
+        if (detailRes.ok) {
+          const detailData = await detailRes.json();
+          setBusinessData(detailData);
+          setFormData({
+            name: detailData.name || '',
+            categoryId: detailData.categoryId || ''
+          });
+          setIsActive(detailData.active ?? true);
+        }
+      } catch (e) {}
+    };
+
+    const interval = setInterval(refetchStatus, 5000);
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        refetchStatus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [id, hasChanges]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isFormDisabled) return;
     const { name, value } = e.target;
@@ -194,76 +243,112 @@ const DetailBusinessPage: React.FC = () => {
       return;
     }
 
-    const toastId = toast.loading("Đang cập nhật trạng thái...");
+    if (!newActiveStatus) {
+      try {
+        const res = await fetch(`/api/v1/business/${id}/children-count`);
+        const resJson = await res.json();
+        const counts: ChildCounts = resJson?.data || {};
+        if (counts.total && counts.total > 0) {
+          setCascadeCounts(counts);
+          setShowCascadeModal(true);
+          setIsStatusOpen(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Lỗi kiểm tra con nghiệp vụ:", err);
+      }
+      await executeToggleActive(false, false);
+    } else {
+      await executeToggleActive(true, false);
+    }
+  };
+
+  const executeToggleActive = async (newActive: boolean, cascade: boolean) => {
+    setIsCascadeProcessing(true);
     try {
-      const response = await fetch(`/api/v1/business/${id}/active?active=${newActiveStatus}`, {
+      const url = `/api/v1/business/${id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
+      const response = await fetch(url, {
         method: 'GET',
         headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
-      
       const errorData = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        setIsActive(newActiveStatus);
-        setBusinessData((prev: any) => ({ ...prev, active: newActiveStatus }));
-        toast.dismiss(toastId);
-        renderCustomToast(newActiveStatus ? "Hiển thị nghiệp vụ thành công" : "Ẩn nghiệp vụ thành công");
+        setIsActive(newActive);
+        setBusinessData((prev: any) => ({ ...prev, active: newActive }));
+        setShowCascadeModal(false);
+        renderCustomToast(newActive ? "Hiển thị thành công" : "Ẩn thành công");
       } else {
-        toast.dismiss(toastId);
-        if (!newActiveStatus && (response.status === 400 || response.status === 409)) {
-          renderCannotHideToast(formData.name || businessData.name);
-        } else {
-          toast.error(errorData.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
-        }
+        toast.error(errorData.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
       }
     } catch (error) {
-      toast.error('Lỗi kết nối máy chủ', { id: toastId, position: 'top-center' });
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
     } finally {
+      setIsCascadeProcessing(false);
       setIsStatusOpen(false);
     }
   };
 
-  const renderCannotHideToast = (businessName: string) => {
-    toast.custom((t) => 
-      createPortal(
-        <div className="warning-toast-wrapper">
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
-            <div className="warning-toast-icon-container">
-              <div className="warning-bg-outer"></div>
-              <div className="warning-bg-inner"></div>
-              <svg className="warning-toast-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path fillRule="evenodd" clipRule="evenodd" d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" fill="#EAB308"/>
-                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
-                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
-              </svg>
-            </div>
-            <h3 className="warning-toast-title">
-              Không thể ẩn nghiệp vụ: "{businessName}"
-            </h3>
-            <p className="warning-toast-desc">
-              Nghiệp vụ này đang chứa các sản phẩm trực thuộc đang hoạt động bên trong.
-            </p>
-            <div className="warning-toast-actions">
-              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    , { duration: Infinity, id: 'cannot-hide-toast' }); 
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [priorConflict, setPriorConflict] = useState<PriorVersionInfo | null>(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<string | null>(null);
+  const [isDeletingPrior, setIsDeletingPrior] = useState(false);
+  const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+
+  const findPriorConflictVersion = () => {
+    if (!businessData?.versions || businessData.versions.length <= 1) return null;
+    return businessData.versions.find(
+      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL')
+    ) || null;
+  };
+
+  const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
+    if (isFormDisabled || !id) return;
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus(status);
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction(status);
+  };
+
+  const onSubmitClick = () => {
+    if (isFormDisabled || !id) return;
+    const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
+    const categoryVal = formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId;
+    if (!nameVal) {
+      toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
+      return;
+    }
+    if (!categoryVal) {
+      toast.error("Vui lòng chọn danh mục sản phẩm thuộc về", { position: 'top-center' });
+      setIsOpen(true);
+      return;
+    }
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus('PENDING_APPROVAL');
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction('PENDING_APPROVAL');
   };
 
   const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isFormDisabled || !id) return;
 
-    if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
-      if (!formData.name.trim()) {
+    if (status === 'PENDING_APPROVAL') {
+      const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
+      const categoryVal = formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId;
+      if (!nameVal) {
         toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
         return;
       }
-      if (!formData.categoryId) {
+      if (!categoryVal) {
         toast.error("Vui lòng chọn danh mục sản phẩm thuộc về", { position: 'top-center' });
         setIsOpen(true);
         return;
@@ -280,7 +365,7 @@ const DetailBusinessPage: React.FC = () => {
         },
         body: JSON.stringify({
           name: formData.name || businessData.name,
-          categoryId: formData.categoryId || businessData.categoryId,
+          categoryId: formData.categoryId || businessData.categoryId || null,
           active: isActive, 
           status
         }),
@@ -290,14 +375,14 @@ const DetailBusinessPage: React.FC = () => {
         let message = '';
         switch (status) {
           case 'DRAFT': 
-          case 'NEEDS_REVISION': message = "Lưu nháp nghiệp vụ thành công"; break;
-          case 'ARCHIVED': message = "Lưu trữ nghiệp vụ thành công"; break;
-          case 'ACTIVE': message = "Kích hoạt nghiệp vụ hoạt động trở lại thành công"; break;
-          case 'PENDING_APPROVAL': message = "Gửi phê duyệt nghiệp vụ thành công"; break;
-          default: message = "Cập nhật nghiệp vụ thành công";
+          case 'NEEDS_REVISION': message = "Lưu nháp thành công"; break;
+          case 'ARCHIVED': message = "Lưu trữ thành công"; break;
+          case 'ACTIVE': message = "Hiển thị thành công"; break;
+          case 'PENDING_APPROVAL': message = "Gửi phê duyệt thành công"; break;
+          default: message = "Cập nhật thành công";
         }
         renderCustomToast(message);
-        setTimeout(() => navigate('/business-management'), 10);
+        setTimeout(() => navigate('/business-management'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
@@ -311,41 +396,7 @@ const DetailBusinessPage: React.FC = () => {
 
   const handleDeleteBusiness = () => {
     if (isFormDisabled || !id) return;
-
-    toast.custom((t) =>
-      createPortal(
-        <div className="confirm-toast-overlay">
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
-            <div className="confirm-toast-body">
-              <div className="confirm-toast-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="confirm-toast-content">
-                <p className="confirm-toast-title">Xác nhận xóa</p>
-                <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa không? Hành động này không thể hoàn tác.</p>
-              </div>
-            </div>
-            <div className="confirm-toast-actions">
-              <button
-                className="confirm-btn-delete"
-                onClick={async () => {
-                  toast.dismiss(t.id);
-                  await executeDelete();
-                }}
-              >
-                Xóa
-              </button>
-              <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    , { id: 'delete-confirm-toast', duration: Infinity });
+    setShowDeleteModal(true);
   };
 
   const executeDelete = async () => {
@@ -358,8 +409,9 @@ const DetailBusinessPage: React.FC = () => {
       });
 
       if (response.ok) {
-        renderCustomToast("Xóa nghiệp vụ thành công");
-        setTimeout(() => navigate('/business-management'), 10);
+        setShowDeleteModal(false);
+        renderCustomToast("Xóa thành công");
+        setTimeout(() => navigate('/business-management'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
@@ -397,7 +449,9 @@ const DetailBusinessPage: React.FC = () => {
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
-              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+              {isCascadeLocked
+                ? CASCADE_LOCK_MESSAGE
+                : 'Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.'}
             </span>
           </div>
         )}
@@ -433,11 +487,11 @@ const DetailBusinessPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className={`btnDraft ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -446,11 +500,11 @@ const DetailBusinessPage: React.FC = () => {
 
                 {(businessData.status === 'ACTIVE' || businessData.status === 'NEEDS_REVISION') && (
                   <>
-                    <button className={`btnDraft ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness(businessData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick(businessData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${isActionValid ? 'active' : 'disabled'}`} disabled={!isActionValid} onClick={() => handleUpdateBusiness('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -587,6 +641,12 @@ const DetailBusinessPage: React.FC = () => {
                 approverName={getApproverDisplayName()}
                 createdAt={formatDateTime(businessData.createdAt)}
                 version={businessData.version}
+                versions={businessData.versions || []}
+                currentId={id}
+                onSelectVersion={(v) => {
+                  setPreviewVersionItem(v);
+                  setShowVersionModal(true);
+                }}
               />
 
              <div className="commentCard">
@@ -602,7 +662,7 @@ const DetailBusinessPage: React.FC = () => {
                       <React.Fragment key={c.id || index}>
                         <div className="commentItem">
                           <div className="userInfo">
-                            <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
+                            <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
                                 <span className="userName">
@@ -625,6 +685,96 @@ const DetailBusinessPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (confirmAction) {
+            const act = confirmAction;
+            setConfirmAction(null);
+            handleUpdateBusiness(act);
+          }
+        }}
+        variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp mảng nghiệp vụ không?' : 'Bạn có chắc chắn muốn gửi phê duyệt mảng nghiệp vụ không?'}
+        confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+      />
+
+      <DuplicateVersionModal
+        isOpen={showDuplicateModal}
+        itemName={businessData?.name || 'mảng nghiệp vụ này'}
+        priorVersion={priorConflict}
+        isProcessing={isDeletingPrior}
+        onCancel={() => {
+          setShowDuplicateModal(false);
+          setPriorConflict(null);
+          setPendingTargetStatus(null);
+        }}
+        onViewPrior={() => {
+          if (priorConflict) {
+            setShowDuplicateModal(false);
+            setPreviewVersionItem(priorConflict as any);
+            setShowVersionModal(true);
+          }
+        }}
+        onConfirm={async () => {
+          if (!priorConflict) return;
+          try {
+            setIsDeletingPrior(true);
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const delRes = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DELETE(priorConflict.id), {
+              method: 'POST',
+              headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+            });
+            if (delRes.ok) {
+              toast.success('Đã xóa phiên bản trùng lặp trước đó');
+              setShowDuplicateModal(false);
+              const target = pendingTargetStatus;
+              setPriorConflict(null);
+              setPendingTargetStatus(null);
+              if (target) {
+                handleUpdateBusiness(target as any);
+              }
+            } else {
+              const err = await delRes.json();
+              toast.error(err.message || 'Không thể xóa phiên bản cũ', { position: 'top-center' });
+            }
+          } catch (e) {
+            toast.error('Lỗi khi xóa phiên bản cũ', { position: 'top-center' });
+          } finally {
+            setIsDeletingPrior(false);
+          }
+        }}
+      />
+
+      <VersionDetailModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+        itemType="business"
+        versionItem={previewVersionItem}
+      />
+
+      <ActionConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={executeDelete}
+        variant="delete"
+        title="Xác nhận xóa"
+        desc="Bạn có chắc chắn muốn xóa nghiệp vụ này không? Hành động này không thể hoàn tác."
+        confirmText="Xóa"
+      />
+
+      <CascadeHideModal
+        isOpen={showCascadeModal}
+        onClose={() => setShowCascadeModal(false)}
+        onConfirm={() => executeToggleActive(false, true)}
+        itemTypeLabel="nghiệp vụ"
+        itemName={formData.name || businessData?.name || ''}
+        counts={cascadeCounts}
+        isProcessing={isCascadeProcessing}
+      />
     </div>
   );
 };

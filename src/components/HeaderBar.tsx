@@ -5,6 +5,7 @@ import logoAgribank from '../assets/logo-agribank.png';
 import './HeaderBar.css';
 import { type UserRole } from '../config/menuConfig';
 import { AUTH_SERVICE_LOGOUT_URL, API_ENDPOINTS } from '../config/apiConfig';
+import { getUserAvatar } from '../utils/avatarUtils';
 
 // Import bộ icon mới
 import tracuuIcon from '../assets/icon/tracuu.svg';
@@ -142,6 +143,13 @@ const HeaderBar: React.FC = () => {
   });
   const [displayName, setDisplayName] = useState<string>(() => {
     return localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh';
+  });
+  const [userAvatar] = useState<string>(() => {
+    const username =
+      localStorage.getItem('currentUserUsername') ||
+      localStorage.getItem('username') ||
+      localStorage.getItem('currentUserFullName');
+    return getUserAvatar(username);
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -419,9 +427,12 @@ const HeaderBar: React.FC = () => {
               <p className="user-name">{displayName}</p>
               <p className="user-role">{ROLE_LABELS[role] || 'Quản lý nội dung'}</p>
             </div>
-            <div className="avatar-container">
+            <div
+              className="avatar-container"
+              title="Nhấp để mở menu quyền"
+            >
               <img
-                src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92&_nc_eui2=AeElV1lB8lxE-Jl95Brt5yL0LdMbKgfDiPot0xsqB8OI-kQvt-NXlC2_iQ2LpjOlsP_Sj8JB4tlBq6Qh5qcQD-aq&_nc_ohc=B9tUax_rWcUQ7kNvwGbtNW8&_nc_oc=Ado2VW0tNyfSJvCs3OCpA8USP2wUqKSgB_pesbBXYXzije1mYwA01dv_Go9XPC3JRu1wWgwHPm4Vw404DpcFzxqm&_nc_zt=24&_nc_ht=scontent-hkg1-2.xx&_nc_gid=hdKbd8IqLtAGg9csLT1Atg&_nc_ss=7b2a8&oh=00_Af6Qe-5KSfSnIshr1ykW4CWS0M9GhucP97bQF2jEdMqaYg&oe=6A09D4B9"
+                src={userAvatar}
                 alt="Avatar"
                 className="avatar-img"
               />

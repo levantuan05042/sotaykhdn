@@ -4,6 +4,7 @@ import axios from 'axios';
 import './ProductBusinessPage.css';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge2 from '../components/ui/StatusBadge2';
+import CellWithTooltip from '../components/ui/CellWithTooltip';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 import { formatApprovedBy } from '../utils/formatUtils';
@@ -40,8 +41,12 @@ interface ProductBusinessItem {
   categoryName?: string;
   status: string;
   active?: boolean;
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;
 }
 
@@ -111,13 +116,26 @@ const ProductBusinessPage: React.FC = () => {
       const userMap = getUserMap();
 
       const enrichedData = rawList.map((item: any) => {
-        const creatorCode = item.createdBy || item.createdByFullName; 
-        const approverCode = item.approvedBy;
+        const creatorRaw =
+          item.createdByFullName ||
+          item.CREATED_BY_FULL_NAME ||
+          item.created_by_full_name ||
+          item.createdBy;
+
+        const approverRaw =
+          item.approvedByFullName ||
+          item.APPROVED_BY_FULL_NAME ||
+          item.approved_by_full_name ||
+          item.approvedBy;
+
+        const creator = formatApprovedBy(creatorRaw) || getFullName(item.createdBy, userMap) || item.createdBy || '---';
+        const approver = formatApprovedBy(approverRaw) || getFullName(item.approvedBy, userMap) || item.approvedBy || '---';
 
         return {
           ...item,
-          createdByFullName: getFullName(creatorCode, userMap) || '---',
-          approvedBy: getFullName(approverCode, userMap) || '---' 
+          createdByFullName: creator,
+          approvedByFullName: approver,
+          approvedBy: approver
         };
       });
 
@@ -264,51 +282,28 @@ const ProductBusinessPage: React.FC = () => {
     {
       key: 'status',
       header: 'Trạng thái',
-      width: '180px',
-      render: (row) => {
-        const statusText = STATUS_OPTIONS.find(opt => opt.value === row.status)?.label || row.status;
-        return (
-          <div className="custom-tooltip-container">
-            <StatusBadge2 status={row.status} />
-            <div className="custom-tooltip">{statusText}</div>
-          </div>
-        );
-      },
+      width: '210px',
+      render: (row) => <StatusBadge2 status={row.status} />,
     },
     {
       key: 'active',
       header: 'Hiệu lực',
-      render: (row) => (
-        <div className="custom-tooltip-container">
-          {renderActiveToggle(row)}
-          <div className="custom-tooltip">{row.active ? 'Hiện' : 'Ẩn'}</div>
-        </div>
-      ),
+      render: (row) => renderActiveToggle(row),
     },
     {
       key: 'createdByFullName',
       header: 'Người tạo',
       render: (row) => {
-        const name = formatApprovedBy(row.createdByFullName);
-        return (
-          <div className="custom-tooltip-container">
-            <span className="truncate-text">{name}</span>
-            <div className="custom-tooltip">{name}</div>
-          </div>
-        );
+        const name = formatApprovedBy(row.createdByFullName || row.CREATED_BY_FULL_NAME || row.createdBy);
+        return <CellWithTooltip text={name} />;
       },
     },
     {
-      key: 'approvedBy',
+      key: 'approvedByFullName',
       header: 'Người kiểm duyệt',
       render: (row) => {
-        const name = formatApprovedBy(row.approvedBy);
-        return (
-          <div className="custom-tooltip-container">
-            <span className="truncate-text">{name}</span>
-            <div className="custom-tooltip">{name}</div>
-          </div>
-        );
+        const name = formatApprovedBy(row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy);
+        return <CellWithTooltip text={name} />;
       },
     },
     {
@@ -316,12 +311,7 @@ const ProductBusinessPage: React.FC = () => {
       header: 'Phiên bản',
       render: (row) => {
         const v = row.version ? `Phiên bản ${row.version}` : '---';
-        return (
-          <div className="custom-tooltip-container">
-            <span className="truncate-text" style={{ fontWeight: 600, color: '#053E2B' }}>{v}</span>
-            <div className="custom-tooltip">{v}</div>
-          </div>
-        );
+        return <span style={{ fontWeight: 600, color: '#053E2B' }}>{v}</span>;
       },
     },
     {
@@ -330,7 +320,7 @@ const ProductBusinessPage: React.FC = () => {
       width: '80px',
       align: 'center',
       render: (row) => (
-        <div className="custom-tooltip-container" style={{ justifyContent: 'center' }}>
+        <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'center' }}>
           <button
             className="btn-view-detail"
             onClick={(e) => {
@@ -344,8 +334,7 @@ const ProductBusinessPage: React.FC = () => {
               <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
-          <div className="custom-tooltip">Xem chi tiết</div>
-        </div>
+        </CellWithTooltip>
       ),
     },
   ];

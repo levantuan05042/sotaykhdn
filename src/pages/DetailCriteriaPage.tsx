@@ -1,13 +1,19 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createPortal } from 'react-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
+import { getRandomAvatar } from '../utils/avatarUtils';
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import VersionDetailModal from '../components/ui/VersionDetailModal';
+import type { VersionItem } from '../components/ui/ProductInfoCard';
+import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked } from '../utils/formatUtils';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -56,8 +62,14 @@ const DetailCriteriaPage: React.FC = () => {
   const [isActive, setIsActive] = useState(true);
   const [criteriaData, setCriteriaData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Modal states
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCascadeModal, setShowCascadeModal] = useState(false);
+  const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
+  const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   
-  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
+  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; hidden?: boolean }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [formData, setFormData] = useState<{ code: string; name: string; groupIds: string[]; isRequired: boolean }>({
@@ -91,7 +103,8 @@ const DetailCriteriaPage: React.FC = () => {
     baseCurrentUsername === baseCreatorUsername
   );
 
-  const isReadOnly = !isLoggedIn || !isOwner;
+  const isCascadeLocked = isCriteriaFullyLocked(criteriaData);
+  const isReadOnly = !isLoggedIn || !isOwner || isCascadeLocked;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -153,18 +166,33 @@ const DetailCriteriaPage: React.FC = () => {
 
         setIsActive(detailData.active ?? true);
 
+        const attachedGroups: any[] = detailData.productGroups || [];
+        const hiddenIds = new Set(
+          attachedGroups.filter((g: any) => g.active === false).map((g: any) => String(g.id))
+        );
+
         if (groupsRes.ok) {
           const groupsData = await groupsRes.json();
-          const options = groupsData.map((g: any) => ({
+          const options = (groupsData || []).map((g: any) => ({
             label: g.name,
-            value: String(g.id) 
+            value: String(g.id),
+            hidden: hiddenIds.has(String(g.id)),
           }));
+          attachedGroups.forEach((g: any) => {
+            const id = String(g.id);
+            if (!options.some((opt: any) => opt.value === id)) {
+              options.push({ label: g.name, value: id, hidden: g.active === false });
+            }
+          });
           setGroupOptions(options);
         } else {
-          const fallbackOptions = detailData.productGroups
-            ? detailData.productGroups.map((g: any) => ({ label: g.name, value: String(g.id) }))
-            : [];
-          setGroupOptions(fallbackOptions);
+          setGroupOptions(
+            attachedGroups.map((g: any) => ({
+              label: g.name,
+              value: String(g.id),
+              hidden: g.active === false,
+            }))
+          );
         }
 
       } catch (error) {
@@ -177,6 +205,75 @@ const DetailCriteriaPage: React.FC = () => {
     initPageData();
     return () => { isMounted = false; };
   }, [id]);
+
+  const isFormModified = useMemo(() => {
+    if (!criteriaData) return false;
+    const origName = criteriaData.name || '';
+    const origCode = criteriaData.code || '';
+    const origRequired = criteriaData.isRequired ?? false;
+    const origGroups = criteriaData.productGroups ? criteriaData.productGroups.map((g: any) => String(g.id)).sort().join(',') : '';
+    const currentGroups = (formData.groupIds || []).slice().sort().join(',');
+    return (
+      formData.name.trim() !== origName.trim() ||
+      formData.code.trim() !== origCode.trim() ||
+      formData.isRequired !== origRequired ||
+      currentGroups !== origGroups
+    );
+  }, [formData, criteriaData]);
+
+  // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
+  useEffect(() => {
+    if (!id) return;
+    const refetchStatus = async () => {
+      if (isFormModified) return;
+      try {
+        const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DETAIL(id));
+        if (detailRes.ok) {
+          const detailData = await detailRes.json();
+          setCriteriaData(detailData);
+          const initialGroupIds = detailData.productGroups
+            ? detailData.productGroups.map((g: any) => String(g.id))
+            : [];
+          setFormData({
+            code: detailData.code || '',
+            name: detailData.name || '',
+            groupIds: initialGroupIds,
+            isRequired: detailData.isRequired ?? false 
+          });
+          setIsActive(detailData.active ?? true);
+          const attachedGroups: any[] = detailData.productGroups || [];
+          const hiddenIds = new Set(
+            attachedGroups.filter((g: any) => g.active === false).map((g: any) => String(g.id))
+          );
+          setGroupOptions((prev) => {
+            const next = prev.map((opt) => ({ ...opt, hidden: hiddenIds.has(opt.value) }));
+            attachedGroups.forEach((g: any) => {
+              const id = String(g.id);
+              if (!next.some((opt) => opt.value === id)) {
+                next.push({ label: g.name, value: id, hidden: g.active === false });
+              }
+            });
+            return next;
+          });
+        }
+      } catch (e) {}
+    };
+
+    const interval = setInterval(refetchStatus, 5000);
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        refetchStatus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [id, isFormModified]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
@@ -213,7 +310,48 @@ const DetailCriteriaPage: React.FC = () => {
     });
   };
 
+  const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION' | null>(null);
+
   const handleGoBack = () => navigate('/criteria-management');
+
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [priorConflict, setPriorConflict] = useState<PriorVersionInfo | null>(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<string | null>(null);
+  const [isDeletingPrior, setIsDeletingPrior] = useState(false);
+  const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+
+  const findPriorConflictVersion = () => {
+    if (!criteriaData?.versions || criteriaData.versions.length <= 1) return null;
+    return criteriaData.versions.find(
+      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL')
+    ) || null;
+  };
+
+  const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
+    if (isReadOnly || !id) return;
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus(status);
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction(status);
+  };
+
+  const onSubmitClick = () => {
+    if (isReadOnly || !id) return;
+    if (!validateFormBeforeSubmit()) return;
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus('PENDING_APPROVAL');
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction('PENDING_APPROVAL');
+  };
 
   const validateFormBeforeSubmit = () => {
     if (isReadOnly) return false;
@@ -236,7 +374,7 @@ const DetailCriteriaPage: React.FC = () => {
   const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
 
-    if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
+    if (status === 'PENDING_APPROVAL') {
       if (!validateFormBeforeSubmit()) return;
     }
 
@@ -269,15 +407,15 @@ const DetailCriteriaPage: React.FC = () => {
         switch (status) {
           case 'DRAFT': 
           case 'NEEDS_REVISION':
-            message = "Lưu nháp tiêu chí thành công"; break;
-          case 'ARCHIVED': message = "Lưu trữ tiêu chí thành công"; break;
-          case 'ACTIVE': message = "Kích hoạt tiêu chí hoạt động trở lại thành công"; break;
-          case 'PENDING_APPROVAL': message = "Gửi phê duyệt tiêu chí thành công"; break;
-          default: message = "Cập nhật tiêu chí thành công";
+            message = "Lưu nháp thành công"; break;
+          case 'ARCHIVED': message = "Lưu trữ thành công"; break;
+          case 'ACTIVE': message = "Hiển thị thành công"; break;
+          case 'PENDING_APPROVAL': message = "Gửi phê duyệt thành công"; break;
+          default: message = "Cập nhật thành công";
         }
 
         renderCustomToast(message);
-        setTimeout(() => navigate('/criteria-management'), 10);
+        setTimeout(() => navigate('/criteria-management'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
@@ -289,120 +427,62 @@ const DetailCriteriaPage: React.FC = () => {
     }
   };
 
-  const showCannotHideWarning = (itemName: string) => {
-    toast.custom((t) => 
-      createPortal(
-        <div className="warning-toast-wrapper">
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} warning-toast-card`}>
-            <div className="warning-toast-icon-container">
-              <div className="warning-bg-outer"></div>
-              <div className="warning-bg-inner"></div>
-              <svg 
-                className="warning-toast-icon" 
-                width="40" height="40" 
-                viewBox="0 0 24 24" 
-                fill="none" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path 
-                  fillRule="evenodd" 
-                  clipRule="evenodd" 
-                  d="M10.2943 3.65586C11.0478 2.34807 12.9522 2.34807 13.7057 3.65586L21.6575 17.4526C22.4116 18.761 21.4651 20.4001 19.9517 20.4001H4.0483C2.53489 20.4001 1.58842 18.761 2.34251 17.4526L10.2943 3.65586Z" 
-                  fill="#EAB308"
-                />
-                <path d="M12 8.5V13.5" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
-                <circle cx="12" cy="17" r="1.5" fill="#FFFFFF"/>
-              </svg>
-            </div>
-            
-            <h3 className="warning-toast-title">
-              Không thể ẩn nghiệp vụ: "{itemName}"
-            </h3>
-            <p className="warning-toast-desc">
-              Nghiệp vụ này đang chứa các sản phẩm trực thuộc đang hoạt động bên trong.
-            </p>
-            
-            <div className="warning-toast-actions">
-              <button className="warning-btn-close" onClick={() => toast.dismiss(t.id)}>
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    , { duration: Infinity, id: 'cannot-hide-toast' }); 
-  };
-
   const handleToggleActive = async (newActiveState: boolean) => {
     if (isReadOnly || !id) return;
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/v1/criteria/${id}/active?active=${newActiveState}`, {
-        method: 'GET',
-        headers: { 
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    if (isActive === newActiveState) {
+      setIsStatusOpen(false);
+      return;
+    }
+
+    if (!newActiveState) {
+      try {
+        const res = await fetch(`/api/v1/criteria/${id}/children-count`);
+        const resJson = await res.json();
+        const counts: ChildCounts = resJson?.data || {};
+        if (counts.total && counts.total > 0) {
+          setCascadeCounts(counts);
+          setShowCascadeModal(true);
+          setIsStatusOpen(false);
+          return;
         }
+      } catch (err) {
+        console.warn("Lỗi kiểm tra con tiêu chí:", err);
+      }
+      await executeToggleActive(false, false);
+    } else {
+      await executeToggleActive(true, false);
+    }
+  };
+
+  const executeToggleActive = async (newActive: boolean, cascade: boolean) => {
+    setIsCascadeProcessing(true);
+    try {
+      const url = `/api/v1/criteria/${id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
+      const errorData = await response.json().catch(() => ({}));
 
       if (response.ok) {
-        setIsActive(newActiveState);
-        setIsStatusOpen(false);
-        renderCustomToast(newActiveState ? 'Hiển thị tiêu chí thành công' : 'Ẩn tiêu chí thành công');
+        setIsActive(newActive);
+        setCriteriaData((prev: any) => ({ ...prev, active: newActive }));
+        setShowCascadeModal(false);
+        renderCustomToast(newActive ? "Hiển thị thành công" : "Ẩn thành công");
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        setIsStatusOpen(false);
-        
-        if (!newActiveState || errorData.code === 'HAS_ACTIVE_PRODUCTS') {
-          showCannotHideWarning(criteriaData?.name || "Tiêu chí");
-        } else {
-          toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật trạng thái', { position: 'top-center' });
-        }
+        toast.error(errorData.message || 'Có lỗi xảy ra khi thay đổi trạng thái', { position: 'top-center' });
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
     } finally {
-      setLoading(false);
+      setIsCascadeProcessing(false);
+      setIsStatusOpen(false);
     }
   };
 
   const handleDeleteCriteria = () => {
     if (isReadOnly || !id) return;
-
-    toast.custom((t) =>
-      createPortal(
-        <div className="confirm-toast-overlay">
-          <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} confirm-toast-card`}>
-            <div className="confirm-toast-body">
-              <div className="confirm-toast-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="confirm-toast-content">
-                <p className="confirm-toast-title">Xác nhận xóa</p>
-                <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa không? Hành động này không thể hoàn tác.</p>
-              </div>
-            </div>
-            <div className="confirm-toast-actions">
-              <button
-                className="confirm-btn-delete"
-                onClick={async () => {
-                  toast.dismiss(t.id);
-                  await executeDelete();
-                }}
-              >
-                Xóa
-              </button>
-              <button className="confirm-btn-cancel" onClick={() => toast.dismiss(t.id)}>
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )
-    , { id: 'delete-confirm-toast', duration: Infinity });
+    setShowDeleteModal(true);
   };
 
   const executeDelete = async () => {
@@ -418,8 +498,9 @@ const DetailCriteriaPage: React.FC = () => {
       });
 
       if (response.ok) {
-        renderCustomToast("Xóa tiêu chí sản phẩm thành công");
-        setTimeout(() => navigate('/criteria-management'), 10);
+        setShowDeleteModal(false);
+        renderCustomToast("Xóa thành công");
+        setTimeout(() => navigate('/criteria-management'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
@@ -480,18 +561,28 @@ const DetailCriteriaPage: React.FC = () => {
   const getSelectedGroupsLabel = () => {
     if (formData.groupIds.length === 0) return "Chọn nhóm sản phẩm";
     if (formData.groupIds.length === groupOptions.length && groupOptions.length > 0) return "Tất cả nhóm sản phẩm";
-    
-    const selectedLabels = groupOptions
-      .filter(opt => formData.groupIds.includes(opt.value))
-      .map(opt => opt.label);
 
-    if (selectedLabels.length <= 3) {
-      return selectedLabels.join(', ');
-    }
-    
-    const firstThree = selectedLabels.slice(0, 3).join(', ');
-    const remainingCount = selectedLabels.length - 3;
-    return `${firstThree} và ${remainingCount} nhóm khác`;
+    const selected = groupOptions.filter(opt => formData.groupIds.includes(opt.value));
+    const visibleSelected = selected.slice(0, 3);
+    const remainingCount = selected.length - visibleSelected.length;
+
+    return (
+      <>
+        {visibleSelected.map((opt, index) => (
+          <span
+            key={opt.value}
+            title={opt.hidden ? 'Nhóm đang bị ẩn' : undefined}
+            style={{
+              opacity: opt.hidden ? 0.42 : 1,
+              color: opt.hidden ? '#6B7280' : undefined,
+            }}
+          >
+            {opt.label}{index < visibleSelected.length - 1 || remainingCount > 0 ? ', ' : ''}
+          </span>
+        ))}
+        {remainingCount > 0 && <span>và {remainingCount} nhóm khác</span>}
+      </>
+    );
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu tiêu chí...</div>;
@@ -516,7 +607,9 @@ const DetailCriteriaPage: React.FC = () => {
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
-              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+              {isCascadeLocked
+                ? CASCADE_LOCK_MESSAGE
+                : 'Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.'}
             </span>
           </div>
         )}
@@ -557,11 +650,11 @@ const DetailCriteriaPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => handleUpdateCriteria('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -570,11 +663,11 @@ const DetailCriteriaPage: React.FC = () => {
 
                 {(criteriaData.status === 'ACTIVE' || criteriaData.status === 'NEEDS_REVISION') && (
                   <>
-                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => handleUpdateCriteria(criteriaData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick(criteriaData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                       Lưu nháp
                     </button>
-                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={() => handleUpdateCriteria('PENDING_APPROVAL')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       Gửi phê duyệt
                     </button>
@@ -746,7 +839,16 @@ const DetailCriteriaPage: React.FC = () => {
                                       </svg>
                                     )}
                                   </div>
-                                  <span style={{ fontSize: '14px', color: '#1F2937' }}>{opt.label}</span>
+                                  <span
+                                    style={{
+                                      fontSize: '14px',
+                                      color: opt.hidden ? '#6B7280' : '#1F2937',
+                                      opacity: opt.hidden ? 0.55 : 1,
+                                    }}
+                                    title={opt.hidden ? 'Nhóm đang bị ẩn' : undefined}
+                                  >
+                                    {opt.label}{opt.hidden ? ' (Đang ẩn)' : ''}
+                                  </span>
                                 </div>
                               );
                             })
@@ -819,7 +921,13 @@ const DetailCriteriaPage: React.FC = () => {
               creatorName={getCreatorDisplayName()} 
               approverName={getApproverDisplayName()} 
               createdAt={formatDateTime(criteriaData.createdAt)} 
-              version={criteriaData.version ?? 0} 
+              version={criteriaData.version ?? 0}
+              versions={criteriaData.versions || []}
+              currentId={id}
+              onSelectVersion={(v) => {
+                setPreviewVersionItem(v);
+                setShowVersionModal(true);
+              }}
             />
 
             <div className="commentCard">
@@ -835,7 +943,7 @@ const DetailCriteriaPage: React.FC = () => {
                     <React.Fragment key={c.id || index}>
                       <div className="commentItem">
                         <div className="userInfo">
-                          <img src={c.avatarUrl || "https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png"} className="avatar" alt="avatar" />
+                          <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
                           <div style={{ flex: 1 }}>
                             <div className="userHeader">
                               <span className="userName">
@@ -859,6 +967,96 @@ const DetailCriteriaPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (confirmAction) {
+            const act = confirmAction;
+            setConfirmAction(null);
+            handleUpdateCriteria(act);
+          }
+        }}
+        variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp tiêu chí không?' : 'Bạn có chắc chắn muốn gửi phê duyệt tiêu chí không?'}
+        confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+      />
+
+      <DuplicateVersionModal
+        isOpen={showDuplicateModal}
+        itemName={criteriaData?.name || 'tiêu chí này'}
+        priorVersion={priorConflict}
+        isProcessing={isDeletingPrior}
+        onCancel={() => {
+          setShowDuplicateModal(false);
+          setPriorConflict(null);
+          setPendingTargetStatus(null);
+        }}
+        onViewPrior={() => {
+          if (priorConflict) {
+            setShowDuplicateModal(false);
+            setPreviewVersionItem(priorConflict as any);
+            setShowVersionModal(true);
+          }
+        }}
+        onConfirm={async () => {
+          if (!priorConflict) return;
+          try {
+            setIsDeletingPrior(true);
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const delRes = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DELETE(priorConflict.id), {
+              method: 'POST',
+              headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+            });
+            if (delRes.ok) {
+              toast.success('Đã xóa phiên bản trùng lặp trước đó');
+              setShowDuplicateModal(false);
+              const target = pendingTargetStatus;
+              setPriorConflict(null);
+              setPendingTargetStatus(null);
+              if (target) {
+                handleUpdateCriteria(target as any);
+              }
+            } else {
+              const err = await delRes.json();
+              toast.error(err.message || 'Không thể xóa phiên bản cũ', { position: 'top-center' });
+            }
+          } catch (e) {
+            toast.error('Lỗi khi xóa phiên bản cũ', { position: 'top-center' });
+          } finally {
+            setIsDeletingPrior(false);
+          }
+        }}
+      />
+
+      <VersionDetailModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+        itemType="criteria"
+        versionItem={previewVersionItem}
+      />
+
+      <ActionConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={executeDelete}
+        variant="delete"
+        title="Xác nhận xóa"
+        desc="Bạn có chắc chắn muốn xóa tiêu chí này không? Hành động này không thể hoàn tác."
+        confirmText="Xóa"
+      />
+
+      <CascadeHideModal
+        isOpen={showCascadeModal}
+        onClose={() => setShowCascadeModal(false)}
+        onConfirm={() => executeToggleActive(false, true)}
+        itemTypeLabel="tiêu chí"
+        itemName={formData.name || criteriaData?.name || ''}
+        counts={cascadeCounts}
+        isProcessing={isCascadeProcessing}
+      />
     </div>
   );
 };

@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './DetailGroupPage.css'; // Dùng chung CSS để đồng bộ giao diện
 import toast from 'react-hot-toast';
 import axios from 'axios';
-
 import { API_ENDPOINTS } from '../config/apiConfig';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 
 const AddCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -123,50 +123,55 @@ const AddCriteriaPage: React.FC = () => {
     return `${firstThree} và ${remainingCount} nhóm khác`;
   };
 
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // --- VALIDATE FORM TRƯỚC KHI LƯU NHÁP HOẶC MỞ MODAL DUYỆT ---
-  const validateForm = () => {
+  const onSaveDraftClick = () => {
+    setConfirmAction('DRAFT');
+  };
+
+  const onSubmitClick = () => {
     if (!formData.code.trim()) {
       toast.error("Vui lòng nhập mã tiêu chí", { position: 'top-center' });
-      return false;
+      return;
     }
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên tiêu chí", { position: 'top-center' });
-      return false;
+      return;
     }
     if (formData.groupIds.length === 0) {
       toast.error("Vui lòng chọn ít nhất một nhóm sản phẩm áp dụng", { position: 'top-center' });
-      return false;
+      return;
     }
-    return true;
-  };
-
-  // Xử lý Lưu nháp
-  const handleSaveDraft = async () => {
-    if (!validateForm()) return;
-    await submitCriteriaData('DRAFT');
+    setConfirmAction('PENDING_APPROVAL');
   };
 
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
     try {
+      setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CRITERIA.LIST, {
-        code: formData.code.trim(),
-        name: formData.name.trim(),
-        groupIds: formData.groupIds,
+        code: formData.code.trim() || undefined,
+        name: formData.name.trim() || undefined,
+        groupIds: formData.groupIds.length > 0 ? formData.groupIds : undefined,
         status,
-        required: formData.required,
-        active: isActive,
-        approvedBy: approvedBy || null // Gửi kèm username người kiểm duyệt nếu có
+        required: formData.required ?? false,
+        active: isActive ?? false,
+        approvedBy: approvedBy || null
       });
 
-      const message = status === 'DRAFT' ? "Lưu nháp tiêu chí thành công" : "Gửi phê duyệt tiêu chí thành công";
+      const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
       renderCustomToast(message);
-      setTimeout(() => navigate('/criteria-management'), 2000);
+      setConfirmAction(null);
+      setTimeout(() => navigate('/criteria-management'), 400);
 
     } catch (error: any) {
       console.error("Lỗi API:", error);
       const errorMessage = error.response?.data?.message || 'Mã hoặc tên tiêu chí đã tồn tại trên hệ thống';
       toast.error(errorMessage, { position: 'top-center' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -191,12 +196,8 @@ const AddCriteriaPage: React.FC = () => {
     ), { position: 'top-center' });
   };
 
-  const isFormValid = 
-      formData.code.trim() !== '' || 
-      formData.name.trim() !== '' || 
-      formData.groupIds.length > 0 ||
-      formData.required !== false || 
-      formData.active !== true;      
+  const canSaveDraft = !isSubmitting;
+  const canSubmit = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0 && !isSubmitting;
 
   const filteredOptions = groupOptions.filter(opt => 
     opt.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -230,9 +231,9 @@ const AddCriteriaPage: React.FC = () => {
 
           <div className="headerRight">
             <button 
-              className={`btnDraft ${isFormValid ? 'active' : 'disabled'}`} 
-              disabled={!isFormValid} 
-              onClick={handleSaveDraft}
+              className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} 
+              disabled={!canSaveDraft} 
+              onClick={onSaveDraftClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -241,13 +242,9 @@ const AddCriteriaPage: React.FC = () => {
               Lưu nháp
             </button>
             <button 
-              className={`btnSubmit ${isFormValid ? 'active' : 'disabled'}`} 
-              disabled={!isFormValid} 
-              onClick={() => {
-                if (validateForm()) {
-                  submitCriteriaData('PENDING_APPROVAL');
-                }
-              }}
+              className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
+              disabled={!canSubmit} 
+              onClick={onSubmitClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -505,6 +502,17 @@ const AddCriteriaPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && submitCriteriaData(confirmAction)}
+        variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp tiêu chí không?' : 'Bạn có chắc chắn muốn gửi phê duyệt tiêu chí không?'}
+        confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        loading={isSubmitting}
+      />
     </div>
   );
 };

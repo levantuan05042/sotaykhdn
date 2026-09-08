@@ -1,12 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import './ProductPage.css';
-import DataTable, { type Column } from '../components/ui/DataTable2';
+import DataTable2, { type Column } from '../components/ui/DataTable2';
 import StatusBadge2 from '../components/ui/StatusBadge2';
+import StatusBadgeListRequest from '../components/ui/StatusBadgeListRequest';
 import ImportProductModal from '../components/ImportProductModal';
+import CellWithTooltip from '../components/ui/CellWithTooltip';
+import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdown';
+import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
-import { getUserMap, getFullName } from '../utils/userUtils';
+import { formatApprovedBy, getCascadeRowClassName, isCascadeHidden } from '../utils/formatUtils';
+import hotToast from 'react-hot-toast';
+import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 
 
 const STATUS_OPTIONS = [
@@ -84,19 +90,43 @@ const ProductPage: React.FC = () => {
   if (isProcessingPage) currentListName = 'Danh sách sản phẩm đang xử lý';
   if (isRejectedPage) currentListName = 'Danh sách sản phẩm từ chối';
 
+  const pageKey = location.pathname;
+  const cached = getCachedPageState(pageKey);
+
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState(cached?.searchTerm ?? '');
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(cached?.selectedStatuses ?? []);
+  const [selectedGroups, setSelectedGroups] = useState<string[]>(cached?.selectedGroups ?? []);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(cached?.selectedCategories ?? []);
+  const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>(cached?.selectedBusinesses ?? []);
+  const [selectedActives, setSelectedActives] = useState<string[]>(cached?.selectedActives ?? []);
+  const [selectedCreators, setSelectedCreators] = useState<string[]>(cached?.selectedCreators ?? []);
+  const [selectedApprovers, setSelectedApprovers] = useState<string[]>(cached?.selectedApprovers ?? []);
+  const [selectedRequestNames, setSelectedRequestNames] = useState<string[]>(cached?.selectedTypes ?? []);
+  const [currentPage, setCurrentPage] = useState<number>(cached?.currentPage ?? 1);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [groupOptions, setGroupOptions] = useState<GroupOption[]>([]);
-  const [groupSearchTerm, setGroupSearchTerm] = useState('');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const statusRef = useRef<HTMLDivElement>(null);
-  const groupRef = useRef<HTMLDivElement>(null);
+  const filterSectionRef = useRef<HTMLDivElement>(null);
   const headerListMenuRef = useRef<HTMLDivElement>(null);
+
+  // Lưu trạng thái trang vào cache
+  useEffect(() => {
+    setCachedPageState(pageKey, {
+      searchTerm,
+      selectedStatuses,
+      selectedGroups,
+      selectedCategories,
+      selectedBusinesses,
+      selectedActives,
+      selectedCreators,
+      selectedApprovers,
+      selectedTypes: selectedRequestNames,
+      currentPage,
+    });
+  }, [pageKey, searchTerm, selectedStatuses, selectedGroups, selectedCategories, selectedBusinesses, selectedActives, selectedCreators, selectedApprovers, selectedRequestNames, currentPage]);
 
   useEffect(() => {
     if (!toast) return;
@@ -119,57 +149,88 @@ const ProductPage: React.FC = () => {
     fetchGroupOptions();
   }, []);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const response = await axios.get(API_ENDPOINTS.PRODUCT.LIST, {
         params: {
           keyword: searchTerm.trim() || undefined,
-          status: selectedStatus || undefined,
-          types: selectedGroups.length > 0 ? selectedGroups : undefined,
-        },
-        paramsSerializer: (params) => {
-          const searchParams = new URLSearchParams();
-          Object.entries(params).forEach(([key, value]) => {
-            if (Array.isArray(value)) {
-              value.forEach((v) => searchParams.append(key, v));
-            } else if (value !== undefined) {
-              searchParams.append(key, String(value));
-            }
-          });
-          return searchParams.toString();
         },
       });
 
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
-      const userMap = getUserMap();
 
-      const enrichedData = rawList.map((item: any) => ({
-        ...item,
-        createdByFullName: getFullName(item.createdBy, userMap) || null,
-        approvedBy: getFullName(item.approvedBy, userMap) || null 
-      }));
+      const enrichedData = rawList.map((item: any) => {
+        const creator = (item.createdByFullName && String(item.createdByFullName).trim() && item.createdByFullName !== '---')
+          ? String(item.createdByFullName).trim()
+          : (item.CREATED_BY_FULL_NAME && String(item.CREATED_BY_FULL_NAME).trim() && item.CREATED_BY_FULL_NAME !== '---'
+              ? String(item.CREATED_BY_FULL_NAME).trim()
+              : (formatApprovedBy(item.createdBy) || item.createdBy || '---'));
+
+        const approver = (item.approvedByFullName && String(item.approvedByFullName).trim() && item.approvedByFullName !== '---')
+          ? String(item.approvedByFullName).trim()
+          : (item.APPROVED_BY_FULL_NAME && String(item.APPROVED_BY_FULL_NAME).trim() && item.APPROVED_BY_FULL_NAME !== '---'
+              ? String(item.APPROVED_BY_FULL_NAME).trim()
+              : (formatApprovedBy(item.approvedBy) || item.approvedBy || '---'));
+
+        return {
+          ...item,
+          createdByFullName: creator,
+          approvedByFullName: approver,
+          approvedBy: approver
+        };
+      });
 
       setData(enrichedData);
+      if (!isBackground) {
+        restorePageScroll(pageKey);
+      }
     } catch (error) {
-      console.error(error);
-      setData([]);
+      if (!isBackground) {
+        console.error(error);
+        setData([]);
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     const handler = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(handler);
-  }, [searchTerm, selectedStatus, selectedGroups]);
+  }, [searchTerm]);
+
+  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 5000);
+
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData(true);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [searchTerm, pageKey]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (target?.closest?.('.table-filter-dropdown-menu')) return;
       if (
-        statusRef.current && !statusRef.current.contains(event.target as Node) &&
-        groupRef.current && !groupRef.current.contains(event.target as Node) &&
+        filterSectionRef.current && !filterSectionRef.current.contains(event.target as Node) &&
         headerListMenuRef.current && !headerListMenuRef.current.contains(event.target as Node)
       ) {
         setOpenDropdown(null);
@@ -179,35 +240,83 @@ const ProductPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const ACTIVE_OPTIONS = [
+    { label: 'Đang hiển thị', value: 'true' },
+    { label: 'Đã ẩn', value: 'false' },
+  ];
+
+  const groupFilterOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    groupOptions.forEach(g => map.set(g.value, g.label));
+    data.forEach(item => {
+      if (item.productGroupId && item.productGroupName) {
+        map.set(item.productGroupId, item.productGroupName);
+      } else if (item.productGroupName) {
+        map.set(item.productGroupName, item.productGroupName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [groupOptions, data]);
+
+  const categoryFilterOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    data.forEach(item => {
+      if (item.productCategoryId && item.productCategoryName) {
+        map.set(item.productCategoryId, item.productCategoryName);
+      } else if (item.productCategoryName) {
+        map.set(item.productCategoryName, item.productCategoryName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [data]);
+
+  const businessFilterOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    data.forEach(item => {
+      if (item.businessId && item.businessName) {
+        map.set(item.businessId, item.businessName);
+      } else if (item.businessName) {
+        map.set(item.businessName, item.businessName);
+      }
+    });
+    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+  }, [data]);
+
+  const creatorFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach(item => {
+      const val = item.createdByFullName || item.CREATED_BY_FULL_NAME;
+      if (val && val !== '---') set.add(val);
+    });
+    return Array.from(set).map(val => ({ label: val, value: val }));
+  }, [data]);
+
+  const approverFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach(item => {
+      const val = item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy;
+      if (val && val !== '---') set.add(val);
+    });
+    return Array.from(set).map(val => ({ label: val, value: val }));
+  }, [data]);
+
+  const requestNameFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach(item => {
+      const val = stripHtml(item.requestName);
+      if (val && val !== '---') set.add(val);
+    });
+    return Array.from(set).map(val => ({ label: val, value: val }));
+  }, [data]);
+
   const handleImportSuccess = () => {
     fetchData();
     setToast({ type: 'success', message: 'Nhập sản phẩm từ Excel thành công.' });
     navigate('/request-list');
   };
 
-  const getLabel = (options: any[], value: string) =>
-    options.find((opt) => opt.value === value)?.label || value;
-
-  const handleGroupSelect = (val: string) => {
-    setSelectedGroups((prev) =>
-      prev.includes(val) ? prev.filter((item) => item !== val) : [...prev, val]
-    );
-  };
-
-  const handleToggleGroupDropdown = () => {
-    if (openDropdown === 'group') {
-      setOpenDropdown(null);
-    } else {
-      setOpenDropdown('group');
-      setGroupSearchTerm('');
-    }
-  };
-
-  const filteredGroupOptions = groupOptions.filter((opt) =>
-    opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
-  );
-
   const handleToggleActive = async (item: any, currentActive: boolean) => {
+    if (isCascadeHidden(item)) return;
     const newActiveStatus = !currentActive;
     setData(prevData =>
       prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
@@ -218,43 +327,93 @@ const ProductPage: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
       });
       if (!response.ok) throw new Error('Failed');
+      hotToast.success(newActiveStatus ? 'Hiển thị thành công' : 'Ẩn thành công', { position: 'top-center' });
     } catch (error) {
       setData(prevData =>
         prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
       );
-      alert('Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!');
+      hotToast.error('Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!', { position: 'top-center' });
     }
   };
 
   const renderActiveToggle = (item: any) => {
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const isCascadeLocked = isCascadeHidden(item);
+    const isDisabled = disabledStatuses.includes(item.status?.toUpperCase()) || isCascadeLocked;
     const isActive = item.active || false;
     return (
-      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
+      <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()} title={isCascadeLocked ? 'Đang bị ẩn theo đối tượng cha' : undefined}>
         <label className="toggle-switch">
-          <input 
-            type="checkbox" 
-            checked={isActive} 
-            onChange={() => handleToggleActive(item, isActive)}
+          <input
+            type="checkbox"
+            checked={isActive}
+            disabled={isDisabled}
+            onChange={() => { if (!isDisabled) handleToggleActive(item, isActive); }}
           />
           <span className="toggle-slider"></span>
         </label>
-        <span className="toggle-label">
-          {isActive ? 'Hiện' : 'Ẩn'}
+        <span className={`toggle-label ${isDisabled ? 'disabled-text' : ''}`}>
+          {isCascadeLocked ? 'Ẩn theo cha' : (isActive ? 'Hiện' : 'Ẩn')}
         </span>
       </div>
     );
   };
 
   const getFilteredData = () => {
+    let result = data;
     if (isProcessingPage) {
-      // Bổ sung thêm 'NEEDS_REVISION' vào mảng
       const allowedStatuses = ['DRAFT', 'PENDING_APPROVAL', 'NEEDS_REVISION'];
-      return data.filter(item => allowedStatuses.includes(item.status?.toUpperCase()));
+      result = result.filter(item => allowedStatuses.includes(item.status?.toUpperCase()));
+    } else if (isRejectedPage) {
+      result = result.filter(item => item.status?.toUpperCase() === 'REJECTED');
+    } else {
+      result = result.filter(item => item.status?.toUpperCase() === 'ACTIVE');
     }
-    if (isRejectedPage) {
-      return data.filter(item => item.status?.toUpperCase() === 'REJECTED');
+
+    return result.filter(item => {
+      if (selectedStatuses.length > 0 && !selectedStatuses.some(s => s.toUpperCase() === item.status?.toUpperCase())) {
+        return false;
+      }
+      if (selectedGroups.length > 0 && !selectedGroups.some(g => g === item.productGroupId || g === item.productGroupName)) {
+        return false;
+      }
+      if (selectedCategories.length > 0 && !selectedCategories.some(c => c === item.productCategoryId || c === item.productCategoryName)) {
+        return false;
+      }
+      if (selectedBusinesses.length > 0 && !selectedBusinesses.some(b => b === item.businessId || b === item.businessName)) {
+        return false;
+      }
+      if (selectedActives.length > 0) {
+        const itemActive = Boolean(item.active);
+        const matchesActive = selectedActives.some(a => (a === 'true' && itemActive) || (a === 'false' && !itemActive));
+        if (!matchesActive) return false;
+      }
+      if (selectedCreators.length > 0) {
+        const creator = item.createdByFullName || item.CREATED_BY_FULL_NAME || '';
+        if (!selectedCreators.includes(creator)) return false;
+      }
+      if (selectedApprovers.length > 0) {
+        const approver = item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy || '';
+        if (!selectedApprovers.includes(approver)) return false;
+      }
+      if (selectedRequestNames.length > 0) {
+        const reqName = stripHtml(item.requestName);
+        if (!selectedRequestNames.includes(reqName)) return false;
+      }
+      return true;
+    });
+  };
+
+  const renderNote = (noteVal?: string | null) => {
+    if (!noteVal || String(noteVal).trim() === '' || String(noteVal).trim() === '---') {
+      return <span>---</span>;
     }
-    return data.filter(item => item.status?.toUpperCase() === 'ACTIVE');
+    const val = String(noteVal).trim();
+    if (val === '0') return <StatusBadgeListRequest status="NEEDS_REVISION" />;
+    if (val === '1') return <StatusBadgeListRequest status="REJECTED" />;
+    if (val === '2') return <StatusBadgeListRequest status="APPROVED" />;
+    if (val === '3' || val.toUpperCase() === 'REVIEWED') return <StatusBadgeListRequest status="REVIEWED" />;
+    return <CellWithTooltip text={stripHtml(noteVal)} />;
   };
 
   const getColumns = (): Column<any>[] => {
@@ -264,33 +423,33 @@ const ProductPage: React.FC = () => {
       width: '80px',
       align: 'center',
       render: (row) => (
-        <button
-          className="btn-view-detail"
-          title="Xem chi tiết"
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/products/${row.id}`);
-          }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
+        <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'center' }}>
+          <button
+            className="btn-view-detail"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/products/${row.id}`);
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </CellWithTooltip>
       )
     };
 
     if (isProcessingPage) {
       return [
-        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
-        { key: 'name', header: 'Sản phẩm', render: (row) => <span className="truncate-text" style={{ fontWeight: 500 }} title={stripHtml(row.name)}>{stripHtml(row.name) || '---'}</span> },
-        { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <span className="truncate-text" title={row.productGroupName}>{row.productGroupName || '---'}</span> },
-        { key: 'status', header: 'Trạng thái', width: '180px', render: (row) => <StatusBadge2 status={row.status} /> },
+        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
+        { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
+        { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
+        { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
         { key: 'requestName', header: 'Tên yêu cầu', render: (row) => (
-          <span 
-            className="truncate-text" 
-            title={stripHtml(row.requestName)}
+          <CellWithTooltip
+            text={stripHtml(row.requestName)}
             onClick={(e) => {
               if (row.requestId) {
                 e.stopPropagation();
@@ -298,14 +457,12 @@ const ProductPage: React.FC = () => {
               }
             }}
             style={{ cursor: row.requestId ? 'pointer' : 'default', color: row.requestId ? '#2563EB' : 'inherit', textDecoration: row.requestId ? 'underline' : 'none' }}
-          >
-            {stripHtml(row.requestName) || '---'}
-          </span>
+          />
         )},
-        { key: 'notes', header: 'Ghi chú', render: (row) => <span className="truncate-text" title={row.notes}>{row.notes || '---'}</span> },
-        { key: 'createdAt', header: 'Ngày tạo', render: (row) => formatDate(row.createdAt) },
-        { key: 'createdByFullName', header: 'Người tạo', render: (row) => row.createdByFullName || '---' },
-        { key: 'approvedBy', header: 'Người kiểm duyệt', render: (row) => row.approvedBy || '---' },
+        { key: 'notes', header: 'Ghi chú', render: (row) => renderNote(row.notes) },
+        { key: 'createdAt', header: 'Ngày tạo', render: (row) => <CellWithTooltip text={formatDate(row.createdAt)} /> },
+        { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
+        { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
         { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
         baseAction
       ];
@@ -313,30 +470,30 @@ const ProductPage: React.FC = () => {
 
     if (isRejectedPage) {
       return [
-        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
-        { key: 'name', header: 'Sản phẩm', render: (row) => <span className="truncate-text" style={{ fontWeight: 500 }} title={stripHtml(row.name)}>{stripHtml(row.name) || '---'}</span> },
-        { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <span className="truncate-text" title={row.productGroupName}>{row.productGroupName || '---'}</span> },
-        { key: 'productCategoryName', header: 'Danh mục sản phẩm', render: (row) => <span className="truncate-text" title={row.productCategoryName}>{row.productCategoryName || '---'}</span> },
-        { key: 'businessName', header: 'Nghiệp vụ', render: (row) => <span className="truncate-text" title={row.businessName}>{row.businessName || '---'}</span> },
-        { key: 'status', header: 'Trạng thái', width: '180px', render: (row) => <StatusBadge2 status={row.status} /> },
-        { key: 'active', header: 'Hiệu lực', render: (row) => row.active ? <span style={{color: '#14532D', fontWeight: 600}}>Đang hiển thị</span> : <span style={{color: '#EF4444', fontWeight: 600}}>Đã ẩn</span> },
-        { key: 'createdByFullName', header: 'Người tạo', render: (row) => row.createdByFullName || '---' },
-        { key: 'approvedBy', header: 'Người kiểm duyệt', render: (row) => row.approvedBy || '---' },
+        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
+        { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
+        { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
+        { key: 'productCategoryName', header: 'Danh mục sản phẩm', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
+        { key: 'businessName', header: 'Nghiệp vụ', render: (row) => <CellWithTooltip text={row.businessName} /> },
+        { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
+        { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
+        { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
+        { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
         { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
         baseAction
       ];
     }
 
     return [
-      { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
-      { key: 'name', header: 'Sản phẩm', render: (row) => <span className="truncate-text" style={{ fontWeight: 500 }} title={stripHtml(row.name)}>{stripHtml(row.name) || '---'}</span> },
-      { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <span className="truncate-text" title={row.productGroupName}>{row.productGroupName || '---'}</span> },
-      { key: 'productCategoryName', header: 'Danh mục sản phẩm', render: (row) => <span className="truncate-text" title={row.productCategoryName}>{row.productCategoryName || '---'}</span> },
-      { key: 'businessName', header: 'Nghiệp vụ', render: (row) => <span className="truncate-text" title={row.businessName}>{row.businessName || '---'}</span> },
-      { key: 'status', header: 'Trạng thái', width: '180px', render: (row) => <StatusBadge2 status={row.status} /> },
+      { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
+      { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
+      { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
+      { key: 'productCategoryName', header: 'Danh mục sản phẩm', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
+      { key: 'businessName', header: 'Nghiệp vụ', render: (row) => <CellWithTooltip text={row.businessName} /> },
+      { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
       { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
-      { key: 'createdByFullName', header: 'Người tạo', render: (row) => row.createdByFullName || '---' },
-      { key: 'approvedBy', header: 'Người kiểm duyệt', render: (row) => row.approvedBy || '---' },
+      { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
+      { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
       { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
       baseAction
     ];
@@ -420,77 +577,193 @@ const ProductPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="filter-section">
+      <div className="filter-section" ref={filterSectionRef}>
         <div className="dropdown-group-container">
-          <div className="dropdown-row">
-            <div className="dropdown-wrapper" ref={statusRef}>
-              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}>
-                <span>Trạng thái</span>
-                <svg className={`chevron-icon ${openDropdown === 'status' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {openDropdown === 'status' && (
-                <div className="dropdown-menu">
-                  {STATUS_OPTIONS.map((opt) => (
-                    <div
-                      key={opt.value}
-                      className={`menu-item ${selectedStatus === opt.value ? 'selected' : ''}`}
-                      onClick={() => { setSelectedStatus(opt.value); setOpenDropdown(null); }}
-                    >
-                      <span>{opt.label}</span>
-                      {selectedStatus === opt.value && <i className="check-icon">✔</i>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <FilterScrollContainer className="dropdown-row">
+            {/* Nhóm sản phẩm */}
+            <TableColumnFilterDropdown
+              label="Nhóm sản phẩm"
+              options={groupFilterOptions}
+              selectedValues={selectedGroups}
+              onSelectValues={setSelectedGroups}
+              isOpen={openDropdown === 'group'}
+              onToggle={() => setOpenDropdown(openDropdown === 'group' ? null : 'group')}
+              hasSearch={groupFilterOptions.length > 5}
+              searchPlaceholder="Tìm nhóm..."
+            />
 
-            <div className="dropdown-wrapper" ref={groupRef}>
-              <button className="btn-dropdown" onClick={handleToggleGroupDropdown}>
-                <span>Nhóm sản phẩm</span>
-                <svg className={`chevron-icon ${openDropdown === 'group' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              {openDropdown === 'group' && (
-                <div className="dropdown-menu">
-                  <div className="dropdown-search-box">
-                    <input
-                      type="text"
-                      className="dropdown-search-input"
-                      placeholder="Tìm nhóm sản phẩm..."
-                      value={groupSearchTerm}
-                      onChange={(e) => setGroupSearchTerm(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                  <div className="dropdown-scroll-items">
-                    {filteredGroupOptions.length > 0 ? (
-                      filteredGroupOptions.map(opt => (
-                        <div 
-                          key={opt.value} 
-                          className={`menu-item ${selectedGroups.includes(opt.value) ? 'selected' : ''}`}
-                          onClick={() => handleGroupSelect(opt.value)}
-                        >
-                          <span>{opt.label}</span>
-                          {selectedGroups.includes(opt.value) && <i className="check-icon">✔</i>}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="menu-item disabled">Không tìm thấy nhóm nào</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+            {!isProcessingPage && (
+              <>
+                {/* Danh mục sản phẩm */}
+                <TableColumnFilterDropdown
+                  label="Danh mục sản phẩm"
+                  options={categoryFilterOptions}
+                  selectedValues={selectedCategories}
+                  onSelectValues={setSelectedCategories}
+                  isOpen={openDropdown === 'category'}
+                  onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
+                  hasSearch={categoryFilterOptions.length > 5}
+                  searchPlaceholder="Tìm danh mục..."
+                />
+
+                {/* Nghiệp vụ */}
+                <TableColumnFilterDropdown
+                  label="Nghiệp vụ"
+                  options={businessFilterOptions}
+                  selectedValues={selectedBusinesses}
+                  onSelectValues={setSelectedBusinesses}
+                  isOpen={openDropdown === 'business'}
+                  onToggle={() => setOpenDropdown(openDropdown === 'business' ? null : 'business')}
+                  hasSearch={businessFilterOptions.length > 5}
+                  searchPlaceholder="Tìm nghiệp vụ..."
+                />
+              </>
+            )}
+
+            {/* Trạng thái */}
+            <TableColumnFilterDropdown
+              label="Trạng thái"
+              options={STATUS_OPTIONS}
+              selectedValues={selectedStatuses}
+              onSelectValues={setSelectedStatuses}
+              isOpen={openDropdown === 'status'}
+              onToggle={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}
+            />
+
+            {!isProcessingPage && (
+              /* Hiệu lực */
+              <TableColumnFilterDropdown
+                label="Hiệu lực"
+                options={ACTIVE_OPTIONS}
+                selectedValues={selectedActives}
+                onSelectValues={setSelectedActives}
+                isOpen={openDropdown === 'active'}
+                onToggle={() => setOpenDropdown(openDropdown === 'active' ? null : 'active')}
+              />
+            )}
+
+            {isProcessingPage && (
+              /* Tên yêu cầu */
+              <TableColumnFilterDropdown
+                label="Tên yêu cầu"
+                options={requestNameFilterOptions}
+                selectedValues={selectedRequestNames}
+                onSelectValues={setSelectedRequestNames}
+                isOpen={openDropdown === 'requestName'}
+                onToggle={() => setOpenDropdown(openDropdown === 'requestName' ? null : 'requestName')}
+                hasSearch={requestNameFilterOptions.length > 5}
+                searchPlaceholder="Tìm yêu cầu..."
+              />
+            )}
+
+            {/* Người tạo */}
+            <TableColumnFilterDropdown
+              label="Người tạo"
+              options={creatorFilterOptions}
+              selectedValues={selectedCreators}
+              onSelectValues={setSelectedCreators}
+              isOpen={openDropdown === 'creator'}
+              onToggle={() => setOpenDropdown(openDropdown === 'creator' ? null : 'creator')}
+              hasSearch={creatorFilterOptions.length > 5}
+              searchPlaceholder="Tìm người tạo..."
+            />
+
+            {/* Người kiểm duyệt */}
+            <TableColumnFilterDropdown
+              label="Người kiểm duyệt"
+              options={approverFilterOptions}
+              selectedValues={selectedApprovers}
+              onSelectValues={setSelectedApprovers}
+              isOpen={openDropdown === 'approver'}
+              onToggle={() => setOpenDropdown(openDropdown === 'approver' ? null : 'approver')}
+              hasSearch={approverFilterOptions.length > 5}
+              searchPlaceholder="Tìm người duyệt..."
+            />
+          </FilterScrollContainer>
 
           <div className="selected-filters-row">
-            {selectedStatus && <FilterTag label={getLabel(STATUS_OPTIONS, selectedStatus)} onRemove={() => setSelectedStatus(null)} />}
-            {selectedGroups.map(groupVal => (
-              <FilterTag key={groupVal} label={getLabel(groupOptions, groupVal)} onRemove={() => handleGroupSelect(groupVal)} />
+            {selectedGroups.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Nhóm: ${groupFilterOptions.find((o) => o.value === val)?.label || val}`}
+                onRemove={() => setSelectedGroups((prev) => prev.filter((v) => v !== val))}
+              />
             ))}
+            {selectedCategories.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Danh mục: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`}
+                onRemove={() => setSelectedCategories((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedBusinesses.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Nghiệp vụ: ${businessFilterOptions.find((o) => o.value === val)?.label || val}`}
+                onRemove={() => setSelectedBusinesses((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedStatuses.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Trạng thái: ${STATUS_OPTIONS.find((o) => o.value === val)?.label || val}`}
+                onRemove={() => setSelectedStatuses((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedActives.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Hiệu lực: ${ACTIVE_OPTIONS.find((o) => o.value === val)?.label || val}`}
+                onRemove={() => setSelectedActives((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedRequestNames.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Yêu cầu: ${val}`}
+                onRemove={() => setSelectedRequestNames((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedCreators.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Người tạo: ${val}`}
+                onRemove={() => setSelectedCreators((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedApprovers.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Người kiểm duyệt: ${val}`}
+                onRemove={() => setSelectedApprovers((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {(selectedGroups.length > 0 || selectedCategories.length > 0 || selectedBusinesses.length > 0 || selectedStatuses.length > 0 || selectedActives.length > 0 || selectedRequestNames.length > 0 || selectedCreators.length > 0 || selectedApprovers.length > 0) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedGroups([]);
+                  setSelectedCategories([]);
+                  setSelectedBusinesses([]);
+                  setSelectedStatuses([]);
+                  setSelectedActives([]);
+                  setSelectedRequestNames([]);
+                  setSelectedCreators([]);
+                  setSelectedApprovers([]);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#AE1C3F',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  padding: '4px 8px',
+                }}
+              >
+                Xóa tất cả bộ lọc
+              </button>
+            )}
           </div>
         </div>
 
@@ -510,14 +783,20 @@ const ProductPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="table-placeholder" style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-        <DataTable
+      <div className={`table-placeholder ${isProcessingPage ? 'table-processing-highlight' : ''}`} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+        <DataTable2
           columns={getColumns()}
           data={getFilteredData()}
           keyExtractor={(row) => row.id}
-          onRowClick={(row) => navigate(`/products/${row.id}`)}
+          page={currentPage}
+          onPageChange={setCurrentPage}
+          onRowClick={(row) => {
+            savePageScroll(pageKey);
+            navigate(`/products/${row.id}`);
+          }}
           loading={loading}
           emptyText="Không tìm thấy sản phẩm nào phù hợp."
+          getRowClassName={getCascadeRowClassName}
         />
       </div>
     </div>

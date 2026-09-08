@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-
 import { API_ENDPOINTS } from '../config/apiConfig';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -68,6 +68,9 @@ const AddCategoryPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -75,7 +78,11 @@ const AddCategoryPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/product-category');
 
-  const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
+  const onSaveDraftClick = () => {
+    setConfirmAction('DRAFT');
+  };
+
+  const onSubmitClick = () => {
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên danh mục sản phẩm", { position: 'top-center' });
       return;
@@ -85,22 +92,29 @@ const AddCategoryPage: React.FC = () => {
       setIsOpen(true);
       return;
     }
+    setConfirmAction('PENDING_APPROVAL');
+  };
 
+  const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     try {
+      setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
-        name: formData.name.trim(),
-        groupId: formData.groupId,
+        name: formData.name.trim() || undefined,
+        groupId: formData.groupId || undefined,
         active: isActive,
         status
       });
 
-      const message = status === 'DRAFT' ? "Lưu nháp danh mục thành công" : "Gửi phê duyệt danh mục thành công";
+      const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
       renderCustomToast(message);
-      setTimeout(() => navigate('/product-category'), 2000);
+      setConfirmAction(null);
+      setTimeout(() => navigate('/product-category'), 400);
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Tên danh mục sản phẩm đã tồn tại';
       toast.error(errorMessage, { position: 'top-center' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -130,7 +144,8 @@ const AddCategoryPage: React.FC = () => {
     formData.groupId !== '' || 
     isActive !== true;
 
-  const canSubmit = isFormDirty;
+  const canSaveDraft = !isSubmitting;
+  const canSubmit = isFormDirty && formData.name.trim() !== '' && formData.groupId !== '' && !isSubmitting;
 
   // MỚI: Lọc danh sách nhóm sản phẩm dựa trên từ khóa tìm kiếm
   const filteredGroupOptions = groupOptions.filter(opt => 
@@ -166,9 +181,9 @@ const AddCategoryPage: React.FC = () => {
 
           <div className="headerRight">
             <button 
-              className={`btnDraft ${canSubmit ? 'active' : 'disabled'}`} 
-              disabled={!canSubmit} 
-              onClick={() => handleCreateCategory('DRAFT')}
+              className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} 
+              disabled={!canSaveDraft} 
+              onClick={onSaveDraftClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -179,7 +194,7 @@ const AddCategoryPage: React.FC = () => {
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
               disabled={!canSubmit} 
-              onClick={() => handleCreateCategory('PENDING_APPROVAL')}
+              onClick={onSubmitClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -385,6 +400,17 @@ const AddCategoryPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && handleCreateCategory(confirmAction)}
+        variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm không?'}
+        confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        loading={isSubmitting}
+      />
     </div>
   );
 };

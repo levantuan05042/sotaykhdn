@@ -36,14 +36,18 @@ export const StatusBadge2: React.FC<StatusBadgeProps> = ({ status, className = '
         alignItems: 'center',
         justifyContent: 'center',
         borderRadius: '9999px',
-        padding: '4px 16px',
-        height: '32px',
+        padding: '6px 18px',
+        minHeight: '32px',
         fontFamily: "'Inter', sans-serif",
         fontSize: '14px',
         fontWeight: 500,
-        lineHeight: '100%',
+        lineHeight: 1.2,
         textAlign: 'center',
-        whiteSpace: 'nowrap'
+        whiteSpace: 'nowrap',
+        width: 'max-content',
+        minWidth: 'max-content',
+        flexShrink: 0,
+        boxSizing: 'border-box'
       }}
     >
       <span>{config.label}</span>

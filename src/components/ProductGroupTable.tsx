@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
+import CellWithTooltip from './ui/CellWithTooltip';
 import './ProductGroupTable.css';
 
 interface ProductGroup {
@@ -10,8 +11,12 @@ interface ProductGroup {
   name: string;
   status: string;
   active?: boolean;
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;
 }
 
@@ -121,7 +126,7 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
           <colgroup>
             <col style={{ width: '70px' }} />
             <col style={{ width: '220px' }} />
-            <col style={{ width: '160px' }} />
+            <col style={{ width: '210px' }} />
             <col style={{ width: '150px' }} />
             <col style={{ width: '220px' }} />
             <col style={{ width: '220px' }} />
@@ -180,43 +185,40 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
                     {/* 5. Cột Người tạo */}
                     <td className="tooltip-cell" style={{ overflow: 'visible' }}>
                       <div className="custom-tooltip-container">
-                        <span className="truncate-text" title={formatApprovedBy(item.createdByFullName) || ''}>
-                          {formatApprovedBy(item.createdByFullName)}
+                        <span className="truncate-text" title={formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy) || ''}>
+                          {formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy)}
                         </span>
-                        <div className="custom-tooltip">{formatApprovedBy(item.createdByFullName)}</div>
+                        <div className="custom-tooltip">{formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy)}</div>
                       </div>
                     </td>
                     
                     {/* 6. Cột Người kiểm duyệt */}
                     <td className="tooltip-cell" style={{ overflow: 'visible' }}>
                       <div className="custom-tooltip-container">
-                        <span className="truncate-text" title={formatApprovedBy(item.approvedBy) || ''}>
-                          {formatApprovedBy(item.approvedBy)}
+                        <span className="truncate-text" title={formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy) || ''}>
+                          {formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy)}
                         </span>
-                        <div className="custom-tooltip">{formatApprovedBy(item.approvedBy)}</div>
+                        <div className="custom-tooltip">{formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy)}</div>
                       </div>
                     </td>
                     
                     {/* 7. Cột Phiên bản */}
-                    <td className="tooltip-cell" style={{ color: '#053E2B', fontWeight: 600, overflow: 'visible' }}>
-                      <div className="custom-tooltip-container">
-                        <span className="truncate-text" title={item.version ? `Phiên bản ${item.version}` : ''}>
-                          {item.version ? `Phiên bản ${item.version}` : '---'}
-                        </span>
-                        <div className="custom-tooltip">{item.version ? `Phiên bản ${item.version}` : '---'}</div>
-                      </div>
+                    <td style={{ color: '#053E2B', fontWeight: 600 }}>
+                      <span>
+                        {item.version ? `Phiên bản ${item.version}` : '---'}
+                      </span>
                     </td>
                     
                     {/* 8. Cột Nút hành động */}
-                    <td className="text-right tooltip-cell" style={{ overflow: 'visible' }} onClick={(e) => e.stopPropagation()}>
-                      <div className="custom-tooltip-container" style={{ justifyContent: 'flex-end' }}>
-                        <button className="btn-view-detail" onClick={() => handleViewDetail(item.id)} title="Xem chi tiết">
+                    <td className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'flex-end' }}>
+                        <button className="btn-view-detail" onClick={() => handleViewDetail(item.id)}>
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
                             <circle cx="12" cy="12" r="3" />
                           </svg>
                         </button>
-                      </div>
+                      </CellWithTooltip>
                     </td>
                     
                   </tr>

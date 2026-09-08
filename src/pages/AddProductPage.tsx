@@ -7,8 +7,9 @@ import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 
-// Bổ sung thêm hàm toDisplayUrl (nếu có export từ apiConfig) để load ảnh giống ProductImageCard
-import { API_ENDPOINTS, toDisplayUrl } from '../config/apiConfig';
+import { API_ENDPOINTS } from '../config/apiConfig';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import ProductImageCard2 from '../components/ui/ProductImageCard2';
 
 interface Criterion {
   id: string;
@@ -75,38 +76,38 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   }, [value]);
 
   return (
-    <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', overflow: 'hidden', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB' }}>
-      <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px' }}>
+    <div style={{ backgroundColor: '#ffffff', borderRadius: '6px', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', position: 'relative' }}>
+      <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', borderTopLeftRadius: '6px', borderTopRightRadius: '6px' }}>
         <span className="ql-formats">
-          <button className="ql-bold" />
-          <button className="ql-italic" />
-          <button className="ql-underline" />
-          <button className="ql-strike" />
+          <button className="ql-bold" title="In đậm (Bold)" />
+          <button className="ql-italic" title="In nghiêng (Italic)" />
+          <button className="ql-underline" title="Gạch chân (Underline)" />
+          <button className="ql-strike" title="Gạch ngang chữ (Strikethrough)" />
         </span>
         <span className="ql-formats">
-          <button className="ql-list" value="ordered" />
-          <button className="ql-list" value="bullet" />
+          <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
+          <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
         </span>
         <span className="ql-formats">
-          <button className="ql-script" value="sub" />
-          <button className="ql-script" value="super" />
+          <button className="ql-script" value="sub" title="Chỉ số dưới (Subscript)" />
+          <button className="ql-script" value="super" title="Chỉ số trên (Superscript - m²)" />
         </span>
         <span className="ql-formats">
-          <button className="ql-indent" value="-1" />
-          <button className="ql-indent" value="+1" />
+          <button className="ql-indent" value="-1" title="Giảm thụt lề (Outdent)" />
+          <button className="ql-indent" value="+1" title="Tăng thụt lề (Indent)" />
         </span>
         <span className="ql-formats">
-          <select className="ql-color" />
-          <select className="ql-background" />
+          <select className="ql-color" title="Màu chữ" />
+          <select className="ql-background" title="Màu nền highlight" />
         </span>
         <span className="ql-formats">
-          <select className="ql-align" />
+          <select className="ql-align" title="Căn lề văn bản" />
         </span>
         <span className="ql-formats">
-          <button className="ql-clean" />
+          <button className="ql-clean" title="Xóa toàn bộ định dạng" />
         </span>
       </div>
-      <div ref={editorRef} style={{ minHeight: '120px', fontSize: '15px', border: 'none' }} />
+      <div ref={editorRef} style={{ minHeight: '120px', fontSize: '15px', border: 'none', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }} />
     </div>
   );
 };
@@ -199,6 +200,58 @@ const AddProductPage: React.FC = () => {
 
   const [isActive, setIsActive] = useState<boolean>(true); 
   const [criteria, setCriteria] = useState<Criterion[]>([]);
+  const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
+  const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+
+  const moveCriterion = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+
+      const dragIdx = selected.findIndex(c => c.id === draggedId);
+      const targetIdx = selected.findIndex(c => c.id === targetId);
+      if (dragIdx === -1 || targetIdx === -1) return prev;
+
+      const reorderedSelected = [...selected];
+      const [movedItem] = reorderedSelected.splice(dragIdx, 1);
+      reorderedSelected.splice(targetIdx, 0, movedItem);
+
+      return [...reorderedSelected, ...unselected];
+    });
+  };
+
+  const moveCriterionUp = (id: string) => {
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const idx = selected.findIndex(c => c.id === id);
+      if (idx <= 0) return prev;
+
+      const reorderedSelected = [...selected];
+      const temp = reorderedSelected[idx];
+      reorderedSelected[idx] = reorderedSelected[idx - 1];
+      reorderedSelected[idx - 1] = temp;
+
+      return [...reorderedSelected, ...unselected];
+    });
+  };
+
+  const moveCriterionDown = (id: string) => {
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const idx = selected.findIndex(c => c.id === id);
+      if (idx === -1 || idx >= selected.length - 1) return prev;
+
+      const reorderedSelected = [...selected];
+      const temp = reorderedSelected[idx];
+      reorderedSelected[idx] = reorderedSelected[idx + 1];
+      reorderedSelected[idx + 1] = temp;
+
+      return [...reorderedSelected, ...unselected];
+    });
+  };
   
   const [formData, setFormData] = useState({
     productGroupId: '',   
@@ -403,8 +456,30 @@ const AddProductPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/products/processing');
 
-  const handleCreateProduct = async (status: 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const onSaveDraftClick = () => {
+    setConfirmAction('DRAFT');
+  };
+
+  const onSubmitClick = () => {
     if (!formData.productGroupId) {
+      toast.error("Vui lòng chọn Nhóm sản phẩm", { position: 'top-center' });
+      return;
+    }
+    const missingRequiredCriterion = criteria.find(c => c.isRequired && !c.value.trim());
+    if (missingRequiredCriterion) {
+      toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${missingRequiredCriterion.name}`, { 
+        position: 'top-center' 
+      });
+      return; 
+    }
+    setConfirmAction('PENDING_APPROVAL');
+  };
+
+  const handleCreateProduct = async (status: 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
+    if (!formData.productGroupId && status !== 'DRAFT') {
       toast.error("Vui lòng chọn Nhóm sản phẩm", { position: 'top-center' });
       return;
     }
@@ -427,7 +502,7 @@ const AddProductPage: React.FC = () => {
       }));
 
     const payload: any = { 
-      productGroupId: formData.productGroupId,
+      productGroupId: formData.productGroupId || undefined,
       status: status,
       criteria: activeCriteriaPayload,
       imageUrl: imageUrl || null,
@@ -438,17 +513,22 @@ const AddProductPage: React.FC = () => {
     if (formData.businessId) payload.businessId = formData.businessId;
 
     try {
+      setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT.LIST, payload);
-      toast.success(status === 'DRAFT' ? "Lưu nháp sản phẩm thành công" : "Gửi phê duyệt sản phẩm thành công", { position: 'top-center' });
-      setTimeout(() => navigate('/products/processing'), 2000);
+      toast.success(status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công", { position: 'top-center' });
+      setConfirmAction(null);
+      setTimeout(() => navigate('/products/processing'), 500);
     } catch (error: any) {
       console.error("Lỗi gửi request:", error);
       const errMsg = error.response?.data?.message || "Không thể kết nối đến server.";
       toast.error(errMsg, { position: 'top-center' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const canSubmit = formData.productGroupId !== '';
+  const canSaveDraft = !isSubmitting;
+  const canSubmit = formData.productGroupId !== '' && !isSubmitting;
 
   // --- LỌC DANH SÁCH TÌM KIẾM ---
   const filteredGroupOptions = groupOptions.filter(opt => 
@@ -494,9 +574,9 @@ const AddProductPage: React.FC = () => {
 
           <div className="headerRight">
              <button 
-              className={`btnDraft ${canSubmit ? 'active' : 'disabled'}`} 
-              disabled={!canSubmit} 
-              onClick={() => handleCreateProduct('DRAFT')}
+              className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} 
+              disabled={!canSaveDraft} 
+              onClick={onSaveDraftClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -507,7 +587,7 @@ const AddProductPage: React.FC = () => {
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
               disabled={!canSubmit} 
-              onClick={() => handleCreateProduct('PENDING_APPROVAL')}
+              onClick={onSubmitClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -637,48 +717,240 @@ const AddProductPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* CRITERIA LIST */}
-              {criteria.filter(c => c.isSelected).map((criterion) => (
-                <div key={criterion.id} className="formGroup" style={{ marginBottom: '24px', marginTop: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    {!criterion.isRequired && (
-                      <button
-                        type="button"
-                        onClick={() => toggleCriterionSelection(criterion.id)}
-                        style={{
-                          background: 'none', border: 'none', cursor: 'pointer',
-                          padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#9CA3AF', transition: 'color 0.2s ease'
-                        }}
-                        onMouseOver={(e) => e.currentTarget.style.color = '#EF4444'}
-                        onMouseOut={(e) => e.currentTarget.style.color = '#9CA3AF'}
-                        title="Bỏ tiêu chí thừa"
-                      >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
-                      </button>
+              {/* CRITERIA LIST - HỖ TRỢ ĐỔI THỨ TỰ (CHỈ KÉO KHI NHẤN GIỮ ⠿ & NÚT LÊN/XUỐNG) */}
+              {criteria.filter(c => c.isSelected).map((criterion, idx, arr) => {
+                const isDraggingThis = draggedCriterionId === criterion.id;
+                const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
+
+                return (
+                  <div
+                    key={criterion.id}
+                    className="formGroup criterion-card"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverCriterionId !== criterion.id) {
+                        setDragOverCriterionId(criterion.id);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverCriterionId === criterion.id) {
+                        setDragOverCriterionId(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedCriterionId && draggedCriterionId !== criterion.id) {
+                        moveCriterion(draggedCriterionId, criterion.id);
+                      }
+                      setDraggedCriterionId(null);
+                      setDragOverCriterionId(null);
+                    }}
+                    style={{
+                      marginBottom: '20px',
+                      marginTop: '16px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '10px',
+                      border: isDragOverThis ? '2px dashed #B01E3E' : '1px solid #E5E7EB',
+                      padding: '16px',
+                      opacity: isDraggingThis ? 0.45 : 1,
+                      transform: isDraggingThis ? 'scale(0.99)' : 'none',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isDragOverThis ? '0 4px 12px rgba(176, 30, 62, 0.15)' : '0 1px 2px rgba(0,0,0,0.03)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {/* Biểu tượng kéo thả - CHỈ CHO PHÉP KÉO KHI NHẤN GIỮ NÚT NÀY */}
+                        <div
+                          draggable={true}
+                          onDragStart={(e) => {
+                            e.stopPropagation();
+                            e.dataTransfer.setData('text/plain', criterion.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                            const card = (e.currentTarget as HTMLElement).closest('.criterion-card') as HTMLElement;
+                            if (card && e.dataTransfer.setDragImage) {
+                              e.dataTransfer.setDragImage(card, 20, 20);
+                            }
+                            setDraggedCriterionId(criterion.id);
+                          }}
+                          onDragEnd={(e) => {
+                            e.stopPropagation();
+                            setDraggedCriterionId(null);
+                            setDragOverCriterionId(null);
+                          }}
+                          title="Nhấn giữ để kéo di chuyển tiêu chí"
+                          style={{
+                            cursor: 'grab',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#6B7280',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            userSelect: 'none',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#F3F4F6';
+                            e.currentTarget.style.color = '#111827';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'transparent';
+                            e.currentTarget.style.color = '#6B7280';
+                          }}
+                          onMouseDown={(e) => {
+                            e.currentTarget.style.cursor = 'grabbing';
+                          }}
+                          onMouseUp={(e) => {
+                            e.currentTarget.style.cursor = 'grab';
+                          }}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="9" cy="5" r="2" />
+                            <circle cx="9" cy="12" r="2" />
+                            <circle cx="9" cy="19" r="2" />
+                            <circle cx="15" cy="5" r="2" />
+                            <circle cx="15" cy="12" r="2" />
+                            <circle cx="15" cy="19" r="2" />
+                          </svg>
+                        </div>
+
+                        {/* Thứ tự badge */}
+                        <span
+                          style={{
+                            backgroundColor: '#F3F4F6',
+                            color: '#374151',
+                            borderRadius: '4px',
+                            padding: '2px 7px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            border: '1px solid #E5E7EB',
+                            userSelect: 'none',
+                          }}
+                          title={`Tiêu chí thứ ${idx + 1}`}
+                        >
+                          #{idx + 1}
+                        </span>
+
+                        <label className="label" style={{ fontWeight: 600, margin: 0, fontSize: '14px', color: '#1F2937' }}>
+                          {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
+                        </label>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {/* Nút di chuyển lên */}
+                        <button
+                          type="button"
+                          onClick={() => moveCriterionUp(criterion.id)}
+                          disabled={idx === 0}
+                          title={idx === 0 ? 'Đang ở vị trí đầu tiên' : 'Di chuyển lên trên'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '26px',
+                            height: '26px',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '4px',
+                            backgroundColor: '#FFFFFF',
+                            color: idx === 0 ? '#D1D5DB' : '#374151',
+                            cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                            padding: 0,
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (idx !== 0) e.currentTarget.style.backgroundColor = '#F3F4F6';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                            <path d="M5 12.5L10 7.5L15 12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+
+                        {/* Nút di chuyển xuống */}
+                        <button
+                          type="button"
+                          onClick={() => moveCriterionDown(criterion.id)}
+                          disabled={idx === arr.length - 1}
+                          title={idx === arr.length - 1 ? 'Đang ở vị trí cuối cùng' : 'Di chuyển xuống dưới'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '26px',
+                            height: '26px',
+                            border: '1px solid #D1D5DB',
+                            borderRadius: '4px',
+                            backgroundColor: '#FFFFFF',
+                            color: idx === arr.length - 1 ? '#D1D5DB' : '#374151',
+                            cursor: idx === arr.length - 1 ? 'not-allowed' : 'pointer',
+                            padding: 0,
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (idx !== arr.length - 1) e.currentTarget.style.backgroundColor = '#F3F4F6';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FFFFFF';
+                          }}
+                        >
+                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+
+                        {/* Bỏ tiêu chí thừa (nếu không bắt buộc) */}
+                        {!criterion.isRequired && (
+                          <button
+                            type="button"
+                            onClick={() => toggleCriterionSelection(criterion.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              cursor: 'pointer',
+                              padding: '4px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#9CA3AF',
+                              marginLeft: '4px',
+                              transition: 'color 0.2s ease',
+                            }}
+                            onMouseOver={(e) => (e.currentTarget.style.color = '#EF4444')}
+                            onMouseOut={(e) => (e.currentTarget.style.color = '#9CA3AF')}
+                            title="Bỏ tiêu chí này"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                              <line x1="10" y1="11" x2="10" y2="17" />
+                              <line x1="14" y1="11" x2="14" y2="17" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div draggable={false} onDragStart={(e) => e.stopPropagation()}>
+                      <QuillEditor 
+                        value={criterion.value}
+                        placeholder={criterion.isRequired ? "Tiêu chí này bắt buộc phải nhập..." : "Nhập nội dung chi tiết..."}
+                        hasError={criterion.isRequired && !criterion.value.trim()}
+                        onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
+                      />
+                    </div>
+                    {criterion.isRequired && !criterion.value.trim() && (
+                      <span style={{ color: '#EF4444', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
+                        ⚠️ Trường bắt buộc, vui lòng nhập nội dung.
+                      </span>
                     )}
-                    <label className="label" style={{ fontWeight: 600, margin: 0 }}>
-                      {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
-                    </label>
                   </div>
-                  <QuillEditor 
-                    value={criterion.value}
-                    placeholder={criterion.isRequired ? "Tiêu chí này bắt buộc phải nhập..." : "Nhập nội dung chi tiết..."}
-                    hasError={criterion.isRequired && !criterion.value.trim()}
-                    onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
-                  />
-                  {criterion.isRequired && !criterion.value.trim() && (
-                    <span style={{ color: '#EF4444', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
-                      ⚠️ Trường bắt buộc, vui lòng nhập nội dung.
-                    </span>
-                  )}
-                </div>
-              ))}
+                );
+              })}
 
               {formData.productGroupId && (
                 <div style={{ textAlign: 'left', marginTop: '16px' }}>
@@ -692,123 +964,110 @@ const AddProductPage: React.FC = () => {
                 </div>
               )}
               
-              <div 
-                className="product-image-card-container" 
-                style={{ 
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '16px',
-                  border: '1px solid #F3F4F6',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                  padding: '20px 24px',
-                  boxSizing: 'border-box',
-                  width: 'fit-content', // Đổi từ '100%' thành 'fit-content'
-                  minWidth: '400px',    // Thêm minWidth để khung upload luôn giữ form đẹp
-                  marginBottom: '24px',
-                  marginTop: '24px' 
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
-                    Ảnh mô tả
-                  </h3>
-                </div>
+            {/* THÊM KHUNG CARD CHO PHẦN ẢNH ĐỂ ĐỒNG BỘ GIAO DIỆN */}
+            <div 
+              style={{
+                background: '#FFFFFF',
+                borderRadius: '12px',
+                border: '1px solid #E5E7EB',
+                padding: '20px 24px',
+                boxSizing: 'border-box',
+                width: '100%',
+                marginBottom: '20px',
+                marginTop: '16px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#111827' }}>
+                  Ảnh mô tả <span style={{ color: '#EF4444' }}>(*)</span>
+                </h3>
+              </div>
 
-                {imageUrl ? (
-                  <div 
-                    className="product-image-wrapper" 
-                    style={{ 
-                      position: 'relative', 
-                      width: '100%', 
-                      border: '1px solid #F3F4F6', 
-                      borderRadius: '12px', 
-                      backgroundColor: '#FAFAFA', 
-                      padding: '32px 16px', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      minHeight: '160px', 
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <img 
-                      src={typeof toDisplayUrl === 'function' ? toDisplayUrl(imageUrl) : (imageUrl.startsWith('http') ? imageUrl : imageUrl)} 
-                      alt="Product" 
-                      className="product-image" 
-                      style={{ 
-                        maxHeight: '260px', 
-                        maxWidth: '100%', 
-                        objectFit: 'contain', 
-                        borderRadius: '8px', 
-                        display: 'block' 
-                      }}
-                    />
-                    
-                    <div className="image-overlay">
-                      <button 
-                        type="button" 
-                        className="overlay-btn" 
-                        onClick={() => {
+              {imageUrl ? (
+                <div 
+                  className="product-image-wrapper" 
+                  style={{ 
+                    position: 'relative', 
+                    width: '100%', 
+                    border: '1px solid #F3F4F6', 
+                    borderRadius: '12px', 
+                    backgroundColor: '#FAFAFA', 
+                    padding: '32px 16px', 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    minHeight: '160px', 
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <ProductImageCard2 imageUrl={imageUrl} />
+                  
+                  <div className="image-overlay">
+                    <button 
+                      type="button" 
+                      className="overlay-btn" 
+                      onClick={() => {
                         const cleanPath = imageUrl.replace(/^(https?:\/\/[^\/]+)/, '');
                         setPreviewUrl(cleanPath); 
                         setShowImageModal(true);
                       }}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                        </svg>
-                      </button>
-                      
-                      <button 
-                        type="button" 
-                        className="overlay-btn" 
-                        onClick={() => { 
-                          setImageUrl(''); 
-                          setPreviewUrl(null);    
-                          setSelectedFile(null);  
-                        }}
-                      >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                        </svg>
-                      </button>
-                    </div>
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    
+                    <button 
+                      type="button" 
+                      className="overlay-btn" 
+                      onClick={() => { 
+                        setImageUrl(''); 
+                        setPreviewUrl(null);    
+                        setSelectedFile(null);  
+                      }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                      </svg>
+                    </button>
                   </div>
-                ) : (
-                  <button type="button" onClick={() => setShowImageModal(true)}
-                    className="upload-placeholder"
-                    style={{
-                      width:'100%',
-                      minHeight: '160px',
-                      display:'flex',
-                      flexDirection:'column',
-                      alignItems:'center',
-                      justifyContent:'center',
-                      border:'2px dashed #D1D5DB',
-                      borderRadius:12,
-                      background:'#F9FAFB',
-                      cursor:'pointer',
-                      color:'#6B7280',
-                      transition:'all 0.2s',
-                      padding: '32px 16px',
-                      boxSizing: 'border-box'
-                    }}
-                    onMouseOver={e => {e.currentTarget.style.borderColor='#AE1C3F'; e.currentTarget.style.background='#FDF2F4';}}
-                    onMouseOut={e => {e.currentTarget.style.borderColor='#D1D5DB'; e.currentTarget.style.background='#F9FAFB';}}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                      </div>
-                      <p style={{ margin: '0 0 4px', fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</p>
-                      <span style={{ color: '#10B981', fontWeight: 600, fontSize: '15px' }}>Chọn file</span>
-                      <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tối đa 10MB</p>
-                  </button>
-                )}
-              </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => setShowImageModal(true)}
+                  className="upload-placeholder"
+                  style={{
+                    width:'100%',
+                    minHeight: '160px',
+                    display:'flex',
+                    flexDirection:'column',
+                    alignItems:'center',
+                    justifyContent:'center',
+                    border:'2px dashed #D1D5DB',
+                    borderRadius:12,
+                    background:'#F9FAFB',
+                    cursor:'pointer',
+                    color:'#6B7280',
+                    transition:'all 0.2s',
+                    padding: '32px 16px',
+                    boxSizing: 'border-box'
+                  }}
+                  onMouseOver={e => {e.currentTarget.style.borderColor='#AE1C3F'; e.currentTarget.style.background='#FDF2F4';}}
+                  onMouseOut={e => {e.currentTarget.style.borderColor='#D1D5DB'; e.currentTarget.style.background='#F9FAFB';}}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: '#D1FAE5', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                    </div>
+                    <p style={{ margin: '0 0 4px', fontSize: 14, color: '#6B7280' }}>Kéo và thả ảnh tại đây hoặc</p>
+                    <span style={{ color: '#10B981', fontWeight: 600, fontSize: '15px' }}>Chọn file</span>
+                    <p style={{ margin: '8px 0 0', fontSize: 12, color: '#9CA3AF' }}>PNG, JPG, WEBP · Tối đa 10MB</p>
+                </button>
+              )}
+            </div>
               {/* END IMAGE UPLOAD LAYOUT */}
 
             </div>
@@ -1058,6 +1317,16 @@ const AddProductPage: React.FC = () => {
         </div>
       )}
 
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && handleCreateProduct(confirmAction)}
+        variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt sản phẩm không?'}
+        confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        loading={isSubmitting}
+      />
     </div>
   );
 };

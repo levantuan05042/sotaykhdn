@@ -3,7 +3,6 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
 import styles from './MainLayout.module.css'; // Đã dùng CSS Module
-import { Toaster } from 'react-hot-toast';
 import axios from 'axios';
 import { AUTH_ME_URL, BEADMIN_USERS_URL, AUTH_SERVICE_LOGIN_URL } from '../config/apiConfig';
 import { getAllowedModesForRole, normalizeRole } from '../config/menuConfig';
@@ -143,8 +142,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className={styles['main-layout']}>
-      <Toaster position="top-right" reverseOrder={false} />
-
       <header className={styles['grid-header']}>
         <HeaderBar />
       </header>

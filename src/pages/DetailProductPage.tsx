@@ -9,9 +9,15 @@ import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
+import { getRandomAvatar } from '../utils/avatarUtils';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils'; 
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
+import VersionDetailModal from '../components/ui/VersionDetailModal';
+import type { VersionItem } from '../components/ui/ProductInfoCard';
 
 interface Criterion {
   id: string;
@@ -26,7 +32,7 @@ interface PixelCrop {
 }
 
 const serializeCriteriaForDiff = (list: Criterion[]) =>
-  JSON.stringify(list.map(c => ({ name: c.name, value: c.value, isSelected: c.isSelected })));
+  JSON.stringify(list.filter(c => c.isSelected).map(c => ({ id: c.id, name: c.name, value: c.value })));
 
 const isHtmlEmpty = (html: string) => {
   if (!html) return true;
@@ -355,9 +361,10 @@ interface QuillEditorProps {
   placeholder?: string;
   hasError?: boolean;
   readOnly?: boolean;
+  isRejected?: boolean;
 }
 
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly }) => {
+const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly, isRejected }) => {
   const toolbarRef = useRef<HTMLDivElement>(null);
   const editorRef  = useRef<HTMLDivElement>(null);
   const quillRef   = useRef<Quill | null>(null);
@@ -391,32 +398,43 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
       quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
   }, [value, readOnly]);
 
+  const isDark = isRejected || readOnly;
+
   return (
-    <div style={{ backgroundColor: '#fff', borderRadius: 8, overflow: 'hidden', border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease' }}>
+    <div style={{ backgroundColor: isDark ? '#E5E7EB' : '#fff', borderRadius: 8, border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease', opacity: isDark ? 0.8 : 1, position: 'relative' }}>
       {!readOnly && (
-        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB' }}>
+        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB', borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
           <span className="ql-formats">
-            <button className="ql-bold"/><button className="ql-italic"/>
-            <button className="ql-underline"/><button className="ql-strike"/>
+            <button className="ql-bold" title="In đậm (Bold)" />
+            <button className="ql-italic" title="In nghiêng (Italic)" />
+            <button className="ql-underline" title="Gạch chân (Underline)" />
+            <button className="ql-strike" title="Gạch ngang chữ (Strikethrough)" />
           </span>
           <span className="ql-formats">
-            <button className="ql-list" value="ordered"/>
-            <button className="ql-list" value="bullet"/>
+            <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
+            <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
           </span>
           <span className="ql-formats">
-            <button className="ql-script" value="sub"/>
-            <button className="ql-script" value="super"/>
+            <button className="ql-script" value="sub" title="Chỉ số dưới (Subscript)" />
+            <button className="ql-script" value="super" title="Chỉ số trên (Superscript - m²)" />
           </span>
           <span className="ql-formats">
-            <button className="ql-indent" value="-1"/>
-            <button className="ql-indent" value="+1"/>
+            <button className="ql-indent" value="-1" title="Giảm thụt lề (Outdent)" />
+            <button className="ql-indent" value="+1" title="Tăng thụt lề (Indent)" />
           </span>
-          <span className="ql-formats"><select className="ql-color"/><select className="ql-background"/></span>
-          <span className="ql-formats"><select className="ql-align"/></span>
-          <span className="ql-formats"><button className="ql-clean"/></span>
+          <span className="ql-formats">
+            <select className="ql-color" title="Màu chữ" />
+            <select className="ql-background" title="Màu nền highlight" />
+          </span>
+          <span className="ql-formats">
+            <select className="ql-align" title="Căn lề văn bản" />
+          </span>
+          <span className="ql-formats">
+            <button className="ql-clean" title="Xóa toàn bộ định dạng" />
+          </span>
         </div>
       )}
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#F9FAFB' : '#FFF' }}/>
+      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: isDark ? '#E5E7EB' : '#FFF', color: isDark ? '#4B5563' : '#1F2937', cursor: isDark ? 'not-allowed' : 'text', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
     </div>
   );
 };
@@ -551,13 +569,58 @@ const DetailProductPage: React.FC = () => {
     return '';
   };
   
+  const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION' | null>(null);
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [priorConflict, setPriorConflict] = useState<PriorVersionInfo | null>(null);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<string | null>(null);
+  const [isDeletingPrior, setIsDeletingPrior] = useState(false);
+  const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
+  const [showVersionModal, setShowVersionModal] = useState(false);
+
+  const findPriorConflictVersion = () => {
+    if (!productData?.versions || productData.versions.length <= 1) return null;
+    return productData.versions.find(
+      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL')
+    ) || null;
+  };
+
+  const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
+    if (isReadOnly || !id) return;
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus(status);
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction(status);
+  };
+
   const handleApproveClick = () => {
+    if (isReadOnly || !id) return;
+    const gid = formData.productGroupId || productData?.productGroupId;
+    if (!gid) {
+      toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' });
+      return;
+    }
+    const missingRequiredCriterion = criteria.find(c => c.isRequired && !c.value.trim());
+    if (missingRequiredCriterion) {
+      toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${missingRequiredCriterion.name}`, { position: 'top-center' });
+      return;
+    }
     const isBatch = productData?.requestId || productData?.batchRequestId;
     if (isBatch) {
       setShowBatchModal(true);
-    } else {
-      handleUpdateProduct('PENDING_APPROVAL');
+      return;
     }
+    const conflict = findPriorConflictVersion();
+    if (conflict) {
+      setPriorConflict(conflict);
+      setPendingTargetStatus('PENDING_APPROVAL');
+      setShowDuplicateModal(true);
+      return;
+    }
+    setConfirmAction('PENDING_APPROVAL');
   };
 
   let rawCurrentUsername = getCurrentUsername();
@@ -575,10 +638,12 @@ const DetailProductPage: React.FC = () => {
 
   const isOwner = Boolean(isLoggedIn && currentUsername && creatorUsername && currentUsername === creatorUsername);
   const isPendingApproval = productData?.status === 'PENDING_APPROVAL';
+  const isRejected = productData?.status === 'REJECTED';
   
-  const isReadOnly = !isLoggedIn || !isOwner || isPendingApproval;
+  const isCascadeLocked = isCascadeHidden(productData);
+  const isReadOnly = !isLoggedIn || !isOwner || isPendingApproval || isRejected || isCascadeLocked;
   
-  const showPermissionBanner = !isLoggedIn || !isOwner;
+  const showPermissionBanner = !isLoggedIn || !isOwner || isCascadeLocked;
 
   const getCreatorDisplayName = () => {
     if (productData?.createdByFullName) return productData.createdByFullName;
@@ -711,6 +776,41 @@ const DetailProductPage: React.FC = () => {
     init();
   }, [id]);
 
+  const isFormDirty     = formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
+  const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
+  const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
+
+  // Tự động cập nhật dữ liệu sản phẩm khi DB thay đổi nếu không đang chỉnh sửa dở dang
+  useEffect(() => {
+    if (!id) return;
+    const refetchStatus = async () => {
+      if (isDirty) return;
+      try {
+        const pRes = await fetch(API_ENDPOINTS.PRODUCT.DETAIL(id));
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          setProductData(pData);
+          setIsActive(pData.active ?? true);
+        }
+      } catch (e) {}
+    };
+
+    const interval = setInterval(refetchStatus, 5000);
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        refetchStatus();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [id, isDirty]);
+
   useEffect(() => {
     if (!formData.productGroupId) { 
       setCategoryOptions([]); 
@@ -792,14 +892,65 @@ const DetailProductPage: React.FC = () => {
     setCriteria(prev => prev.map(c => c.id !== id ? c : (c.isRequired ? c : { ...c, isSelected: !c.isSelected })));
   };
 
-  const isFormDirty     = formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
-  const isCriteriaDirty = serializeCriteriaForDiff(criteria) !== serializeCriteriaForDiff(originalCriteria);
-  const isDirty         = isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true);
+  const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
+  const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+
+  const moveCriterion = (draggedId: string, targetId: string) => {
+    if (isReadOnly || draggedId === targetId) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+
+      const dragIdx = selected.findIndex(c => c.id === draggedId);
+      const targetIdx = selected.findIndex(c => c.id === targetId);
+      if (dragIdx === -1 || targetIdx === -1) return prev;
+
+      const reorderedSelected = [...selected];
+      const [movedItem] = reorderedSelected.splice(dragIdx, 1);
+      reorderedSelected.splice(targetIdx, 0, movedItem);
+
+      return [...reorderedSelected, ...unselected];
+    });
+  };
+
+  const moveCriterionUp = (id: string) => {
+    if (isReadOnly) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const idx = selected.findIndex(c => c.id === id);
+      if (idx <= 0) return prev;
+
+      const reorderedSelected = [...selected];
+      const temp = reorderedSelected[idx];
+      reorderedSelected[idx] = reorderedSelected[idx - 1];
+      reorderedSelected[idx - 1] = temp;
+
+      return [...reorderedSelected, ...unselected];
+    });
+  };
+
+  const moveCriterionDown = (id: string) => {
+    if (isReadOnly) return;
+    setCriteria(prev => {
+      const selected = prev.filter(c => c.isSelected);
+      const unselected = prev.filter(c => !c.isSelected);
+      const idx = selected.findIndex(c => c.id === id);
+      if (idx === -1 || idx >= selected.length - 1) return prev;
+
+      const reorderedSelected = [...selected];
+      const temp = reorderedSelected[idx];
+      reorderedSelected[idx] = reorderedSelected[idx + 1];
+      reorderedSelected[idx + 1] = temp;
+
+      return [...reorderedSelected, ...unselected];
+    });
+  };
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id) return;
-    if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
-      if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
+    if (status !== 'ARCHIVED' && status !== 'ACTIVE' && status !== 'DRAFT') {
+      if (!formData.productGroupId && !productData?.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
     }
     try {
       setLoading(true);
@@ -829,14 +980,14 @@ const DetailProductPage: React.FC = () => {
       });
       if (res.ok) {
         const msgs: Record<string, string> = {
-          DRAFT: 'Lưu nháp sản phẩm thành công', 
-          ARCHIVED: 'Lưu trữ sản phẩm thành công',
-          ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công',
-          PENDING_APPROVAL: 'Gửi phê duyệt sản phẩm thành công',
-          NEEDS_REVISION: 'Lưu thay đổi thành công (Trạng thái: Yêu cầu chỉnh sửa)',
+          DRAFT: 'Lưu nháp thành công', 
+          ARCHIVED: 'Lưu trữ thành công',
+          ACTIVE: 'Kích hoạt thành công',
+          PENDING_APPROVAL: 'Gửi phê duyệt thành công',
+          NEEDS_REVISION: 'Lưu nháp thành công',
         };
-        renderCustomToast(msgs[status] || 'Cập nhật sản phẩm thành công');
-        setTimeout(() => navigate('/products/processing'), 10);
+        renderCustomToast(msgs[status] || 'Cập nhật thành công');
+        setTimeout(() => navigate('/products/processing'), 400);
       } else {
         const err = await res.json();
         toast.error(err.message || 'Có lỗi xảy ra khi cập nhật sản phẩm', { position: 'top-center' });
@@ -858,7 +1009,7 @@ const DetailProductPage: React.FC = () => {
       });
       
       if (res.ok) {
-        renderCustomToast(newActiveStatus ? 'Đã bật hiển thị sản phẩm' : 'Đã ẩn sản phẩm');
+        renderCustomToast(newActiveStatus ? 'Hiển thị thành công' : 'Ẩn thành công');
       } else {
         const err = await res.json();
         toast.error(err.message || 'Lỗi khi thay đổi trạng thái hiển thị', { position: 'top-center' });
@@ -918,7 +1069,11 @@ const DetailProductPage: React.FC = () => {
         method: 'POST',
         headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
-      if (res.ok) { renderCustomToast('Xóa sản phẩm thành công'); setTimeout(() => navigate('/products/processing'), 10); }
+      if (res.ok) { 
+        setShowDeleteModal(false);
+        renderCustomToast('Xóa thành công'); 
+        setTimeout(() => navigate('/products/processing'), 400); 
+      }
       else { const e = await res.json(); toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' }); setLoading(false); }
     } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
   };
@@ -962,7 +1117,9 @@ const DetailProductPage: React.FC = () => {
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
-              Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.
+              {isCascadeLocked
+                ? CASCADE_LOCK_MESSAGE
+                : 'Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.'}
             </span>
           </div>
         )}
@@ -987,6 +1144,34 @@ const DetailProductPage: React.FC = () => {
           </div>
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {isRejected && (
+              <>
+                <button 
+                  className="btnDraft" 
+                  disabled 
+                  style={{ 
+                    opacity: 0.5, 
+                    cursor: 'not-allowed', 
+                    backgroundColor: '#E5E7EB', 
+                    color: '#9CA3AF' 
+                  }}
+                >
+                  Lưu nháp
+                </button>
+                <button 
+                  className="btnSubmit" 
+                  disabled 
+                  style={{ 
+                    opacity: 0.5, 
+                    cursor: 'not-allowed', 
+                    backgroundColor: '#D1D5DB', 
+                    color: '#9CA3AF' 
+                  }}
+                >
+                  Gửi phê duyệt
+                </button>
+              </>
+            )}
             {!isReadOnly && (
               <>
                 {productData.status === 'DRAFT' && (<>
@@ -996,15 +1181,15 @@ const DetailProductPage: React.FC = () => {
                     </svg>
                     Xóa
                   </button>
-                  <button className="btnDraft active" onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className="btnDraft active" onClick={() => onSaveDraftClick('DRAFT')}>Lưu nháp</button>
                   <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'ACTIVE' && (<>
-                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => handleUpdateProduct('DRAFT')}>Lưu nháp</button>
+                  <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => onSaveDraftClick('DRAFT')}>Lưu nháp</button>
                   <button className={`btnSubmit ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'NEEDS_REVISION' && (<>
-                  <button className="btnDraft active" onClick={() => handleUpdateProduct('NEEDS_REVISION')}>Lưu nháp</button>
+                  <button className="btnDraft active" onClick={() => onSaveDraftClick('NEEDS_REVISION')}>Lưu nháp</button>
                   <button className="btnSubmit active" onClick={handleApproveClick}>Gửi phê duyệt</button>
                 </>)}
                 {productData.status === 'ARCHIVED' && (
@@ -1018,6 +1203,28 @@ const DetailProductPage: React.FC = () => {
         <div className="contentGrid">
 
           <div className="leftCol">
+            {isRejected && (
+              <div style={{
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                borderRadius: '8px',
+                padding: '12px 16px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                color: '#991B1B',
+                fontSize: '14px',
+                fontWeight: 500
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>Sản phẩm này đã bị <strong>Từ chối</strong> và ở chế độ chỉ xem, không thể chỉnh sửa.</span>
+              </div>
+            )}
             <div className="formCard">
 
               <div className="formGroup" style={{ marginBottom: 16 }}>
@@ -1033,7 +1240,12 @@ const DetailProductPage: React.FC = () => {
                         if (!isGroupOpen) setGroupSearch('');
                       }
                     }}
-                    style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
+                    style={{ 
+                      opacity: isReadOnly ? 0.75 : 1, 
+                      cursor: isReadOnly ? 'not-allowed' : 'pointer', 
+                      backgroundColor: isReadOnly ? '#E5E7EB' : '#FFF',
+                      color: isReadOnly ? '#4B5563' : '#111827'
+                    }}
                   >
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || 'Chọn nhóm'}</span>
                   </div>
@@ -1073,12 +1285,17 @@ const DetailProductPage: React.FC = () => {
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''}`} 
                       onClick={() => {
-                        if (!isReadOnly) {
+                        if (!isReadOnly && formData.productGroupId) {
                           setIsCategoryOpen(v => !v);
                           if (!isCategoryOpen) setCategorySearch('');
                         }
                       }}
-                      style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
+                      style={{ 
+                        opacity: (isReadOnly || !formData.productGroupId) ? 0.75 : 1, 
+                        cursor: (isReadOnly || !formData.productGroupId) ? 'not-allowed' : 'pointer', 
+                        backgroundColor: (isReadOnly || !formData.productGroupId) ? '#E5E7EB' : '#FFF',
+                        color: (isReadOnly || !formData.productGroupId) ? '#4B5563' : '#111827'
+                      }}
                     >
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục')}</span>
                     </div>
@@ -1116,12 +1333,17 @@ const DetailProductPage: React.FC = () => {
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''}`} 
                       onClick={() => {
-                        if (!isReadOnly) {
+                        if (!isReadOnly && formData.productCategoryId) {
                           setIsOperationOpen(v => !v);
                           if (!isOperationOpen) setOperationSearch('');
                         }
                       }}
-                      style={{ opacity: isReadOnly ? 0.8 : 1, cursor: isReadOnly ? 'default' : 'pointer', backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF' }}
+                      style={{ 
+                        opacity: (isReadOnly || !formData.productCategoryId) ? 0.75 : 1, 
+                        cursor: (isReadOnly || !formData.productCategoryId) ? 'not-allowed' : 'pointer', 
+                        backgroundColor: (isReadOnly || !formData.productCategoryId) ? '#E5E7EB' : '#FFF',
+                        color: (isReadOnly || !formData.productCategoryId) ? '#4B5563' : '#111827'
+                      }}
                     >
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn nghiệp vụ')}</span>
                     </div>
@@ -1154,33 +1376,241 @@ const DetailProductPage: React.FC = () => {
                 </div>
               </div>
 
-              {criteria.filter(c => c.isSelected).map(criterion => {
+              {/* CRITERIA LIST - HỖ TRỢ ĐỔI THỨ TỰ (CHỈ KÉO KHI NHẤN GIỮ ⠿ & NÚT LÊN/XUỐNG) */}
+              {criteria.filter(c => c.isSelected).map((criterion, idx, arr) => {
                 const hasErr = !isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value);
+                const isDraggingThis = draggedCriterionId === criterion.id;
+                const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
+
                 return (
-                  <div key={criterion.id} className="formGroup" style={{ marginTop: 24, marginBottom: 24 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                      {!isReadOnly && !criterion.isRequired && (
-                        <button type="button" onClick={() => toggleCriterionSelection(criterion.id)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#9CA3AF', transition: 'color 0.2s' }}
-                          title="Bỏ tiêu chí này">
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="3 6 5 6 21 6"/>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-                          </svg>
-                        </button>
+                  <div
+                    key={criterion.id}
+                    className="formGroup criterion-card"
+                    onDragOver={(e) => {
+                      if (isReadOnly) return;
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverCriterionId !== criterion.id) {
+                        setDragOverCriterionId(criterion.id);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverCriterionId === criterion.id) {
+                        setDragOverCriterionId(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      if (isReadOnly) return;
+                      e.preventDefault();
+                      if (draggedCriterionId && draggedCriterionId !== criterion.id) {
+                        moveCriterion(draggedCriterionId, criterion.id);
+                      }
+                      setDraggedCriterionId(null);
+                      setDragOverCriterionId(null);
+                    }}
+                    style={{
+                      marginTop: 16,
+                      marginBottom: 20,
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 10,
+                      border: isDragOverThis ? '2px dashed #B01E3E' : '1px solid #E5E7EB',
+                      padding: 16,
+                      opacity: isDraggingThis ? 0.45 : 1,
+                      transform: isDraggingThis ? 'scale(0.99)' : 'none',
+                      transition: 'all 0.15s ease',
+                      boxShadow: isDragOverThis ? '0 4px 12px rgba(176, 30, 62, 0.15)' : '0 1px 2px rgba(0,0,0,0.03)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {/* Drag handle - CHỈ CHO PHÉP KÉO KHI NHẤN GIỮ NÚT NÀY */}
+                        {!isReadOnly && (
+                          <div
+                            draggable={true}
+                            onDragStart={(e) => {
+                              e.stopPropagation();
+                              e.dataTransfer.setData('text/plain', criterion.id);
+                              e.dataTransfer.effectAllowed = 'move';
+                              const card = (e.currentTarget as HTMLElement).closest('.criterion-card') as HTMLElement;
+                              if (card && e.dataTransfer.setDragImage) {
+                                e.dataTransfer.setDragImage(card, 20, 20);
+                              }
+                              setDraggedCriterionId(criterion.id);
+                            }}
+                            onDragEnd={(e) => {
+                              e.stopPropagation();
+                              setDraggedCriterionId(null);
+                              setDragOverCriterionId(null);
+                            }}
+                            title="Nhấn giữ để kéo di chuyển tiêu chí"
+                            style={{
+                              cursor: 'grab',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#6B7280',
+                              padding: '4px',
+                              borderRadius: 4,
+                              userSelect: 'none',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.backgroundColor = '#F3F4F6';
+                              e.currentTarget.style.color = '#111827';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = '#6B7280';
+                            }}
+                            onMouseDown={(e) => {
+                              e.currentTarget.style.cursor = 'grabbing';
+                            }}
+                            onMouseUp={(e) => {
+                              e.currentTarget.style.cursor = 'grab';
+                            }}
+                          >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                              <circle cx="9" cy="5" r="2" />
+                              <circle cx="9" cy="12" r="2" />
+                              <circle cx="9" cy="19" r="2" />
+                              <circle cx="15" cy="5" r="2" />
+                              <circle cx="15" cy="12" r="2" />
+                              <circle cx="15" cy="19" r="2" />
+                            </svg>
+                          </div>
+                        )}
+
+                        {/* Thứ tự badge */}
+                        <span
+                          style={{
+                            backgroundColor: '#F3F4F6',
+                            color: '#374151',
+                            borderRadius: 4,
+                            padding: '2px 7px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            border: '1px solid #E5E7EB',
+                            userSelect: 'none',
+                          }}
+                          title={`Tiêu chí thứ ${idx + 1}`}
+                        >
+                          #{idx + 1}
+                        </span>
+
+                        <label className="label" style={{ fontWeight: 600, margin: 0, fontSize: 14, color: '#1F2937' }}>
+                          {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
+                        </label>
+                      </div>
+
+                      {!isReadOnly && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {/* Nút di chuyển lên */}
+                          <button
+                            type="button"
+                            onClick={() => moveCriterionUp(criterion.id)}
+                            disabled={idx === 0}
+                            title={idx === 0 ? 'Đang ở vị trí đầu tiên' : 'Di chuyển lên trên'}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 26,
+                              height: 26,
+                              border: '1px solid #D1D5DB',
+                              borderRadius: 4,
+                              backgroundColor: '#FFFFFF',
+                              color: idx === 0 ? '#D1D5DB' : '#374151',
+                              cursor: idx === 0 ? 'not-allowed' : 'pointer',
+                              padding: 0,
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (idx !== 0) e.currentTarget.style.backgroundColor = '#F3F4F6';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                              <path d="M5 12.5L10 7.5L15 12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+
+                          {/* Nút di chuyển xuống */}
+                          <button
+                            type="button"
+                            onClick={() => moveCriterionDown(criterion.id)}
+                            disabled={idx === arr.length - 1}
+                            title={idx === arr.length - 1 ? 'Đang ở vị trí cuối cùng' : 'Di chuyển xuống dưới'}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 26,
+                              height: 26,
+                              border: '1px solid #D1D5DB',
+                              borderRadius: 4,
+                              backgroundColor: '#FFFFFF',
+                              color: idx === arr.length - 1 ? '#D1D5DB' : '#374151',
+                              cursor: idx === arr.length - 1 ? 'not-allowed' : 'pointer',
+                              padding: 0,
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (idx !== arr.length - 1) e.currentTarget.style.backgroundColor = '#F3F4F6';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.backgroundColor = '#FFFFFF';
+                            }}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
+                              <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+
+                          {/* Bỏ tiêu chí thừa (nếu không bắt buộc) */}
+                          {!criterion.isRequired && (
+                            <button
+                              type="button"
+                              onClick={() => toggleCriterionSelection(criterion.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#9CA3AF',
+                                marginLeft: 4,
+                                transition: 'color 0.2s',
+                              }}
+                              onMouseOver={(e) => (e.currentTarget.style.color = '#EF4444')}
+                              onMouseOut={(e) => (e.currentTarget.style.color = '#9CA3AF')}
+                              title="Bỏ tiêu chí này"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
                       )}
-                      <label className="label" style={{ fontWeight: 600, margin: 0 }}>
-                        {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
-                      </label>
                     </div>
-                    <QuillEditor
-                      value={criterion.value}
-                      placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
-                      hasError={hasErr}
-                      readOnly={isReadOnly}
-                      onChange={v => handleCriterionValueChange(criterion.id, v)}
-                    />
+
+                    <div draggable={false} onDragStart={(e) => e.stopPropagation()}>
+                      <QuillEditor
+                        value={criterion.value}
+                        placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
+                        hasError={hasErr}
+                        readOnly={isReadOnly}
+                        isRejected={isRejected}
+                        onChange={(v) => handleCriterionValueChange(criterion.id, v)}
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -1339,9 +1769,9 @@ const DetailProductPage: React.FC = () => {
                   <div 
                     className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
                     onClick={() => !isStatusDisabled && setIsStatusOpen(v => !v)}
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isStatusDisabled ? '#F9FAFB' : '#FFF', cursor: isStatusDisabled ? 'default' : 'pointer', width: '100%', boxSizing: 'border-box', opacity: isStatusDisabled ? 0.6 : 1 }}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isStatusDisabled ? '#E5E7EB' : '#FFF', cursor: isStatusDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box', opacity: isStatusDisabled ? 0.7 : 1 }}
                   >
-                    <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
+                    <span style={{ color: isStatusDisabled ? '#6B7280' : '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                     {!isStatusDisabled && (
                       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="#9CA3AF" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ transform: isStatusOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                         <path d="M5 7.5L10 12.5L15 7.5"/>
@@ -1362,6 +1792,12 @@ const DetailProductPage: React.FC = () => {
                 approverName={getApproverDisplayName()}
                 createdAt={formatDateTime(productData?.createdAt)}
                 version={productData?.version || 1}
+                versions={productData?.versions || []}
+                currentId={id}
+                onSelectVersion={(v) => {
+                  setPreviewVersionItem(v);
+                  setShowVersionModal(true);
+                }}
               />
 
               <div className="commentCard emptyComment">
@@ -1377,7 +1813,7 @@ const DetailProductPage: React.FC = () => {
                       <React.Fragment key={c.id || i}>
                         <div className="commentItem">
                           <div className="userInfo">
-                            <img src={c.avatarUrl || 'https://images.squarespace-cdn.com/content/v1/61da6bc18e4e00423cffe684/1765779011140-U85TJYNQM9M24A5RQOZW/Leo+nui.png'} className="avatar" alt="avatar"/>
+                            <img src={c.avatarUrl || getRandomAvatar(c.createdBy || i)} className="avatar" alt="avatar"/>
                             <div style={{ flex: 1 }}>
                               <div className="userHeader">
                                 <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
@@ -1421,28 +1857,85 @@ const DetailProductPage: React.FC = () => {
         requestName={requestName}
       />
 
-      {showDeleteModal && (
-        <div className="confirm-toast-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="confirm-toast-card" onClick={e => e.stopPropagation()}>
-            <div className="confirm-toast-body">
-              <div className="confirm-toast-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="22" viewBox="0 0 17 19" fill="none">
-                  <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="#AE1C3F" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-              <div className="confirm-toast-content">
-                <p className="confirm-toast-title">Xác nhận xóa </p>
-                <p className="confirm-toast-desc">Bạn có chắc chắn muốn xóa không? Hành động này không thể hoàn tác.</p>
-              </div>
-            </div>
-            <div className="confirm-toast-actions">
-              
-              <button className="confirm-btn-delete" onClick={async () => { setShowDeleteModal(false); await executeDelete(); }}>Xóa</button>
-              <button className="confirm-btn-cancel" onClick={() => setShowDeleteModal(false)}>Hủy</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ActionConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={executeDelete}
+        variant="delete"
+        title="Xác nhận xóa"
+        desc="Bạn có chắc chắn muốn xóa sản phẩm này không? Hành động này không thể hoàn tác."
+        confirmText="Xóa"
+      />
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => {
+          if (confirmAction) {
+            const act = confirmAction;
+            setConfirmAction(null);
+            handleUpdateProduct(act);
+          }
+        }}
+        variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt sản phẩm không?'}
+        confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+      />
+
+      <DuplicateVersionModal
+        isOpen={showDuplicateModal}
+        itemName={productData.name}
+        priorVersion={priorConflict}
+        isProcessing={isDeletingPrior}
+        onCancel={() => {
+          setShowDuplicateModal(false);
+          setPriorConflict(null);
+          setPendingTargetStatus(null);
+        }}
+        onViewPrior={() => {
+          if (priorConflict) {
+            setShowDuplicateModal(false);
+            setPreviewVersionItem(priorConflict as any);
+            setShowVersionModal(true);
+          }
+        }}
+        onConfirm={async () => {
+          if (!priorConflict) return;
+          try {
+            setIsDeletingPrior(true);
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+            const delRes = await fetch(API_ENDPOINTS.PRODUCT.DELETE(priorConflict.id), {
+              method: 'POST',
+              headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+            });
+            if (delRes.ok) {
+              toast.success('Đã xóa phiên bản trùng lặp trước đó');
+              setShowDuplicateModal(false);
+              const target = pendingTargetStatus;
+              setPriorConflict(null);
+              setPendingTargetStatus(null);
+              if (target) {
+                handleUpdateProduct(target as any);
+              }
+            } else {
+              const err = await delRes.json();
+              toast.error(err.message || 'Không thể xóa phiên bản cũ', { position: 'top-center' });
+            }
+          } catch (e) {
+            toast.error('Lỗi khi xóa phiên bản cũ', { position: 'top-center' });
+          } finally {
+            setIsDeletingPrior(false);
+          }
+        }}
+      />
+
+      <VersionDetailModal
+        isOpen={showVersionModal}
+        onClose={() => setShowVersionModal(false)}
+        itemType="product"
+        versionItem={previewVersionItem}
+      />
 
     </div>
   );

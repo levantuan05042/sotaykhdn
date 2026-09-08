@@ -56,9 +56,9 @@ const RequestTable: React.FC<Props> = ({ data }) => {
 
   const handleViewDetail = (item: RequestItem) => {
     if (item.isBatch) {
-      navigate(`/products/batch/${item.requestId}`);
+      navigate(`/products/batch/${item.requestId}`, { state: { requestName: item.requestName, requestId: item.requestId } });
     } else {
-      navigate(`/product/${item.productId}`);
+      navigate(`/product/${item.productId}`, { state: { requestName: item.requestName, requestId: item.requestId } });
     }
   };
 

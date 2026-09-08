@@ -41,6 +41,10 @@ export const StatusBadgeListRequest: React.FC<StatusBadgeProps> = ({ status, cla
         lineHeight: '100%',
         textAlign: 'center',
         whiteSpace: 'nowrap',
+        width: 'max-content',
+        minWidth: 'max-content',
+        flexShrink: 0,
+        boxSizing: 'border-box',
         gap: '6px' 
       }}
     >

@@ -87,6 +87,11 @@
   margin: 0 0 16px 0;
 }
 
+.cascade-hidden-section {
+  opacity: 0.55;
+  filter: grayscale(0.25);
+}
+
 /* =======================================
    CARD CHUNG (Sản phẩm / Danh mục)
 ======================================= */

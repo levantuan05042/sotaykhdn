@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
+import { addRecentlyViewed } from '../../utils/userHistoryStorage';
 import './ProductDetailView.css';
 
 const getImageUrl = (path?: string | null) => {
@@ -140,10 +141,7 @@ const ProductDetailView: React.FC = () => {
   }, [isMoreDrawerOpen]);
 
   const saveToHistory = (prod: ProductData) => {
-    const saved = localStorage.getItem('recentlyViewed');
-    let history: any[] = saved ? JSON.parse(saved) : [];
-    history = history.filter((item) => item.id !== prod.id);
-    history.unshift({
+    addRecentlyViewed({
       id: prod.id,
       name: prod.name,
       imageUrl: prod.imageUrl,
@@ -151,7 +149,6 @@ const ProductDetailView: React.FC = () => {
       views: prod.views || prod.viewCount || 0,
       createdAt: prod.createdAt,
     });
-    localStorage.setItem('recentlyViewed', JSON.stringify(history.slice(0, 6)));
   };
 
   useEffect(() => {
@@ -160,6 +157,10 @@ const ProductDetailView: React.FC = () => {
       try {
         setLoading(true);
         const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
+        if (res.data?.cascadeHiddenBy) {
+          setProduct(null);
+          return;
+        }
         setProduct(res.data);
         saveToHistory(res.data);
         if (res.data.imageUrl) {
@@ -245,7 +246,11 @@ const ProductDetailView: React.FC = () => {
   if (!product) return <div className="dp-container"><div className="dp-error">Không tìm thấy sản phẩm.</div></div>;
 
   const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
-  const sortedDetails = [...(product.details || [])].sort((a, b) => a.stt - b.stt);
+  const sortedDetails = [...(product.details || [])].sort((a, b) => {
+    const sttA = typeof a.stt === 'number' ? a.stt : 999999;
+    const sttB = typeof b.stt === 'number' ? b.stt : 999999;
+    return sttA - sttB;
+  });
   const breadcrumbItems = buildBreadcrumbs();
 
   const displayBreadcrumbs = breadcrumbItems.length > 4 

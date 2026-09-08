@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-
 import { API_ENDPOINTS } from '../config/apiConfig';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 
 const AddBusinessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -70,6 +70,8 @@ const AddBusinessPage: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -77,27 +79,40 @@ const AddBusinessPage: React.FC = () => {
 
   const handleGoBack = () => navigate('/business-management');
 
-  const handleCreateBusiness = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
-    if (!formData.name.trim() || !formData.productCategoryId) {
-      toast.error("Vui lòng nhập tên nghiệp vụ và chọn danh mục", { position: 'top-center' });
+  const onSaveDraftClick = () => {
+    setConfirmAction('DRAFT');
+  };
+
+  const onSubmitClick = () => {
+    if (!formData.name.trim()) {
+      toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
       return;
     }
+    if (!formData.productCategoryId) {
+      toast.error("Vui lòng chọn danh mục sản phẩm", { position: 'top-center' });
+      setIsOpen(true);
+      return;
+    }
+    setConfirmAction('PENDING_APPROVAL');
+  };
 
-    if (isSubmitting) return; // Chặn nếu đang gọi API
+  const handleCreateBusiness = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
+    if (isSubmitting) return;
 
     try {
       setIsSubmitting(true);
       
       await axios.post(API_ENDPOINTS.PRODUCT_BUSINESS.LIST, {
-        name: formData.name.trim(),
-        productCategoryId: formData.productCategoryId,
+        name: formData.name.trim() || undefined,
+        productCategoryId: formData.productCategoryId || undefined,
         status,
         active: isActive
       });
 
-      const message = status === 'DRAFT' ? "Lưu nháp nghiệp vụ thành công" : "Gửi phê duyệt nghiệp vụ thành công";
+      const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
       renderCustomToast(message);
-      setTimeout(() => navigate('/business-management'), 2000);
+      setConfirmAction(null);
+      setTimeout(() => navigate('/business-management'), 400);
       
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi tạo nghiệp vụ';
@@ -134,7 +149,8 @@ const AddBusinessPage: React.FC = () => {
     formData.productCategoryId !== '' || 
     isActive !== true;
 
-  const canSubmit = isFormDirty && !isSubmitting; 
+  const canSaveDraft = !isSubmitting;
+  const canSubmit = isFormDirty && formData.name.trim() !== '' && formData.productCategoryId !== '' && !isSubmitting;
 
   // MỚI: Lọc danh sách danh mục dựa trên từ khóa tìm kiếm
   const filteredCategoryOptions = categoryOptions.filter(opt => 
@@ -167,26 +183,26 @@ const AddBusinessPage: React.FC = () => {
 
           <div className="headerRight">
             <button 
-              className={`btnDraft ${canSubmit ? 'active' : 'disabled'}`} 
-              disabled={!canSubmit} 
-              onClick={() => handleCreateBusiness('DRAFT')}
+              className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} 
+              disabled={!canSaveDraft} 
+              onClick={onSaveDraftClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 8V21H3V8M1 3H23V8H1V3ZM10 12H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              {isSubmitting ? 'Đang xử lý...' : 'Lưu nháp'}
+              Lưu nháp
             </button>
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
               disabled={!canSubmit} 
-              onClick={() => handleCreateBusiness('PENDING_APPROVAL')}
+              onClick={onSubmitClick}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }} 
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              {isSubmitting ? 'Đang xử lý...' : 'Gửi phê duyệt'}
+              Gửi phê duyệt
             </button>
           </div>
         </div>
@@ -383,6 +399,17 @@ const AddBusinessPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={() => confirmAction && handleCreateBusiness(confirmAction)}
+        variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp mảng nghiệp vụ không?' : 'Bạn có chắc chắn muốn gửi phê duyệt mảng nghiệp vụ không?'}
+        confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        loading={isSubmitting}
+      />
     </div>
   );
 };

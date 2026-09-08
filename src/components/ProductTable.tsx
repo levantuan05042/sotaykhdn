@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2'; 
+import { CellWithTooltip } from './ui/CellWithTooltip';
 import './ProductTable.css';
 
 interface ProductCategory {
@@ -13,8 +14,12 @@ interface ProductCategory {
   productGroupName: string | null;
   status: string;
   active?: boolean;       
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;
 }
 
@@ -22,21 +27,6 @@ interface Props {
   data: ProductCategory[];
   onToggleActive?: (id: string, newActiveStatus: boolean) => void;
 }
-
-const CellWithTooltip = ({ text, weight = 400 }: { text: string; weight?: number }) => {
-  if (!text || text === '---') {
-    return <span style={{ fontWeight: weight }}>{text || '---'}</span>;
-  }
-  
-  return (
-    <div className="truncate-wrapper">
-      <span className="truncate-text" style={{ fontWeight: weight }}>
-        {text}
-      </span>
-      <span className="custom-tooltip">{text}</span>
-    </div>
-  );
-};
 
 const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
   const navigate = useNavigate();
@@ -112,7 +102,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
             <th className="col-group">Nhóm sản phẩm</th> 
             <th className="col-category">Danh mục sản phẩm</th> 
             <th className="col-business">Nghiệp vụ</th> 
-            <th>Trạng thái</th>
+            <th className="col-status">Trạng thái</th>
             <th>Hiệu lực</th>
             <th className="col-creator">Người tạo</th>
             <th className="col-reviewer">Người kiểm duyệt</th>
@@ -130,7 +120,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
               >
                 <td>{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</td>
                 <td>
-                  <CellWithTooltip text={stripHtml(item.name)} weight={500} />
+                  <CellWithTooltip text={stripHtml(item.name)} style={{ fontWeight: 500 }} />
                 </td>
                 <td className="col-group">
                   <CellWithTooltip text={item.productGroupName || ''} />
@@ -142,7 +132,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                   <CellWithTooltip text={item.businessName || ''} />
                 </td>
 
-                <td>
+                <td className="col-status">
                   <StatusBadge2 status={item.status} />
                 </td>
 
@@ -163,25 +153,27 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                 </td>
 
                 <td className="col-creator">
-                  <CellWithTooltip text={formatApprovedBy(item.createdByFullName)} />
+                  <CellWithTooltip text={formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy)} />
                 </td>
                 <td className="col-reviewer">
-                  <CellWithTooltip text={formatApprovedBy(item.approvedBy)} />
+                  <CellWithTooltip text={formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy)} />
                 </td>
                 <td>
-                  <CellWithTooltip text={item.version ? `Phiên bản ${item.version}` : ''} weight={600} />
+                  <span style={{ fontWeight: 600 }}>{item.version ? `Phiên bản ${item.version}` : '---'}</span>
                 </td>
 
                 <td onClick={(e) => e.stopPropagation()}>
-                  <button
-                    className="btn-action-view"
-                    onClick={() => handleViewDetail(item.id)}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  </button>
+                  <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'center' }}>
+                    <button
+                      className="btn-action-view"
+                      onClick={() => handleViewDetail(item.id)}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </button>
+                  </CellWithTooltip>
                 </td>
               </tr>
             ))

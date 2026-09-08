@@ -1,10 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './RequestListPage.css';
 import DataTable, { type Column } from '../components/ui/DataTable2';
 import StatusBadge2 from '../components/ui/StatusBadgeListRequest';
+import ImportProductModal from '../components/ImportProductModal';
+import CellWithTooltip from '../components/ui/CellWithTooltip';
+import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdown';
+import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 
 const STATUS_OPTIONS = [
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
@@ -42,6 +47,33 @@ const stripHtml = (htmlString: string) => {
   return htmlString.replace(/<\/?[^>]+(>|$)/g, "");
 };
 
+const ImportAction: React.FC<{ onSuccess: () => void }> = ({ onSuccess }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        className="btn-import"
+        onClick={() => setIsOpen(true)}
+        style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '36px', padding: '0 16px', backgroundColor: '#EBEAEF', border: 'none', borderRadius: '6px', color: '#374151', fontWeight: 500, cursor: 'pointer' }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span>Import</span>
+      </button>
+
+      <ImportProductModal 
+        isOpen={isOpen} 
+        onClose={() => setIsOpen(false)} 
+        onSuccess={onSuccess} 
+      />
+    </>
+  );
+};
+
 const RequestListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -63,10 +95,33 @@ const RequestListPage: React.FC = () => {
     return sDate ? new Date(sDate) : new Date();
   });
 
+  const cached = getCachedPageState('request-list');
+
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(cached?.selectedTypes ?? []);
+  const [selectedCreators, setSelectedCreators] = useState<string[]>(cached?.selectedCreators ?? []);
+  const [selectedApprovers, setSelectedApprovers] = useState<string[]>(cached?.selectedApprovers ?? []);
+  const [currentPage, setCurrentPage] = useState<number>(cached?.currentPage ?? 1);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const statusRef = useRef<HTMLDivElement>(null);
   const timeRef = useRef<HTMLDivElement>(null);
+  const filterSectionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCachedPageState('request-list', {
+      selectedTypes,
+      selectedCreators,
+      selectedApprovers,
+      currentPage,
+    });
+  }, [selectedTypes, selectedCreators, selectedApprovers, currentPage]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -89,8 +144,8 @@ const RequestListPage: React.FC = () => {
     }
   }, [openDropdown, startDate, endDate]);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const response = await axios.get(API_ENDPOINTS.PRODUCT_REQUESTS.LIST, {
         params: {
@@ -120,15 +175,23 @@ const RequestListPage: React.FC = () => {
 
       const enrichedData = rawList.map((item: any) => ({
         ...item,
-        createdByFullName: item.createdByFullName || userMap[item.createdBy] || item.createdBy || null,
-        approvedBy: userMap[item.approvedBy] || item.approvedBy || null 
+        createdByFullName: item.createdByFullName || item.CREATED_BY_FULL_NAME || userMap[item.createdBy] || item.createdBy || null,
+        approvedByFullName: item.approvedByFullName || item.APPROVED_BY_FULL_NAME || userMap[item.approvedBy] || item.approvedBy || null,
+        approvedBy: item.approvedByFullName || item.APPROVED_BY_FULL_NAME || userMap[item.approvedBy] || item.approvedBy || null 
       }));
 
       setData(enrichedData);
+      if (!isBackground) {
+        restorePageScroll('request-list');
+      }
     } catch (error) {
-      setData([]);
+      if (!isBackground) {
+        setData([]);
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      }
     }
   };
 
@@ -137,11 +200,34 @@ const RequestListPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [searchTerm, selectedStatus, startDate, endDate]);
 
+  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true);
+    }, 5000);
+
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData(true);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [searchTerm, selectedStatus, startDate, endDate]);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (target?.closest?.('.table-filter-dropdown-menu') || target?.closest?.('.date-picker-dropdown')) return;
       if (
-        statusRef.current && !statusRef.current.contains(event.target as Node) &&
-        timeRef.current && !timeRef.current.contains(event.target as Node)
+        filterSectionRef.current && !filterSectionRef.current.contains(event.target as Node)
       ) {
         setOpenDropdown(null);
       }
@@ -149,6 +235,47 @@ const RequestListPage: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  const TYPE_OPTIONS = [
+    { label: 'Tạo theo lô', value: 'batch' },
+    { label: 'Tạo lẻ', value: 'single' },
+  ];
+
+  const creatorFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach(item => {
+      const name = item.createdByFullName || item.CREATED_BY_FULL_NAME;
+      if (name && name !== '---') set.add(name);
+    });
+    return Array.from(set).map(name => ({ label: name, value: name }));
+  }, [data]);
+
+  const approverFilterOptions = useMemo(() => {
+    const set = new Set<string>();
+    data.forEach(item => {
+      const name = item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy;
+      if (name && name !== '---') set.add(name);
+    });
+    return Array.from(set).map(name => ({ label: name, value: name }));
+  }, [data]);
+
+  const getFilteredData = () => {
+    return data.filter(item => {
+      if (selectedTypes.length > 0) {
+        const matchesType = selectedTypes.some(t => (t === 'batch' && item.isBatch) || (t === 'single' && !item.isBatch));
+        if (!matchesType) return false;
+      }
+      if (selectedCreators.length > 0) {
+        const c = item.createdByFullName || item.CREATED_BY_FULL_NAME || '';
+        if (!selectedCreators.includes(c)) return false;
+      }
+      if (selectedApprovers.length > 0) {
+        const a = item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy || '';
+        if (!selectedApprovers.includes(a)) return false;
+      }
+      return true;
+    });
+  };
 
   const getStatusLabel = (value: string) => {
     return STATUS_OPTIONS.find(opt => opt.value === value)?.label || value;
@@ -159,6 +286,11 @@ const RequestListPage: React.FC = () => {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
+  };
+
+  const handleImportSuccess = () => {
+    fetchData();
+    setToast({ type: 'success', message: 'Nhập yêu cầu từ Excel thành công.' });
   };
 
   const applyPreset = (type: string) => {
@@ -342,9 +474,9 @@ const RequestListPage: React.FC = () => {
 
   const handleViewDetail = (item: any) => {
     if (item.isBatch) {
-      navigate(`/products/batch/${item.requestId}`);
+      navigate(`/products/batch/${item.requestId}`, { state: { requestName: item.requestName, requestId: item.requestId } });
     } else {
-      navigate(`/product/${item.productId}`);
+      navigate(`/product/${item.productId}`, { state: { requestName: item.requestName, requestId: item.requestId } });
     }
   };
 
@@ -354,48 +486,50 @@ const RequestListPage: React.FC = () => {
       header: 'STT',
       width: '70px',
       align: 'center',
-      render: (_, index) => index + 1,
+      render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} />,
     },
     {
       key: 'requestName',
       header: 'Tên yêu cầu',
       render: (row) => (
-        <span className="truncate-text" style={{ fontWeight: 500, color: '#1F2937' }} title={stripHtml(row.requestName)}>
-          {stripHtml(row.requestName)}
-        </span>
+        <CellWithTooltip
+          text={stripHtml(row.requestName)}
+          style={{ fontWeight: 500, color: '#1F2937' }}
+        />
       ),
     },
     {
       key: 'status',
       header: 'Trạng thái',
-      width: '180px',
+      width: '210px',
       render: (row) => <StatusBadge2 status={row.status} />,
     },
     {
       key: 'createdAt',
       header: 'Thời gian',
       width: '150px',
-      render: (row) => <span style={{ color: '#4B5563' }}>{formatUIDate(row.createdAt)}</span>,
+      render: (row) => <CellWithTooltip text={formatUIDate(row.createdAt)} style={{ color: '#4B5563' }} />,
     },
     {
       key: 'totalProducts',
       header: 'Số lượng',
       width: '150px',
       render: (row) => (
-        <span style={{ color: '#4B5563', fontWeight: row.isBatch ? 600 : 400 }}>
-          {row.isBatch ? `${row.totalProducts} Sản phẩm` : 'Tạo lẻ'}
-        </span>
+        <CellWithTooltip
+          text={row.isBatch ? `${row.totalProducts} Sản phẩm` : 'Tạo lẻ'}
+          style={{ color: '#4B5563', fontWeight: row.isBatch ? 600 : 400 }}
+        />
       ),
     },
     {
       key: 'createdByFullName',
       header: 'Người tạo',
-      render: (row) => <span style={{ color: '#4B5563' }}>{row.createdByFullName || '---'}</span>,
+      render: (row) => <CellWithTooltip text={row.createdByFullName || '---'} style={{ color: '#4B5563' }} />,
     },
     {
       key: 'approvedBy',
       header: 'Người duyệt',
-      render: (row) => <span style={{ color: '#4B5563' }}>{row.approvedBy || '---'}</span>,
+      render: (row) => <CellWithTooltip text={row.approvedBy || '---'} style={{ color: '#4B5563' }} />,
     },
     {
       key: 'action',
@@ -403,35 +537,70 @@ const RequestListPage: React.FC = () => {
       width: '80px',
       align: 'center',
       render: (row) => (
-        <button
-          className="btn-view-detail"
-          title="Xem chi tiết"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleViewDetail(row);
-          }}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E1F36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-            <circle cx="12" cy="12" r="3" />
-          </svg>
-        </button>
+        <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'center' }}>
+          <button
+            className="btn-view-detail"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewDetail(row);
+            }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#9CA3AF' }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9E1F36" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </CellWithTooltip>
       ),
     },
   ];
 
   return (
     <div className="request-list-container">
+      {toast && (
+        <div className={`import-toast ${toast.type === 'error' ? 'error' : ''}`} role="status" aria-live="polite">
+          {toast.type === 'success' ? (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="8" cy="8" r="8" fill="#22C55E" />
+              <path d="M5 8.5L7 10.5L11 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }}>
+              <circle cx="8" cy="8" r="8" fill="#DC2626" />
+              <path d="M8 5v3.5M8 11h.01" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       <div className="content-wrapper">
         <h2 className="page-title">Danh sách yêu cầu</h2>
+
+        <div className="header-actions">
+          <ImportAction onSuccess={handleImportSuccess} />
+
+          <button
+            className="btn-add-new"
+            onClick={() => navigate('/products/add')}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', height: '36px', padding: '0 16px', backgroundColor: '#B01E3E', border: 'none', borderRadius: '6px', color: '#FFFFFF', fontWeight: 500, cursor: 'pointer' }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            <span>Thêm mới</span>
+          </button>
+        </div>
       </div>
 
-      <div className="filter-section">
+      <div className="filter-section" ref={filterSectionRef}>
         <div className="dropdown-group-container">
-          <div className="dropdown-row">
-            <div className="dropdown-wrapper" ref={statusRef}>
-              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')}>
+          <FilterScrollContainer className="dropdown-row">
+            {/* Trạng thái */}
+            <div className="dropdown-wrapper" ref={statusRef} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'status' ? null : 'status')} style={{ whiteSpace: 'nowrap' }}>
                 <span>Trạng thái</span>
                 <svg className={`chevron-icon ${openDropdown === 'status' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
@@ -450,8 +619,9 @@ const RequestListPage: React.FC = () => {
               )}
             </div>
 
-            <div className="dropdown-wrapper" ref={timeRef}>
-              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')}>
+            {/* Thời gian */}
+            <div className="dropdown-wrapper" ref={timeRef} style={{ position: 'relative', display: 'inline-flex', flexShrink: 0, whiteSpace: 'nowrap' }}>
+              <button className="btn-dropdown" onClick={() => setOpenDropdown(openDropdown === 'time' ? null : 'time')} style={{ whiteSpace: 'nowrap' }}>
                 <span>Thời gian</span>
                 <svg className={`chevron-icon ${openDropdown === 'time' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
@@ -479,7 +649,41 @@ const RequestListPage: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+
+            {/* Số lượng / Loại yêu cầu */}
+            <TableColumnFilterDropdown
+              label="Số lượng"
+              options={TYPE_OPTIONS}
+              selectedValues={selectedTypes}
+              onSelectValues={setSelectedTypes}
+              isOpen={openDropdown === 'type'}
+              onToggle={() => setOpenDropdown(openDropdown === 'type' ? null : 'type')}
+            />
+
+            {/* Người tạo */}
+            <TableColumnFilterDropdown
+              label="Người tạo"
+              options={creatorFilterOptions}
+              selectedValues={selectedCreators}
+              onSelectValues={setSelectedCreators}
+              isOpen={openDropdown === 'creator'}
+              onToggle={() => setOpenDropdown(openDropdown === 'creator' ? null : 'creator')}
+              hasSearch={creatorFilterOptions.length > 5}
+              searchPlaceholder="Tìm người tạo..."
+            />
+
+            {/* Người duyệt */}
+            <TableColumnFilterDropdown
+              label="Người duyệt"
+              options={approverFilterOptions}
+              selectedValues={selectedApprovers}
+              onSelectValues={setSelectedApprovers}
+              isOpen={openDropdown === 'approver'}
+              onToggle={() => setOpenDropdown(openDropdown === 'approver' ? null : 'approver')}
+              hasSearch={approverFilterOptions.length > 5}
+              searchPlaceholder="Tìm người duyệt..."
+            />
+          </FilterScrollContainer>
 
           <div className="selected-filters-row">
             {selectedStatus && <FilterTag label={getStatusLabel(selectedStatus)} onRemove={() => setSelectedStatus(null)} />}
@@ -488,6 +692,51 @@ const RequestListPage: React.FC = () => {
                 label={`${startDate ? formatUIDate(startDate) : ''} - ${endDate ? formatUIDate(endDate) : ''}`} 
                 onRemove={() => { setStartDate(''); setEndDate(''); }} 
               />
+            )}
+            {selectedTypes.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Loại: ${TYPE_OPTIONS.find((o) => o.value === val)?.label || val}`}
+                onRemove={() => setSelectedTypes((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedCreators.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Người tạo: ${val}`}
+                onRemove={() => setSelectedCreators((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {selectedApprovers.map((val) => (
+              <FilterTag
+                key={val}
+                label={`Người duyệt: ${val}`}
+                onRemove={() => setSelectedApprovers((prev) => prev.filter((v) => v !== val))}
+              />
+            ))}
+            {(selectedTypes.length > 0 || selectedCreators.length > 0 || selectedApprovers.length > 0 || selectedStatus || startDate || endDate) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedTypes([]);
+                  setSelectedCreators([]);
+                  setSelectedApprovers([]);
+                  setSelectedStatus(null);
+                  setStartDate('');
+                  setEndDate('');
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#AE1C3F',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  padding: '4px 8px',
+                }}
+              >
+                Xóa tất cả bộ lọc
+              </button>
             )}
           </div>
         </div>
@@ -511,9 +760,14 @@ const RequestListPage: React.FC = () => {
       <div className="table-placeholder">
         <DataTable
           columns={columns}
-          data={data}
+          data={getFilteredData()}
           keyExtractor={(row) => row.requestId || row.productId || row.requestName}
-          onRowClick={(row) => handleViewDetail(row)}
+          page={currentPage}
+          onPageChange={setCurrentPage}
+          onRowClick={(row) => {
+            savePageScroll('request-list');
+            handleViewDetail(row);
+          }}
           loading={loading}
           emptyText="Không tìm thấy yêu cầu nào phù hợp."
         />

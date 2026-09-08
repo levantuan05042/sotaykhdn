@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import HeaderBar from '../../components/view/HeaderBar';
 import Sidebar from '../../components/view/Sidebar';
-import { Toaster } from 'react-hot-toast';
 import styles from './MainLayout.module.css';
 import EmailIcon from '../../assets/icon/email.svg';
 import PhoneIcon from '../../assets/icon/phone.svg';
@@ -33,8 +32,6 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className={styles['main-layout']}>
-      <Toaster position="top-right" reverseOrder={false} />
-
       <header className={styles['grid-header']}>
         <HeaderBar
           isMenuOpen={isSidebarOpen}

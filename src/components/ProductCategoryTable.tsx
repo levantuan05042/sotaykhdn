@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
 import StatusBadge2 from './ui/StatusBadge2';
+import CellWithTooltip from './ui/CellWithTooltip';
 import './ProductCategoryTable.css';
 
 interface ProductCategory {
@@ -11,8 +12,12 @@ interface ProductCategory {
   groupName: string;
   status: string;
   active?: boolean;
+  createdBy?: string | null;
   createdByFullName?: string | null;
   approvedBy?: string | null;
+  approvedByFullName?: string | null;
+  CREATED_BY_FULL_NAME?: string | null;
+  APPROVED_BY_FULL_NAME?: string | null;
   version?: number | null;
 }
 
@@ -122,6 +127,17 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <div className="product-table-container">
         <table className="product-table table-text-base">
+          <colgroup>
+            <col style={{ width: '80px' }} />
+            <col style={{ width: '220px' }} />
+            <col style={{ width: '180px' }} />
+            <col style={{ width: '210px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '200px' }} />
+            <col style={{ width: '200px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '80px' }} />
+          </colgroup>
           <thead>
             <tr>
               <th className="px-40 rounded-l-12 w-24">STT</th>
@@ -140,10 +156,9 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
             {paginatedData.length > 0 ? (
               paginatedData.map((item, index) => {
                 const sttVal = (currentPage - 1) * itemsPerPage + index + 1;
-                const activeVal = item.active ? 'Hiện' : 'Ẩn';
                 const versionVal = item.version ? `Phiên bản ${item.version}` : '---';
-                const createdVal = formatApprovedBy(item.createdByFullName);
-                const approvedVal = formatApprovedBy(item.approvedBy);
+                const createdVal = formatApprovedBy(item.createdByFullName || item.CREATED_BY_FULL_NAME || item.createdBy);
+                const approvedVal = formatApprovedBy(item.approvedByFullName || item.APPROVED_BY_FULL_NAME || item.approvedBy);
                 const groupVal = item.groupName || '---';
 
                 return (
@@ -173,42 +188,27 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                     </td>
 
                     <td>
-                      <div className="custom-tooltip-container">
-                        <StatusBadge2 status={item.status} />
-                        <div className="custom-tooltip">{item.status}</div>
-                      </div>
+                      <StatusBadge2 status={item.status} />
                     </td>
 
                     <td>
-                      <div className="custom-tooltip-container">
-                        {renderActiveToggle(item)}
-                        <div className="custom-tooltip">{activeVal}</div>
-                      </div>
+                      {renderActiveToggle(item)}
                     </td>
 
                     <td>
-                      <div className="custom-tooltip-container">
-                        <span className="truncate-text">{createdVal}</span>
-                        <div className="custom-tooltip">{createdVal}</div>
-                      </div>
+                      <CellWithTooltip text={createdVal} />
                     </td>
 
                     <td>
-                      <div className="custom-tooltip-container">
-                        <span className="truncate-text">{approvedVal}</span>
-                        <div className="custom-tooltip">{approvedVal}</div>
-                      </div>
+                      <CellWithTooltip text={approvedVal} />
                     </td>
 
                     <td style={{ color: '#053E2B', fontFamily: 'Inter, sans-serif', fontSize: '16px', fontWeight: 600, lineHeight: '24px' }}>
-                      <div className="custom-tooltip-container">
-                        <span className="truncate-text">{versionVal}</span>
-                        <div className="custom-tooltip">{versionVal}</div>
-                      </div>
+                      <span>{versionVal}</span>
                     </td>
 
                     <td className="px-40 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="custom-tooltip-container" style={{ justifyContent: 'flex-end' }}>
+                      <CellWithTooltip tooltip="Xem chi tiết" style={{ justifyContent: 'flex-end' }}>
                         <button
                           className="btn-view-detail"
                           onClick={() => handleViewDetail(item.id)}
@@ -218,8 +218,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                             <circle cx="12" cy="12" r="3" />
                           </svg>
                         </button>
-                        <div className="custom-tooltip">Xem chi tiết</div>
-                      </div>
+                      </CellWithTooltip>
                     </td>
                   </tr>
                 );

@@ -122,7 +122,7 @@
   bottom: 100%;
   left: 0;
   margin-bottom: 6px;
-  z-index: 9999;
+  z-index: 2147483647 !important;
   background-color: #FDEBEB;
   color: #1A191B;
   padding: 8px 12px;
@@ -138,6 +138,10 @@
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
   transition: opacity 0.2s ease, visibility 0.2s ease;
   pointer-events: none;
+}
+
+.custom-tooltip-container:hover {
+  z-index: 2147483647 !important;
 }
 
 .custom-tooltip-container:hover .custom-tooltip {
