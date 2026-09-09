@@ -8,8 +8,10 @@ import Cropper from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import StatusBadge2 from '../components/ui/StatusBadgeListRequest';
+import '../components/ui/DataTable.css';
 import './BatchRequestDetailPage.css';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { formatDetailHtml } from './DetailProductPage';
 
 const extractUsername = (rawName: string | null | undefined): string => {
   if (!rawName) return '';
@@ -444,7 +446,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
       readOnly: readOnly,
     });
     quillRef.current = quill;
-    if (value) quill.clipboard.dangerouslyPasteHTML(value);
+    if (value) quill.clipboard.dangerouslyPasteHTML(formatDetailHtml(value));
     quill.on('text-change', () => {
       const h = quill.root.innerHTML;
       onChange(h === '<p><br></p>' ? '' : h);
@@ -457,8 +459,9 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   useEffect(() => {
     if (!quillRef.current) return;
     const cur = quillRef.current.root.innerHTML;
-    if (value !== cur && !(value === '' && cur === '<p><br></p>'))
-      quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
+    const formatted = formatDetailHtml(value);
+    if (formatted !== cur && !(formatted === '' && cur === '<p><br></p>'))
+      quillRef.current.clipboard.dangerouslyPasteHTML(formatted || '');
   }, [value]);
 
   useEffect(() => {
@@ -844,11 +847,37 @@ const BatchRequestDetailPage: React.FC = () => {
     }
   };
 
-  const totalPages = Math.ceil(products.length / itemsPerPage);
+  const totalPages = Math.ceil(products.length / itemsPerPage) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (safeCurrentPage > 3) {
+        pages.push('...');
+      }
+      const start = Math.max(2, safeCurrentPage - 1);
+      const end = Math.min(totalPages - 1, safeCurrentPage + 1);
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      if (safeCurrentPage < totalPages - 2) {
+        pages.push('...');
+      }
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
+    const startIndex = (safeCurrentPage - 1) * itemsPerPage;
     return products.slice(startIndex, startIndex + itemsPerPage);
-  }, [products, currentPage, itemsPerPage]);
+  }, [products, safeCurrentPage, itemsPerPage]);
 
   const handleFormChange = (updates: any) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -1224,19 +1253,25 @@ const BatchRequestDetailPage: React.FC = () => {
                           {item.businessName || 'Chưa chọn'}
                         </td>
                         <td className="batch-table-td" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '150px' }}>
-                          {String(item.notes) === '0' ? (
-                            <StatusBadge2 status="NEEDS_REVISION" className="batch-status-badge" />
-                          ) : String(item.notes) === '1' ? (
-                            <StatusBadge2 status="REJECTED" className="batch-status-badge" />
-                          ) : String(item.notes) === '2' ? (
-                            <StatusBadge2 status="APPROVED" className="batch-status-badge" />
-                          ) : String(item.notes) === 'REVIEWED' ? (
-                            <StatusBadge2 status="REVIEWED" className="batch-status-badge" />
-                          ) : item.status ? (
-                            <StatusBadge2 status={String(item.status).toUpperCase()} className="batch-status-badge" />
-                          ) : (
-                            item.notes || '—'
-                          )}
+                          {(() => {
+                            const noteStr = item.notes !== null && item.notes !== undefined ? String(item.notes).trim() : '';
+                            if (!noteStr || noteStr === '---' || noteStr.toUpperCase() === 'PENDING_APPROVAL' || noteStr.toUpperCase() === 'PENDING' || noteStr.toLowerCase() === 'chờ duyệt') {
+                              return '---';
+                            }
+                            if (noteStr === '0') {
+                              return <StatusBadge2 status="NEEDS_REVISION" className="batch-status-badge" />;
+                            }
+                            if (noteStr === '1') {
+                              return <StatusBadge2 status="REJECTED" className="batch-status-badge" />;
+                            }
+                            if (noteStr === '2') {
+                              return <StatusBadge2 status="APPROVED" className="batch-status-badge" />;
+                            }
+                            if (noteStr === '3' || noteStr.toUpperCase() === 'REVIEWED') {
+                              return <StatusBadge2 status="REVIEWED" className="batch-status-badge" />;
+                            }
+                            return noteStr;
+                          })()}
                         </td>
                         <td 
                           className="batch-table-td" 
@@ -1271,25 +1306,15 @@ const BatchRequestDetailPage: React.FC = () => {
           </div>
 
           {!loading && products.length > 0 && (
-            <div className="batch-pagination">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6B7280' }}>
-                <span>Hiển thị</span>
-                
+            <div className="table-pagination-footer">
+              <div className="pagination-info">
+                <span>Hiển thị </span>
                 <select 
+                  className="pagination-size-select"
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
                     setCurrentPage(1);
-                  }}
-                  style={{ 
-                    padding: '4px 8px', 
-                    fontSize: '13px', 
-                    borderRadius: '4px', 
-                    border: '1px solid #D1D5DB', 
-                    outline: 'none', 
-                    cursor: 'pointer', 
-                    color: '#374151', 
-                    backgroundColor: '#fff' 
                   }}
                 >
                   <option value={5}>5</option>
@@ -1297,23 +1322,40 @@ const BatchRequestDetailPage: React.FC = () => {
                   <option value={20}>20</option>
                   <option value={50}>50</option>
                 </select>
-
-                <span>
-                  bản ghi/trang (Hiển thị {products.length === 0 ? 0 : ((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, products.length)} trên {products.length} bản ghi)
-                </span>
+                <span> bản ghi/trang (Hiển thị {products.length === 0 ? 0 : ((safeCurrentPage - 1) * itemsPerPage) + 1} - {Math.min(safeCurrentPage * itemsPerPage, products.length)} trên {products.length} bản ghi)</span>
               </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}
-                  style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #D1D5DB', backgroundColor: currentPage === 1 ? '#F3F4F6' : '#fff', color: currentPage === 1 ? '#9CA3AF' : '#374151', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '13px' }}
-                >Trước</button>
-                <span style={{ display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: '13px', color: '#374151', fontWeight: 500 }}>
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
-                  style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #D1D5DB', backgroundColor: currentPage === totalPages ? '#F3F4F6' : '#fff', color: currentPage === totalPages ? '#9CA3AF' : '#374151', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '13px' }}
-                >Sau</button>
+
+              <div className="pagination-controls">
+                <button 
+                  className="pagination-btn"
+                  disabled={safeCurrentPage === 1}
+                  onClick={() => setCurrentPage(Math.max(1, safeCurrentPage - 1))}
+                >
+                  &lsaquo;
+                </button>
+                
+                {getPageNumbers().map((p, idx) => {
+                  if (p === '...') {
+                    return <span key={`dots-${idx}`} className="pagination-dots">...</span>;
+                  }
+                  return (
+                    <button
+                      key={`page-${p}`}
+                      className={`pagination-btn ${safeCurrentPage === p ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(p as number)}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
+                <button 
+                  className="pagination-btn"
+                  disabled={safeCurrentPage === totalPages}
+                  onClick={() => setCurrentPage(Math.min(totalPages, safeCurrentPage + 1))}
+                >
+                  &rsaquo;
+                </button>
               </div>
             </div>
           )}
