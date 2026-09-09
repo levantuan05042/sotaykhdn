@@ -165,9 +165,9 @@
 /* Left Form Styles */
 .detail-left-panel {
   flex: 7;
-  background-color: transparent;
+  background-color: #F2EFF3;
   border: none;
-  padding: 0;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   height: 100%;

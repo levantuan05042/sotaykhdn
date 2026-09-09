@@ -22,8 +22,8 @@ export const ProductImageCard: React.FC<ProductImageCardProps> = ({
       className={`product-image-card-container ${className}`}
       style={{
         backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
-        border: '1px solid #F3F4F6',
+        borderRadius: '12px',
+        border: '1px solid #D1D5DB',
         boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
         padding: '20px 24px',
         boxSizing: 'border-box',

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, ClearFilterButton, type FilterOption } from '../components/ui/FilterDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -153,6 +153,21 @@ const ApproverRequestListPage: React.FC = () => {
     }
   };
 
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+    selectedStatuses.length > 0 ||
+    startDate ||
+    endDate
+  );
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedStatuses([]);
+    setStartDate('');
+    setEndDate('');
+    setSelectedKeys([]);
+  };
+
   const columns: Column<RequestItem>[] = [
     {
       key: 'stt',
@@ -236,9 +251,14 @@ const ApproverRequestListPage: React.FC = () => {
                 setEndDate(end);
               }}
             />
+
+            <ClearFilterButton
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+            />
           </div>
 
-          {selectedStatuses.length > 0 && (
+          {(selectedStatuses.length > 0 || startDate || endDate) && (
             <div className="selected-filters-row">
               {selectedStatuses.map((val) => {
                 const opt = STATUS_FILTER_OPTIONS.find((o) => o.value === val);
@@ -250,6 +270,22 @@ const ApproverRequestListPage: React.FC = () => {
                   />
                 );
               })}
+              {(startDate || endDate) && (
+                <FilterTag
+                  label={`${startDate || '...'} - ${endDate || '...'}`}
+                  onRemove={() => {
+                    setStartDate('');
+                    setEndDate('');
+                  }}
+                />
+              )}
+              <button
+                type="button"
+                className="btn-clear-tags-text"
+                onClick={handleClearFilters}
+              >
+                Xóa bộ lọc
+              </button>
             </div>
           )}
         </div>

@@ -148,3 +148,64 @@
 .btn-remove-tag:hover {
   color: #AE1C3F;
 }
+
+/* --- CLEAR FILTER BUTTON ON FILTERBAR --- */
+.btn-clear-filter {
+  display: none !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid #D1D5DB;
+  border-radius: 8px;
+  padding: 0 14px;
+  height: 36px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.btn-clear-filter:hover:not(:disabled) {
+  background-color: #FEE2E2;
+  border-color: #FCA5A5;
+  color: #AE1C3F;
+}
+
+.btn-clear-filter:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #FAFAFA;
+  border-color: #E5E7EB;
+  color: #9CA3AF;
+}
+
+.btn-clear-filter-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+
+.btn-clear-tags-text {
+  background: none;
+  border: none;
+  color: #84828E;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  transition: color 0.15s ease;
+}
+
+.btn-clear-tags-text:hover {
+  color: #AE1C3F;
+  text-decoration: underline;
+}
+
