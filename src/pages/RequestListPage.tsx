@@ -547,7 +547,7 @@ const RequestListPage: React.FC = () => {
       });
 
     if (activeEntries.length === 0) {
-      return <CellWithTooltip text="—" />;
+      return <CellWithTooltip text="---" />;
     }
 
     const tooltipText = activeEntries
@@ -598,15 +598,15 @@ const RequestListPage: React.FC = () => {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px',
+                  gap: '3px',
                   backgroundColor: cfg.bg,
                   color: cfg.color,
                   border: `1px solid ${cfg.border}`,
                   borderRadius: '9999px',
-                  padding: '2px 8px',
-                  fontSize: '12px',
+                  padding: '1px 6px',
+                  fontSize: '11px',
                   fontWeight: 500,
-                  lineHeight: '18px',
+                  lineHeight: '15px',
                   whiteSpace: 'nowrap',
                   flexShrink: 0,
                 }}

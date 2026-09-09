@@ -141,6 +141,9 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
                   {(() => {
                     const note = String(stripHtml(item.notes)).trim();
 
+                    if (!note || note === '---' || note.toLowerCase() === 'pending_approval' || note.toLowerCase() === 'pending' || note.toLowerCase() === 'chờ duyệt') {
+                      return <CellWithTooltip text="---" />;
+                    }
                     if (note === '0') return <StatusBadgeListRequest status="NEEDS_REVISION" />;
                     if (note === '1') return <StatusBadgeListRequest status="REJECTED" />;
                     if (note === '2') return <StatusBadgeListRequest status="APPROVED" />;

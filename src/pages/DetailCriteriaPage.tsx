@@ -111,7 +111,10 @@ const DetailCriteriaPage: React.FC = () => {
   );
 
   const isCascadeLocked = isCriteriaFullyLocked(criteriaData);
-  const isOwnerLocked = !isLoggedIn || !isOwner;
+  const isStatusActive = criteriaData?.status === 'ACTIVE';
+  // Khi trạng thái đã duyệt (ACTIVE) thì không còn phân biệt người tạo với người xem nữa để ai cũng có thể tạo phiên bản mới
+  const canEdit = isLoggedIn && (isOwner || isStatusActive);
+  const isOwnerLocked = !canEdit;
   const isReadOnly = isOwnerLocked || isCascadeLocked;
 
   useEffect(() => {
@@ -624,7 +627,6 @@ const DetailCriteriaPage: React.FC = () => {
   }, [filteredOptions, isReadOnly, formData.groupIds]);
 
   const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
-  const isStatusActive = criteriaData?.status === 'ACTIVE';
   const canChangeActiveStatus = !isOwnerLocked && isStatusActive;
   const shownActive = isCascadeLocked ? false : isActive;
 
@@ -1026,8 +1028,15 @@ const DetailCriteriaPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp tiêu chí không?' : 'Bạn có chắc chắn muốn gửi phê duyệt tiêu chí không?'}
+        desc={
+          (String(criteriaData?.status || '').toUpperCase() === 'ACTIVE' || String(criteriaData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
+            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${criteriaData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(criteriaData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
+            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
+            ? 'Bạn có chắc chắn muốn lưu bản nháp tiêu chí không?'
+            : 'Bạn có chắc chắn muốn gửi phê duyệt tiêu chí không?'
+        }
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        cancelText="Hủy"
       />
 
       <DuplicateVersionModal

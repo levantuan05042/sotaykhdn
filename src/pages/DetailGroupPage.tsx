@@ -101,9 +101,12 @@ const DetailGroupPage: React.FC = () => {
     baseCurrentUsername === baseCreatorUsername
   );
 
-  const isInputDisabled = !isOwner || productData?.status === 'PENDING_APPROVAL' || productData?.status === 'ARCHIVED';
   const isStatusActive = productData?.status === 'ACTIVE';
-  const isStatusDisabled = !isOwner || !isStatusActive;
+  // Khi trạng thái đã duyệt (ACTIVE) thì không còn phân biệt người tạo với người xem nữa để ai cũng có thể tạo phiên bản mới
+  const canEdit = isLoggedIn && (isOwner || isStatusActive);
+
+  const isInputDisabled = !canEdit || productData?.status === 'PENDING_APPROVAL' || productData?.status === 'ARCHIVED';
+  const isStatusDisabled = !canEdit || !isStatusActive;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -148,7 +151,7 @@ const DetailGroupPage: React.FC = () => {
     );
   }, [formData, isActive, productData]);
 
-  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(isOwner && isModified));
+  const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(canEdit && isModified));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
   useEffect(() => {
@@ -443,7 +446,7 @@ const DetailGroupPage: React.FC = () => {
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
-        {!isOwner && (
+        {!canEdit && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -479,7 +482,7 @@ const DetailGroupPage: React.FC = () => {
           </div>
 
           <div className="headerRight" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {!isOwner ? null : (
+            {!canEdit ? null : (
               <>
                 {productData.status === 'DRAFT' && (
                   <>
@@ -720,8 +723,15 @@ const DetailGroupPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp nhóm sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt nhóm sản phẩm không?'}
+        desc={
+          (String(productData?.status || '').toUpperCase() === 'ACTIVE' || String(productData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
+            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${productData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(productData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
+            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
+            ? 'Bạn có chắc chắn muốn lưu bản nháp nhóm sản phẩm không?'
+            : 'Bạn có chắc chắn muốn gửi phê duyệt nhóm sản phẩm không?'
+        }
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        cancelText="Hủy"
       />
 
       <DuplicateVersionModal

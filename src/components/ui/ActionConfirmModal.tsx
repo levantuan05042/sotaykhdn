@@ -118,7 +118,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
           borderRadius: '12px',
           boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2)',
           border: '1px solid #E5E7EB',
-          width: '380px',
+          width: '420px',
           maxWidth: '90vw',
           gap: '20px',
           pointerEvents: 'auto',
@@ -131,12 +131,36 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
             <p className="confirm-toast-title" style={{ margin: 0, color: '#1A191B', fontSize: '16px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
               {title}
             </p>
-            <p className="confirm-toast-desc" style={{ margin: 0, color: '#6B7280', fontSize: '14px', lineHeight: 1.5, fontFamily: 'Inter, sans-serif' }}>
+            <p className="confirm-toast-desc" style={{ margin: 0, color: '#6B7280', fontSize: '14px', lineHeight: 1.5, fontFamily: 'Inter, sans-serif', whiteSpace: 'pre-line' }}>
               {desc}
             </p>
           </div>
         </div>
         <div className="confirm-toast-actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+          <button 
+            className="confirm-btn-cancel" 
+            onClick={onClose}
+            disabled={loading}
+            style={{
+              padding: '8px 18px',
+              borderRadius: '8px',
+              background: '#FFFFFF',
+              border: '1px solid #D1D5DB',
+              color: '#374151',
+              fontSize: '14px',
+              fontWeight: 600,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F3F4F6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#FFFFFF';
+            }}
+          >
+            {cancelText}
+          </button>
           <button 
             className="confirm-btn-delete"
             onClick={onConfirm}
@@ -161,30 +185,6 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
             }}
           >
             {loading ? 'Đang xử lý...' : displayConfirmText}
-          </button>
-          <button 
-            className="confirm-btn-cancel" 
-            onClick={onClose}
-            disabled={loading}
-            style={{
-              padding: '8px 18px',
-              borderRadius: '8px',
-              background: '#FFFFFF',
-              border: '1px solid #D1D5DB',
-              color: '#374151',
-              fontSize: '14px',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#F3F4F6';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#FFFFFF';
-            }}
-          >
-            {cancelText}
           </button>
         </div>
       </div>
