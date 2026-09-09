@@ -83,6 +83,43 @@ interface ProductData {
   [key: string]: any;
 }
 
+const formatDetailHtml = (val?: string): string => {
+  if (!val || !val.trim()) return '';
+  if (/<[a-z][\s\S]*>/i.test(val)) {
+    return val;
+  }
+  const normalized = val.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalized.split('\n');
+  let start = 0;
+  while (start < lines.length && !lines[start].trim()) start++;
+  let end = lines.length - 1;
+  while (end >= start && !lines[end].trim()) end--;
+  if (start > end) return '';
+
+  return lines.slice(start, end + 1).map(line => {
+    if (!line.trim()) return '<p><br></p>';
+    let spaces = 0;
+    let tabs = 0;
+    let idx = 0;
+    while (idx < line.length) {
+      const c = line.charAt(idx);
+      if (c === '\t') { tabs++; idx++; }
+      else if (c === ' ' || c === '\u00A0') { spaces++; idx++; }
+      else break;
+    }
+    const indent = Math.min(8, tabs + Math.floor(spaces / 2));
+    const content = line.substring(idx).trimEnd()
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/  /g, ' &nbsp;');
+    if (indent > 0) {
+      return `<p class="ql-indent-${indent}" style="padding-left: ${indent * 2}em;">${content}</p>`;
+    }
+    return `<p>${content}</p>`;
+  }).join('');
+};
+
 const ProductDetailView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -395,7 +432,7 @@ const ProductDetailView: React.FC = () => {
               sortedDetails.map((detail, idx) => (
                 <div className="dp-row" key={detail.id || idx}>
                   <div className="dp-label">{detail.tieuChi}</div>
-                  <div className="dp-value" dangerouslySetInnerHTML={{ __html: detail.noiDung }} />
+                  <div className="dp-value" dangerouslySetInnerHTML={{ __html: formatDetailHtml(detail.noiDung) }} />
                 </div>
               ))
             ) : (

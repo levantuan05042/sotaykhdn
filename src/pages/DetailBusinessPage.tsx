@@ -102,12 +102,14 @@ const DetailBusinessPage: React.FC = () => {
   );
 
   const isCascadeLocked = isCascadeHidden(businessData);
-  const isOwnerLocked = !isLoggedIn || !isOwner;
+  const isStatusActive = businessData?.status === 'ACTIVE';
+  // Khi trạng thái đã duyệt (ACTIVE) thì không còn phân biệt người tạo với người xem nữa để ai cũng có thể tạo phiên bản mới
+  const canEdit = isLoggedIn && (isOwner || isStatusActive);
+  const isOwnerLocked = !canEdit;
   const isReadOnly = isOwnerLocked || isCascadeLocked;
   
   const isPending = businessData?.status === 'PENDING_APPROVAL';
   const isFormDisabled = isReadOnly || isPending;
-  const isStatusActive = businessData?.status === 'ACTIVE';
   const isDisplayStatusReadOnly = isOwnerLocked || !isStatusActive;
 
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
@@ -724,8 +726,15 @@ const DetailBusinessPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp mảng nghiệp vụ không?' : 'Bạn có chắc chắn muốn gửi phê duyệt mảng nghiệp vụ không?'}
+        desc={
+          (String(businessData?.status || '').toUpperCase() === 'ACTIVE' || String(businessData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
+            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${businessData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(businessData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
+            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
+            ? 'Bạn có chắc chắn muốn lưu bản nháp mảng nghiệp vụ không?'
+            : 'Bạn có chắc chắn muốn gửi phê duyệt mảng nghiệp vụ không?'
+        }
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        cancelText="Hủy"
       />
 
       <DuplicateVersionModal

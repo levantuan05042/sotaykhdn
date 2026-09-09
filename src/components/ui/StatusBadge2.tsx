@@ -11,7 +11,8 @@ export const STATUS_MAP: Record<string, { bg: string; color: string; label: stri
   PENDING: { bg: '#F7D8A7', color: '#7C2D12', label: 'Chờ duyệt' },
   NEEDS_REVISION: { bg: '#FFF8B6', color: '#433D1F', label: 'Yêu cầu chỉnh sửa' },
   REVISION: { bg: '#FFF8B6', color: '#433D1F', label: 'Yêu cầu chỉnh sửa' },
-  ARCHIVED: { bg: '#BAE6FD', color: '#0C4A6E', label: 'Lưu trữ' }
+  ARCHIVED: { bg: '#BAE6FD', color: '#0C4A6E', label: 'Lưu trữ' },
+  REVIEWED: { bg: '#CCF4E0', color: '#053E2B', label: 'Đã xem' }
 };
 
 interface StatusBadgeProps {

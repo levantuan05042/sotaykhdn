@@ -420,6 +420,9 @@ const ProductPage: React.FC = () => {
       return <span>---</span>;
     }
     const val = String(noteVal).trim();
+    if (val.toUpperCase() === 'PENDING_APPROVAL' || val.toUpperCase() === 'PENDING' || val.toLowerCase() === 'chờ duyệt') {
+      return <span>---</span>;
+    }
     if (val === '0') return <StatusBadgeListRequest status="NEEDS_REVISION" />;
     if (val === '1') return <StatusBadgeListRequest status="REJECTED" />;
     if (val === '2') return <StatusBadgeListRequest status="APPROVED" />;
@@ -470,7 +473,7 @@ const ProductPage: React.FC = () => {
             style={{ cursor: row.requestId ? 'pointer' : 'default', color: row.requestId ? '#2563EB' : 'inherit', textDecoration: row.requestId ? 'underline' : 'none' }}
           />
         )},
-        { key: 'notes', header: 'Ghi chú', render: (row) => renderNote(row.notes) },
+        { key: 'notes', header: 'Ghi chú', width: '210px', render: (row) => renderNote(row.notes) },
         { key: 'createdAt', header: 'Ngày tạo', render: (row) => <CellWithTooltip text={formatDate(row.createdAt)} /> },
         { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
         { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
