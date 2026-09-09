@@ -56,7 +56,6 @@ const ProductCriteriaPage: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState(cached?.searchTerm ?? '');
-  const [selectedCodes, setSelectedCodes] = useState<string[]>(cached?.selectedCodes ?? []);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(cached?.selectedGroups ?? []);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(cached?.selectedStatuses ?? []);
   const [selectedActives, setSelectedActives] = useState<string[]>(cached?.selectedActives ?? []);
@@ -84,7 +83,6 @@ const ProductCriteriaPage: React.FC = () => {
   useEffect(() => {
     setCachedPageState('criteria-management', {
       searchTerm,
-      selectedCodes,
       selectedGroups,
       selectedStatuses,
       selectedActives,
@@ -92,7 +90,7 @@ const ProductCriteriaPage: React.FC = () => {
       selectedApprovers,
       currentPage,
     });
-  }, [searchTerm, selectedCodes, selectedGroups, selectedStatuses, selectedActives, selectedCreators, selectedApprovers, currentPage]);
+  }, [searchTerm, selectedGroups, selectedStatuses, selectedActives, selectedCreators, selectedApprovers, currentPage]);
 
   useEffect(() => {
     const fetchGroupOptions = async () => {
@@ -203,14 +201,6 @@ const ProductCriteriaPage: React.FC = () => {
     return options.find(opt => opt.value === value)?.label || value;
   };
 
-  const codeFilterOptions = useMemo(() => {
-    const set = new Set<string>();
-    data.forEach(item => {
-      if (item.code) set.add(item.code);
-    });
-    return Array.from(set).sort().map(c => ({ label: c, value: c }));
-  }, [data]);
-
   const groupFilterOptions = useMemo(() => {
     const map = new Map<string, string>();
     groupOptions.forEach(opt => map.set(opt.value, opt.label));
@@ -246,9 +236,6 @@ const ProductCriteriaPage: React.FC = () => {
 
   const getFilteredData = () => {
     return data.filter(item => {
-      if (selectedCodes.length > 0 && !selectedCodes.includes(item.code)) {
-        return false;
-      }
       if (selectedGroups.length > 0) {
         const groups = item.productGroups || [];
         const hasGroup = groups.some((g: any) => selectedGroups.includes(g.id) || selectedGroups.includes(g.name));
@@ -484,18 +471,6 @@ const ProductCriteriaPage: React.FC = () => {
       <div className="filter-section" ref={filterSectionRef}>
         <div className="dropdown-group-container">
           <FilterScrollContainer className="dropdown-row">
-            {/* Mã tiêu chí */}
-            <TableColumnFilterDropdown
-              label="Mã tiêu chí"
-              options={codeFilterOptions}
-              selectedValues={selectedCodes}
-              onSelectValues={setSelectedCodes}
-              isOpen={openDropdown === 'code'}
-              onToggle={() => setOpenDropdown(openDropdown === 'code' ? null : 'code')}
-              hasSearch={codeFilterOptions.length > 5}
-              searchPlaceholder="Tìm mã tiêu chí..."
-            />
-
             {/* Nhóm sản phẩm */}
             <TableColumnFilterDropdown
               label="Nhóm sản phẩm"
@@ -554,13 +529,6 @@ const ProductCriteriaPage: React.FC = () => {
           </FilterScrollContainer>
 
           <div className="selected-filters-row">
-            {selectedCodes.map((val) => (
-              <FilterTag 
-                key={val}
-                label={`Mã: ${val}`} 
-                onRemove={() => setSelectedCodes((prev) => prev.filter((v) => v !== val))} 
-              />
-            ))}
             {selectedGroups.map((val) => (
               <FilterTag 
                 key={val}
@@ -596,11 +564,10 @@ const ProductCriteriaPage: React.FC = () => {
                 onRemove={() => setSelectedApprovers((prev) => prev.filter((v) => v !== val))} 
               />
             ))}
-            {(selectedCodes.length > 0 || selectedGroups.length > 0 || selectedStatuses.length > 0 || selectedActives.length > 0 || selectedCreators.length > 0 || selectedApprovers.length > 0) && (
+            {(selectedGroups.length > 0 || selectedStatuses.length > 0 || selectedActives.length > 0 || selectedCreators.length > 0 || selectedApprovers.length > 0) && (
               <button
                 type="button"
                 onClick={() => {
-                  setSelectedCodes([]);
                   setSelectedGroups([]);
                   setSelectedStatuses([]);
                   setSelectedActives([]);

@@ -40,3 +40,13 @@ body {
 
 sub { vertical-align: sub !important; font-size: 0.75em !important; line-height: 0 !important; }
 sup { vertical-align: super !important; font-size: 0.75em !important; line-height: 0 !important; }
+
+/* Đảm bảo toàn bộ Toast notifications luôn nổi lên trên cùng, kể cả khi modal đang mở */
+div[style*="z-index: 2147483647"],
+.toast-pill-container,
+[data-toaster-container],
+.react-hot-toast,
+div[data-hot-toast-container],
+div:has(> .toast-pill-container) {
+  z-index: 2147483647 !important;
+}
