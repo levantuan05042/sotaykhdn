@@ -7,6 +7,7 @@ interface CellWithTooltipProps {
   tooltip?: string | number | null;
   className?: string;
   style?: React.CSSProperties;
+  contentStyle?: React.CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
 }
 
@@ -16,6 +17,7 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
   tooltip,
   className = '',
   style,
+  contentStyle,
   onClick,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -122,6 +124,7 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
           flex: 1,
           minWidth: 0,
           textAlign: style?.justifyContent === 'center' ? 'center' : style?.justifyContent === 'flex-end' ? 'right' : undefined,
+          ...contentStyle,
         }}
       >
         {displayContent}

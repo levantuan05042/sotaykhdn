@@ -56,7 +56,7 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        zIndex: 2147483647,
+        zIndex: 100000,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -102,7 +102,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 2147483647,
+        zIndex: 100000,
         pointerEvents: 'auto',
         animation: 'actionModalFadeIn 0.2s ease-out',
       }}

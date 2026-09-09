@@ -511,7 +511,7 @@
   min-width: 300px;
   pointer-events: auto;
   position: relative;
-  z-index: 10000000;
+  z-index: 2147483647 !important;
   animation: slideInRight 0.3s ease-out;
 }
 

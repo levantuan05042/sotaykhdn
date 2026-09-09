@@ -518,6 +518,109 @@ const RequestListPage: React.FC = () => {
     }
   };
 
+  const STATUS_DETAIL_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
+    ACTIVE: { label: 'Hoàn thành', bg: '#E0F9EC', color: '#14532D', border: '#A7F3D0' },
+    COMPLETED: { label: 'Hoàn thành', bg: '#E0F9EC', color: '#14532D', border: '#A7F3D0' },
+    APPROVED: { label: 'Đã duyệt', bg: '#E0F9EC', color: '#14532D', border: '#A7F3D0' },
+    PENDING_APPROVAL: { label: 'Chờ duyệt', bg: '#FED7AA', color: '#7C2D12', border: '#FDBA74' },
+    NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', bg: '#FFF8B6', color: '#433D1F', border: '#FEF08A' },
+    REJECTED: { label: 'Từ chối', bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' },
+    DRAFT: { label: 'Lưu nháp', bg: '#BAE6FD', color: '#082F49', border: '#7DD3FC' },
+  };
+
+  const ORDERED_STATUS_KEYS = ['ACTIVE', 'APPROVED', 'COMPLETED', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'REJECTED', 'DRAFT'];
+
+  const renderStatusDetail = (row: any) => {
+    const counts: Record<string, number> = { ...(row.statusCounts || {}) };
+
+    // Fallback nếu row.statusCounts chưa có từ backend hoặc object rỗng
+    if (Object.keys(counts).length === 0 && row.status) {
+      counts[row.status] = row.isBatch ? (Number(row.totalProducts) || 1) : 1;
+    }
+
+    const activeEntries = Object.entries(counts)
+      .filter(([_, count]) => typeof count === 'number' && count > 0)
+      .sort(([a], [b]) => {
+        const idxA = ORDERED_STATUS_KEYS.indexOf(a.toUpperCase());
+        const idxB = ORDERED_STATUS_KEYS.indexOf(b.toUpperCase());
+        return (idxA !== -1 ? idxA : 99) - (idxB !== -1 ? idxB : 99);
+      });
+
+    if (activeEntries.length === 0) {
+      return <CellWithTooltip text="—" />;
+    }
+
+    const tooltipText = activeEntries
+      .map(([statusKey, count]) => {
+        const cfg = STATUS_DETAIL_CONFIG[statusKey.toUpperCase()] || { label: statusKey };
+        return `${count} ${cfg.label}`;
+      })
+      .join(', ');
+
+    return (
+      <CellWithTooltip
+        tooltip={tooltipText}
+        className="status-detail-cell"
+        contentStyle={{
+          display: 'flex',
+          alignItems: 'center',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          maxHeight: 'none',
+          WebkitLineClamp: 'unset',
+          WebkitBoxOrient: 'unset',
+        }}
+      >
+        <div 
+          className="status-detail-row"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'nowrap',
+            gap: '6px',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            width: '100%',
+          }}
+        >
+          {activeEntries.map(([statusKey, count]) => {
+            const key = statusKey.toUpperCase();
+            const cfg = STATUS_DETAIL_CONFIG[key] || {
+              label: statusKey,
+              bg: '#F3F4F6',
+              color: '#374151',
+              border: '#E5E7EB',
+            };
+
+            return (
+              <span
+                key={statusKey}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  backgroundColor: cfg.bg,
+                  color: cfg.color,
+                  border: `1px solid ${cfg.border}`,
+                  borderRadius: '9999px',
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  lineHeight: '18px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
+              >
+                <span style={{ fontWeight: 700 }}>{count}</span>
+                <span>{cfg.label}</span>
+              </span>
+            );
+          })}
+        </div>
+      </CellWithTooltip>
+    );
+  };
+
   const columns: Column<any>[] = [
     {
       key: 'stt',
@@ -551,13 +654,19 @@ const RequestListPage: React.FC = () => {
     {
       key: 'totalProducts',
       header: 'Số lượng',
-      width: '150px',
+      width: '130px',
       render: (row) => (
         <CellWithTooltip
           text={row.isBatch ? `${row.totalProducts} Sản phẩm` : 'Tạo lẻ'}
           style={{ color: '#4B5563', fontWeight: row.isBatch ? 600 : 400 }}
         />
       ),
+    },
+    {
+      key: 'statusDetail',
+      header: 'Chi tiết trạng thái',
+      width: '280px',
+      render: (row) => renderStatusDetail(row),
     },
     {
       key: 'createdByFullName',

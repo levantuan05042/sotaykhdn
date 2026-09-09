@@ -348,6 +348,26 @@
   max-height: 40px;
 }
 
+.custom-tooltip-container.status-detail-cell .truncate-text {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  max-height: none !important;
+  -webkit-line-clamp: unset !important;
+  -webkit-box-orient: unset !important;
+}
+
+.status-detail-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
 .btn-view-detail {
   transition: color 0.2s;
 }

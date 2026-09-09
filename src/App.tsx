@@ -138,7 +138,7 @@ function App() {
         toastOptions={{
           duration: 3500,
           style: {
-            zIndex: 9999999,
+            zIndex: 2147483647,
             pointerEvents: 'auto',
           }
         }}

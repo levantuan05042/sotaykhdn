@@ -33,7 +33,7 @@ export const UnsavedChangesModal: React.FC<UnsavedChangesModalProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 2147483647,
+        zIndex: 100000,
         animation: 'unsavedFadeIn 0.2s ease-out',
       }}
     >

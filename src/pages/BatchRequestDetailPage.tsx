@@ -1123,7 +1123,12 @@ const BatchRequestDetailPage: React.FC = () => {
 
   return (
     <div className="batch-detail-container">
-      <Toaster position="top-right" reverseOrder={false} />
+      <Toaster 
+        position="top-right" 
+        reverseOrder={false}
+        containerStyle={{ zIndex: 2147483647 }}
+        toastOptions={{ style: { zIndex: 2147483647 } }}
+      />
       
       <div className="batch-header">
         <div className="batch-header-left">
@@ -1490,43 +1495,47 @@ const BatchRequestDetailPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ flexShrink: 0, backgroundColor: '#FFFFFF', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
-              <div className="batch-card-box" style={{ marginBottom: '8px' }}>
-                <label className="batch-form-label">
-                  Nội dung yêu cầu chỉnh sửa (nếu có)
-                </label>
-                <textarea
-                  value={formData.feedback}
-                  readOnly
-                  className="batch-form-textarea"
-                  placeholder="Không có nội dung yêu cầu chỉnh sửa"
-                  style={{ 
-                    backgroundColor: '#F9FAFB', 
-                    cursor: 'default',          
-                    color: '#374151',
-                    height: '64px',
-                    resize: 'none'
-                  }}
-                />
+            {(Boolean(formData.feedback && formData.feedback.trim()) || canEdit) && (
+              <div style={{ flexShrink: 0, backgroundColor: '#FFFFFF', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+                {Boolean(formData.feedback && formData.feedback.trim()) && (
+                  <div className="batch-card-box" style={{ marginBottom: '8px' }}>
+                    <label className="batch-form-label">
+                      Nội dung yêu cầu chỉnh sửa (nếu có)
+                    </label>
+                    <textarea
+                      value={formData.feedback}
+                      readOnly
+                      className="batch-form-textarea"
+                      placeholder="Không có nội dung yêu cầu chỉnh sửa"
+                      style={{ 
+                        backgroundColor: '#F9FAFB', 
+                        cursor: 'default',          
+                        color: '#374151',
+                        height: '64px',
+                        resize: 'none'
+                      }}
+                    />
+                  </div>
+                )}
+                
+                {canEdit && (
+                  <div className="batch-card-box" style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', marginBottom: 0 }}>
+                    <button 
+                      onClick={handleLocalSave}
+                      disabled={!hasFormChanges || isUpdating || isQuickViewRejected}
+                      className="btn-primary-action"
+                      style={isQuickViewRejected ? { 
+                        opacity: 0.5, 
+                        cursor: 'not-allowed', 
+                        backgroundColor: '#9CA3AF' 
+                      } : undefined}
+                    >
+                      Lưu
+                    </button>
+                  </div>
+                )}
               </div>
-              
-              {canEdit && (
-                <div className="batch-card-box" style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', marginBottom: 0 }}>
-                  <button 
-                    onClick={handleLocalSave}
-                    disabled={!hasFormChanges || isUpdating || isQuickViewRejected}
-                    className="btn-primary-action"
-                    style={isQuickViewRejected ? { 
-                      opacity: 0.5, 
-                      cursor: 'not-allowed', 
-                      backgroundColor: '#9CA3AF' 
-                    } : undefined}
-                  >
-                    Lưu
-                  </button>
-                </div>
-              )}
-            </div>
+            )}
 
           </div>
         )}

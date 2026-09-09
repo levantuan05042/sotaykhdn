@@ -138,7 +138,6 @@ const DetailCriteriaPage: React.FC = () => {
   }, [isOpen]);
 
   const handleToggleDropdown = () => {
-    if (isReadOnly) return;
     setIsOpen(!isOpen);
   };
 
@@ -604,9 +603,6 @@ const DetailCriteriaPage: React.FC = () => {
     );
   };
 
-  if (loading) return <div className="loading">Đang tải dữ liệu tiêu chí...</div>;
-  if (!criteriaData) return <div className="error">Không tìm thấy dữ liệu tiêu chí sản phẩm phù hợp.</div>;
-  
   const isFormValid = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0;
   const canSubmit = !isReadOnly && isFormValid;
   const canSaveDraft = !isReadOnly;
@@ -615,10 +611,25 @@ const DetailCriteriaPage: React.FC = () => {
     opt.label.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const displayOptions = useMemo(() => {
+    if (!isReadOnly) return filteredOptions;
+    // Ở chế độ chỉ xem, ưu tiên hiển thị các nhóm được chọn lên đầu để dễ xem
+    return [...filteredOptions].sort((a, b) => {
+      const aChecked = formData.groupIds.includes(a.value);
+      const bChecked = formData.groupIds.includes(b.value);
+      if (aChecked && !bChecked) return -1;
+      if (!aChecked && bChecked) return 1;
+      return 0;
+    });
+  }, [filteredOptions, isReadOnly, formData.groupIds]);
+
   const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
   const isStatusActive = criteriaData?.status === 'ACTIVE';
   const canChangeActiveStatus = !isOwnerLocked && isStatusActive;
   const shownActive = isCascadeLocked ? false : isActive;
+
+  if (loading) return <div className="loading">Đang tải dữ liệu tiêu chí...</div>;
+  if (!criteriaData) return <div className="error">Không tìm thấy dữ liệu tiêu chí sản phẩm phù hợp.</div>;
 
   return (
     <div className="pageWrapper">
@@ -747,21 +758,19 @@ const DetailCriteriaPage: React.FC = () => {
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
                     onClick={handleToggleDropdown}
                     style={{ 
-                      opacity: isReadOnly ? 0.7 : 1, 
-                      cursor: isReadOnly ? 'not-allowed' : 'pointer'
+                      backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF',
+                      cursor: 'pointer'
                     }}
                   >
                     <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
                       {getSelectedGroupsLabel()}
                     </span>
-                    {!isReadOnly && (
-                      <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
-                        <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                    )}
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
+                      <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </div>
                   
-                  {!isReadOnly && isOpen && (
+                  {isOpen && (
                     <div 
                       ref={dropdownListRef}
                       className="custom-options-list" 
@@ -794,11 +803,21 @@ const DetailCriteriaPage: React.FC = () => {
                       </div>
 
                       <div style={{ overflowY: 'auto', flex: 1 }}>
-                        {groupOptions.length > 0 && !searchTerm && (
+                        {groupOptions.length > 0 && !searchTerm && (!isReadOnly || isAllSelected) && (
                           <div 
                             className="custom-option select-all-option"
                             onClick={handleToggleSelectAll}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB', fontWeight: '500', userSelect: 'none' }}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '10px', 
+                              cursor: isReadOnly ? 'default' : 'pointer', 
+                              padding: '10px 12px', 
+                              borderBottom: '1px solid #F3F4F6', 
+                              background: '#F9FAFB', 
+                              fontWeight: '500', 
+                              userSelect: 'none' 
+                            }}
                           >
                             <div 
                               style={{
@@ -825,19 +844,26 @@ const DetailCriteriaPage: React.FC = () => {
                         )}
 
                         <div>
-                          {filteredOptions.length === 0 ? (
+                          {displayOptions.length === 0 ? (
                             <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
                               Không tìm thấy nhóm sản phẩm phù hợp
                             </div>
                           ) : (
-                            filteredOptions.map((opt) => {
+                            displayOptions.map((opt) => {
                               const isChecked = formData.groupIds.includes(opt.value);
                               return (
                                 <div 
                                   key={opt.value} 
                                   className={`custom-option ${isChecked ? 'selected' : ''}`}
                                   onClick={() => handleToggleGroup(opt.value)}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', userSelect: 'none' }}
+                                  style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '10px', 
+                                    cursor: isReadOnly ? 'default' : 'pointer', 
+                                    padding: '10px 12px', 
+                                    userSelect: 'none' 
+                                  }}
                                 >
                                   <div 
                                     style={{
@@ -845,7 +871,7 @@ const DetailCriteriaPage: React.FC = () => {
                                       height: '18px',
                                       borderRadius: '4px',
                                       border: isChecked ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
-                                      backgroundColor: isChecked ? '#AE1C3F' : '#FFFFFF',
+                                      backgroundColor: isChecked ? '#AE1C3F' : (isReadOnly ? '#F9FAFB' : '#FFFFFF'),
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
