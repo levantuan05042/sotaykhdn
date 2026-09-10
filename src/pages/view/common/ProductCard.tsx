@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BASE_URL } from '../../../config/view/apiConfig';
+import { copyTextToClipboard, getViewProductShareUrl } from '../../../utils/clipboard';
 import './ProductCard.css';
 
 export interface ProductInfo {
@@ -70,13 +71,12 @@ const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () =
     return () => { isMounted = false; };
   }, [product.id]);
 
-  const handleCopyLink = (e: React.MouseEvent) => {
+  const handleCopyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    const linkToCopy = `${window.location.origin}/view/product-detail/${product.id}`;
-    navigator.clipboard.writeText(linkToCopy).then(() => {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    }).catch(err => console.error("Lỗi copy link:", err));
+    const copied = await copyTextToClipboard(getViewProductShareUrl(product.id));
+    if (!copied) return;
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleToggleSave = async (e: React.MouseEvent) => {

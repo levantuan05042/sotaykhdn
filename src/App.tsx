@@ -140,6 +140,7 @@ function App() {
           style: {
             zIndex: 2147483647,
             pointerEvents: 'auto',
+            fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
           }
         }}
       />

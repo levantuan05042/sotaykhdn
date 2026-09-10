@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
+import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
 import './Search.css';
 
 interface SearchProductItem {
@@ -92,7 +93,8 @@ export const SearchResultsPage = () => {
         </div>
       ) : (
         <div className="search-empty-state">
-          Không tìm thấy sản phẩm nào chứa từ khóa "{query}".
+          <img src={EmptyIcon} alt="Không tìm thấy sản phẩm" className="empty-state-icon" />
+          <span className="empty-state-text">Không tìm thấy sản phẩm nào chứa từ khóa "{query}".</span>
         </div>
       )}
     </div>

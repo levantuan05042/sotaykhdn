@@ -18,6 +18,7 @@ import iconNganQuy from '../../assets/icons/sp-ngan-quy.svg';
 import iconBaoHiem from '../../assets/icons/sp-bao-hiem.svg';
 import iconChuongTrinhUuDai from '../../assets/icons/uu-dai-khdn.svg';
 import iconTimKiem from '../../assets/icon/timkiem.svg';
+import iconTaoMoi from '../../assets/icon/tao_moi.svg';
 
 const removeAccents = (str: string) => {
   return str
@@ -573,27 +574,6 @@ const HomePage: React.FC = () => {
           </div>
         )}
 
-        {newlyCreatedProducts.length > 0 && (
-          <div className="mb-12">
-            <div className="flex items-center space-x-3 mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" />
-              </svg>
-              <h2 className="text-2xl font-bold text-gray-800">Sản phẩm mới tạo</h2>
-            </div>
-            
-            <div className="products-grid">
-              {newlyCreatedProducts.map((product) => (
-                <ProductCard 
-                  key={product.id} 
-                  product={product} 
-                  onClick={() => navigate(`/view/product-detail/${product.id}`)} 
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
         {recentProducts.length > 0 && (
           <div className="mb-12">
             <div className="flex items-center space-x-3 mb-6">
@@ -608,6 +588,25 @@ const HomePage: React.FC = () => {
             
             <div className="products-grid">
               {recentProducts.map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  product={product} 
+                  onClick={() => navigate(`/view/product-detail/${product.id}`)} 
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {newlyCreatedProducts.length > 0 && (
+          <div className="mb-12">
+            <div className="flex items-center space-x-3 mb-6">
+              <img src={iconTaoMoi} alt="" width={24} height={24} />
+              <h2 className="text-2xl font-bold text-gray-800">Sản phẩm mới tạo</h2>
+            </div>
+            
+            <div className="products-grid">
+              {newlyCreatedProducts.map((product) => (
                 <ProductCard 
                   key={product.id} 
                   product={product} 

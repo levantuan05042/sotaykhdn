@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
 import { addRecentlyViewed } from '../../utils/userHistoryStorage';
+import { copyTextToClipboard } from '../../utils/clipboard';
 import './ProductDetailView.css';
 
 const getImageUrl = (path?: string | null) => {
@@ -264,7 +265,8 @@ const ProductDetailView: React.FC = () => {
   };
 
   const handleShare = async () => {
-    try { await navigator.clipboard.writeText(window.location.href); } catch (err) {}
+    const copied = await copyTextToClipboard(window.location.href);
+    if (!copied) return;
     setShareCopied(true);
     if (shareTimeoutRef.current) window.clearTimeout(shareTimeoutRef.current);
     shareTimeoutRef.current = window.setTimeout(() => setShareCopied(false), 1500);
@@ -326,7 +328,7 @@ const ProductDetailView: React.FC = () => {
                         <span className="dp-breadcrumb-text">{item.name}</span>
                       </button>
                     )}
-                    {!isLast && <span className="dp-breadcrumb-sep">/</span>}
+                    {!isLast && <span className="dp-breadcrumb-sep">&gt;</span>}
                   </React.Fragment>
                 );
               })}
@@ -341,7 +343,7 @@ const ProductDetailView: React.FC = () => {
               </button>
 
               <div className="dp-share-wrapper">
-                <button className="dp-icon-btn" onClick={handleShare} title="Chia sẻ">
+                <button className="dp-action-btn" onClick={handleShare} title="Chia sẻ">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="18" cy="5" r="3"></circle>
                     <circle cx="6" cy="12" r="3"></circle>
@@ -349,6 +351,7 @@ const ProductDetailView: React.FC = () => {
                     <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
                     <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                   </svg>
+                  <span className="dp-action-label">Chia sẻ</span>
                 </button>
                 {shareCopied && <div className="dp-copied-tip">Đã sao chép liên kết</div>}
               </div>
@@ -357,7 +360,7 @@ const ProductDetailView: React.FC = () => {
                 ref={toggleBtnRef}
                 className={`dp-icon-btn ${isMoreDrawerOpen ? 'active' : ''}`} 
                 onClick={() => setIsMoreDrawerOpen(!isMoreDrawerOpen)}
-                title="Thông tin hệ thống"
+                title="Thông tin sản phẩm"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -413,7 +416,7 @@ const ProductDetailView: React.FC = () => {
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                   </svg>
-                  {formatDateOnly(product.createdAt)}
+                  Ngày tạo {formatDateOnly(product.createdAt)}
                 </div>
                 <div className="dp-meta-item">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -441,30 +444,42 @@ const ProductDetailView: React.FC = () => {
           </div>
         </div>
 
-        {/* Sidebar Thông tin hệ thống */}
+        {/* Sidebar Thông tin sản phẩm */}
         <div className="dp-sidebar-wrapper" ref={sidebarRef}>
           <div className="dp-sidebar-inner">
-            <h3 className="dp-sidebar-title">Thông tin hệ thống</h3>
+            <h3 className="dp-sidebar-title">Thông tin sản phẩm</h3>
             <div className="dp-sidebar-content">
               <div className="dp-info-row">
-                <div className="dp-info-label">Phiên bản</div>
-                <div className="dp-info-value">V{product.version || 1}</div>
+                <div className="dp-info-label">Tên sản phẩm</div>
+                <div className="dp-info-value">{product.name || '---'}</div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Nhóm sản phẩm</div>
+                <div className="dp-info-value">{product.productGroupName || product.groupName || '---'}</div>
               </div>
               <div className="dp-info-row">
                 <div className="dp-info-label">Người tạo</div>
-                <div className="dp-info-value">{product.createdBy || 'Hệ thống'}</div>
+                <div className="dp-info-value">{product.createdByFullName || product.createdBy || '---'}</div>
               </div>
               <div className="dp-info-row">
-                <div className="dp-info-label">Thời gian tạo</div>
+                <div className="dp-info-label">Người Phê duyệt</div>
+                <div className="dp-info-value">{product.approvedByFullName || product.approvedBy || '---'}</div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Phiên bản</div>
+                <div className="dp-info-value">
+                  {product.version !== undefined && product.version !== null && String(product.version).trim() !== '' && String(product.version).toLowerCase() !== 'null'
+                    ? `Phiên bản ${product.version}`
+                    : '---'}
+                </div>
+              </div>
+              <div className="dp-info-row">
+                <div className="dp-info-label">Ngày tạo</div>
                 <div className="dp-info-value">{formatDateTime(product.createdAt)}</div>
               </div>
               <div className="dp-info-row">
-                <div className="dp-info-label">Người phê duyệt</div>
-                <div className="dp-info-value">{product.approvedBy || '---'}</div>
-              </div>
-              <div className="dp-info-row">
-                <div className="dp-info-label">Thời gian phê duyệt</div>
-                <div className="dp-info-value">{formatDateTime(product.updatedAt)}</div>
+                <div className="dp-info-label">Lần cập nhật cuối cùng</div>
+                <div className="dp-info-value">{formatDateTime(product.updatedAt || product.createdAt)}</div>
               </div>
             </div>
           </div>

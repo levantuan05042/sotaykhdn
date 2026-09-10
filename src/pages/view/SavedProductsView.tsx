@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../../config/view/apiConfig';
+import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
+import { copyTextToClipboard, getViewProductShareUrl } from '../../utils/clipboard';
 // Tái sử dụng lại CSS chung của layout
 import './GroupView.css';
 
@@ -38,12 +40,12 @@ const ProductCard = ({ product, onClick, onUnsave }: { product: ProductInfo; onC
   const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(true); // Ở trang này mặc định sản phẩm đã được lưu
 
-  const handleCopyLink = (e: React.MouseEvent) => {
+  const handleCopyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(`${window.location.origin}/view/product-detail/${product.id}`).then(() => {
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    });
+    const copied = await copyTextToClipboard(getViewProductShareUrl(product.id));
+    if (!copied) return;
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleToggleSave = async (e: React.MouseEvent) => {
@@ -156,7 +158,7 @@ const SavedProductsView: React.FC = () => {
       {/* Tiêu đề trang & Bộ đếm số lượng sản phẩm góc phải */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <h2 className="group-page-title" style={{ margin: 0 }}>Sản phẩm đã lưu</h2>
-        <span style={{ color: '#6B7280', fontSize: '36px', fontWeight: 500 }}>
+        <span style={{ color: '#6B7280', fontSize: '14px', fontWeight: 500 }}>
           {products.length} sản phẩm
         </span>
       </div>
@@ -176,7 +178,10 @@ const SavedProductsView: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="state-message">Bạn chưa lưu sản phẩm nào.</div>
+        <div className="empty-data-message">
+          <img src={EmptyIcon} alt="Chưa có sản phẩm nào đã lưu" className="empty-state-icon" />
+          <span className="empty-state-text">Chưa có sản phẩm nào đã lưu</span>
+        </div>
       )}
     </div>
   );

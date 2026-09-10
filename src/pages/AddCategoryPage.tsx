@@ -97,6 +97,7 @@ const AddCategoryPage: React.FC = () => {
   };
 
   const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
+    if (isSubmitting) return;
     try {
       setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {

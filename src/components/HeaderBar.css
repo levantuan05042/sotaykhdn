@@ -19,6 +19,14 @@
   font-style: normal;
 }
 
+.header-brand-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+
 /* Notification Container & Button */
 .notification-wrapper {
   position: relative;
