@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { filterApprovedVersions } from '../../utils/formatUtils';
 
 export interface VersionItem {
   id: string;
@@ -49,22 +50,9 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
     };
   }, [isVersionDropdownOpen]);
 
-  const getStatusBadgeStyle = (status?: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return { bg: '#E0F9EC', text: '#14532D', label: 'Đang áp dụng' };
-      case 'DRAFT':
-        return { bg: '#F3F4F6', text: '#4B5563', label: 'Bản nháp' };
-      case 'PENDING_APPROVAL':
-        return { bg: '#FEF3C7', text: '#92400E', label: 'Chờ duyệt' };
-      case 'REJECTED':
-        return { bg: '#FEE2E2', text: '#991B1B', label: 'Từ chối' };
-      case 'ARCHIVED':
-        return { bg: '#EFF6FF', text: '#1E40AF', label: 'Lưu trữ' };
-      default:
-        return { bg: '#F3F4F6', text: '#4B5563', label: status || '---' };
-    }
-  };
+  const approvedVersions = useMemo(() => filterApprovedVersions(versions), [versions]);
+
+  const getStatusBadgeStyle = () => ({ bg: '#E0F9EC', text: '#14532D', label: 'Đã duyệt' });
 
   const formatShortDate = (dateStr?: string) => {
     if (!dateStr) return '';
@@ -80,7 +68,7 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
     }
   };
 
-  const hasMultipleVersions = versions && versions.length > 0;
+  const hasMultipleVersions = approvedVersions.length > 0;
 
   return (
     <div className="infoCard">
@@ -173,7 +161,7 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                     }}
                   >
                     <span style={{ fontSize: '12px', fontWeight: 600, color: '#374151' }}>
-                      Lịch sử phiên bản ({versions.length})
+                      Lịch sử phiên bản ({approvedVersions.length})
                     </span>
                     <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
                       Chọn để xem
@@ -181,12 +169,12 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                   </div>
 
                   <div style={{ maxHeight: '260px', overflowY: 'auto' }}>
-                    {versions.map((v) => {
+                    {approvedVersions.map((v) => {
                       const isCurrent = currentId ? v.id === currentId : String(v.version) === String(version);
-                      const badge = getStatusBadgeStyle(v.status);
+                      const badge = getStatusBadgeStyle();
                       const versionDisplay = (v.version !== null && v.version !== undefined && String(v.version).trim() !== '' && String(v.version).trim().toLowerCase() !== 'null')
                         ? `Phiên bản ${v.version}` 
-                        : (v.status === 'DRAFT' ? 'Bản nháp' : '---');
+                        : '---';
 
                       return (
                         <div

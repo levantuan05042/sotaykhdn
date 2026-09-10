@@ -10,7 +10,7 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 import { getRandomAvatar } from '../utils/avatarUtils';
-import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils'; 
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc } from '../utils/formatUtils'; 
 import {
   displaySuccessMessage,
   notifyIfCannotShowChild,
@@ -524,7 +524,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   const isDark = isRejected || readOnly;
 
   return (
-    <div style={{ backgroundColor: isDark ? '#E5E7EB' : '#fff', borderRadius: 8, border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease', opacity: isDark ? 0.8 : 1, position: 'relative' }}>
+    <div style={{ backgroundColor: isDark ? '#F9FAFB' : '#fff', borderRadius: 8, border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease', position: 'relative' }}>
       {!readOnly && (
         <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB', borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
           <span className="ql-formats">
@@ -557,7 +557,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
           </span>
         </div>
       )}
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: isDark ? '#E5E7EB' : '#FFF', color: isDark ? '#4B5563' : '#1F2937', cursor: isDark ? 'not-allowed' : 'text', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
+      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: isDark ? '#F9FAFB' : '#FFF', color: isDark ? '#374151' : '#1F2937', cursor: isDark ? 'not-allowed' : 'text', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
     </div>
   );
 };
@@ -1448,19 +1448,14 @@ const DetailProductPage: React.FC = () => {
                 </label>
                 <div className="custom-select-container" ref={groupRef}>
                   <div 
-                    className={`select-custom ${isGroupOpen ? 'open' : ''}`} 
+                    className={`select-custom ${isGroupOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                     onClick={() => {
                       if (!isReadOnly) {
                         setIsGroupOpen(v => !v);
                         if (!isGroupOpen) setGroupSearch('');
                       }
                     }}
-                    style={{ 
-                      opacity: isReadOnly ? 0.75 : 1, 
-                      cursor: isReadOnly ? 'not-allowed' : 'pointer', 
-                      backgroundColor: isReadOnly ? '#E5E7EB' : '#FFF',
-                      color: isReadOnly ? '#4B5563' : '#111827'
-                    }}
+                    style={isReadOnly ? { cursor: 'not-allowed' } : undefined}
                   >
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || 'Chọn nhóm'}</span>
                   </div>
@@ -1498,19 +1493,14 @@ const DetailProductPage: React.FC = () => {
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
-                      className={`select-custom ${isCategoryOpen ? 'open' : ''}`} 
+                      className={`select-custom ${isCategoryOpen ? 'open' : ''} ${(isReadOnly || !formData.productGroupId) ? 'is-disabled' : ''}`} 
                       onClick={() => {
                         if (!isReadOnly && formData.productGroupId) {
                           setIsCategoryOpen(v => !v);
                           if (!isCategoryOpen) setCategorySearch('');
                         }
                       }}
-                      style={{ 
-                        opacity: (isReadOnly || !formData.productGroupId) ? 0.75 : 1, 
-                        cursor: (isReadOnly || !formData.productGroupId) ? 'not-allowed' : 'pointer', 
-                        backgroundColor: (isReadOnly || !formData.productGroupId) ? '#E5E7EB' : '#FFF',
-                        color: (isReadOnly || !formData.productGroupId) ? '#4B5563' : '#111827'
-                      }}
+                      style={(isReadOnly || !formData.productGroupId) ? { cursor: 'not-allowed' } : undefined}
                     >
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục')}</span>
                     </div>
@@ -1546,19 +1536,14 @@ const DetailProductPage: React.FC = () => {
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
-                      className={`select-custom ${isOperationOpen ? 'open' : ''}`} 
+                      className={`select-custom ${isOperationOpen ? 'open' : ''} ${(isReadOnly || !formData.productCategoryId) ? 'is-disabled' : ''}`} 
                       onClick={() => {
                         if (!isReadOnly && formData.productCategoryId) {
                           setIsOperationOpen(v => !v);
                           if (!isOperationOpen) setOperationSearch('');
                         }
                       }}
-                      style={{ 
-                        opacity: (isReadOnly || !formData.productCategoryId) ? 0.75 : 1, 
-                        cursor: (isReadOnly || !formData.productCategoryId) ? 'not-allowed' : 'pointer', 
-                        backgroundColor: (isReadOnly || !formData.productCategoryId) ? '#E5E7EB' : '#FFF',
-                        color: (isReadOnly || !formData.productCategoryId) ? '#4B5563' : '#111827'
-                      }}
+                      style={(isReadOnly || !formData.productCategoryId) ? { cursor: 'not-allowed' } : undefined}
                     >
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn nghiệp vụ')}</span>
                     </div>
@@ -1928,15 +1913,15 @@ const DetailProductPage: React.FC = () => {
 
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px', position: 'static' }}>
               
-              <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box', opacity: isProductActive ? 1 : 0.5, transition: 'opacity 0.2s ease' }}>
+              <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hoạt động</span>
                 </div>
                 <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                   <div 
-                    className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                    className={`select-custom ${isStatusOpen ? 'open' : ''} ${isStatusDisabled ? 'is-disabled' : ''}`} 
                     onClick={() => !isStatusDisabled && setIsStatusOpen(v => !v)}
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isStatusDisabled ? '#E5E7EB' : '#FFF', cursor: isStatusDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box', opacity: isStatusDisabled ? 0.7 : 1 }}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', cursor: isStatusDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                   >
                     <span style={{ color: isStatusDisabled ? '#6B7280' : '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                     {!isStatusDisabled && (
@@ -2046,8 +2031,9 @@ const DetailProductPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Bạn có chắc chắn muốn lưu bản nháp sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt sản phẩm không?'}
+        desc={getActionConfirmDesc(productData, id, confirmAction, 'sản phẩm', isProductActive)}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        cancelText="Hủy"
       />
 
       <DuplicateVersionModal
