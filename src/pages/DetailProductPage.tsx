@@ -10,7 +10,7 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils'; 
 import { getRandomAvatar } from '../utils/avatarUtils';
-import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc } from '../utils/formatUtils'; 
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc, isSameActor } from '../utils/formatUtils'; 
 import {
   displaySuccessMessage,
   notifyIfCannotShowChild,
@@ -709,7 +709,7 @@ const DetailProductPage: React.FC = () => {
   const findPriorConflictVersion = () => {
     if (!productData?.versions || productData.versions.length <= 1) return null;
     return productData.versions.find(
-      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL')
+      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL' || v.status === 'NEEDS_REVISION')
     ) || null;
   };
 
@@ -2063,6 +2063,7 @@ const DetailProductPage: React.FC = () => {
         isOpen={showDuplicateModal}
         itemName={productData.name}
         priorVersion={priorConflict}
+        canReplace={isSameActor(currentUsername, priorConflict?.createdBy)}
         isProcessing={isDeletingPrior}
         onCancel={() => {
           setShowDuplicateModal(false);
@@ -2077,7 +2078,7 @@ const DetailProductPage: React.FC = () => {
           }
         }}
         onConfirm={async () => {
-          if (!priorConflict) return;
+          if (!priorConflict || !isSameActor(currentUsername, priorConflict.createdBy)) return;
           try {
             setIsDeletingPrior(true);
             const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -2095,7 +2096,7 @@ const DetailProductPage: React.FC = () => {
                 handleUpdateProduct(target as any);
               }
             } else {
-              const err = await delRes.json();
+              const err = await delRes.json().catch(() => ({}));
               toast.error(err.message || 'Không thể xóa phiên bản cũ', { position: 'top-center' });
             }
           } catch (e) {

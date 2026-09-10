@@ -14,7 +14,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
-import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc } from '../utils/formatUtils';
+import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
   notifyIfCannotShowChild,
@@ -339,7 +339,7 @@ const DetailCriteriaPage: React.FC = () => {
   const findPriorConflictVersion = () => {
     if (!criteriaData?.versions || criteriaData.versions.length <= 1) return null;
     return criteriaData.versions.find(
-      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL')
+      (v: any) => v.id !== id && (v.status === 'DRAFT' || v.status === 'PENDING_APPROVAL' || v.status === 'NEEDS_REVISION')
     ) || null;
   };
 
@@ -1046,6 +1046,7 @@ const DetailCriteriaPage: React.FC = () => {
         isOpen={showDuplicateModal}
         itemName={criteriaData?.name || 'tiêu chí này'}
         priorVersion={priorConflict}
+        canReplace={isSameActor(currentUsername, priorConflict?.createdBy)}
         isProcessing={isDeletingPrior}
         onCancel={() => {
           setShowDuplicateModal(false);
@@ -1060,7 +1061,7 @@ const DetailCriteriaPage: React.FC = () => {
           }
         }}
         onConfirm={async () => {
-          if (!priorConflict) return;
+          if (!priorConflict || !isSameActor(currentUsername, priorConflict.createdBy)) return;
           try {
             setIsDeletingPrior(true);
             const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
@@ -1078,7 +1079,7 @@ const DetailCriteriaPage: React.FC = () => {
                 handleUpdateCriteria(target as any);
               }
             } else {
-              const err = await delRes.json();
+              const err = await delRes.json().catch(() => ({}));
               toast.error(err.message || 'Không thể xóa phiên bản cũ', { position: 'top-center' });
             }
           } catch (e) {
