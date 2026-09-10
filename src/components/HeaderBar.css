@@ -39,20 +39,16 @@
   height: 56px;
   justify-content: center;
   align-items: center;
-  background-color: #F2EFF3;
+  background-color: transparent;
   border-radius: 100px;
   aspect-ratio: 1 / 1;
   border: none;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
 
-.notification-btn:hover {
-  background-color: #E3DFE6;
-}
-
+.notification-btn:hover,
 .notification-btn.active {
-  background-color: #E3DFE6;
+  background-color: transparent;
 }
 
 /* Badge dot trên Icon Chuông */
