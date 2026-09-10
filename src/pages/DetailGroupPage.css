@@ -873,3 +873,16 @@
 .confirm-btn-delete:hover {
   background: #8e1734;
 }
+
+/* Disabled / read-only form controls — đồng bộ Figma */
+.select-custom.is-disabled,
+.select-custom.disabled-view,
+.select-custom.disabled,
+.input.is-disabled,
+.input:disabled,
+.form-control-disabled {
+  background-color: #F9FAFB !important;
+  color: #374151 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}

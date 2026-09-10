@@ -102,8 +102,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, plac
 
   const selectedOption = options.find(o => String(o.id) === String(value));
 
-  const isDark = isRejected || disabled;
-
   return (
     <div style={{ position: 'relative', marginBottom: '16px' }} ref={dropdownRef}>
       {label && <label className="batch-form-label" style={{ color: isRejected ? '#4B5563' : undefined }}>{label}</label>}
@@ -116,10 +114,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ label, value, options, plac
           justifyContent: 'space-between', 
           alignItems: 'center',
           cursor: disabled ? 'not-allowed' : 'pointer',
-          backgroundColor: isRejected ? '#E5E7EB' : (disabled ? '#F3F4F6' : '#FFFFFF'),
+          backgroundColor: disabled ? '#F9FAFB' : '#FFFFFF',
+          color: disabled ? '#374151' : undefined,
           borderColor: isRejected ? '#9CA3AF' : (isOpen ? '#AE1C3F' : '#D1D5DB'),
           boxShadow: isOpen && !disabled ? '0 0 0 3px rgba(174, 28, 63, 0.12)' : 'none',
-          opacity: isDark ? 0.75 : 1,
           backgroundImage: disabled ? 'none' : undefined
         }}
       >
@@ -475,11 +473,10 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
   return (
     <div
       style={{
-        backgroundColor: isDark ? '#E5E7EB' : '#fff', borderRadius: '6px',
+        backgroundColor: isDark ? '#F9FAFB' : '#fff', borderRadius: '6px',
         border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB',
         boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none',
         transition: 'all 0.2s ease',
-        opacity: isDark ? 0.8 : 1,
         position: 'relative',
       }}
     >

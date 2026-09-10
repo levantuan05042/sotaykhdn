@@ -14,7 +14,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
-import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked } from '../utils/formatUtils';
+import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
   notifyIfCannotShowChild,
@@ -115,7 +115,8 @@ const DetailCriteriaPage: React.FC = () => {
   // Khi trạng thái đã duyệt (ACTIVE) thì không còn phân biệt người tạo với người xem nữa để ai cũng có thể tạo phiên bản mới
   const canEdit = isLoggedIn && (isOwner || isStatusActive);
   const isOwnerLocked = !canEdit;
-  const isReadOnly = isOwnerLocked || isCascadeLocked;
+  const isPending = String(criteriaData?.status || '').toUpperCase() === 'PENDING_APPROVAL' || String(criteriaData?.status || '').toUpperCase() === 'PENDING';
+  const isReadOnly = isOwnerLocked || isCascadeLocked || isPending;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -616,14 +617,7 @@ const DetailCriteriaPage: React.FC = () => {
 
   const displayOptions = useMemo(() => {
     if (!isReadOnly) return filteredOptions;
-    // Ở chế độ chỉ xem, ưu tiên hiển thị các nhóm được chọn lên đầu để dễ xem
-    return [...filteredOptions].sort((a, b) => {
-      const aChecked = formData.groupIds.includes(a.value);
-      const bChecked = formData.groupIds.includes(b.value);
-      if (aChecked && !bChecked) return -1;
-      if (!aChecked && bChecked) return 1;
-      return 0;
-    });
+    return filteredOptions.filter((opt) => formData.groupIds.includes(opt.value));
   }, [filteredOptions, isReadOnly, formData.groupIds]);
 
   const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
@@ -636,7 +630,7 @@ const DetailCriteriaPage: React.FC = () => {
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
-        {isReadOnly && (
+        {isReadOnly && !isPending && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -729,12 +723,12 @@ const DetailCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="code" 
-                  className="input" 
+                  className={`input ${isReadOnly ? 'is-disabled' : ''}`}
                   value={formData.code} 
                   onChange={handleInputChange} 
                   readOnly={isReadOnly}
                   disabled={isReadOnly}
-                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
+                  style={{ cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập mã tiêu chí"
                 />
               </div>
@@ -743,12 +737,12 @@ const DetailCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${isReadOnly ? 'is-disabled' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isReadOnly}
                   disabled={isReadOnly}
-                  style={{ backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF', cursor: isReadOnly ? 'not-allowed' : 'text' }}
+                  style={{ cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập tên tiêu chí"
                 />
               </div>
@@ -759,10 +753,12 @@ const DetailCriteriaPage: React.FC = () => {
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''}`} 
                     onClick={handleToggleDropdown}
-                    style={{ 
-                      backgroundColor: isReadOnly ? '#F9FAFB' : '#FFF',
-                      cursor: 'pointer'
+                    style={{
+                      backgroundColor: isReadOnly ? '#F9FAFB' : '#FFFFFF',
+                      color: '#374151',
+                      cursor: 'pointer',
                     }}
+                    title={isReadOnly ? 'Xem danh sách nhóm sản phẩm áp dụng' : undefined}
                   >
                     <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
                       {getSelectedGroupsLabel()}
@@ -805,7 +801,7 @@ const DetailCriteriaPage: React.FC = () => {
                       </div>
 
                       <div style={{ overflowY: 'auto', flex: 1 }}>
-                        {groupOptions.length > 0 && !searchTerm && (!isReadOnly || isAllSelected) && (
+                        {groupOptions.length > 0 && !searchTerm && !isReadOnly && (
                           <div 
                             className="custom-option select-all-option"
                             onClick={handleToggleSelectAll}
@@ -813,7 +809,7 @@ const DetailCriteriaPage: React.FC = () => {
                               display: 'flex', 
                               alignItems: 'center', 
                               gap: '10px', 
-                              cursor: isReadOnly ? 'default' : 'pointer', 
+                              cursor: 'pointer', 
                               padding: '10px 12px', 
                               borderBottom: '1px solid #F3F4F6', 
                               background: '#F9FAFB', 
@@ -848,7 +844,9 @@ const DetailCriteriaPage: React.FC = () => {
                         <div>
                           {displayOptions.length === 0 ? (
                             <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
-                              Không tìm thấy nhóm sản phẩm phù hợp
+                              {isReadOnly && !searchTerm
+                                ? 'Chưa có nhóm sản phẩm áp dụng'
+                                : 'Không tìm thấy nhóm sản phẩm phù hợp'}
                             </div>
                           ) : (
                             displayOptions.map((opt) => {
@@ -926,7 +924,7 @@ const DetailCriteriaPage: React.FC = () => {
           </div>
 
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB', opacity: isStatusActive ? 1 : 0.5, pointerEvents: isStatusActive ? 'auto' : 'none' }}>
+            <div className="formCard" style={{ borderRadius: 12, background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: 340, padding: 24, flexDirection: 'column', alignItems: 'flex-start', gap: 10, border: '1px solid #E5E7EB' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -935,9 +933,9 @@ const DetailCriteriaPage: React.FC = () => {
               </div>
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                 <div 
-                  className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                  className={`select-custom ${isStatusOpen ? 'open' : ''} ${!canChangeActiveStatus ? 'is-disabled' : ''}`} 
                   onClick={() => canChangeActiveStatus && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: !canChangeActiveStatus ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: !canChangeActiveStatus ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: !canChangeActiveStatus ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{shownActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                   {canChangeActiveStatus && (
@@ -1028,13 +1026,7 @@ const DetailCriteriaPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={
-          (String(criteriaData?.status || '').toUpperCase() === 'ACTIVE' || String(criteriaData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
-            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${criteriaData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(criteriaData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
-            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
-            ? 'Bạn có chắc chắn muốn lưu bản nháp tiêu chí không?'
-            : 'Bạn có chắc chắn muốn gửi phê duyệt tiêu chí không?'
-        }
+        desc={getActionConfirmDesc(criteriaData, id, confirmAction, 'tiêu chí')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
       />
