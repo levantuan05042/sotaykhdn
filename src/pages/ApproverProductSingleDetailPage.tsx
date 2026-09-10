@@ -8,6 +8,8 @@ import LoadingOverlay from '../components/ui/LoadingOverlay';
 import ProductImageCard from '../components/ui/ProductImageCard';
 import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
+import AuditLogTimeline from '../components/AuditLogTimeline';
+import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
 import './ApproverProductDetailPage.css';
 
 interface CommentItem {
@@ -60,6 +62,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
   const [detail, setDetail] = useState<ProductDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [productGroups, setProductGroups] = useState<any[]>([]);
@@ -163,6 +166,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
         'REVIEWED': 'Đã Review'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[notesVal] || notesVal}) thành công!`);
+      setAuditRefreshKey((prev) => prev + 1);
       fetchDetail();
     } catch (error: any) {
       console.error("Error submitting review:", error);
@@ -288,84 +292,86 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
 
         {/* LEFT COLUMN: FORM */}
         <section className="detail-left-panel">
-
-          <div className="form-group">
-            <label className="form-label">
-              Nhóm sản phẩm <span className="form-label-required">(*)</span>
-            </label>
-            <select
-              className="form-select"
-              value={detail.productGroupId || ''}
-              disabled
-            >
-              <option value="">Chọn nhóm sản phẩm</option>
-              {productGroups.map((g: any) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group-row">
+          <div className="detail-form-card shadow-sm">
             <div className="form-group">
-              <label className="form-label">Danh mục sản phẩm</label>
+              <label className="form-label">
+                Nhóm sản phẩm <span className="form-label-required">(*)</span>
+              </label>
               <select
                 className="form-select"
-                value={detail.productCategoryId || ''}
+                value={detail.productGroupId || ''}
                 disabled
               >
-                <option value="">Chọn danh mục sản phẩm</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="">Chọn nhóm sản phẩm</option>
+                {productGroups.map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
             </div>
-            <div className="form-group">
-              <label className="form-label">Nghiệp vụ</label>
-              <select
-                className="form-select"
-                value={detail.businessId || ''}
-                disabled
-              >
-                <option value="">Chọn nghiệp vụ</option>
-                {businesses.map((b: any) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+
+            <div className="form-group-row">
+              <div className="form-group">
+                <label className="form-label">Danh mục sản phẩm</label>
+                <select
+                  className="form-select"
+                  value={detail.productCategoryId || ''}
+                  disabled
+                >
+                  <option value="">Chọn danh mục sản phẩm</option>
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nghiệp vụ</label>
+                <select
+                  className="form-select"
+                  value={detail.businessId || ''}
+                  disabled
+                >
+                  <option value="">Chọn nghiệp vụ</option>
+                  {businesses.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={detail.name || ''}
+                readOnly
+              />
+            </div>
+
+            {/* Dynamic Criteria Fields */}
+            {detail.details?.map((item: any, index: number) => (
+              <CriteriaRichBlock
+                key={item.criteriaId || index}
+                label={item.tieuChi}
+                isRequired={item.isRequired}
+                value={item.noiDung || ''}
+              />
+            ))}
+
+            {/* Product Image */}
+            <ProductImageCard imageUrl={detail.imageUrl} />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              value={detail.name || ''}
-              readOnly
-            />
-          </div>
-
-          {/* Dynamic Criteria Fields */}
-          {detail.details?.map((item: any, index: number) => (
-            <CriteriaRichBlock
-              key={item.criteriaId || index}
-              label={item.tieuChi}
-              isRequired={item.isRequired}
-              value={item.noiDung || ''}
-            />
-          ))}
-
-          {/* Product Image */}
-          <ProductImageCard imageUrl={detail.imageUrl} />
-
+          <AuditLogTimeline objectCode={detail.id} refreshKey={auditRefreshKey} />
         </section>
 
         {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
         <section className="detail-right-panel">
 
           {/* Trạng thái sản phẩm & Trạng thái hiển thị */}
-          <div className="right-card shadow-sm">
+          <CollapsibleRightCard title="Trạng thái" className="right-card shadow-sm">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
@@ -398,17 +404,10 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
                 </select>
               </div>
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Thông tin sản phẩm */}
-          <div className="right-card shadow-sm">
-            <h3 className="right-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Thông tin sản phẩm</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </h3>
-
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm">
             <div style={{
               display: 'flex',
               flexDirection: 'column',
@@ -496,7 +495,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
               </div>
 
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Bình luận phản hồi */}
           <div className="comments-container shadow-sm">

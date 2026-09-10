@@ -165,14 +165,14 @@
 /* Left Form Styles */
 .detail-left-panel {
   flex: 7;
-  background-color: #F2EFF3;
+  background-color: transparent;
   border: none;
-  padding: 24px;
+  padding: 0;
+  padding-right: 8px;
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
-  padding-right: 8px;
   box-sizing: border-box;
 }
 

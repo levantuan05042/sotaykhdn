@@ -19,9 +19,10 @@ export interface AuditLogItem {
 interface AuditLogTimelineProps {
   objectCode?: string;
   logs?: AuditLogItem[];
+  refreshKey?: string | number;
 }
 
-export const AuditLogTimeline: React.FC<AuditLogTimelineProps> = ({ objectCode, logs: propsLogs }) => {
+export const AuditLogTimeline: React.FC<AuditLogTimelineProps> = ({ objectCode, logs: propsLogs, refreshKey }) => {
   const [logs, setLogs] = useState<AuditLogItem[]>(propsLogs || []);
   const [loading, setLoading] = useState<boolean>(!propsLogs && !!objectCode);
 
@@ -44,7 +45,7 @@ export const AuditLogTimeline: React.FC<AuditLogTimelineProps> = ({ objectCode, 
         setLogs([]);
         setLoading(false);
       });
-  }, [objectCode, propsLogs]);
+  }, [objectCode, propsLogs, refreshKey]);
 
   const formatLogTime = (isoString?: string) => {
     if (!isoString) return '';

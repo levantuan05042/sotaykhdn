@@ -8,6 +8,8 @@ import LoadingOverlay from '../components/ui/LoadingOverlay';
 import ProductImageCard from '../components/ui/ProductImageCard';
 import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
+import AuditLogTimeline from '../components/AuditLogTimeline';
+import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
 import './ApproverProductDetailPage.css';
 
 interface ApproverProductDetailPageProps {
@@ -26,6 +28,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -142,6 +145,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         ...prev,
         notes: notesVal
       }));
+      setAuditRefreshKey((prev) => prev + 1);
 
       const labelMap: Record<string, string> = {
         '0': 'Yêu cầu chỉnh sửa',
@@ -373,113 +377,115 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
 
         {/* LEFT COLUMN: FORM */}
         <section className="detail-left-panel">
-
-          <div className="form-group">
-            <label className="form-label">
-              Nhóm sản phẩm <span className="form-label-required">(*)</span>
-            </label>
-            <select
-              className="form-select"
-              value={detail.productGroupId || ''}
-              disabled
-              onChange={(e) => {
-                const grpId = e.target.value;
-                const grpName = productGroups.find(g => g.id === grpId)?.name || '';
-                setDetail((prev: any) => ({
-                  ...prev,
-                  productGroupId: grpId,
-                  productGroupName: grpName
-                }));
-              }}
-            >
-              <option value="">Chọn nhóm sản phẩm</option>
-              {productGroups.map((g: any) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group-row">
+          <div className="detail-form-card shadow-sm">
             <div className="form-group">
-              <label className="form-label">Danh mục sản phẩm</label>
+              <label className="form-label">
+                Nhóm sản phẩm <span className="form-label-required">(*)</span>
+              </label>
               <select
                 className="form-select"
-                value={detail.productCategoryId || ''}
+                value={detail.productGroupId || ''}
                 disabled
                 onChange={(e) => {
-                  const catId = e.target.value;
-                  const catName = categories.find(c => c.id === catId)?.name || '';
+                  const grpId = e.target.value;
+                  const grpName = productGroups.find(g => g.id === grpId)?.name || '';
                   setDetail((prev: any) => ({
                     ...prev,
-                    productCategoryId: catId,
-                    productCategoryName: catName,
-                    businessId: '',
-                    businessName: ''
+                    productGroupId: grpId,
+                    productGroupName: grpName
                   }));
                 }}
               >
-                <option value="">Chọn danh mục sản phẩm</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="">Chọn nhóm sản phẩm</option>
+                {productGroups.map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
             </div>
+
+            <div className="form-group-row">
+              <div className="form-group">
+                <label className="form-label">Danh mục sản phẩm</label>
+                <select
+                  className="form-select"
+                  value={detail.productCategoryId || ''}
+                  disabled
+                  onChange={(e) => {
+                    const catId = e.target.value;
+                    const catName = categories.find(c => c.id === catId)?.name || '';
+                    setDetail((prev: any) => ({
+                      ...prev,
+                      productCategoryId: catId,
+                      productCategoryName: catName,
+                      businessId: '',
+                      businessName: ''
+                    }));
+                  }}
+                >
+                  <option value="">Chọn danh mục sản phẩm</option>
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nghiệp vụ</label>
+                <select
+                  className="form-select"
+                  value={detail.businessId || ''}
+                  disabled
+                  onChange={(e) => {
+                    const busId = e.target.value;
+                    const busName = businesses.find(b => b.id === busId)?.name || '';
+                    setDetail((prev: any) => ({
+                      ...prev,
+                      businessId: busId,
+                      businessName: busName
+                    }));
+                  }}
+                >
+                  <option value="">Chọn nghiệp vụ</option>
+                  {businesses.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="form-group">
-              <label className="form-label">Nghiệp vụ</label>
-              <select
-                className="form-select"
-                value={detail.businessId || ''}
-                disabled
-                onChange={(e) => {
-                  const busId = e.target.value;
-                  const busName = businesses.find(b => b.id === busId)?.name || '';
-                  setDetail((prev: any) => ({
-                    ...prev,
-                    businessId: busId,
-                    businessName: busName
-                  }));
-                }}
-              >
-                <option value="">Chọn nghiệp vụ</option>
-                {businesses.map((b: any) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+              <label className="form-label">
+                Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={detail.name || ''}
+                readOnly
+              />
             </div>
+
+            {/* Dynamic Criteria Fields */}
+            {detail.details?.map((item: any, index: number) => (
+              <CriteriaRichBlock
+                key={item.criteriaId || index}
+                label={item.tieuChi}
+                isRequired={item.isRequired}
+                value={item.noiDung || ''}
+              />
+            ))}
+
+            {/* Last Field: Product Image */}
+            <ProductImageCard imageUrl={detail.imageUrl} />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              value={detail.name || ''}
-              readOnly
-            />
-          </div>
-
-          {/* Dynamic Criteria Fields */}
-          {detail.details?.map((item: any, index: number) => (
-            <CriteriaRichBlock
-              key={item.criteriaId || index}
-              label={item.tieuChi}
-              isRequired={item.isRequired}
-              value={item.noiDung || ''}
-            />
-          ))}
-
-          {/* Last Field: Product Image */}
-          <ProductImageCard imageUrl={detail.imageUrl} />
-
+          <AuditLogTimeline objectCode={detail.id} refreshKey={auditRefreshKey} />
         </section>
 
         {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
         <section className="detail-right-panel">
 
           {/* Trạng thái sản phẩm & Trạng thái hiển thị */}
-          <div className="right-card shadow-sm">
+          <CollapsibleRightCard title="Trạng thái" className="right-card shadow-sm">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
@@ -513,17 +519,10 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                 </select>
               </div>
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Thông tin sản phẩm */}
-          <div className="right-card shadow-sm">
-            <h3 className="right-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Thông tin sản phẩm</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </h3>
-
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm">
             <div style={{
               display: 'flex',
               flexDirection: 'column',
@@ -627,7 +626,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               </div>
 
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Bình luận phản hồi */}
           <div className="comments-container shadow-sm">

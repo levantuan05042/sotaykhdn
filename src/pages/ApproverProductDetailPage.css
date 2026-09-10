@@ -126,6 +126,18 @@
 /* Left Form Styles */
 .detail-left-panel {
   flex: 7; /* occupies roughly 65-70% */
+  background-color: transparent;
+  border: none;
+  padding: 0;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.detail-form-card {
   background-color: #F2EFF3;
   border-radius: 16px;
   border: none;
@@ -133,8 +145,8 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  height: 100%;
-  overflow-y: auto;
+  height: fit-content;
+  width: 100%;
   box-sizing: border-box;
 }
 
