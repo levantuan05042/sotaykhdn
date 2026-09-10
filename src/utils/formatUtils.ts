@@ -203,3 +203,14 @@ export const isApprovedVersionStatus = (status?: string | null) => {
 export const filterApprovedVersions = <T extends { status?: string | null }>(versions?: T[] | null): T[] =>
   (versions || []).filter((v) => isApprovedVersionStatus(v.status));
 
+export const normalizeActorId = (value?: string | null): string => {
+  if (!value) return '';
+  return String(value).trim().split('_')[0].toLowerCase();
+};
+
+export const isSameActor = (current?: string | null, createdBy?: string | null): boolean => {
+  const a = normalizeActorId(current);
+  const b = normalizeActorId(createdBy);
+  return Boolean(a && b && a === b);
+};
+

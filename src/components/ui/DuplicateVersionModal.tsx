@@ -5,6 +5,7 @@ export interface PriorVersionInfo {
   version?: number | null;
   status: string;
   name?: string;
+  createdBy?: string;
   createdByFullName?: string;
   createdAt?: string;
 }
@@ -13,7 +14,8 @@ interface DuplicateVersionModalProps {
   isOpen: boolean;
   itemName?: string;
   priorVersion: PriorVersionInfo | null;
-  onConfirm: () => void;
+  canReplace?: boolean;
+  onConfirm?: () => void;
   onCancel: () => void;
   onViewPrior: () => void;
   isProcessing?: boolean;
@@ -23,6 +25,7 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
   isOpen,
   itemName = 'mục này',
   priorVersion,
+  canReplace = false,
   onConfirm,
   onCancel,
   onViewPrior,
@@ -147,14 +150,19 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
           </div>
           <div style={{ flex: 1 }}>
             <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 600, color: '#111827' }}>
-              Thông báo phiên bản đã tồn tại
+              {canReplace ? 'Thông báo phiên bản đã tồn tại' : 'Không thể tạo phiên bản mới'}
             </h3>
             <p style={{ margin: 0, fontSize: '14px', color: '#4B5563', lineHeight: 1.5 }}>
-              Hệ thống ghi nhận đã có phiên bản mới hơn của <strong style={{ color: '#111827' }}>{itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong>
+              {canReplace
+                ? <>Hệ thống ghi nhận đã có phiên bản mới hơn của <strong style={{ color: '#111827' }}>{itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong></>
+                : <>Đã có phiên bản mới hơn của <strong style={{ color: '#111827' }}>{itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong></>
+              }
               {creatorLabel && <> (tạo bởi <strong style={{ color: '#111827' }}>{creatorLabel}</strong>{timeLabel ? ` lúc ${timeLabel}` : ''})</>}.
             </p>
             <p style={{ margin: '12px 0 0', fontSize: '14px', fontWeight: 500, color: '#1F2937' }}>
-              Bạn có muốn xóa để lấy cái bạn đang làm không?
+              {canReplace
+                ? 'Bạn có muốn xóa để lấy cái bạn đang làm không?'
+                : 'Không thể tạo thêm phiên bản mới khi phiên bản này chưa được duyệt xong.'}
             </p>
           </div>
         </div>
@@ -187,7 +195,7 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
               opacity: isProcessing ? 0.6 : 1,
             }}
           >
-            Hủy
+            {canReplace ? 'Hủy' : 'Đóng'}
           </button>
           
           <button
@@ -212,34 +220,36 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
               <path d="M1 10s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6z" />
               <circle cx="10" cy="10" r="3" />
             </svg>
-            Xem cái sinh trước
+            {canReplace ? 'Xem cái sinh trước' : 'Xem phiên bản đang xử lý'}
           </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (isProcessing || confirmingRef.current) return;
-              confirmingRef.current = true;
-              onConfirm();
-            }}
-            disabled={isProcessing}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#AE1C3F',
-              color: '#FFFFFF',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: isProcessing ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-            }}
-          >
-            {isProcessing ? 'Đang xử lý...' : 'Xác nhận'}
-          </button>
+          {canReplace && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isProcessing || confirmingRef.current || !onConfirm) return;
+                confirmingRef.current = true;
+                onConfirm();
+              }}
+              disabled={isProcessing}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#AE1C3F',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: isProcessing ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+              }}
+            >
+              {isProcessing ? 'Đang xử lý...' : 'Xác nhận'}
+            </button>
+          )}
         </div>
       </div>
       <style>{`
