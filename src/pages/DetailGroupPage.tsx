@@ -8,6 +8,7 @@ import { getRandomAvatar } from '../utils/avatarUtils';
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import { getActionConfirmDesc } from '../utils/formatUtils';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
@@ -560,13 +561,9 @@ const DetailGroupPage: React.FC = () => {
                 <label className="label"> Thuộc nhóm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container">
                   <div 
-                    className={`select-custom ${isOpen ? 'open' : ''}`} 
+                    className={`select-custom ${isOpen ? 'open' : ''} ${isInputDisabled ? 'is-disabled' : ''}`} 
                     onClick={() => !isInputDisabled && setIsOpen(!isOpen)}
-                    style={{ 
-                      opacity: isInputDisabled ? 0.7 : 1, 
-                      cursor: isInputDisabled ? 'not-allowed' : 'pointer',
-                      backgroundColor: isInputDisabled ? '#F9FAFB' : '#FFF'
-                    }}
+                    style={{ cursor: isInputDisabled ? 'not-allowed' : 'pointer' }}
                   >
                     <span>{GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm lớn"}</span>
                     {!isInputDisabled && (
@@ -596,12 +593,12 @@ const DetailGroupPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${isInputDisabled ? 'is-disabled' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isInputDisabled}
                   disabled={isInputDisabled}
-                  style={{ backgroundColor: isInputDisabled ? '#F9FAFB' : '#FFF', cursor: isInputDisabled ? 'not-allowed' : 'text' }}
+                  style={{ cursor: isInputDisabled ? 'not-allowed' : 'text' }}
                 />
               </div>
 
@@ -618,9 +615,7 @@ const DetailGroupPage: React.FC = () => {
               flexDirection: 'column', 
               alignItems: 'flex-start', 
               gap: 10, 
-              border: '1px solid #E5E7EB',
-              opacity: isStatusActive ? 1 : 0.5,
-              pointerEvents: isStatusActive ? 'auto' : 'none'
+              border: '1px solid #E5E7EB'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hoạt động</span>
@@ -630,9 +625,9 @@ const DetailGroupPage: React.FC = () => {
               </div>
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                 <div 
-                  className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                  className={`select-custom ${isStatusOpen ? 'open' : ''} ${isStatusDisabled ? 'is-disabled' : ''}`} 
                   onClick={() => !isStatusDisabled && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isStatusDisabled ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isStatusDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isStatusDisabled ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                   {!isStatusDisabled && (
@@ -723,13 +718,7 @@ const DetailGroupPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={
-          (String(productData?.status || '').toUpperCase() === 'ACTIVE' || String(productData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
-            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${productData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(productData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
-            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
-            ? 'Bạn có chắc chắn muốn lưu bản nháp nhóm sản phẩm không?'
-            : 'Bạn có chắc chắn muốn gửi phê duyệt nhóm sản phẩm không?'
-        }
+        desc={getActionConfirmDesc(productData, id, confirmAction, 'nhóm sản phẩm')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
       />

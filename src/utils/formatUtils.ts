@@ -94,3 +94,112 @@ export const getCascadeRowClassName = (_item?: { cascadeHiddenBy?: string | null
 export const CASCADE_LOCK_MESSAGE =
   'Bản ghi này đang bị ẩn theo đối tượng cha nên chỉ xem, không thể chỉnh sửa.';
 
+export interface VersionConfirmInfo {
+  isNewVersion: boolean;
+  baseVersion: number;
+  targetVersion: number;
+}
+
+const APPROVED_VERSION_STATUSES = new Set(['ACTIVE', 'APPROVED', 'COMPLETED', 'ARCHIVED']);
+
+const toVersionNumber = (value: any): number | null => {
+  if (value === null || value === undefined || String(value).trim() === '' || String(value).toLowerCase() === 'null') {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+export const getVersionConfirmInfo = (
+  entityData: any,
+  currentId?: string,
+  isProductActiveFlag?: boolean
+): VersionConfirmInfo => {
+  const currentStatus = String(entityData?.status || '').toUpperCase();
+  const isCurrentActive = Boolean(isProductActiveFlag) || currentStatus === 'ACTIVE' || currentStatus === 'APPROVED' || currentStatus === 'COMPLETED';
+  const isDraftLike = currentStatus === 'DRAFT' || currentStatus === 'NEEDS_REVISION' || currentStatus === 'PENDING_APPROVAL';
+
+  const activeId = currentId || entityData?.id;
+  const versions: any[] = Array.isArray(entityData?.versions) ? entityData.versions : [];
+  const siblings = versions.filter((v: any) => !activeId || v.id !== activeId);
+
+  const priorActive = siblings.find((v: any) => APPROVED_VERSION_STATUSES.has(String(v.status || '').toUpperCase()));
+
+  const priorVersionNumbers = siblings
+    .map((v: any) => toVersionNumber(v.version))
+    .filter((n: number | null): n is number => n !== null);
+  const maxPriorVersion = priorVersionNumbers.length > 0 ? Math.max(...priorVersionNumbers) : null;
+
+  const hasDifferentOriginalId = Boolean(
+    entityData?.originalId && activeId && entityData.originalId !== activeId
+  );
+  const hasPriorApprovedVersion = Boolean(priorActive) || maxPriorVersion !== null;
+  const hasSiblingHistory = siblings.length > 0 || versions.length > 1;
+  const currentVersionNumber = toVersionNumber(entityData?.version);
+  const hasCurrentVersionNumber = currentVersionNumber !== null && currentVersionNumber > 1;
+
+  const isNewVersion =
+    isCurrentActive ||
+    hasPriorApprovedVersion ||
+    hasCurrentVersionNumber ||
+    hasDifferentOriginalId ||
+    (isDraftLike && hasSiblingHistory);
+
+  let baseVersion = 1;
+  let targetVersion = 2;
+
+  if (isCurrentActive) {
+    baseVersion = currentVersionNumber || 1;
+    targetVersion = baseVersion + 1;
+  } else if (hasCurrentVersionNumber && currentVersionNumber) {
+    targetVersion = currentVersionNumber;
+    baseVersion = Math.max(1, targetVersion - 1);
+  } else if (hasPriorApprovedVersion || hasDifferentOriginalId || (isDraftLike && hasSiblingHistory)) {
+    baseVersion = toVersionNumber(priorActive?.version) || maxPriorVersion || 1;
+    targetVersion = baseVersion + 1;
+  }
+
+  return { isNewVersion, baseVersion, targetVersion };
+};
+
+export const getActionConfirmDesc = (
+  entityData: any,
+  currentId: string | undefined,
+  confirmAction: string | null,
+  entityTypeName: string,
+  isProductActiveFlag?: boolean
+): string => {
+  const { isNewVersion, baseVersion, targetVersion } = getVersionConfirmInfo(entityData, currentId, isProductActiveFlag);
+  const isDraftAction = confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION';
+  const isSubmitAction = confirmAction === 'PENDING_APPROVAL';
+
+  if (isNewVersion && isSubmitAction) {
+    return `Bạn đang thực hiện chỉnh sửa Phiên bản ${baseVersion} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${targetVersion} và gửi đến Kiểm soát để phê duyệt.`;
+  }
+
+  if (isNewVersion && isDraftAction) {
+    return `Bạn đang thực hiện chỉnh sửa Phiên bản ${baseVersion} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được lưu thành bản nháp của Phiên bản ${targetVersion}.`;
+  }
+
+  if (isDraftAction) {
+    return `Bạn có chắc chắn muốn lưu bản nháp ${entityTypeName} không?`;
+  }
+
+  return `Bạn có chắc chắn muốn gửi phê duyệt ${entityTypeName} không?`;
+};
+
+export const DISABLED_CONTROL_STYLE = {
+  backgroundColor: '#F9FAFB',
+  color: '#374151',
+  cursor: 'not-allowed' as const,
+  opacity: 1,
+};
+
+export const isApprovedVersionStatus = (status?: string | null) => {
+  const s = String(status || '').toUpperCase();
+  return s === 'ACTIVE' || s === 'APPROVED' || s === 'COMPLETED' || s === 'ARCHIVED';
+};
+
+export const filterApprovedVersions = <T extends { status?: string | null }>(versions?: T[] | null): T[] =>
+  (versions || []).filter((v) => isApprovedVersionStatus(v.status));
+

@@ -660,7 +660,7 @@ const AddProductPage: React.FC = () => {
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${!formData.productGroupId ? 'disabled' : ''}`} 
                       onClick={() => formData.productGroupId && setIsCategoryOpen(!isCategoryOpen)} 
-                      style={{ backgroundColor: formData.productGroupId ? 'white' : '#E5E7EB', cursor: formData.productGroupId ? 'pointer' : 'not-allowed' }}
+                      style={{ backgroundColor: formData.productGroupId ? 'white' : '#F9FAFB', color: formData.productGroupId ? undefined : '#374151', cursor: formData.productGroupId ? 'pointer' : 'not-allowed' }}
                     >
                       <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục")}</span>
                     </div>
@@ -701,7 +701,7 @@ const AddProductPage: React.FC = () => {
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${!formData.productCategoryId ? 'disabled' : ''}`} 
                       onClick={() => formData.productCategoryId && setIsOperationOpen(!isOperationOpen)} 
-                      style={{ backgroundColor: formData.productCategoryId ? 'white' : '#E5E7EB', cursor: formData.productCategoryId ? 'pointer' : 'not-allowed' }}
+                      style={{ backgroundColor: formData.productCategoryId ? 'white' : '#F9FAFB', color: formData.productCategoryId ? undefined : '#374151', cursor: formData.productCategoryId ? 'pointer' : 'not-allowed' }}
                     >
                       <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn nghiệp vụ")}</span>
                     </div>

@@ -14,7 +14,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
-import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
   getHideBlockedByPendingCopy,
@@ -557,14 +557,14 @@ const DetailBusinessPage: React.FC = () => {
                 <label className="label"> Danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" ref={categoryRef}>
                   <div 
-                    className={`select-custom ${isOpen ? 'open' : ''} ${isFormDisabled ? 'disabled-view' : ''}`} 
+                    className={`select-custom ${isOpen ? 'open' : ''} ${isFormDisabled ? 'is-disabled' : ''}`} 
                     onClick={() => {
                       if (!isFormDisabled) {
                         setIsOpen(!isOpen);
                         if (!isOpen) setCategorySearchTerm('');
                       }
                     }}
-                    style={{ opacity: isFormDisabled ? 0.7 : 1, cursor: isFormDisabled ? 'not-allowed' : 'pointer' }}
+                    style={{ cursor: isFormDisabled ? 'not-allowed' : 'pointer' }}
                   >
                     <span>{categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm"}</span>
                     {!isFormDisabled && (
@@ -622,19 +622,19 @@ const DetailBusinessPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${isFormDisabled ? 'is-disabled' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isFormDisabled}
                   disabled={isFormDisabled}
-                  style={{ backgroundColor: isFormDisabled ? '#F9FAFB' : '#FFF', cursor: isFormDisabled ? 'not-allowed' : 'text' }}
+                  style={{ cursor: isFormDisabled ? 'not-allowed' : 'text' }}
                 />
               </div>
             </div>
           </div>
 
           <div className="rightCol" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-             <div className="formCard" style={{ borderRadius: '12px', background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: '340px', padding: '24px', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', border: '1px solid #E5E7EB', opacity: isStatusActive ? 1 : 0.5, pointerEvents: isStatusActive ? 'auto' : 'none' }}>
+             <div className="formCard" style={{ borderRadius: '12px', background: 'var(--Mauve-3, #F2EFF3)', display: 'flex', width: '340px', padding: '24px', flexDirection: 'column', alignItems: 'flex-start', gap: '10px', border: '1px solid #E5E7EB' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ color: '#1A191B', fontSize: '16px', fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -644,9 +644,9 @@ const DetailBusinessPage: React.FC = () => {
                 
                 <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                   <div 
-                    className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                    className={`select-custom ${isStatusOpen ? 'open' : ''} ${isDisplayStatusReadOnly ? 'is-disabled' : ''}`} 
                     onClick={() => !isDisplayStatusReadOnly && setIsStatusOpen(!isStatusOpen)} 
-                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', background: isDisplayStatusReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isDisplayStatusReadOnly ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
+                    style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: '8px', alignSelf: 'stretch', borderRadius: '8px', border: '1px solid #D5D7DA', boxShadow: '0 1px 2px 0 rgba(10, 13, 18, 0.05)', cursor: isDisplayStatusReadOnly ? 'not-allowed' : 'pointer', boxSizing: 'border-box', width: '100%' }}
                   >
                     <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                     {!isDisplayStatusReadOnly && (
@@ -726,13 +726,7 @@ const DetailBusinessPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={
-          (String(businessData?.status || '').toUpperCase() === 'ACTIVE' || String(businessData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
-            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${businessData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(businessData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
-            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
-            ? 'Bạn có chắc chắn muốn lưu bản nháp mảng nghiệp vụ không?'
-            : 'Bạn có chắc chắn muốn gửi phê duyệt mảng nghiệp vụ không?'
-        }
+        desc={getActionConfirmDesc(businessData, id, confirmAction, 'mảng nghiệp vụ')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
       />

@@ -14,7 +14,7 @@ import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
-import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden, filterApprovedVersions, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 
 interface Criterion {
   id: string;
@@ -42,22 +42,7 @@ const stripHtml = (htmlString?: string | null) => {
   return String(htmlString).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 };
 
-const getVersionStatusBadge = (status?: string) => {
-  switch (status) {
-    case 'ACTIVE':
-      return { bg: '#E0F9EC', text: '#14532D', label: 'Đang áp dụng' };
-    case 'DRAFT':
-      return { bg: '#F3F4F6', text: '#4B5563', label: 'Bản nháp' };
-    case 'PENDING_APPROVAL':
-      return { bg: '#FEF3C7', text: '#92400E', label: 'Chờ duyệt' };
-    case 'REJECTED':
-      return { bg: '#FEE2E2', text: '#991B1B', label: 'Từ chối' };
-    case 'ARCHIVED':
-      return { bg: '#EFF6FF', text: '#1E40AF', label: 'Lưu trữ' };
-    default:
-      return { bg: '#F3F4F6', text: '#4B5563', label: status || '---' };
-  }
-};
+const getVersionStatusBadge = () => ({ bg: '#E0F9EC', text: '#14532D', label: 'Đã duyệt' });
 
 const isHtmlEmpty = (html: string) => {
   if (!html) return true;
@@ -464,7 +449,7 @@ const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder,
           </span>
         </div>
       )}
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#FAFAFA' : 'transparent', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
+      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#F9FAFB' : 'transparent', color: readOnly ? '#374151' : undefined, cursor: readOnly ? 'not-allowed' : 'text', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
     </div>
   );
 };
@@ -577,9 +562,13 @@ const DetailProductPage: React.FC = () => {
   const isRejected = productStatus === 'REJECTED';
   const isApproved =
     productStatus === 'ACTIVE' || productStatus === 'APPROVED' || productStatus === 'COMPLETED';
+  const isPendingApproval = productStatus === 'PENDING_APPROVAL' || productStatus === 'PENDING';
+  const isDraft = productStatus === 'DRAFT';
+  const isNeedsRevision = productStatus === 'NEEDS_REVISION' || productStatus === 'REVISION';
   const isCascadeLocked = isCascadeHidden(productData);
-  const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked || isApproved;
+  const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked || isApproved || isPendingApproval;
   const isDisplayStatusDisabled = isReadOnly || productStatus !== 'ACTIVE';
+  const canShowNewCriteriaNotice = (isApproved || isDraft || isNeedsRevision) && !isPendingApproval;
 
   useEffect(() => {
     if (productData?.imageUrl) setPreviewImage(toDisplayUrl(productData.imageUrl));
@@ -742,7 +731,7 @@ const DetailProductPage: React.FC = () => {
           if (usedIds.has(c.id) || usedNames.has(c.name.trim().toLowerCase())) continue;
           merged.push({
             ...c,
-            isSelected: c.isRequired,
+            isSelected: false,
             value: '',
           });
           usedIds.add(c.id);
@@ -779,34 +768,20 @@ const DetailProductPage: React.FC = () => {
     });
   };
 
-  const moveCriterionUp = (id: string) => {
-    if (isReadOnly) return;
-    setCriteria(prev => {
-      const selected = prev.filter(c => c.isSelected);
-      const unselected = prev.filter(c => !c.isSelected);
-      const idx = selected.findIndex(c => c.id === id);
-      if (idx <= 0) return prev;
-      const reorderedSelected = [...selected];
-      const temp = reorderedSelected[idx];
-      reorderedSelected[idx] = reorderedSelected[idx - 1];
-      reorderedSelected[idx - 1] = temp;
-      return [...reorderedSelected, ...unselected];
-    });
-  };
+  const missingRequiredCriteria = useMemo(() => {
+    return criteria.filter(c => c.isRequired && !c.isSelected);
+  }, [criteria]);
 
-  const moveCriterionDown = (id: string) => {
+  const handleAddMissingRequiredCriteria = (criterionIds: string[]) => {
     if (isReadOnly) return;
-    setCriteria(prev => {
-      const selected = prev.filter(c => c.isSelected);
-      const unselected = prev.filter(c => !c.isSelected);
-      const idx = selected.findIndex(c => c.id === id);
-      if (idx === -1 || idx >= selected.length - 1) return prev;
-      const reorderedSelected = [...selected];
-      const temp = reorderedSelected[idx];
-      reorderedSelected[idx] = reorderedSelected[idx + 1];
-      reorderedSelected[idx + 1] = temp;
-      return [...reorderedSelected, ...unselected];
-    });
+    setCriteria(prev => prev.map(c => criterionIds.includes(c.id) ? { ...c, isSelected: true } : c));
+    toast.success('Đã bổ sung tiêu chí bắt buộc vào phiên bản này. Vui lòng nhập nội dung.', { position: 'top-center' });
+    setTimeout(() => {
+      const el = document.getElementById(`criterion-${criterionIds[0]}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 150);
   };
 
   const isFormDirty     = productName !== (productData?.name || '') || formData.productGroupId !== (productData?.productGroupId || '') || formData.productCategoryId !== (productData?.productCategoryId || '') || formData.businessId !== (productData?.businessId || '');
@@ -868,8 +843,13 @@ const DetailProductPage: React.FC = () => {
       if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
       if (!productName.trim()) { toast.error('Vui lòng nhập Tên sản phẩm dịch vụ', { position: 'top-center' }); return; }
       if (status !== 'DRAFT') {
-        const miss = criteria.find(c => c.isRequired && isHtmlEmpty(c.value));
-        if (miss) { toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${miss.name}`, { position: 'top-center' }); return; }
+        const missingUnselectedRequired = criteria.filter(c => c.isRequired && !c.isSelected);
+        if (missingUnselectedRequired.length > 0) {
+          toast.error(`Phiên bản mới yêu cầu bổ sung tiêu chí bắt buộc: ${missingUnselectedRequired.map(c => c.name).join(', ')}`, { position: 'top-center' });
+          return;
+        }
+        const miss = criteria.find(c => c.isRequired && c.isSelected && isHtmlEmpty(c.value));
+        if (miss) { toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc mới: ${miss.name}`, { position: 'top-center' }); return; }
       }
     }
     try {
@@ -920,7 +900,7 @@ const DetailProductPage: React.FC = () => {
   const selectedCriteria = criteria.filter(c => c.isSelected);
   const requestNameDisplay = stripHtml(routeState?.requestName || productData?.requestName) || 'Quay lại';
   const requestIdForBack = routeState?.requestId || productData?.requestId;
-  const versions: VersionItem[] = productData?.versions || [];
+  const versions: VersionItem[] = filterApprovedVersions(productData?.versions || []);
   const hasMultipleVersions = versions.length > 0;
 
   const handleBack = () => {
@@ -938,7 +918,7 @@ const DetailProductPage: React.FC = () => {
       <style>{`.ql-editor{word-break:break-word!important;overflow-wrap:break-word!important;white-space:pre-wrap!important;}`}</style>
 
       <div className="mainContainer">
-        {isReadOnly && !isApproved && (
+        {isReadOnly && !isApproved && !isPendingApproval && (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -960,7 +940,7 @@ const DetailProductPage: React.FC = () => {
               </span>
             </button>
             
-            <div className="breadcrumb">
+            <div className="breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {/* Icon phân cách ">" giữa nút Quay lại và Tên SP */}
               <div className="separatorWrapper">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -976,6 +956,64 @@ const DetailProductPage: React.FC = () => {
                 >
                   {productName?.trim() || productData?.name}
                 </span>
+              )}
+
+              {canShowNewCriteriaNotice && missingRequiredCriteria.length > 0 && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '4px 6px 4px 14px',
+                    borderRadius: 9999,
+                    backgroundColor: '#F0F9FF',
+                    border: '1px solid #BAE6FD',
+                    color: '#0369A1',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    minHeight: 32,
+                    boxSizing: 'border-box',
+                    fontFamily: "'Inter', sans-serif",
+                  }}
+                  title={`Nhóm sản phẩm đã bổ sung tiêu chí bắt buộc mới: ${missingRequiredCriteria.map(c => c.name).join(', ')}.`}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', color: '#0284C7' }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="16" x2="12" y2="12" />
+                      <line x1="12" y1="8" x2="12.01" y2="8" />
+                    </svg>
+                  </span>
+                  <span>Có tiêu chí mới (+{missingRequiredCriteria.length})</span>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={() => handleAddMissingRequiredCriteria(missingRequiredCriteria.map(c => c.id))}
+                      style={{
+                        background: '#0284C7',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 9999,
+                        padding: '4px 12px',
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        marginLeft: 4,
+                        transition: 'background-color 0.15s ease',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0369A1';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#0284C7';
+                      }}
+                      title="Bổ sung tiêu chí mới vào sản phẩm này"
+                    >
+                      Bổ sung ngay
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -1012,7 +1050,7 @@ const DetailProductPage: React.FC = () => {
         </div>
 
         <div className="contentGrid">
-          <div className="leftCol" style={isApproved ? { opacity: 0.72, pointerEvents: 'none' } : undefined}>
+          <div className="leftCol">
             {/* Bọc TẤT CẢ trong 1 formCard duy nhất */}
             <div className="formCard">
               
@@ -1020,9 +1058,9 @@ const DetailProductPage: React.FC = () => {
                 <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nhóm sản phẩm (*)</label>
                 <div className="custom-select-container" ref={groupRef}>
                   <div 
-                    className={`select-custom ${isGroupOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                    className={`select-custom ${isGroupOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                     onClick={() => { if (!isReadOnly) setIsGroupOpen(v => !v); }} 
-                    style={{ backgroundColor: isReadOnly ? '#F9FAFB' : 'white', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                    style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                   >
                     <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || productData?.productGroupName || 'Chọn nhóm'}</span>
                   </div>
@@ -1050,9 +1088,9 @@ const DetailProductPage: React.FC = () => {
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
-                      className={`select-custom ${isCategoryOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                      className={`select-custom ${isCategoryOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                       onClick={() => { if (!isReadOnly) setIsCategoryOpen(v => !v); }} 
-                      style={{ backgroundColor: isReadOnly ? '#F9FAFB' : 'white', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                      style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
                       <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục')}</span>
                     </div>
@@ -1071,9 +1109,9 @@ const DetailProductPage: React.FC = () => {
                   <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
-                      className={`select-custom ${isOperationOpen ? 'open' : ''} ${isReadOnly ? 'readOnlyOverlay' : ''}`} 
+                      className={`select-custom ${isOperationOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                       onClick={() => { if (!isReadOnly) setIsOperationOpen(v => !v); }} 
-                      style={{ backgroundColor: isReadOnly ? '#F9FAFB' : 'white', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}
+                      style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
                       <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn nghiệp vụ')}</span>
                     </div>
@@ -1092,14 +1130,16 @@ const DetailProductPage: React.FC = () => {
 
               {formData.productGroupId && (
                 <>
-                  {selectedCriteria.map((criterion, idx, arr) => {
+                  {selectedCriteria.map((criterion) => {
                     const hasErr = !isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value);
                     const isDraggingThis = draggedCriterionId === criterion.id;
                     const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
+                    const isNewInThisVersion = criterion.isRequired && !originalCriteria.some(o => o.id === criterion.id);
 
                     return (
                       <div
                         key={criterion.id}
+                        id={`criterion-${criterion.id}`}
                         className="formGroup criterion-card"
                         onDragOver={(e) => {
                           if (isReadOnly) return;
@@ -1126,14 +1166,27 @@ const DetailProductPage: React.FC = () => {
                         style={{
                           marginTop: 16,
                           marginBottom: 20,
-                          backgroundColor: '#FFFFFF',
+                          backgroundColor: isReadOnly ? '#F9FAFB' : '#FFFFFF',
                           borderRadius: 10,
-                          border: isDragOverThis ? '2px dashed #B01E3E' : '1px solid #E5E7EB',
+                          border: isDragOverThis
+                            ? '2px dashed #B01E3E'
+                            : isNewInThisVersion
+                            ? '1px solid #BAE6FD'
+                            : '1px solid #E5E7EB',
+                          borderLeft: isNewInThisVersion
+                            ? '4px solid #0284C7'
+                            : isDragOverThis
+                            ? '2px dashed #B01E3E'
+                            : '1px solid #E5E7EB',
                           padding: 16,
                           opacity: isDraggingThis ? 0.45 : 1,
                           transform: isDraggingThis ? 'scale(0.99)' : 'none',
                           transition: 'all 0.15s ease',
-                          boxShadow: isDragOverThis ? '0 4px 12px rgba(176, 30, 62, 0.15)' : '0 1px 2px rgba(0,0,0,0.03)',
+                          boxShadow: isDragOverThis
+                            ? '0 4px 12px rgba(176, 30, 62, 0.15)'
+                            : isNewInThisVersion
+                            ? '0 2px 10px rgba(2, 132, 199, 0.08)'
+                            : '0 1px 2px rgba(0,0,0,0.03)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -1194,102 +1247,59 @@ const DetailProductPage: React.FC = () => {
                               </div>
                             )}
 
-                            <span
-                              style={{
-                                backgroundColor: '#F3F4F6',
-                                color: '#374151',
-                                borderRadius: 4,
-                                padding: '2px 7px',
-                                fontSize: 12,
-                                fontWeight: 700,
-                                border: '1px solid #E5E7EB',
-                                userSelect: 'none',
-                              }}
-                              title={`Tiêu chí thứ ${idx + 1}`}
-                            >
-                              #{idx + 1}
-                            </span>
-
                             <label className="label" style={{ fontWeight: 600, margin: 0, fontSize: 14, color: '#1F2937' }}>
                               {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
                             </label>
+                            {isNewInThisVersion && (
+                              <span
+                                style={{
+                                  backgroundColor: '#F0F9FF',
+                                  color: '#0369A1',
+                                  border: '1px solid #BAE6FD',
+                                  fontSize: 11,
+                                  padding: '2px 9px',
+                                  borderRadius: 20,
+                                  fontWeight: 600,
+                                  userSelect: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                                title="Tiêu chí bắt buộc mới được bổ sung cho phiên bản này"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 2l2.4 7.4h7.6l-6.2 4.5 2.4 7.4-6.2-4.5-6.2 4.5 2.4-7.4-6.2-4.5h7.6z" />
+                                </svg>
+                                Mới ở phiên bản này
+                              </span>
+                            )}
                           </div>
 
-                          {!isReadOnly && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <button
-                                type="button"
-                                onClick={() => moveCriterionUp(criterion.id)}
-                                disabled={idx === 0}
-                                title={idx === 0 ? 'Đang ở vị trí đầu tiên' : 'Di chuyển lên trên'}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: 26,
-                                  height: 26,
-                                  border: '1px solid #D1D5DB',
-                                  borderRadius: 4,
-                                  backgroundColor: '#FFFFFF',
-                                  color: idx === 0 ? '#D1D5DB' : '#374151',
-                                  cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                                  padding: 0,
-                                }}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                                  <path d="M5 12.5L10 7.5L15 12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => moveCriterionDown(criterion.id)}
-                                disabled={idx === arr.length - 1}
-                                title={idx === arr.length - 1 ? 'Đang ở vị trí cuối cùng' : 'Di chuyển xuống dưới'}
-                                style={{
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  width: 26,
-                                  height: 26,
-                                  border: '1px solid #D1D5DB',
-                                  borderRadius: 4,
-                                  backgroundColor: '#FFFFFF',
-                                  color: idx === arr.length - 1 ? '#D1D5DB' : '#374151',
-                                  cursor: idx === arr.length - 1 ? 'not-allowed' : 'pointer',
-                                  padding: 0,
-                                }}
-                              >
-                                <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                                  <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                              </button>
-                              {!criterion.isRequired && (
-                                <button
-                                  type="button"
-                                  onClick={() => toggleCriterionSelection(criterion.id)}
-                                  style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    padding: 4,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    color: '#9CA3AF',
-                                    marginLeft: 4,
-                                  }}
-                                  onMouseOver={(e) => (e.currentTarget.style.color = '#EF4444')}
-                                  onMouseOut={(e) => (e.currentTarget.style.color = '#9CA3AF')}
-                                  title="Bỏ tiêu chí này"
-                                >
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="3 6 5 6 21 6" />
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                    <line x1="10" y1="11" x2="10" y2="17" />
-                                    <line x1="14" y1="11" x2="14" y2="17" />
-                                  </svg>
-                                </button>
-                              )}
-                            </div>
+                          {!isReadOnly && !criterion.isRequired && (
+                            <button
+                              type="button"
+                              onClick={() => toggleCriterionSelection(criterion.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                padding: 4,
+                                display: 'flex',
+                                alignItems: 'center',
+                                color: '#9CA3AF',
+                                marginLeft: 4,
+                              }}
+                              onMouseOver={(e) => (e.currentTarget.style.color = '#EF4444')}
+                              onMouseOut={(e) => (e.currentTarget.style.color = '#9CA3AF')}
+                              title="Bỏ tiêu chí này"
+                            >
+                              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                <line x1="10" y1="11" x2="10" y2="17" />
+                                <line x1="14" y1="11" x2="14" y2="17" />
+                              </svg>
+                            </button>
                           )}
                         </div>
 
@@ -1485,7 +1495,7 @@ const DetailProductPage: React.FC = () => {
             </div>
 
             <div className="formCard">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, opacity: isDisplayStatusDisabled ? 0.6 : 1 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" style={{ cursor: 'help' }}>
@@ -1495,14 +1505,9 @@ const DetailProductPage: React.FC = () => {
                 
                 <div className="custom-select-container" ref={statusRef}>
                   <div 
-                    className={`select-custom ${isStatusOpen ? 'open' : ''} ${isDisplayStatusDisabled ? 'readOnlyOverlay' : ''}`} 
+                    className={`select-custom ${isStatusOpen ? 'open' : ''} ${isDisplayStatusDisabled ? 'is-disabled' : ''}`} 
                     onClick={() => { if (!isDisplayStatusDisabled) setIsStatusOpen(v => !v); }} 
-                    style={{ 
-                      backgroundColor: isDisplayStatusDisabled ? '#F3F4F6' : 'white', 
-                      cursor: isDisplayStatusDisabled ? 'not-allowed' : 'pointer',
-                      color: isDisplayStatusDisabled ? '#9CA3AF' : 'inherit',
-                      borderColor: isDisplayStatusDisabled ? '#E5E7EB' : '#D1D5DB' 
-                    }}
+                    style={isDisplayStatusDisabled ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <span style={{ 
@@ -1630,7 +1635,7 @@ const DetailProductPage: React.FC = () => {
                           <div style={{ maxHeight: 260, overflowY: 'auto' }}>
                             {versions.map((v) => {
                               const isCurrent = id ? v.id === id : String(v.version) === String(productData?.version);
-                              const badge = getVersionStatusBadge(v.status);
+                              const badge = getVersionStatusBadge();
                               const versionDisplay = (v.version !== null && v.version !== undefined && String(v.version).trim() !== '' && String(v.version).toLowerCase() !== 'null')
                                 ? `Phiên bản ${v.version}`
                                 : (v.status === 'DRAFT' ? 'Bản nháp' : '---');

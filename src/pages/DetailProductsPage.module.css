@@ -598,10 +598,26 @@
   cursor: pointer;
 }
 
-.readOnlyOverlay {
+.readOnlyOverlay,
+.select-custom.is-disabled,
+.input.is-disabled,
+.input:disabled,
+.form-control-disabled {
   pointer-events: none;
   background-color: #F9FAFB !important;
-  color: #6B7280 !important;
+  color: #374151 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+}
+
+:global(.is-disabled),
+:global(.select-custom.is-disabled),
+:global(.input.is-disabled) {
+  background-color: #F9FAFB !important;
+  color: #374151 !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  pointer-events: none;
 }
 
 .permissionBanner {

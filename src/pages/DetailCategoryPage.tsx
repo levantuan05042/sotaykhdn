@@ -13,7 +13,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
-import { CASCADE_LOCK_MESSAGE, isCascadeHidden } from '../utils/formatUtils';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
   getHideBlockedByPendingCopy,
@@ -556,9 +556,9 @@ const DetailCategoryPage: React.FC = () => {
                 <label className="label"> Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container">
                   <div 
-                    className={`select-custom ${isOpen ? 'open' : ''}`} 
+                    className={`select-custom ${isOpen ? 'open' : ''} ${isFormReadOnly ? 'is-disabled' : ''}`} 
                     onClick={() => !isFormReadOnly && setIsOpen(!isOpen)}
-                    style={{ opacity: isFormReadOnly ? 0.7 : 1, cursor: isFormReadOnly ? 'not-allowed' : 'pointer' }}
+                    style={{ cursor: isFormReadOnly ? 'not-allowed' : 'pointer' }}
                   >
                     <span>{groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm sản phẩm"}</span>
                     {!isFormReadOnly && (
@@ -601,12 +601,12 @@ const DetailCategoryPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${isFormReadOnly ? 'is-disabled' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isFormReadOnly}
                   disabled={isFormReadOnly}
-                  style={{ backgroundColor: isFormReadOnly ? '#F9FAFB' : '#FFF', cursor: isFormReadOnly ? 'not-allowed' : 'text' }}
+                  style={{ cursor: isFormReadOnly ? 'not-allowed' : 'text' }}
                 />
               </div>
             </div>
@@ -623,9 +623,7 @@ const DetailCategoryPage: React.FC = () => {
               alignItems: 'flex-start', 
               gap: 10, 
               border: '1px solid #E5E7EB', 
-              boxSizing: 'border-box',
-              opacity: isStatusActive ? 1 : 0.5,
-              pointerEvents: isStatusActive ? 'auto' : 'none'
+              boxSizing: 'border-box'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Trạng thái hiển thị</span>
@@ -635,9 +633,9 @@ const DetailCategoryPage: React.FC = () => {
               </div>
               <div className="custom-select-container" ref={statusRef} style={{ width: '100%', position: 'relative' }}>
                 <div 
-                  className={`select-custom ${isStatusOpen ? 'open' : ''}`} 
+                  className={`select-custom ${isStatusOpen ? 'open' : ''} ${isDisplayStatusReadOnly ? 'is-disabled' : ''}`} 
                   onClick={() => !isDisplayStatusReadOnly && setIsStatusOpen(v => !v)}
-                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', background: isDisplayStatusReadOnly ? '#F9FAFB' : '#FFF', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isDisplayStatusReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
+                  style={{ display: 'flex', padding: '8px 12px', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderRadius: 8, border: '1px solid #D5D7DA', boxShadow: '0 1px 2px rgba(10,13,18,0.05)', cursor: isDisplayStatusReadOnly ? 'not-allowed' : 'pointer', width: '100%', boxSizing: 'border-box' }}
                 >
                   <span style={{ color: '#1A191B', fontWeight: 500 }}>{isActive === false ? 'Ẩn' : 'Hiển thị'}</span>
                   {!isDisplayStatusReadOnly && (
@@ -717,13 +715,7 @@ const DetailCategoryPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={
-          (String(categoryData?.status || '').toUpperCase() === 'ACTIVE' || String(categoryData?.status || '').toUpperCase() === 'APPROVED') && confirmAction === 'PENDING_APPROVAL'
-            ? `Bạn đang thực hiện chỉnh sửa Phiên bản ${categoryData?.version || 1} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${Number(categoryData?.version || 1) + 1} và gửi đến Kiểm soát để phê duyệt.`
-            : confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION'
-            ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm không?'
-            : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm không?'
-        }
+        desc={getActionConfirmDesc(categoryData, id, confirmAction, 'danh mục sản phẩm')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
       />
