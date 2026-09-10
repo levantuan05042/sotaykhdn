@@ -100,7 +100,7 @@ const ProductPage: React.FC = () => {
   const cached = getCachedPageState(pageKey);
 
   const [data, setData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(cached?.searchTerm ?? '');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>(cached?.selectedStatuses ?? []);
   const [selectedGroups, setSelectedGroups] = useState<string[]>(cached?.selectedGroups ?? []);
@@ -213,7 +213,7 @@ const ProductPage: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData(true);
-    }, 5000);
+    }, 15000);
 
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {

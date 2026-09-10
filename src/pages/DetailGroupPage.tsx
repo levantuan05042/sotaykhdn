@@ -77,6 +77,8 @@ const DetailGroupPage: React.FC = () => {
   const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
   const userMap = useMemo(() => getUserMap(), []);
@@ -158,7 +160,7 @@ const DetailGroupPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const refetchStatus = async () => {
-      if (isModified) return;
+      if (isModified || isSubmitting || confirmAction) return;
       try {
         const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id));
         if (response.ok) {
@@ -173,7 +175,7 @@ const DetailGroupPage: React.FC = () => {
       } catch (e) {}
     };
 
-    const interval = setInterval(refetchStatus, 5000);
+    const interval = setInterval(refetchStatus, 15000);
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {
         refetchStatus();
@@ -187,7 +189,7 @@ const DetailGroupPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [id, isModified]);
+  }, [id, isModified, isSubmitting, confirmAction]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isInputDisabled) return;
@@ -212,6 +214,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
+    if (submittingRef.current || isSubmitting) return;
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -223,6 +226,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const onSubmitClick = () => {
+    if (submittingRef.current || isSubmitting || confirmAction) return;
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
       return;
@@ -243,7 +247,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const handleUpdateGroup = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isInputDisabled || !id) return;
+    if (submittingRef.current || isInputDisabled || !id) return;
 
     if (status === 'PENDING_APPROVAL') {
       if (!formData.name.trim()) {
@@ -257,8 +261,10 @@ const DetailGroupPage: React.FC = () => {
       }
     }
 
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.UPDATE(id), {
         method: 'POST',
         headers: { 
@@ -274,6 +280,7 @@ const DetailGroupPage: React.FC = () => {
       });
 
       if (response.ok) {
+        succeeded = true;
         let message = '';
         switch (status) {
           case 'DRAFT':
@@ -286,15 +293,19 @@ const DetailGroupPage: React.FC = () => {
         }
         renderCustomToast(message);
         allowLeave();
+        setConfirmAction(null);
         setTimeout(() => navigate('/product-groups'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -304,15 +315,18 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isInputDisabled || !id) return;
+    if (submittingRef.current || isInputDisabled || !id) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DELETE(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
 
       if (response.ok) {
+        succeeded = true;
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
         allowLeave();
@@ -320,11 +334,14 @@ const DetailGroupPage: React.FC = () => {
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -708,19 +725,14 @@ const DetailGroupPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
-        onConfirm={() => {
-          if (confirmAction) {
-            const act = confirmAction;
-            setConfirmAction(null);
-            handleUpdateGroup(act);
-          }
-        }}
+        onClose={() => { if (!isSubmitting) setConfirmAction(null); }}
+        onConfirm={() => confirmAction && handleUpdateGroup(confirmAction)}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={getActionConfirmDesc(productData, id, confirmAction, 'nhóm sản phẩm')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
+        loading={isSubmitting}
       />
 
       <DuplicateVersionModal
@@ -779,12 +791,13 @@ const DetailGroupPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={() => { if (!isSubmitting) setShowDeleteModal(false); }}
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
         desc="Bạn có chắc chắn muốn xóa nhóm sản phẩm này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
+        loading={isSubmitting}
       />
 
       <CascadeHideModal

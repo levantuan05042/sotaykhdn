@@ -28,6 +28,16 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
   onViewPrior,
   isProcessing = false,
 }) => {
+  const openedAtRef = React.useRef(0);
+  const confirmingRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      openedAtRef.current = Date.now();
+      confirmingRef.current = false;
+    }
+  }, [isOpen]);
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen && !isProcessing) {
@@ -95,7 +105,7 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
         animation: 'dupModalFadeIn 0.2s ease-out',
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && !isProcessing) {
+        if (e.target === e.currentTarget && !isProcessing && Date.now() - openedAtRef.current >= 400) {
           onCancel();
         }
       }}
@@ -207,7 +217,11 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
 
           <button
             type="button"
-            onClick={onConfirm}
+            onClick={() => {
+              if (isProcessing || confirmingRef.current) return;
+              confirmingRef.current = true;
+              onConfirm();
+            }}
             disabled={isProcessing}
             style={{
               padding: '8px 16px',

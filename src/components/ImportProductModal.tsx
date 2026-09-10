@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import axios from 'axios';
 import './ImportProductModal.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { showErrorToast } from '../utils/appToast';
 
 interface ImportProductModalProps {
   isOpen: boolean;
@@ -23,6 +24,35 @@ const formatFileSize = (bytes: number): string => {
 const getFileExtension = (fileName: string): string => {
   const idx = fileName.lastIndexOf('.');
   return idx === -1 ? '' : fileName.slice(idx).toLowerCase();
+};
+
+const extractImportErrorMessage = (error: any): string => {
+  const status = error?.response?.status;
+  const data = error?.response?.data;
+  if (status === 413) return 'File vượt quá 10MB. Hãy chọn file nhỏ hơn.';
+  if (typeof data === 'string' && data.trim()) return data.trim();
+  if (typeof data?.message === 'string' && data.message.trim()) return data.message.trim();
+  if (!error?.response) return 'Không thể kết nối máy chủ. Vui lòng thử lại.';
+  if (status === 401 || status === 403) return 'Bạn không có quyền nhập Excel.';
+  return 'Tải lên thất bại. Kiểm tra lại file Excel và thử lại.';
+};
+
+const getImportErrorTitle = (message: string): string => {
+  const lower = message.toLowerCase();
+  if (message.includes('\n')) return 'Không thể nhập Excel';
+  if (lower.includes('trống')) return 'File Excel trống';
+  if (lower.includes('mật khẩu')) return 'File đang khóa mật khẩu';
+  if (lower.includes('hỏng') || lower.includes('không đọc được')) return 'Không đọc được file';
+  if (lower.includes('.xlsx') || lower.includes('.xls') || lower.includes('định dạng')) {
+    return 'Định dạng tệp không hợp lệ';
+  }
+  if (lower.includes('10mb') || lower.includes('dung lượng')) return 'Dung lượng tệp quá lớn';
+  if (lower.includes('trùng') || lower.includes('đã tồn tại')) return 'Tên sản phẩm trùng';
+  if (lower.includes('thiếu') || lower.includes('bắt buộc')) return 'Thiếu thông tin bắt buộc';
+  if (lower.includes('không tồn tại') || lower.includes('không thuộc') || lower.includes('không có sheet')) {
+    return 'Dữ liệu không khớp hệ thống';
+  }
+  return 'Không thể nhập Excel';
 };
 
 const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose, onSuccess }) => {
@@ -65,6 +95,7 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
       setSelectedFile(null);
       setStatus('error');
       setErrorMessage(validationError);
+      showErrorToast(getImportErrorTitle(validationError), validationError);
       return;
     }
     setSelectedFile(file);
@@ -166,8 +197,11 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
     } catch (error: any) {
       setStatus('error');
       setUploadProgress(0);
-      const serverMessage = error?.response?.data?.message;
-      setErrorMessage(serverMessage || 'Tải lên thất bại. Kiểm tra lại định dạng tệp và thử lại.');
+      const serverMessage = extractImportErrorMessage(error);
+      setErrorMessage(serverMessage);
+      const lines = serverMessage.split('\n');
+      const toastDetail = lines.length > 3 ? `${lines.slice(0, 3).join('\n')}\n...` : serverMessage;
+      showErrorToast(getImportErrorTitle(serverMessage), toastDetail);
       console.error('Lỗi khi nhập sản phẩm từ Excel:', error);
     }
   }, [selectedFile, onSuccess, resetState, onClose]);
@@ -233,7 +267,7 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
 
           {!selectedFile ? (
             <div
-              className={`import-dropzone ${isDragActive ? 'drag-active' : ''}`}
+              className={`import-dropzone ${isDragActive ? 'drag-active' : ''} ${status === 'error' ? 'has-error' : ''}`}
               onDrop={handleDrop}
               onDragEnter={handleDragEnter}
               onDragLeave={handleDragLeave}
@@ -262,7 +296,7 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
               </p>
             </div>
           ) : (
-            <div className="import-file-card">
+            <div className={`import-file-card ${status === 'error' ? 'has-error' : ''}`}>
               <div className="import-file-icon">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#107C41" />
@@ -308,8 +342,20 @@ const ImportProductModal: React.FC<ImportProductModalProps> = ({ isOpen, onClose
             </div>
           )}
 
-          {status === 'error' && (
-            <p className="import-error-message">{errorMessage}</p>
+          {status === 'error' && errorMessage && (
+            <div className="import-error-banner" role="alert">
+              <span className="import-error-icon" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <circle cx="10" cy="10" r="10" fill="#DC2626" />
+                  <path d="M10 5.5V11" stroke="white" strokeWidth="1.8" strokeLinecap="round" />
+                  <circle cx="10" cy="14.2" r="1.1" fill="white" />
+                </svg>
+              </span>
+              <div className="import-error-copy">
+                <strong>{getImportErrorTitle(errorMessage)}</strong>
+                <span>{errorMessage}</span>
+              </div>
+            </div>
           )}
         </div>
 

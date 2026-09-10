@@ -127,7 +127,7 @@ const ToastHost = () => {
                 {item.title}
               </div>
               {item.description ? (
-                <div style={{ fontSize: 13, fontWeight: 400, lineHeight: '18px', color: '#6B7280' }}>
+                <div style={{ fontSize: 13, fontWeight: 400, lineHeight: '18px', color: '#6B7280', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
                   {item.description}
                 </div>
               ) : null}

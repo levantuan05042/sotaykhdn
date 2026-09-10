@@ -69,6 +69,8 @@ const DetailCriteriaPage: React.FC = () => {
   const [isActive, setIsActive] = useState(true);
   const [criteriaData, setCriteriaData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   // Modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -238,7 +240,7 @@ const DetailCriteriaPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const refetchStatus = async () => {
-      if (isFormModified) return;
+      if (isFormModified || isSubmitting) return;
       try {
         const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DETAIL(id));
         if (detailRes.ok) {
@@ -272,7 +274,7 @@ const DetailCriteriaPage: React.FC = () => {
       } catch (e) {}
     };
 
-    const interval = setInterval(refetchStatus, 5000);
+    const interval = setInterval(refetchStatus, 15000);
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {
         refetchStatus();
@@ -286,7 +288,7 @@ const DetailCriteriaPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [id, isFormModified]);
+  }, [id, isFormModified, isSubmitting]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
@@ -342,7 +344,7 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (isReadOnly || !id || submittingRef.current || isSubmitting) return;
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -354,7 +356,7 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const onSubmitClick = () => {
-    if (isReadOnly || !id) return;
+    if (isReadOnly || !id || submittingRef.current || isSubmitting || confirmAction) return;
     if (!validateFormBeforeSubmit()) return;
     const conflict = findPriorConflictVersion();
     if (conflict) {
@@ -385,14 +387,16 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (submittingRef.current || isReadOnly || !id) return;
 
     if (status === 'PENDING_APPROVAL') {
       if (!validateFormBeforeSubmit()) return;
     }
 
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.UPDATE(id), {
         method: 'POST',
         headers: { 
@@ -411,11 +415,11 @@ const DetailCriteriaPage: React.FC = () => {
 
       if (response.status === 409) {
         toast.error("Mã tiêu chí này đã tồn tại trên hệ thống. Vui lòng kiểm tra lại!", { position: 'top-center' });
-        setLoading(false);
         return;
       }
 
       if (response.ok) {
+        succeeded = true;
         let message = '';
         switch (status) {
           case 'DRAFT': 
@@ -429,15 +433,19 @@ const DetailCriteriaPage: React.FC = () => {
 
         renderCustomToast(message);
         allowLeave();
+        setConfirmAction(null);
         setTimeout(() => navigate('/criteria-management'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -507,9 +515,11 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isReadOnly || !id) return;
+    if (submittingRef.current || isReadOnly || !id) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DELETE(id), {
         method: 'POST',
         headers: { 
@@ -519,6 +529,7 @@ const DetailCriteriaPage: React.FC = () => {
       });
 
       if (response.ok) {
+        succeeded = true;
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
         allowLeave();
@@ -526,11 +537,14 @@ const DetailCriteriaPage: React.FC = () => {
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -1016,19 +1030,16 @@ const DetailCriteriaPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
+        onClose={() => { if (!isSubmitting) setConfirmAction(null); }}
         onConfirm={() => {
-          if (confirmAction) {
-            const act = confirmAction;
-            setConfirmAction(null);
-            handleUpdateCriteria(act);
-          }
+          if (confirmAction) return handleUpdateCriteria(confirmAction);
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={getActionConfirmDesc(criteriaData, id, confirmAction, 'tiêu chí')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
+        loading={isSubmitting}
       />
 
       <DuplicateVersionModal
@@ -1087,12 +1098,13 @@ const DetailCriteriaPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={() => { if (!isSubmitting) setShowDeleteModal(false); }}
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
         desc="Bạn có chắc chắn muốn xóa tiêu chí này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
+        loading={isSubmitting}
       />
 
       <CascadeHideModal

@@ -150,6 +150,7 @@ const AddCriteriaPage: React.FC = () => {
 
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
+    if (isSubmitting) return;
     try {
       setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CRITERIA.LIST, {

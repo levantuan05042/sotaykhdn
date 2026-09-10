@@ -488,6 +488,7 @@ const AddProductPage: React.FC = () => {
   };
 
   const handleCreateProduct = async (status: 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
+    if (isSubmitting) return;
     if (!formData.productGroupId && status !== 'DRAFT') {
       toast.error("Vui lòng chọn Nhóm sản phẩm", { position: 'top-center' });
       return;
