@@ -656,7 +656,7 @@ const BatchRequestDetailPage: React.FC = () => {
 
     const interval = setInterval(() => {
       fetchBatchDetails(true);
-    }, 5000);
+    }, 15000);
 
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {
@@ -960,7 +960,7 @@ const BatchRequestDetailPage: React.FC = () => {
   };
 
   const handleLocalSave = async () => {
-    if (!quickViewProduct) return;
+    if (!quickViewProduct || isUpdating) return;
     
     const missingRequired = details.find(d => d.required && isHtmlEmpty(d.noiDung));
     if (!formData.name.trim() || missingRequired) {
@@ -1016,6 +1016,7 @@ const BatchRequestDetailPage: React.FC = () => {
   };
 
   const handleSaveDraftToDB = async () => {
+    if (isUpdating) return;
     setIsUpdating(true);
     try {
       const updatesToPush = { ...pendingUpdates };
@@ -1047,7 +1048,7 @@ const BatchRequestDetailPage: React.FC = () => {
   };
 
   const handleSend = async () => {
-    if (!requestId) return;
+    if (!requestId || isUpdating) return;
     setIsUpdating(true);
     try {
       const updatesToPush = { ...pendingUpdates };

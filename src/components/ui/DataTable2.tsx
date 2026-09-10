@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { LoadingPaginationFooter, TableSkeletonRows } from './TableSkeletonRows';
 import './DataTable.css';
 
 export interface Column<T> {
@@ -90,55 +91,34 @@ export function DataTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className={`data-table-wrapper-container ${className}`} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className={`data-table-wrapper-container ${className}${loading ? ' is-loading' : ''}`} style={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
       <div className="data-table-container">
         <table className="data-table">
-          <thead>
-            <tr>
-              {columns.map((col) => (
-                <th
-                  key={col.key}
-                  style={{
-                    width: col.width,
-                    textAlign: col.align || 'left',
-                  }}
-                >
-                  {col.header}
-                </th>
-              ))}
-            </tr>
-          </thead>
+          <colgroup>
+            {columns.map((col) => (
+              <col key={col.key} style={col.width ? { width: col.width } : undefined} />
+            ))}
+          </colgroup>
+          {!loading && (
+            <thead>
+              <tr>
+                {columns.map((col) => (
+                  <th
+                    key={col.key}
+                    style={{
+                      width: col.width,
+                      textAlign: col.align || 'left',
+                    }}
+                  >
+                    {col.header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+          )}
           <tbody>
             {loading ? (
-              <>
-                <tr className="table-loading-bar-row">
-                  <td colSpan={columns.length}>
-                    <div className="table-loading-bar">
-                      <div className="loading-dots-pulse">
-                        <span className="loading-dot-pulse-item"></span>
-                        <span className="loading-dot-pulse-item"></span>
-                        <span className="loading-dot-pulse-item"></span>
-                      </div>
-                      <strong>Đang tải dữ liệu...</strong>
-                      <span style={{ fontSize: 'inherit', color: 'inherit' }}>Vui lòng chờ trong giây lát</span>
-                    </div>
-                  </td>
-                </tr>
-                {Array.from({ length: 6 }).map((_, rowIndex) => (
-                  <tr key={`skeleton-row-${rowIndex}`}>
-                    {columns.map((col, colIdx) => (
-                      <td key={`skeleton-cell-${colIdx}`} style={{ textAlign: col.align || 'left' }}>
-                        <div
-                          className="table-skeleton-bar"
-                          style={{
-                            width: col.key === 'stt' ? '24px' : col.key === 'actions' ? '40px' : `${Math.max(40, 80 + (colIdx % 3) * 30)}px`
-                          }}
-                        />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </>
+              <TableSkeletonRows columns={columns} />
             ) : paginatedData.length > 0 ? (
               paginatedData.map((row, index) => {
                 const actualIndex = startIndex + index;
@@ -174,12 +154,16 @@ export function DataTable<T extends Record<string, any>>({
         </table>
       </div>
 
+      {loading && totalRecords === 0 ? (
+        <LoadingPaginationFooter />
+      ) : (
       <div className="table-pagination-footer">
         <div className="pagination-info">
           <span>Hiển thị </span>
           <select 
             className="pagination-size-select" 
             value={pageSize}
+            disabled={loading}
             onChange={(e) => {
               setPageSize(Number(e.target.value));
               changePage(1);
@@ -196,7 +180,7 @@ export function DataTable<T extends Record<string, any>>({
         <div className="pagination-controls">
           <button 
             className="pagination-btn"
-            disabled={safeCurrentPage === 1}
+            disabled={loading || safeCurrentPage === 1}
             onClick={() => changePage(Math.max(1, safeCurrentPage - 1))}
           >
             &lsaquo;
@@ -210,6 +194,7 @@ export function DataTable<T extends Record<string, any>>({
               <button
                 key={`page-${p}`}
                 className={`pagination-btn ${safeCurrentPage === p ? 'active' : ''}`}
+                disabled={loading}
                 onClick={() => changePage(p as number)}
               >
                 {p}
@@ -219,13 +204,14 @@ export function DataTable<T extends Record<string, any>>({
 
           <button 
             className="pagination-btn"
-            disabled={safeCurrentPage === totalPages}
+            disabled={loading || safeCurrentPage === totalPages}
             onClick={() => changePage(Math.min(totalPages, safeCurrentPage + 1))}
           >
             &rsaquo;
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

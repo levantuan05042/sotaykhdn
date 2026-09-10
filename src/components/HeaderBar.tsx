@@ -323,7 +323,12 @@ const HeaderBar: React.FC = () => {
   return (
     <header className="header-container">
       {/* Khối bên trái */}
-      <div className="flex items-center">
+      <button
+        type="button"
+        className="flex items-center header-brand-btn"
+        onClick={() => navigate('/view')}
+        aria-label="Về trang chủ tra cứu"
+      >
         <img
           src={logoAgribank}
           alt="Logo Agribank"
@@ -335,7 +340,7 @@ const HeaderBar: React.FC = () => {
             Khách hàng doanh nghiệp
           </h1>
         </div>
-      </div>
+      </button>
 
       {/* Khối bên phải */}
       <div className="flex items-center space-x-6">

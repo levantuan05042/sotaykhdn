@@ -74,6 +74,8 @@ const DetailBusinessPage: React.FC = () => {
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   const [businessData, setBusinessData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   
   const [categorySearchTerm, setCategorySearchTerm] = useState('');
   
@@ -211,7 +213,7 @@ const DetailBusinessPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const refetchStatus = async () => {
-      if (hasChanges) return;
+      if (hasChanges || isSubmitting) return;
       try {
         const detailRes = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DETAIL(id));
         if (detailRes.ok) {
@@ -226,7 +228,7 @@ const DetailBusinessPage: React.FC = () => {
       } catch (e) {}
     };
 
-    const interval = setInterval(refetchStatus, 5000);
+    const interval = setInterval(refetchStatus, 15000);
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {
         refetchStatus();
@@ -240,7 +242,7 @@ const DetailBusinessPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [id, hasChanges]);
+  }, [id, hasChanges, isSubmitting]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isFormDisabled) return;
@@ -330,7 +332,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
-    if (isFormDisabled || !id) return;
+    if (isFormDisabled || !id || submittingRef.current || isSubmitting) return;
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -342,7 +344,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const onSubmitClick = () => {
-    if (isFormDisabled || !id) return;
+    if (isFormDisabled || !id || submittingRef.current || isSubmitting || confirmAction) return;
     const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
     const categoryVal = formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId;
     if (!nameVal) {
@@ -365,7 +367,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isFormDisabled || !id) return;
+    if (submittingRef.current || isFormDisabled || !id) return;
 
     if (status === 'PENDING_APPROVAL') {
       const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
@@ -381,8 +383,10 @@ const DetailBusinessPage: React.FC = () => {
       }
     }
 
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.UPDATE(id), {
         method: 'POST',
         headers: { 
@@ -398,6 +402,7 @@ const DetailBusinessPage: React.FC = () => {
       });
 
       if (response.ok) {
+        succeeded = true;
         let message = '';
         switch (status) {
           case 'DRAFT': 
@@ -409,15 +414,19 @@ const DetailBusinessPage: React.FC = () => {
         }
         renderCustomToast(message);
         allowLeave();
+        setConfirmAction(null);
         setTimeout(() => navigate('/business-management'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -427,15 +436,18 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isFormDisabled || !id) return;
+    if (submittingRef.current || isFormDisabled || !id) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DELETE(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
 
       if (response.ok) {
+        succeeded = true;
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
         allowLeave();
@@ -443,11 +455,14 @@ const DetailBusinessPage: React.FC = () => {
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -716,19 +731,16 @@ const DetailBusinessPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
+        onClose={() => { if (!isSubmitting) setConfirmAction(null); }}
         onConfirm={() => {
-          if (confirmAction) {
-            const act = confirmAction;
-            setConfirmAction(null);
-            handleUpdateBusiness(act);
-          }
+          if (confirmAction) return handleUpdateBusiness(confirmAction);
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={getActionConfirmDesc(businessData, id, confirmAction, 'mảng nghiệp vụ')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
+        loading={isSubmitting}
       />
 
       <DuplicateVersionModal
@@ -787,12 +799,13 @@ const DetailBusinessPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={() => { if (!isSubmitting) setShowDeleteModal(false); }}
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
         desc="Bạn có chắc chắn muốn xóa nghiệp vụ này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
+        loading={isSubmitting}
       />
 
       <CascadeHideModal

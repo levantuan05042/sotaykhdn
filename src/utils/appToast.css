@@ -57,6 +57,8 @@
   line-height: 18px;
   color: #6B7280;
   font-family: Inter, sans-serif;
+  white-space: pre-line;
+  word-break: break-word;
 }
 
 .app-toast-close {

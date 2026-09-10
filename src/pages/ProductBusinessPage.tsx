@@ -193,7 +193,7 @@ const ProductBusinessPage: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData(true);
-    }, 5000);
+    }, 15000);
 
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {

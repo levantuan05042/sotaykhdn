@@ -431,6 +431,7 @@ const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose
   if (!isOpen) return null;
 
   const handleConfirm = async () => {
+    if (loading) return;
     setLoading(true);
     try {
       await onSubmitBatch(requestId, 'PENDING_APPROVAL');
@@ -662,6 +663,8 @@ const DetailProductPage: React.FC = () => {
   const [operationOptions, setOperationOptions] = useState<{ label: string; value: string }[]>([]);
 
   const [loading,           setLoading]           = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingOperations, setLoadingOperations] = useState(false);
 
@@ -711,7 +714,7 @@ const DetailProductPage: React.FC = () => {
   };
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (isReadOnly || !id || submittingRef.current || isSubmitting) return;
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -723,7 +726,7 @@ const DetailProductPage: React.FC = () => {
   };
 
   const handleApproveClick = () => {
-    if (isReadOnly || !id) return;
+    if (isReadOnly || !id || submittingRef.current || isSubmitting || confirmAction) return;
     const gid = formData.productGroupId || productData?.productGroupId;
     if (!gid) {
       toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' });
@@ -937,7 +940,7 @@ const DetailProductPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const refetchStatus = async () => {
-      if (isDirty) return;
+      if (isDirty || isSubmitting) return;
       try {
         const pRes = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(id));
         if (pRes.data) {
@@ -947,7 +950,7 @@ const DetailProductPage: React.FC = () => {
       } catch (e) {}
     };
 
-    const interval = setInterval(refetchStatus, 5000);
+    const interval = setInterval(refetchStatus, 15000);
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {
         refetchStatus();
@@ -961,7 +964,7 @@ const DetailProductPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [id, isDirty]);
+  }, [id, isDirty, isSubmitting]);
 
   useEffect(() => {
     if (!formData.productGroupId) { 
@@ -1070,15 +1073,17 @@ const DetailProductPage: React.FC = () => {
   };
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION') => {
-    if (isReadOnly || !id) return;
+    if (submittingRef.current || isReadOnly || !id) return;
     if (status !== 'ARCHIVED' && status !== 'ACTIVE' && status !== 'DRAFT') {
       if (!formData.productGroupId && !productData?.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
     }
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       let finalImageUrl: string | null;
       if      (imageRemoved) { finalImageUrl = null; }
-      else if (avatarFile)   { try { finalImageUrl = await uploadImage(avatarFile); } catch (e: any) { toast.error(e.message || 'Lỗi upload ảnh', { position: 'top-center' }); setLoading(false); return; } }
+      else if (avatarFile)   { try { finalImageUrl = await uploadImage(avatarFile); } catch (e: any) { toast.error(e.message || 'Lỗi upload ảnh', { position: 'top-center' }); return; } }
       else                   { finalImageUrl = productData.imageUrl || null; }
 
       const payload = {
@@ -1101,6 +1106,7 @@ const DetailProductPage: React.FC = () => {
         body: JSON.stringify(payload) 
       });
       if (res.ok) {
+        succeeded = true;
         const msgs: Record<string, string> = {
           DRAFT: 'Lưu nháp thành công', 
           ARCHIVED: 'Lưu trữ thành công',
@@ -1110,13 +1116,19 @@ const DetailProductPage: React.FC = () => {
         };
         renderCustomToast(msgs[status] || 'Cập nhật thành công');
         allowLeave();
+        setConfirmAction(null);
         setTimeout(() => navigate('/products/processing'), 400);
       } else {
         const err = await res.json();
         toast.error(err.message || 'Có lỗi xảy ra khi cập nhật sản phẩm', { position: 'top-center' });
-        setLoading(false);
       }
-    } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
+    } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); }
+    finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    }
   };
 
   const handleToggleActive = async (newActiveStatus: boolean) => {
@@ -1189,22 +1201,35 @@ const DetailProductPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isReadOnly || !id) return;
+    if (submittingRef.current || isReadOnly || !id) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
       const res = await fetch(API_ENDPOINTS.PRODUCT.DELETE(id), { 
         method: 'POST',
         headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
-      if (res.ok) { 
+      if (res.ok) {
+        succeeded = true;
         setShowDeleteModal(false);
         renderCustomToast('Xóa thành công'); 
         allowLeave();
         setTimeout(() => navigate('/products/processing'), 400); 
+      } else {
+        const e = await res.json();
+        toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
       }
-      else { const e = await res.json(); toast.error(e.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' }); setLoading(false); }
-    } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
+    } catch (e) {
+      console.error(e);
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    }
   };
 
   const renderCustomToast = (message: string) => {
@@ -2011,29 +2036,27 @@ const DetailProductPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={() => { if (!isSubmitting) setShowDeleteModal(false); }}
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
         desc="Bạn có chắc chắn muốn xóa sản phẩm này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
+        loading={isSubmitting}
       />
 
       <ActionConfirmModal
         isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
+        onClose={() => { if (!isSubmitting) setConfirmAction(null); }}
         onConfirm={() => {
-          if (confirmAction) {
-            const act = confirmAction;
-            setConfirmAction(null);
-            handleUpdateProduct(act);
-          }
+          if (confirmAction) return handleUpdateProduct(confirmAction);
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={getActionConfirmDesc(productData, id, confirmAction, 'sản phẩm', isProductActive)}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
+        loading={isSubmitting}
       />
 
       <DuplicateVersionModal

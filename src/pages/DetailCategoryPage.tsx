@@ -63,6 +63,8 @@ const DetailCategoryPage: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [categoryData, setCategoryData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const statusRef = useRef<HTMLDivElement>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -188,7 +190,7 @@ const DetailCategoryPage: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     const refetchStatus = async () => {
-      if (isDirty) return;
+      if (isDirty || isSubmitting) return;
       try {
         const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL(id));
         if (detailRes.ok) {
@@ -203,7 +205,7 @@ const DetailCategoryPage: React.FC = () => {
       } catch (e) {}
     };
 
-    const interval = setInterval(refetchStatus, 5000);
+    const interval = setInterval(refetchStatus, 15000);
     const handleFocus = () => {
       if (document.visibilityState === 'visible') {
         refetchStatus();
@@ -217,7 +219,7 @@ const DetailCategoryPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [id, isDirty]);
+  }, [id, isDirty, isSubmitting]);
 
   const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION' | null>(null);
 
@@ -244,7 +246,7 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
-    if (isNotCreator || !id) return;
+    if (isNotCreator || !id || submittingRef.current || isSubmitting) return;
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -256,7 +258,7 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const onSubmitClick = () => {
-    if (isNotCreator || !id) return;
+    if (isNotCreator || !id || submittingRef.current || isSubmitting || confirmAction) return;
     const nameVal = formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim();
     const groupVal = formData.groupId !== undefined ? formData.groupId : categoryData?.groupId;
     if (!nameVal) {
@@ -279,7 +281,7 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const handleUpdateCategory = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
-    if (isNotCreator || !id) return;
+    if (submittingRef.current || isNotCreator || !id) return;
 
     if (status === 'PENDING_APPROVAL') {
       const nameVal = formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim();
@@ -295,8 +297,10 @@ const DetailCategoryPage: React.FC = () => {
       }
     }
 
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_CATEGORY.UPDATE(id), {
         method: 'POST',
         headers: { 
@@ -312,6 +316,7 @@ const DetailCategoryPage: React.FC = () => {
       });
 
       if (response.ok) {
+        succeeded = true;
         let message = '';
         switch (status) {
           case 'DRAFT': 
@@ -323,15 +328,19 @@ const DetailCategoryPage: React.FC = () => {
         }
         renderCustomToast(message);
         allowLeave();
+        setConfirmAction(null);
         setTimeout(() => navigate('/product-category'), 400);
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -409,15 +418,18 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const executeDelete = async () => {
-    if (isNotCreator || !id) return;
+    if (submittingRef.current || isNotCreator || !id) return;
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       const response = await fetch(API_ENDPOINTS.PRODUCT_CATEGORY.DELETE(id), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
       });
 
       if (response.ok) {
+        succeeded = true;
         setShowDeleteModal(false);
         renderCustomToast("Xóa thành công");
         allowLeave();
@@ -425,11 +437,14 @@ const DetailCategoryPage: React.FC = () => {
       } else {
         const errorData = await response.json();
         toast.error(errorData.message || 'Có lỗi xảy ra khi xóa', { position: 'top-center' });
-        setLoading(false);
       }
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
-      setLoading(false);
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -705,19 +720,16 @@ const DetailCategoryPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={confirmAction !== null}
-        onClose={() => setConfirmAction(null)}
+        onClose={() => { if (!isSubmitting) setConfirmAction(null); }}
         onConfirm={() => {
-          if (confirmAction) {
-            const act = confirmAction;
-            setConfirmAction(null);
-            handleUpdateCategory(act);
-          }
+          if (confirmAction) return handleUpdateCategory(confirmAction);
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={getActionConfirmDesc(categoryData, id, confirmAction, 'danh mục sản phẩm')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
+        loading={isSubmitting}
       />
 
       <DuplicateVersionModal
@@ -776,12 +788,13 @@ const DetailCategoryPage: React.FC = () => {
 
       <ActionConfirmModal
         isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        onClose={() => { if (!isSubmitting) setShowDeleteModal(false); }}
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
         desc="Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
+        loading={isSubmitting}
       />
 
       <CascadeHideModal

@@ -139,6 +139,11 @@
   transform: scale(0.99);
 }
 
+.import-dropzone.has-error {
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+}
+
 .import-dropzone-icon {
   display: flex;
   justify-content: center;
@@ -198,6 +203,15 @@
 
 .import-file-card:hover {
   border-color: var(--import-border-strong);
+}
+
+.import-file-card.has-error {
+  border-color: #FCA5A5;
+  background: #FEF2F2;
+}
+
+.import-file-card.has-error:hover {
+  border-color: #F87171;
 }
 
 .import-file-icon {
@@ -293,14 +307,47 @@
   transform: scale(1.1);
 }
 
-.import-error-message {
-  margin: 12px 2px 0 2px;
-  font-size: 13px;
-  color: var(--import-error);
-  line-height: 1.5;
+.import-error-banner {
+  margin-top: 12px;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #FECACA;
+  background: #FEF2F2;
+}
+
+.import-error-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+.import-error-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.import-error-copy strong {
+  color: #991B1B;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 20px;
+}
+
+.import-error-copy span {
+  color: #B42318;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 18px;
+  word-break: break-word;
+  white-space: pre-line;
 }
 
 /* ---------- Footer ---------- */

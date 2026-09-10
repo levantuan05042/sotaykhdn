@@ -523,6 +523,8 @@ const DetailProductPage: React.FC = () => {
   const [operationOptions, setOperationOptions] = useState<{ label: string; value: string }[]>([]);
 
   const [loading,           setLoading]           = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingOperations, setLoadingOperations] = useState(false);
 
@@ -834,6 +836,7 @@ const DetailProductPage: React.FC = () => {
   };
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE') => {
+    if (submittingRef.current) return;
     if (isReadOnly) {
       toast.error('Bạn không có quyền chỉnh sửa sản phẩm này do không phải là người tạo.', { position: 'top-center' });
       return;
@@ -852,11 +855,13 @@ const DetailProductPage: React.FC = () => {
         if (miss) { toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc mới: ${miss.name}`, { position: 'top-center' }); return; }
       }
     }
+    submittingRef.current = true;
+    setIsSubmitting(true);
+    let succeeded = false;
     try {
-      setLoading(true);
       let finalImageUrl: string | null;
       if      (imageRemoved) { finalImageUrl = null; }
-      else if (avatarFile)   { try { finalImageUrl = await uploadImage(avatarFile); } catch (e: any) { toast.error(e.message || 'Lỗi upload ảnh', { position: 'top-center' }); setLoading(false); return; } }
+      else if (avatarFile)   { try { finalImageUrl = await uploadImage(avatarFile); } catch (e: any) { toast.error(e.message || 'Lỗi upload ảnh', { position: 'top-center' }); return; } }
       else                   { finalImageUrl = productData.imageUrl || null; }
 
       const payload = {
@@ -871,6 +876,7 @@ const DetailProductPage: React.FC = () => {
       };
       const res = await fetch(API_ENDPOINTS.PRODUCT.UPDATE(id), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (res.ok) {
+        succeeded = true;
         const msgs: Record<string, string> = {
           DRAFT: 'Lưu nháp sản phẩm thành công', ARCHIVED: 'Lưu trữ sản phẩm thành công',
           ACTIVE: 'Kích hoạt sản phẩm hoạt động trở lại thành công', PENDING_APPROVAL: 'Gửi phê duyệt sản phẩm thành công',
@@ -889,9 +895,16 @@ const DetailProductPage: React.FC = () => {
       } else {
         const err = await res.json();
         toast.error(err.message || 'Có lỗi xảy ra khi cập nhật sản phẩm', { position: 'top-center' });
-        setLoading(false);
       }
-    } catch (e) { console.error(e); toast.error('Lỗi kết nối máy chủ', { position: 'top-center' }); setLoading(false); }
+    } catch (e) {
+      console.error(e);
+      toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
+    } finally {
+      if (!succeeded) {
+        submittingRef.current = false;
+        setIsSubmitting(false);
+      }
+    }
   };
 
   if (loading)      return <div className="loading" style={{ padding: 40, textAlign: 'center' }}>Đang tải dữ liệu sản phẩm...</div>;
@@ -1028,22 +1041,23 @@ const DetailProductPage: React.FC = () => {
 
             {!isReadOnly && (
               <button 
+                type="button"
                 className="btnSubmit" 
-                disabled={!isDirty || productData?.status === 'PENDING_APPROVAL'} 
+                disabled={!isDirty || isSubmitting || productData?.status === 'PENDING_APPROVAL'} 
                 onClick={() => handleUpdateProduct(productData?.status || 'ACTIVE')}
                 style={{
                   padding: '8px 24px',
                   borderRadius: '8px',
-                  backgroundColor: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? '#AE1C3F' : '#E3DFE6',
-                  color: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? '#FFF' : '#9CA3AF',
+                  backgroundColor: (isDirty && !isSubmitting && productData?.status !== 'PENDING_APPROVAL') ? '#AE1C3F' : '#E3DFE6',
+                  color: (isDirty && !isSubmitting && productData?.status !== 'PENDING_APPROVAL') ? '#FFF' : '#9CA3AF',
                   border: 'none',
                   fontWeight: 600,
                   fontSize: '14px',
-                  cursor: (isDirty && productData?.status !== 'PENDING_APPROVAL') ? 'pointer' : 'not-allowed',
+                  cursor: (isDirty && !isSubmitting && productData?.status !== 'PENDING_APPROVAL') ? 'pointer' : 'not-allowed',
                   transition: 'all 0.2s ease',
                 }}
               >
-                Lưu
+                {isSubmitting ? 'Đang lưu...' : 'Lưu'}
               </button>
             )}
           </div>

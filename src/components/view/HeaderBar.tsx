@@ -201,7 +201,12 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
             )}
           </button>
 
-          <div className={styles['header-brand']}>
+          <button
+            type="button"
+            className={styles['header-brand']}
+            onClick={() => navigate('/view')}
+            aria-label="Về trang chủ tra cứu"
+          >
             <img src={logoAgribank} alt="Logo" className={styles['header-logo']} />
             <div className={styles['header-brand-text']}>
               <h1 className={styles['header-title']}>
@@ -209,7 +214,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                 <span className={styles['header-title-line']}>Khách hàng doanh nghiệp</span>
               </h1>
             </div>
-          </div>
+          </button>
         </div>
 
         <div className={`${styles['header-search-wrapper']} ${isMobileSearchOpen ? styles['mobile-active'] : ''}`} ref={dropdownRef}>
