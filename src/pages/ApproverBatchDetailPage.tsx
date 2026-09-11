@@ -156,9 +156,9 @@ const ApproverBatchDetailPage: React.FC = () => {
   };
 
   const handleApproveBatchSubmit = async () => {
-    // Determine status: if there's any product with notes === '0', it's NEEDS_REVISION, otherwise ACTIVE
+    // Determine status: if there's any product with notes === '0', it's NEEDS_REVISION, otherwise COMPLETED
     const hasRevision = products.some(p => p.notes === '0');
-    const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'ACTIVE';
+    const targetStatus = hasRevision ? 'NEEDS_REVISION' : 'COMPLETED';
 
     try {
       const approvedByStr = getApprovedByStr();
@@ -319,7 +319,7 @@ const ApproverBatchDetailPage: React.FC = () => {
           <h2 className="batch-breadcrumb-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>{batchRequest?.name || 'Lô sản phẩm'}</span>
             <span style={{ color: '#8c8c8c', fontSize: '14px' }}>&rsaquo;</span>
-            <StatusBadge status={batchRequest?.status || 'PENDING_APPROVAL'} />
+            <StatusBadge status={batchRequest?.status === 'ACTIVE' || batchRequest?.status === 'APPROVED' ? 'COMPLETED' : (batchRequest?.status || 'PENDING_APPROVAL')} />
           </h2>
         </div>
 

@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import RejectReasonPopup from './RejectReasonPopup';
 import ApproveConfirmPopup from './ApproveConfirmPopup';
 import AuditLogTimeline from './AuditLogTimeline';
+import CollapsibleRightCard from './ui/CollapsibleRightCard';
 import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverDetailWrapper.css';
 
@@ -151,24 +152,22 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
           </div>
 
           {/* Audit Log Timeline Card */}
-          <AuditLogTimeline objectCode={objectCode} />
+          <AuditLogTimeline objectCode={objectCode} refreshKey={status} />
         </section>
 
         {/* Right Column: Metadata & Comments */}
         <section className="detail-right-panel">
           
           {/* Status Display Card */}
-          <div className="status-display-card shadow-sm">
-            <h3 className="card-title">Trạng thái hiển thị</h3>
+          <CollapsibleRightCard title="Trạng thái hiển thị" className="status-display-card shadow-sm">
             <select className="formSelect" disabled value={status === 'ACTIVE' ? 'active' : 'inactive'}>
               <option value="active">Hiển thị</option>
               <option value="inactive">Ẩn</option>
             </select>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Metadata Card */}
-          <div className="meta-info-card shadow-sm" style={{ marginTop: '16px' }}>
-            <h3 className="card-title">Thông tin sản phẩm</h3>
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="meta-info-card shadow-sm">
             <div className="meta-info-white-box">
               <div className="meta-grid">
                 <div className="meta-item-vertical">
@@ -193,7 +192,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
                 </div>
               </div>
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Comments Card */}
           <div className="comments-container shadow-sm" style={{ marginTop: '16px' }}>

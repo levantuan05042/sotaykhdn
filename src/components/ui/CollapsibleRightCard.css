@@ -1,0 +1,50 @@
+.collapsible-right-card-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.collapsible-right-card-toggle:hover .collapsible-right-card-chevron {
+  color: #171717;
+  stroke: #171717;
+}
+
+.collapsible-right-card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #171717;
+  line-height: 1.4;
+}
+
+.collapsible-right-card-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  color: #595959;
+}
+
+.collapsible-right-card-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.collapsible-right-card-body {
+  margin-top: 12px;
+}
+
+.collapsible-right-card.right-card,
+.collapsible-right-card.status-display-card,
+.collapsible-right-card.meta-info-card {
+  gap: 0;
+}
+
+.collapsible-right-card.is-collapsed {
+  padding-bottom: 16px;
+}

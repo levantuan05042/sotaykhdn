@@ -8,6 +8,8 @@ import LoadingOverlay from '../components/ui/LoadingOverlay';
 import ProductImageCard from '../components/ui/ProductImageCard';
 import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
+import AuditLogTimeline from '../components/AuditLogTimeline';
+import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
 import './ApproverProductDetailPage.css';
 
 interface ApproverProductDetailPageProps {
@@ -26,6 +28,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
+  const [auditRefreshKey, setAuditRefreshKey] = useState(0);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -142,6 +145,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         ...prev,
         notes: notesVal
       }));
+      setAuditRefreshKey((prev) => prev + 1);
 
       const labelMap: Record<string, string> = {
         '0': 'Yêu cầu chỉnh sửa',
@@ -373,113 +377,115 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
 
         {/* LEFT COLUMN: FORM */}
         <section className="detail-left-panel">
-
-          <div className="form-group">
-            <label className="form-label">
-              Nhóm sản phẩm <span className="form-label-required">(*)</span>
-            </label>
-            <select
-              className="form-select"
-              value={detail.productGroupId || ''}
-              disabled
-              onChange={(e) => {
-                const grpId = e.target.value;
-                const grpName = productGroups.find(g => g.id === grpId)?.name || '';
-                setDetail((prev: any) => ({
-                  ...prev,
-                  productGroupId: grpId,
-                  productGroupName: grpName
-                }));
-              }}
-            >
-              <option value="">Chọn nhóm sản phẩm</option>
-              {productGroups.map((g: any) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group-row">
+          <div className="detail-form-card shadow-sm">
             <div className="form-group">
-              <label className="form-label">Danh mục sản phẩm</label>
+              <label className="form-label">
+                Nhóm sản phẩm <span className="form-label-required">(*)</span>
+              </label>
               <select
                 className="form-select"
-                value={detail.productCategoryId || ''}
+                value={detail.productGroupId || ''}
                 disabled
                 onChange={(e) => {
-                  const catId = e.target.value;
-                  const catName = categories.find(c => c.id === catId)?.name || '';
+                  const grpId = e.target.value;
+                  const grpName = productGroups.find(g => g.id === grpId)?.name || '';
                   setDetail((prev: any) => ({
                     ...prev,
-                    productCategoryId: catId,
-                    productCategoryName: catName,
-                    businessId: '',
-                    businessName: ''
+                    productGroupId: grpId,
+                    productGroupName: grpName
                   }));
                 }}
               >
-                <option value="">Chọn danh mục sản phẩm</option>
-                {categories.map((c: any) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                <option value="">Chọn nhóm sản phẩm</option>
+                {productGroups.map((g: any) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
             </div>
+
+            <div className="form-group-row">
+              <div className="form-group">
+                <label className="form-label">Danh mục sản phẩm</label>
+                <select
+                  className="form-select"
+                  value={detail.productCategoryId || ''}
+                  disabled
+                  onChange={(e) => {
+                    const catId = e.target.value;
+                    const catName = categories.find(c => c.id === catId)?.name || '';
+                    setDetail((prev: any) => ({
+                      ...prev,
+                      productCategoryId: catId,
+                      productCategoryName: catName,
+                      businessId: '',
+                      businessName: ''
+                    }));
+                  }}
+                >
+                  <option value="">Chọn danh mục sản phẩm</option>
+                  {categories.map((c: any) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nghiệp vụ</label>
+                <select
+                  className="form-select"
+                  value={detail.businessId || ''}
+                  disabled
+                  onChange={(e) => {
+                    const busId = e.target.value;
+                    const busName = businesses.find(b => b.id === busId)?.name || '';
+                    setDetail((prev: any) => ({
+                      ...prev,
+                      businessId: busId,
+                      businessName: busName
+                    }));
+                  }}
+                >
+                  <option value="">Chọn nghiệp vụ</option>
+                  {businesses.map((b: any) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="form-group">
-              <label className="form-label">Nghiệp vụ</label>
-              <select
-                className="form-select"
-                value={detail.businessId || ''}
-                disabled
-                onChange={(e) => {
-                  const busId = e.target.value;
-                  const busName = businesses.find(b => b.id === busId)?.name || '';
-                  setDetail((prev: any) => ({
-                    ...prev,
-                    businessId: busId,
-                    businessName: busName
-                  }));
-                }}
-              >
-                <option value="">Chọn nghiệp vụ</option>
-                {businesses.map((b: any) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </select>
+              <label className="form-label">
+                Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
+              </label>
+              <input
+                type="text"
+                className="form-input"
+                value={detail.name || ''}
+                readOnly
+              />
             </div>
+
+            {/* Dynamic Criteria Fields */}
+            {detail.details?.map((item: any, index: number) => (
+              <CriteriaRichBlock
+                key={item.criteriaId || index}
+                label={item.tieuChi}
+                isRequired={item.isRequired}
+                value={item.noiDung || ''}
+              />
+            ))}
+
+            {/* Last Field: Product Image */}
+            <ProductImageCard imageUrl={detail.imageUrl} />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">
-              Tên sản phẩm dịch vụ <span className="form-label-required">(*)</span>
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              value={detail.name || ''}
-              readOnly
-            />
-          </div>
-
-          {/* Dynamic Criteria Fields */}
-          {detail.details?.map((item: any, index: number) => (
-            <CriteriaRichBlock
-              key={item.criteriaId || index}
-              label={item.tieuChi}
-              isRequired={item.isRequired}
-              value={item.noiDung || ''}
-            />
-          ))}
-
-          {/* Last Field: Product Image */}
-          <ProductImageCard imageUrl={detail.imageUrl} />
-
+          <AuditLogTimeline objectCode={detail.id} refreshKey={auditRefreshKey} />
         </section>
 
         {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
         <section className="detail-right-panel">
 
           {/* Trạng thái sản phẩm & Trạng thái hiển thị */}
-          <div className="right-card shadow-sm">
+          <CollapsibleRightCard title="Trạng thái" className="right-card shadow-sm">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
@@ -493,7 +499,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                 <StatusBadge status={detail.requestStatus || detail.status || 'PENDING_APPROVAL'} />
               </div>
 
-              <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '12px' }}>
+              <div style={{ borderTop: '1px solid #E3DFE6', paddingTop: '12px' }}>
                 <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
                   Trạng thái hiển thị
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -513,56 +519,48 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                 </select>
               </div>
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Thông tin sản phẩm */}
-          <div className="right-card shadow-sm" style={{ marginTop: '16px' }}>
-            <h3 className="right-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: 0, fontSize: '15px', fontWeight: 600, color: '#171717' }}>
-              <span>Thông tin sản phẩm</span>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </h3>
-
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm">
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '14px',
-              padding: '16px',
+              padding: '16px 20px',
               backgroundColor: '#FFFFFF',
-              border: '1px solid #E5E7EB',
-              borderRadius: '8px',
-              marginTop: '10px'
+              border: 'none',
+              borderRadius: '12px',
             }}>
               {/* Row 1: Người tạo & Người Phê duyệt */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '12px', color: '#737373' }}>Người tạo</span>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
+                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Người tạo</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '12px', color: '#737373' }}>Người Phê duyệt</span>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
+                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Người Phê duyệt</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
                 </div>
               </div>
 
               {/* Row 2: Thời gian tạo & Phiên bản */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '12px', color: '#737373' }}>Thời gian tạo</span>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>
+                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Thời gian tạo</span>
+                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
                     {detail.createdAt ? formatDateDDMMYYYY(detail.createdAt) : '—'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '12px', color: '#737373' }}>Phiên bản</span>
+                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Phiên bản</span>
                   <div>
                     <span style={{
-                      backgroundColor: '#E6F4EA',
-                      color: '#047857',
-                      padding: '3px 10px',
-                      borderRadius: '9999px',
-                      fontSize: '12px',
+                      backgroundColor: '#ECFDF5',
+                      color: '#065F46',
+                      padding: '4px 8px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
                       fontWeight: 600,
                       display: 'inline-block'
                     }}>
@@ -573,66 +571,66 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               </div>
 
               {/* Divider */}
-              <div style={{ height: '1px', backgroundColor: '#F0F0F0', margin: '2px 0' }} />
+              <div style={{ height: '1px', backgroundColor: '#F3F4F6', margin: '2px 0' }} />
 
               {/* Row 3: Lượt xem & Lượt lưu */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#737373', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6B7280', fontSize: '13px' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                     <span>Lượt xem</span>
                   </div>
-                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#171717' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
                     {detail.viewCount !== null && detail.viewCount !== undefined ? detail.viewCount : 'Chưa có'}
                   </span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#737373', fontSize: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6B7280', fontSize: '13px' }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                     </svg>
                     <span>Lượt lưu</span>
                   </div>
-                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#171717' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
                     {detail.savedCount !== null && detail.savedCount !== undefined ? detail.savedCount : 0}
                   </span>
                 </div>
               </div>
 
               {/* Divider */}
-              <div style={{ height: '1px', backgroundColor: '#F0F0F0', margin: '2px 0' }} />
+              <div style={{ height: '1px', backgroundColor: '#F3F4F6', margin: '2px 0' }} />
 
               {/* Row 4: Thuộc yêu cầu */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '12px', color: '#737373' }}>Thuộc yêu cầu</span>
-                <span style={{ fontSize: '14px', fontWeight: 500, color: '#053E2B', textDecoration: 'underline', cursor: 'pointer' }}>
+                <span style={{ fontSize: '13px', color: '#6B7280' }}>Thuộc yêu cầu</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#053E2B', textDecoration: 'underline', cursor: 'pointer' }}>
                   {detail.requestName || '—'}
                 </span>
               </div>
 
               {/* Row 5: Thời gian tạo yêu cầu */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '12px', color: '#737373' }}>Thời gian tạo yêu cầu</span>
-                <span style={{ fontSize: '14px', fontWeight: 500, color: '#171717' }}>
+                <span style={{ fontSize: '13px', color: '#6B7280' }}>Thời gian tạo yêu cầu</span>
+                <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
                   {detail.requestCreatedAt ? formatDateDDMMYYYY(detail.requestCreatedAt) : '—'}
                 </span>
               </div>
 
               {/* Row 6: Ghi chú */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <span style={{ fontSize: '12px', color: '#737373' }}>Ghi chú</span>
+                <span style={{ fontSize: '13px', color: '#6B7280' }}>Ghi chú</span>
                 <div>{renderNoteBadge(detail.notes)}</div>
               </div>
 
             </div>
-          </div>
+          </CollapsibleRightCard>
 
           {/* Bình luận phản hồi */}
-          <div className="comments-container shadow-sm" style={{ marginTop: '16px' }}>
-            <h2 className="comments-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#AE1C3F', fontSize: '15px', fontWeight: 700 }}>
+          <div className="comments-container shadow-sm">
+            <h2 className="comments-header">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#AE1C3F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
               </svg>

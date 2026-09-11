@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, ClearFilterButton, type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
@@ -123,6 +123,19 @@ export const ApproverProductGroupListPage: React.FC = () => {
     }
   };
 
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+    selectedStatuses.length > 0 ||
+    selectedGroupTypes.length > 0
+  );
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedStatuses([]);
+    setSelectedGroupTypes([]);
+    setSelectedKeys([]);
+  };
+
   const columns: Column<ProductGroupItem & { stt: number }>[] = [
     {
       key: 'stt',
@@ -217,6 +230,11 @@ export const ApproverProductGroupListPage: React.FC = () => {
               selectedValues={selectedGroupTypes}
               onChange={setSelectedGroupTypes}
             />
+
+            <ClearFilterButton
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+            />
           </div>
 
           {(selectedStatuses.length > 0 || selectedGroupTypes.length > 0) && (
@@ -241,6 +259,13 @@ export const ApproverProductGroupListPage: React.FC = () => {
                   />
                 );
               })}
+              <button
+                type="button"
+                className="btn-clear-tags-text"
+                onClick={handleClearFilters}
+              >
+                Xóa bộ lọc
+              </button>
             </div>
           )}
         </div>

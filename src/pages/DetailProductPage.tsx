@@ -1977,9 +1977,6 @@ const DetailProductPage: React.FC = () => {
                   setPreviewVersionItem(v);
                   setShowVersionModal(true);
                 }}
-                showEngagementStats={String(productData?.status || '').toUpperCase() === 'ACTIVE'}
-                viewCount={productData?.viewCount}
-                savedCount={productData?.savedCount}
               />
 
               <div className="commentCard emptyComment">

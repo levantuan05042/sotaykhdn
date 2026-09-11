@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import SearchInput from '../components/ui/SearchInput';
-import FilterDropdown, { FilterTag, type FilterOption } from '../components/ui/FilterDropdown';
+import FilterDropdown, { FilterTag, ClearFilterButton, type FilterOption } from '../components/ui/FilterDropdown';
 import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
@@ -10,11 +10,19 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import './ApproverCriteriaListPage.css';
 
+interface ProductGroupItem {
+  id: string;
+  name: string;
+  status?: string | null;
+  active?: boolean;
+}
+
 interface CriteriaItem {
   id: string;
   code: string;
   name: string;
   groupName: string;
+  productGroups: ProductGroupItem[];
   categoryName: string;
   businessName: string;
   status: string;
@@ -23,6 +31,77 @@ interface CriteriaItem {
   approvedBy: string;
   version: number;
 }
+
+const normalizeProductGroups = (item: any): ProductGroupItem[] => {
+  const rawGroups = Array.isArray(item.productGroups)
+    ? item.productGroups
+    : (item.productGroups && typeof item.productGroups === 'object' ? Object.values(item.productGroups) : []);
+  return rawGroups
+    .filter((g: any) => g && (!g.status || String(g.status).toUpperCase() === 'ACTIVE'))
+    .map((g: any) => ({
+      id: String(g.id ?? g.name ?? ''),
+      name: g.name || '---',
+      status: g.status,
+      active: g.active,
+    }));
+};
+
+const ApproverGroupNamesCell: React.FC<{
+  groups: ProductGroupItem[];
+  criteriaName: string;
+  onOpen: (groups: ProductGroupItem[], criteriaName: string) => void;
+}> = ({ groups, criteriaName, onOpen }) => {
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+
+  const names = groups.map((g) => g.name).filter(Boolean);
+  const preview = names.length > 0 ? names[0] : '---';
+  const extraCount = Math.max(0, names.length - 1);
+  const canOpenList = names.length > 1 || isOverflow;
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (!el) return;
+    const measure = () => setIsOverflow(el.scrollWidth > el.clientWidth);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [preview]);
+
+  const openList = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canOpenList || names.length === 0) return;
+    onOpen(groups, criteriaName);
+  };
+
+  return (
+    <div className="approver-group-cell" onClick={(e) => e.stopPropagation()}>
+      <span className="approver-group-preview" ref={textRef} title={preview}>
+        {preview}
+      </span>
+      {canOpenList && (
+        <button
+          type="button"
+          className="approver-group-more-trigger"
+          title="Xem đầy đủ nhóm sản phẩm"
+          onClick={openList}
+        >
+          {extraCount > 0 && (
+            <span className="approver-group-more-label">
+              +{extraCount} nhóm
+            </span>
+          )}
+          {extraCount === 0 && (
+            <span className="approver-group-more-label">Xem đầy đủ</span>
+          )}
+          <span className="approver-group-more-btn" aria-hidden="true">
+            <span className="approver-group-more-dots">⋯</span>
+          </span>
+        </button>
+      )}
+    </div>
+  );
+};
 
 const STATUS_FILTER_OPTIONS: FilterOption[] = [
   { label: 'Tất cả trạng thái', value: '' },
@@ -48,6 +127,10 @@ export const ApproverCriteriaListPage: React.FC = () => {
     type: 'APPROVE' | 'REJECT' | null;
   }>({ isOpen: false, type: null });
   const [processing, setProcessing] = useState(false);
+  const [groupModal, setGroupModal] = useState<{
+    groups: ProductGroupItem[];
+    criteriaName: string;
+  } | null>(null);
 
   // Fetch product groups to fill filter options
   useEffect(() => {
@@ -76,19 +159,25 @@ export const ApproverCriteriaListPage: React.FC = () => {
             forApproval: true
           }
         });
-        const mapped: CriteriaItem[] = response.data.map((item: any) => ({
-          id: item.id,
-          code: item.code || '---',
-          name: item.name || '---',
-          groupName: item.groupName || '---',
-          categoryName: item.categoryName || '---',
-          businessName: item.businessName || '---',
-          status: item.status || 'DRAFT',
-          active: !!item.active,
-          createdBy: item.createdByFullName || item.createdBy || '---',
-          approvedBy: item.approvedByFullName || item.approvedBy || '---',
-          version: item.version || 1,
-        }));
+        const mapped: CriteriaItem[] = response.data.map((item: any) => {
+          const productGroups = normalizeProductGroups(item);
+          return {
+            id: item.id,
+            code: item.code || '---',
+            name: item.name || '---',
+            groupName: productGroups.length > 0
+              ? productGroups.map((g) => g.name).join(', ')
+              : (item.groupName || '---'),
+            productGroups,
+            categoryName: item.categoryName || '---',
+            businessName: item.businessName || '---',
+            status: item.status || 'DRAFT',
+            active: !!item.active,
+            createdBy: item.createdByFullName || item.createdBy || '---',
+            approvedBy: item.approvedByFullName || item.approvedBy || '---',
+            version: item.version || 1,
+          };
+        });
         setCriteriaList(mapped);
       } catch (error) {
         console.error('Error fetching criteria from backend:', error);
@@ -99,6 +188,20 @@ export const ApproverCriteriaListPage: React.FC = () => {
 
     fetchCriteria();
   }, []);
+
+  useEffect(() => {
+    if (!groupModal) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setGroupModal(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [groupModal]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -137,14 +240,29 @@ export const ApproverCriteriaListPage: React.FC = () => {
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesGroup = selectedGroupIds.length === 0
       || selectedGroupIds.some((id) => {
+        if (item.productGroups.some((g) => g.id === id)) return true;
         const group = productGroups.find((g) => g.value === id);
-        return group ? item.groupName === group.label : false;
+        if (!group) return false;
+        return item.productGroups.some((g) => g.name === group.label) || item.groupName === group.label;
       });
     return matchesSearch && matchesStatus && matchesGroup;
   }).map((item, index) => ({
     ...item,
     stt: index + 1
   }));
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+    selectedStatuses.length > 0 ||
+    selectedGroupIds.length > 0
+  );
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setSelectedStatuses([]);
+    setSelectedGroupIds([]);
+    setSelectedKeys([]);
+  };
 
   const columns: Column<CriteriaItem & { stt: number }>[] = [
     {
@@ -166,7 +284,15 @@ export const ApproverCriteriaListPage: React.FC = () => {
     {
       key: 'groupName',
       header: 'Nhóm sản phẩm',
-      render: (row) => row.groupName,
+      render: (row) => (
+        <ApproverGroupNamesCell
+          groups={row.productGroups.length > 0
+            ? row.productGroups
+            : (row.groupName && row.groupName !== '---' ? [{ id: row.id, name: row.groupName }] : [])}
+          criteriaName={row.name}
+          onOpen={(groups, criteriaName) => setGroupModal({ groups, criteriaName })}
+        />
+      ),
     },
     {
       key: 'status',
@@ -266,6 +392,11 @@ export const ApproverCriteriaListPage: React.FC = () => {
               selectedValues={selectedGroupIds}
               onChange={setSelectedGroupIds}
             />
+
+            <ClearFilterButton
+              onClick={handleClearFilters}
+              disabled={!hasActiveFilters}
+            />
           </div>
 
           {(selectedStatuses.length > 0 || selectedGroupIds.length > 0) && (
@@ -290,6 +421,13 @@ export const ApproverCriteriaListPage: React.FC = () => {
                   />
                 );
               })}
+              <button
+                type="button"
+                className="btn-clear-tags-text"
+                onClick={handleClearFilters}
+              >
+                Xóa bộ lọc
+              </button>
             </div>
           )}
         </div>
@@ -309,6 +447,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
           columns={columns}
           data={filteredCriteria}
           loading={loading}
+          keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/criteria/${row.id}`)}
           emptyText="Không tìm thấy tiêu chí nào cần duyệt"
           selectable={true}
@@ -329,6 +468,62 @@ export const ApproverCriteriaListPage: React.FC = () => {
         onConfirm={handleBatchConfirm}
         loading={processing}
       />
+
+      {groupModal && (
+        <div
+          className="approver-group-modal-overlay"
+          onClick={() => setGroupModal(null)}
+          role="presentation"
+        >
+          <div
+            className="approver-group-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="approver-group-modal-title"
+          >
+            <div className="approver-group-modal-header">
+              <div>
+                <h3 id="approver-group-modal-title" className="approver-group-modal-title">
+                  Danh sách nhóm sản phẩm
+                </h3>
+                {groupModal.criteriaName && (
+                  <p className="approver-group-modal-subtitle">{groupModal.criteriaName}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className="approver-group-modal-close"
+                onClick={() => setGroupModal(null)}
+                aria-label="Đóng"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <div className="approver-group-modal-body">
+              <p className="approver-group-modal-count">
+                {groupModal.groups.length} nhóm sản phẩm
+              </p>
+              <ol className="approver-group-modal-list">
+                {groupModal.groups.map((g, index) => (
+                  <li
+                    key={g.id || `${g.name}-${index}`}
+                    className={`approver-group-modal-item${g.active === false ? ' is-hidden' : ''}`}
+                  >
+                    <span className="approver-group-modal-index">{index + 1}</span>
+                    <span className="approver-group-modal-name">{g.name}</span>
+                    {g.active === false && (
+                      <span className="approver-group-modal-hidden-tag">Đang ẩn</span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

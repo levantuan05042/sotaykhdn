@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import './ApproveConfirmPopup.css';
 
 interface ApproveConfirmPopupProps {
@@ -16,7 +17,7 @@ export const ApproveConfirmPopup: React.FC<ApproveConfirmPopupProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="custom-popup-overlay" onClick={onClose}>
       <div className="custom-popup-confirm-card" onClick={(e) => e.stopPropagation()}>
         <div className="custom-confirm-body">
@@ -25,11 +26,12 @@ export const ApproveConfirmPopup: React.FC<ApproveConfirmPopupProps> = ({
           </p>
         </div>
         <div className="custom-confirm-footer">
-          <button className="custom-popup-btn-cancel" onClick={onClose}>Hủy</button>
-          <button className="custom-popup-btn-approve" onClick={onConfirm}>Phê duyệt</button>
+          <button type="button" className="custom-popup-btn-cancel" onClick={onClose}>Hủy</button>
+          <button type="button" className="custom-popup-btn-approve" onClick={onConfirm}>Phê duyệt</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

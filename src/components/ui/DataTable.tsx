@@ -135,7 +135,7 @@ export function DataTable<T extends Record<string, any>>({
         <table className="data-table">
           <thead>
             {selectable && selectedKeys.length > 0 ? (
-              <tr className="table-batch-header-row">
+              <tr className="table-batch-header-row" onClick={(e) => e.stopPropagation()}>
                 <th className="checkbox-cell">
                   <div
                     className="batch-minus-square-btn"

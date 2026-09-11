@@ -27,19 +27,19 @@ export const CriteriaRichBlock: React.FC<CriteriaRichBlockProps> = ({
       <label
         style={{
           display: 'block',
-          fontSize: '14px',
-          fontWeight: 600,
-          color: '#111827',
+          fontSize: '13px',
+          fontWeight: 700,
+          color: '#1A191B',
           marginBottom: '8px',
         }}
       >
         {cleanLabel}{' '}
-        {isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
+        {isRequired && <span style={{ color: '#AE1C3F' }}>(*)</span>}
       </label>
 
       <div
         style={{
-          border: '1px solid #E5E7EB',
+          border: '1px solid #D1D5DB',
           borderRadius: '12px',
           backgroundColor: '#FFFFFF',
           overflow: 'hidden',
