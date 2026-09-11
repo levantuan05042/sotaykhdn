@@ -45,15 +45,29 @@ const formatDate = (dateString?: string | null) => {
   return `${day}.${month}.${year}`;
 };
 
-const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () => void }) => {
+const ProductCard = ({
+  product,
+  onClick,
+  onUnsave,
+  initiallySaved = false,
+}: {
+  product: ProductInfo;
+  onClick: () => void;
+  onUnsave?: (id: string) => void;
+  initiallySaved?: boolean;
+}) => {
   const [imgError, setImgError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(initiallySaved);
 
   useEffect(() => {
     let isMounted = true;
     const checkSavedStatus = async () => {
       if (!checkIsLoggedIn()) return;
+      if (initiallySaved) {
+        if (isMounted) setIsSaved(true);
+        return;
+      }
       try {
         const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${product.id}`, { 
           credentials: 'include' 
@@ -69,7 +83,7 @@ const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () =
     if (product.id) checkSavedStatus();
     
     return () => { isMounted = false; };
-  }, [product.id]);
+  }, [product.id, initiallySaved]);
 
   const handleCopyLink = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -95,13 +109,14 @@ const ProductCard = ({ product, onClick }: { product: ProductInfo; onClick: () =
       if (response.ok) {
         const data = await response.json();
         setIsSaved(data);
+        if (!data) onUnsave?.(product.id);
       }
     } catch (error) {
       console.error("Lỗi khi lưu/bỏ lưu sản phẩm:", error);
     }
   };
 
-  const imageUrl = toDisplayUrl(product.imageUrl || product.image_url);
+  const imageUrl = toDisplayUrl(product.imageUrl || product.image_url || product.image);
   const firstLetter = product.name?.trim()?.charAt(0)?.toUpperCase() || '?';
   const totalViews = product.viewCount ?? product.views ?? 0;
 

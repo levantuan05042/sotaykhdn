@@ -299,11 +299,12 @@ const HomePage: React.FC = () => {
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
   return (
-    <div className="homepage min-h-screen font-sans">
-      <div className="hero-section flex flex-col items-center justify-center py-20 px-4 md:px-6 relative">
-        <h1 className="text-[36px] font-bold text-[#211F26] leading-[1.2] mb-8 text-center">
+    <div className="homepage font-sans">
+      <div className="hero-section relative">
+        <h1 className="hero-title">
           Tra cứu sản phẩm dịch vụ
         </h1>
+        <p className="hero-subtitle">dành cho khách hàng doanh nghiệp</p>
         
         <div className="w-full max-w-3xl relative" ref={dropdownRef}>
           <form onSubmit={handleSearchSubmit} className="relative flex items-center z-20">

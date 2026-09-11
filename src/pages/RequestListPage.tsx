@@ -562,27 +562,15 @@ const RequestListPage: React.FC = () => {
         tooltip={tooltipText}
         className="status-detail-cell"
         contentStyle={{
-          display: 'flex',
-          alignItems: 'center',
-          whiteSpace: 'nowrap',
+          display: 'block',
+          whiteSpace: 'normal',
           overflow: 'hidden',
-          maxHeight: 'none',
+          maxHeight: '40px',
           WebkitLineClamp: 'unset',
           WebkitBoxOrient: 'unset',
         }}
       >
-        <div 
-          className="status-detail-row"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'nowrap',
-            gap: '6px',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            width: '100%',
-          }}
-        >
+        <div className="status-detail-row">
           {activeEntries.map(([statusKey, count]) => {
             const key = statusKey.toUpperCase();
             const cfg = STATUS_DETAIL_CONFIG[key] || {
@@ -593,25 +581,8 @@ const RequestListPage: React.FC = () => {
             };
 
             return (
-              <span
-                key={statusKey}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '3px',
-                  backgroundColor: cfg.bg,
-                  color: cfg.color,
-                  border: `1px solid ${cfg.border}`,
-                  borderRadius: '9999px',
-                  padding: '1px 6px',
-                  fontSize: '11px',
-                  fontWeight: 500,
-                  lineHeight: '15px',
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                }}
-              >
-                <span style={{ fontWeight: 700 }}>{count}</span>
+              <span key={statusKey} className="status-detail-chip" style={{ backgroundColor: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
+                <span className="status-detail-chip-count">{count}</span>
                 <span>{cfg.label}</span>
               </span>
             );
@@ -665,7 +636,7 @@ const RequestListPage: React.FC = () => {
     {
       key: 'statusDetail',
       header: 'Chi tiết trạng thái',
-      width: '280px',
+      width: '300px',
       render: (row) => renderStatusDetail(row),
     },
     {
