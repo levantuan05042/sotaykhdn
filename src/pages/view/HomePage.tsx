@@ -350,7 +350,7 @@ const HomePage: React.FC = () => {
                       searchResult.groups.map(item => (
                         <div 
                           key={item.id} 
-                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-[rgba(254,238,242,0.5)] transition-colors text-gray-800" 
                           onClick={() => handleNavigateFromDropdown('group', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
@@ -375,7 +375,7 @@ const HomePage: React.FC = () => {
                       searchResult.categories.map(item => (
                         <div 
                           key={item.id} 
-                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-[rgba(254,238,242,0.5)] transition-colors text-gray-800" 
                           onClick={() => handleNavigateFromDropdown('category', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
@@ -402,7 +402,7 @@ const HomePage: React.FC = () => {
                       searchResult.businesses.map(item => (
                         <div 
                           key={item.id} 
-                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-[rgba(254,238,242,0.5)] transition-colors text-gray-800" 
                           onClick={() => handleNavigateFromDropdown('business', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
@@ -427,7 +427,7 @@ const HomePage: React.FC = () => {
                       searchResult.products.map(item => (
                         <div 
                           key={item.id} 
-                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-gray-50 transition-colors text-gray-800" 
+                          className="px-4 py-2.5 cursor-pointer flex items-start gap-3 hover:bg-[rgba(254,238,242,0.5)] transition-colors text-gray-800" 
                           onClick={() => handleNavigateFromDropdown('product', item.id)}
                         >
                           <span className="text-gray-400 flex-shrink-0 mt-0.5">
@@ -452,7 +452,7 @@ const HomePage: React.FC = () => {
               
               {!loadingSearch && (
                 <div 
-                  className="px-4 py-3 border-t border-gray-100 cursor-pointer flex items-center gap-3 hover:bg-gray-50 transition-colors text-gray-800 rounded-b-xl" 
+                  className="px-4 py-3 border-t border-gray-100 cursor-pointer flex items-center gap-3 hover:bg-[rgba(254,238,242,0.5)] transition-colors text-gray-800 rounded-b-xl" 
                   onClick={handleSearchSubmit}
                 >
                   <span className="text-gray-400 flex-shrink-0">
@@ -473,7 +473,7 @@ const HomePage: React.FC = () => {
             <button 
               key={index} 
               onClick={() => handleTagClick(tag)} 
-              className="bg-white hover:bg-gray-50 text-gray-700 px-3 py-1.5 rounded-full text-[14px] font-normal leading-[24px] flex items-center justify-center gap-2 transition-colors border border-gray-200"
+              className="bg-white hover:bg-[rgba(254,238,242,0.5)] text-gray-700 px-3 py-1.5 rounded-full text-[14px] font-normal leading-[24px] flex items-center justify-center gap-2 transition-colors border border-gray-200 hover:border-[#FCDFE6]"
             >
               <img src={iconTimKiem} alt="search" className="w-[14px] h-[14px] flex-shrink-0" />
               <span>{tag}</span>
@@ -517,7 +517,7 @@ const HomePage: React.FC = () => {
                   <div 
                     key={cat.id} 
                     onClick={() => handleCategoryClick(cat.id)} 
-                    className="bg-white rounded-[12px] p-5 border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col justify-between min-h-[158px] w-full"
+                    className="bg-white rounded-[12px] p-5 border border-gray-200 hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6] transition-all cursor-pointer flex flex-col justify-between min-h-[158px] w-full"
                   >
                     <div 
                       className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
@@ -563,7 +563,7 @@ const HomePage: React.FC = () => {
               <div className="flex justify-center mt-8">
                 <button 
                   onClick={() => setShowAllCategories(!showAllCategories)} 
-                  className="flex items-center px-6 py-2 border border-gray-200 rounded-full text-sm font-medium text-[#AE1C3F] hover:bg-rose-50 transition-colors bg-white"
+                  className="flex items-center px-6 py-2 border border-gray-200 rounded-full text-sm font-medium text-[#AE1C3F] hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6] transition-colors bg-white"
                 >
                   {showAllCategories ? 'Ẩn bớt' : 'Xem tất cả'}
                   <svg className={`w-4 h-4 ml-2 transition-transform duration-300 ${showAllCategories ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -641,8 +641,9 @@ const HomePage: React.FC = () => {
                 return (
                   <div 
                     key={product.id}
+                    data-product-id={product.id}
                     onClick={() => navigate(`/view/product-detail/${product.id}`)}
-                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 transition-all cursor-pointer hover:border-gray-300 hover:shadow-sm"
+                    className="flex items-center justify-between p-4 bg-white rounded-[16px] border border-gray-100 transition-all cursor-pointer hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6]"
                   >
                     <div className="flex items-center gap-4">
                       <span className={`px-4 py-1.5 text-xs font-semibold rounded-full w-[80px] text-center whitespace-nowrap ${badgeClass}`}>

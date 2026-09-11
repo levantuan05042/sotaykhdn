@@ -81,6 +81,21 @@
   align-items: center;
 }
 
+.search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1090;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(17, 17, 17, 0.45);
+  cursor: pointer;
+}
+
+.header-search-open {
+  z-index: 1100;
+}
+
 .search-trigger {
   display: flex;
   align-items: center;
@@ -98,7 +113,7 @@
 
 .search-trigger:hover,
 .search-trigger-active {
-  background-color: #f9f9f9;
+  background-color: rgba(254, 238, 242, 0.5);
 }
 
 .search-trigger-icon {
@@ -170,7 +185,7 @@
 }
 
 .search-item:hover {
-  background-color: #f5f5f5;
+  background-color: rgba(254, 238, 242, 0.5);
 }
 
 .item-icon {
@@ -243,7 +258,7 @@
 }
 
 .search-view-all:hover {
-  background-color: #F4F4F6;
+  background-color: rgba(254, 238, 242, 0.5);
 }
 
 .search-view-all .item-icon {
@@ -273,7 +288,7 @@
 }
 
 .user-profile-trigger:hover {
-  background-color: #f9f9f9;
+  background-color: rgba(254, 238, 242, 0.5);
 }
 
 .user-text {
@@ -371,7 +386,7 @@
 }
 
 .dropdown-item:hover {
-  background-color: #F3F4F6;
+  background-color: rgba(254, 238, 242, 0.5);
 }
 
 .dropdown-item.active {

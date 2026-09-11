@@ -4,6 +4,9 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
 import { addRecentlyViewed } from '../../utils/userHistoryStorage';
 import { copyTextToClipboard } from '../../utils/clipboard';
+import CellWithTooltip from '../../components/ui/CellWithTooltip';
+import LoadingOverlay from '../../components/ui/LoadingOverlay';
+import { showSuccessToast } from '../../utils/appToast';
 import './ProductDetailView.css';
 
 const getImageUrl = (path?: string | null) => {
@@ -77,12 +80,20 @@ interface ProductData {
   createdBy?: string | null;
   approvedBy?: string | null;
   version?: number | string;
+  originalId?: string;
   createdAt?: string;
   updatedAt?: string;
   views?: number;
   viewCount?: number;
   [key: string]: any;
 }
+
+const toVersionNum = (value: unknown) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const isActiveStatus = (status: unknown) => String(status || '').toUpperCase() === 'ACTIVE';
 
 const formatDetailHtml = (val?: string): string => {
   if (!val || !val.trim()) return '';
@@ -131,7 +142,11 @@ const ProductDetailView: React.FC = () => {
   const [imgError, setImgError] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
-  
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updatingName, setUpdatingName] = useState('');
+
+  const [openCriteriaKeys, setOpenCriteriaKeys] = useState<Set<string>>(new Set());
+
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(() => {
     const savedDrawer = sessionStorage.getItem(`drawer-${id}`);
     return savedDrawer === 'true';
@@ -140,27 +155,26 @@ const ProductDetailView: React.FC = () => {
   const shareTimeoutRef = useRef<number | null>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const toggleBtnRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      sessionStorage.setItem(`scroll-${id}`, window.scrollY.toString());
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [id]);
-
-  useEffect(() => {
-    if (!loading && product) {
-      const savedScroll = sessionStorage.getItem(`scroll-${id}`);
-      if (savedScroll) {
-        window.scrollTo(0, parseInt(savedScroll, 10));
-      }
-    }
-  }, [loading, product, id]);
+  const productRef = useRef<ProductData | null>(null);
+  const appliedIdRef = useRef<string | null>(null);
+  const updatingRef = useRef(false);
 
   useEffect(() => {
     sessionStorage.setItem(`drawer-${id}`, isMoreDrawerOpen.toString());
   }, [isMoreDrawerOpen, id]);
+
+  useEffect(() => {
+    setOpenCriteriaKeys(new Set());
+  }, [id]);
+
+  const toggleCriteriaRow = (key: string) => {
+    setOpenCriteriaKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -189,22 +203,36 @@ const ProductDetailView: React.FC = () => {
     });
   };
 
+  const applyProductData = (data: ProductData) => {
+    setProduct(data);
+    productRef.current = data;
+    appliedIdRef.current = data.id;
+    saveToHistory(data);
+    if (data.imageUrl) {
+      setSelectedImage(data.imageUrl);
+      setImgError(false);
+    } else {
+      setSelectedImage('');
+    }
+  };
+
+  useEffect(() => {
+    productRef.current = product;
+  }, [product]);
+
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
+      if (appliedIdRef.current === id && productRef.current?.id === id) return;
       try {
         setLoading(true);
         const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
         if (res.data?.cascadeHiddenBy) {
           setProduct(null);
+          productRef.current = null;
           return;
         }
-        setProduct(res.data);
-        saveToHistory(res.data);
-        if (res.data.imageUrl) {
-          setSelectedImage(res.data.imageUrl);
-          setImgError(false);
-        }
+        applyProductData(res.data);
       } catch (err) {
         console.error(err);
       } finally {
@@ -213,6 +241,70 @@ const ProductDetailView: React.FC = () => {
     };
     fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (!id || loading) return;
+
+    const POLL_MS = 4000;
+    const MIN_OVERLAY_MS = 1200;
+
+    const checkForNewVersion = async () => {
+      if (document.hidden || updatingRef.current) return;
+      const current = productRef.current;
+      if (!current?.id) return;
+
+      try {
+        const res = await axios.get(`${BASE_URL}/api/v1/products/${current.id}/versions`, {
+          params: { _t: Date.now() },
+        });
+        const versions: Array<{ id: string; version?: number; status?: string; active?: boolean; name?: string }> =
+          Array.isArray(res.data) ? res.data : [];
+        const latestActive = versions
+          .filter((item) => isActiveStatus(item.status) && item.active !== false)
+          .sort((a, b) => toVersionNum(b.version) - toVersionNum(a.version))[0];
+
+        if (!latestActive?.id) return;
+
+        const isNewer =
+          latestActive.id !== current.id ||
+          toVersionNum(latestActive.version) > toVersionNum(current.version);
+        if (!isNewer) return;
+
+        updatingRef.current = true;
+        setUpdatingName(latestActive.name || current.name);
+        setIsUpdating(true);
+        const startedAt = Date.now();
+
+        const detailRes = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(latestActive.id)}?_t=${Date.now()}`);
+        const nextProduct = detailRes.data;
+        if (!nextProduct || nextProduct.cascadeHiddenBy) {
+          setIsUpdating(false);
+          updatingRef.current = false;
+          return;
+        }
+
+        applyProductData(nextProduct);
+        if (nextProduct.id && nextProduct.id !== id) {
+          navigate(`/view/product-detail/${nextProduct.id}`, { replace: true });
+        }
+
+        const wait = MIN_OVERLAY_MS - (Date.now() - startedAt);
+        if (wait > 0) await new Promise((resolve) => window.setTimeout(resolve, wait));
+
+        setIsUpdating(false);
+        updatingRef.current = false;
+        showSuccessToast('Cập nhật thành công');
+      } catch (err) {
+        console.error(err);
+        setIsUpdating(false);
+        updatingRef.current = false;
+      }
+    };
+
+    checkForNewVersion();
+    const timer = window.setInterval(checkForNewVersion, POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [id, loading, navigate]);
 
   useEffect(() => {
     if (!id) return;
@@ -298,52 +390,58 @@ const ProductDetailView: React.FC = () => {
 
   return (
     <div className="dp-container">
+      {isUpdating && (
+        <LoadingOverlay title={`Đang cập nhật sản phẩm (${updatingName || product.name})`} />
+      )}
       <div className={`dp-layout ${isMoreDrawerOpen ? 'sidebar-open' : ''}`}>
         
         <div className="dp-main-column">
           <div className="dp-top-row">
             <div className="dp-breadcrumb">
-              {displayBreadcrumbs.map((item, index) => {
-                const isLast = index === displayBreadcrumbs.length - 1;
-                const isEllipsis = item.type === 'ellipsis';
-                return (
-                  <React.Fragment key={`${item.type}-${item.id || index}`}>
-                    {isEllipsis ? <span className="dp-breadcrumb-ellipsis">...</span> : (
-                      <button
-                        className={`dp-breadcrumb-link ${isLast ? 'dp-active' : ''}`}
-                        onClick={() => {
-                          if (isLast) return;
-                          if (item.type === 'home') navigate('/view');
-                          else if (item.id) navigate(`/view/${item.type}/${item.id}`);
-                        }}
-                        disabled={isLast} 
-                        title={item.name}
-                      >
-                        {item.type === 'home' && (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '2px' }}>
-                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                          </svg>
-                        )}
-                        <span className="dp-breadcrumb-text">{item.name}</span>
-                      </button>
-                    )}
-                    {!isLast && <span className="dp-breadcrumb-sep">&gt;</span>}
-                  </React.Fragment>
-                );
-              })}
-            </div>
+            {displayBreadcrumbs.map((item, index) => {
+              const isLast = index === displayBreadcrumbs.length - 1;
+              const isEllipsis = item.type === 'ellipsis';
+              return (
+                <React.Fragment key={`${item.type}-${item.id || index}`}>
+                  {isEllipsis ? <span className="dp-breadcrumb-ellipsis">...</span> : (
+                    <CellWithTooltip tooltip={item.name} style={{ width: 'auto' }}>
+                    <button
+                      className={`dp-breadcrumb-link ${isLast ? 'dp-active' : ''}`}
+                      onClick={() => {
+                        if (isLast) return;
+                        if (item.type === 'home') navigate('/view');
+                        else if (item.id) navigate(`/view/${item.type}/${item.id}`);
+                      }}
+                      disabled={isLast} 
+                    >
+                      {item.type === 'home' && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '2px' }}>
+                          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                      )}
+                      <span className="dp-breadcrumb-text">{item.name}</span>
+                    </button>
+                    </CellWithTooltip>
+                  )}
+                  {!isLast && <span className="dp-breadcrumb-sep">&gt;</span>}
+                </React.Fragment>
+              );
+            })}
+          </div>
 
-            <div className="dp-actions">
-              <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                <span className="dp-action-label">Lưu sản phẩm</span>
-              </button>
+          <div className="dp-actions">
+              <CellWithTooltip tooltip={isSaved ? 'Bỏ lưu' : 'Lưu sản phẩm'} style={{ width: 'auto' }}>
+                <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span className="dp-action-label">Lưu sản phẩm</span>
+                </button>
+              </CellWithTooltip>
 
-              <div className="dp-share-wrapper">
-                <button className="dp-action-btn" onClick={handleShare} title="Chia sẻ">
+              <CellWithTooltip tooltip={shareCopied ? 'Đã sao chép liên kết' : 'Chia sẻ'} style={{ width: 'auto' }}>
+                <button className="dp-action-btn" onClick={handleShare}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="18" cy="5" r="3"></circle>
                     <circle cx="6" cy="12" r="3"></circle>
@@ -353,14 +451,13 @@ const ProductDetailView: React.FC = () => {
                   </svg>
                   <span className="dp-action-label">Chia sẻ</span>
                 </button>
-                {shareCopied && <div className="dp-copied-tip">Đã sao chép liên kết</div>}
-              </div>
+              </CellWithTooltip>
 
+              <CellWithTooltip tooltip="Thông tin sản phẩm" style={{ width: 'auto' }}>
               <button 
                 ref={toggleBtnRef}
                 className={`dp-icon-btn ${isMoreDrawerOpen ? 'active' : ''}`} 
                 onClick={() => setIsMoreDrawerOpen(!isMoreDrawerOpen)}
-                title="Thông tin sản phẩm"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
@@ -373,6 +470,7 @@ const ProductDetailView: React.FC = () => {
                   <path d="M1.66927 14.1683C2.12951 14.1683 2.5026 13.7952 2.5026 13.335C2.5026 12.8747 2.12951 12.5016 1.66927 12.5016C1.20903 12.5016 0.835938 12.8747 0.835938 13.335C0.835938 13.7952 1.20903 14.1683 1.66927 14.1683Z" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
+              </CellWithTooltip>
             </div>
           </div>
 
@@ -418,7 +516,7 @@ const ProductDetailView: React.FC = () => {
                   </svg>
                   Ngày tạo {formatDateOnly(product.createdAt)}
                 </div>
-                <div className="dp-meta-item">
+                <div className="dp-meta-item dp-meta-views">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                     <circle cx="12" cy="12" r="3"></circle>
@@ -430,17 +528,44 @@ const ProductDetailView: React.FC = () => {
           </div>
 
           {/* Bảng hiển thị thông tin sản phẩm */}
-          <div className="dp-criteria-section">
+          <div className="dp-criteria-wrap">
+            <div className="dp-criteria-section">
             {sortedDetails.length > 0 ? (
-              sortedDetails.map((detail, idx) => (
-                <div className="dp-row" key={detail.id || idx}>
-                  <div className="dp-label">{detail.tieuChi}</div>
-                  <div className="dp-value" dangerouslySetInnerHTML={{ __html: formatDetailHtml(detail.noiDung) }} />
-                </div>
-              ))
+              sortedDetails.map((detail, idx) => {
+                const rowKey = String(detail.id || idx);
+                const isOpen = openCriteriaKeys.has(rowKey);
+                return (
+                  <div className={`dp-row ${isOpen ? 'is-open' : ''}`} key={rowKey}>
+                    <button
+                      type="button"
+                      className="dp-row-toggle"
+                      onClick={() => toggleCriteriaRow(rowKey)}
+                      aria-expanded={isOpen}
+                    >
+                      <span className="dp-label">{detail.tieuChi}</span>
+                      <svg
+                        className="dp-row-chevron"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden="true"
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                    <div className="dp-value" dangerouslySetInnerHTML={{ __html: formatDetailHtml(detail.noiDung) }} />
+                  </div>
+                );
+              })
             ) : (
               <div className="dp-empty">Chưa có thông tin chi tiết cho sản phẩm này.</div>
             )}
+            </div>
           </div>
         </div>
 

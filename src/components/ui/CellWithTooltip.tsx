@@ -9,6 +9,7 @@ interface CellWithTooltipProps {
   style?: React.CSSProperties;
   contentStyle?: React.CSSProperties;
   onClick?: (e: React.MouseEvent) => void;
+  placement?: 'top' | 'bottom';
 }
 
 export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
@@ -19,6 +20,7 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
   style,
   contentStyle,
   onClick,
+  placement = 'bottom',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -53,6 +55,9 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
     const tooltipWidth = tooltipRef.current ? tooltipRef.current.offsetWidth : 100;
     const tooltipHeight = tooltipRef.current ? tooltipRef.current.offsetHeight : 32;
 
+    const card = containerRef.current.closest('.product-card') as HTMLElement | null;
+    const cardRect = card?.getBoundingClientRect();
+
     const targetCenterX = rect.left + rect.width / 2;
     let left = targetCenterX - tooltipWidth / 2;
 
@@ -63,10 +68,18 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
       left = 12;
     }
 
-    // Hiển thị ở dưới ô
-    let top = rect.bottom + 6;
-    if (top + tooltipHeight > window.innerHeight - 8 && rect.top > tooltipHeight + 12) {
-      top = rect.top - tooltipHeight - 6;
+    let top: number;
+    if (placement === 'top') {
+      const anchorTop = cardRect ? cardRect.top : rect.top;
+      top = anchorTop - tooltipHeight - 6;
+      if (top < 8) {
+        top = (cardRect ? cardRect.bottom : rect.bottom) + 6;
+      }
+    } else {
+      top = rect.bottom + 6;
+      if (top + tooltipHeight > window.innerHeight - 8 && rect.top > tooltipHeight + 12) {
+        top = rect.top - tooltipHeight - 6;
+      }
     }
 
     setCoords(prev => {
@@ -75,7 +88,7 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
       }
       return { top, left };
     });
-  }, []);
+  }, [placement]);
 
   const handleMouseEnter = () => {
     if (!tooltipText || tooltipText === '---') return;

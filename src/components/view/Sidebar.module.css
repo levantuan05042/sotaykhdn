@@ -64,7 +64,8 @@
   flex: 1 0 0;
   box-sizing: border-box;
   border-radius: 12px;
-  transition: background-color 0.2s ease;
+  border: 1px solid transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .sidebar-icon {
@@ -98,7 +99,17 @@
 }
 
 .sidebar-btn:hover:not(.active) .sidebar-content {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: rgba(254, 238, 242, 0.5);
+  border-color: #FCDFE6;
+}
+
+.sidebar-btn:hover:not(.active) .sidebar-text,
+.sidebar-btn:hover:not(.active) .sidebar-icon {
+  color: #8A1530;
+}
+
+.sidebar-btn:hover:not(.active) .dynamic-icon-img {
+  filter: brightness(0) saturate(100%) invert(14%) sepia(82%) saturate(3800%) hue-rotate(330deg) brightness(70%) contrast(98%);
 }
 
 .sidebar-btn.active .sidebar-content {

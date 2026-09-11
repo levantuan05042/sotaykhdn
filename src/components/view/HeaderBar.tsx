@@ -171,11 +171,16 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   useEffect(() => {
     if (!isSearchOpen) return;
     searchInputRef.current?.focus();
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsSearchOpen(false);
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [isSearchOpen]);
 
   useEffect(() => {
@@ -196,6 +201,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
   return (
     <header className={styles['header-container']}>
+      {isSearchOpen && (
+        <button
+          type="button"
+          className={styles['search-backdrop']}
+          onClick={closeSearch}
+          aria-label="Đóng tìm kiếm"
+        />
+      )}
       <div className={styles['header-content']}>
         <div className={styles['header-left']}>
           <button
@@ -236,7 +249,10 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
         </div>
 
         <div className={styles['header-right']}>
-          <div className={styles['header-search']} ref={dropdownRef}>
+          <div
+            className={`${styles['header-search']} ${isSearchOpen ? styles['header-search-open'] : ''}`}
+            ref={dropdownRef}
+          >
             <button
               type="button"
               className={`${styles['search-trigger']} ${isSearchOpen ? styles['search-trigger-active'] : ''}`}
