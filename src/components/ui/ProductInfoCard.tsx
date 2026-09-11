@@ -20,6 +20,9 @@ interface ProductInfoCardProps {
   versions?: VersionItem[];
   currentId?: string;
   onSelectVersion?: (item: VersionItem) => void;
+  showEngagementStats?: boolean;
+  viewCount?: number | null;
+  savedCount?: number | null;
 }
 
 const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
@@ -30,6 +33,9 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
   versions = [],
   currentId,
   onSelectVersion,
+  showEngagementStats = false,
+  viewCount,
+  savedCount,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false);
@@ -238,6 +244,20 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                 </div>
               )}
             </div>
+            {showEngagementStats && (
+              <>
+                <div className="infoItem">
+                  <span className="infoLabel">Lượt xem</span>
+                  <span className="infoValue">
+                    {viewCount !== null && viewCount !== undefined ? viewCount : 'Chưa có'}
+                  </span>
+                </div>
+                <div className="infoItem">
+                  <span className="infoLabel">Lượt lưu</span>
+                  <span className="infoValue">{savedCount ?? 0}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
