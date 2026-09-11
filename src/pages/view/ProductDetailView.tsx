@@ -146,6 +146,7 @@ const ProductDetailView: React.FC = () => {
   const [updatingName, setUpdatingName] = useState('');
 
   const [openCriteriaKeys, setOpenCriteriaKeys] = useState<Set<string>>(new Set());
+  const openedCriteriaForIdRef = useRef<string | null>(null);
 
   const [isMoreDrawerOpen, setIsMoreDrawerOpen] = useState(() => {
     const savedDrawer = sessionStorage.getItem(`drawer-${id}`);
@@ -162,10 +163,6 @@ const ProductDetailView: React.FC = () => {
   useEffect(() => {
     sessionStorage.setItem(`drawer-${id}`, isMoreDrawerOpen.toString());
   }, [isMoreDrawerOpen, id]);
-
-  useEffect(() => {
-    setOpenCriteriaKeys(new Set());
-  }, [id]);
 
   const toggleCriteriaRow = (key: string) => {
     setOpenCriteriaKeys((prev) => {
@@ -382,6 +379,10 @@ const ProductDetailView: React.FC = () => {
     const sttB = typeof b.stt === 'number' ? b.stt : 999999;
     return sttA - sttB;
   });
+  if (openedCriteriaForIdRef.current !== product.id) {
+    openedCriteriaForIdRef.current = product.id;
+    setOpenCriteriaKeys(new Set(sortedDetails.map((detail, idx) => String(detail.id || idx))));
+  }
   const breadcrumbItems = buildBreadcrumbs();
 
   const displayBreadcrumbs = breadcrumbItems.length > 4 
