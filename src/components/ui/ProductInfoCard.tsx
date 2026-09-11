@@ -20,10 +20,6 @@ interface ProductInfoCardProps {
   versions?: VersionItem[];
   currentId?: string;
   onSelectVersion?: (item: VersionItem) => void;
-  /** Chỉ truyền khi muốn hiện lượt xem / lượt lưu (thường là sản phẩm ACTIVE). */
-  showEngagementStats?: boolean;
-  viewCount?: number | null;
-  savedCount?: number | null;
 }
 
 const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
@@ -34,9 +30,6 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
   versions = [],
   currentId,
   onSelectVersion,
-  showEngagementStats = false,
-  viewCount,
-  savedCount,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false);
@@ -246,37 +239,6 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
               )}
             </div>
           </div>
-
-          {showEngagementStats && (
-            <>
-              <div style={{ height: '1px', backgroundColor: '#F0F0F0', margin: '14px 0 12px' }} />
-              <div className="infoGrid">
-                <div className="infoItem">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                      <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <span className="infoLabel">Lượt xem</span>
-                  </div>
-                  <span className="infoValue" style={{ fontSize: '15px', fontWeight: 600, color: '#171717' }}>
-                    {viewCount !== null && viewCount !== undefined ? viewCount : 'Chưa có'}
-                  </span>
-                </div>
-                <div className="infoItem">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-                    </svg>
-                    <span className="infoLabel">Lượt lưu</span>
-                  </div>
-                  <span className="infoValue" style={{ fontSize: '15px', fontWeight: 600, color: '#171717' }}>
-                    {savedCount !== null && savedCount !== undefined ? savedCount : 0}
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
         </div>
       )}
     </div>
