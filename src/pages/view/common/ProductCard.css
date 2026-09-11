@@ -12,23 +12,24 @@
   background: #ffffff;
   border: 1px solid #EAE7EC;
   border-radius: 16px;
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: visible;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
   cursor: pointer;
   box-sizing: border-box;
 }
 
 .product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+  background: rgba(254, 238, 242, 0.5);
+  border-color: #FCDFE6;
 }
 
 .product-img-wrapper {
   width: 100%;
-  aspect-ratio: 16 / 9; /* Giữ chuẩn tỉ lệ như trong image_a24206.png */
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   background: #f5f5f5;
   flex-shrink: 0;
+  border-radius: 15px 15px 0 0;
 }
 
 .product-img-wrapper img {
@@ -115,14 +116,13 @@
   padding: 0;
   cursor: pointer;
   color: #64748B;
-  transition: color 0.2s ease, transform 0.15s ease;
+  transition: color 0.2s ease;
   display: flex;
   align-items: center;
 }
 
 .product-action-btn:hover { 
   color: #1E293B;
-  transform: scale(1.08);
 }
 
 .product-action-btn.saved-active {
@@ -135,24 +135,46 @@
   align-items: center;
 }
 
-.product-copied-tip {
-  position: absolute;
-  bottom: calc(100% + 8px); 
-  right: -10px;
-  background: #111827;
-  color: #fff;
-  font-size: 12px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  white-space: nowrap;
-  animation: tooltipFadeIn 0.15s ease;
-  z-index: 30;
-  pointer-events: none; 
+.product-actions .custom-tooltip-container {
+  width: auto !important;
 }
 
-@keyframes tooltipFadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to { opacity: 1; transform: translateY(0); }
+.product-actions .truncate-text {
+  flex: none;
+  overflow: visible;
+  max-height: none;
+}
+
+.custom-tooltip-portal {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  background-color: #FDEBEB !important;
+  color: #1A191B !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid #FECDD3 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  width: max-content !important;
+  max-width: 320px !important;
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2) !important;
+  pointer-events: none !important;
+  animation: fadeInTooltip 0.12s ease-out !important;
+}
+
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Lưới sản phẩm — chuẩn /view: 4 / 2 / 1 cột */

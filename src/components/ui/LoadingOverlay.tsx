@@ -3,9 +3,15 @@ import './LoadingOverlay.css';
 
 interface LoadingOverlayProps {
   visible?: boolean;
+  title?: string;
+  subtitle?: string;
 }
 
-export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ visible = true }) => {
+export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
+  visible = true,
+  title = 'Đang tải dữ liệu...',
+  subtitle = 'Vui lòng chờ trong giây lát',
+}) => {
   if (!visible) return null;
 
   return (
@@ -24,13 +30,13 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({ visible = true }
         <span className="loading-dot"></span>
       </div>
 
-      <div className="loading-title-text">Đang tải dữ liệu...</div>
+      <div className="loading-title-text">{title}</div>
 
       <div className="loading-progress-bar-container">
         <div className="loading-progress-bar-indicator"></div>
       </div>
 
-      <div className="loading-subtitle-text">Vui lòng chờ trong giây lát</div>
+      <div className="loading-subtitle-text">{subtitle}</div>
     </div>
   );
 };

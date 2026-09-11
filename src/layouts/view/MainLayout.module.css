@@ -30,6 +30,7 @@
   height: 100%;
   min-height: 0;
   overflow-y: auto;
+  overflow-anchor: none;
   display: flex;
   flex-direction: column;
 }
@@ -38,14 +39,15 @@
   flex: 1 0 auto;
   display: flex;
   flex-direction: column;
-  /* Figma 4039:74161 — nền trắng, glow hồng trái + mint phải */
+  /* Figma 4039:74161 — glow chỉ ở dải trên, phần còn lại trắng */
   background-color: #FFFFFF;
   background-image:
-    radial-gradient(ellipse 90% 70% at 8% 8%, #FDE6EC 0%, rgba(253, 230, 236, 0) 62%),
-    radial-gradient(ellipse 85% 75% at 96% 4%, #C8F2E2 0%, rgba(200, 242, 226, 0) 58%),
-    linear-gradient(180deg, #FFF7F9 0%, #FFFFFF 55%);
+    radial-gradient(ellipse 70% 60% at 8% 0%, #FDE6EC 0%, rgba(253, 230, 236, 0) 72%),
+    radial-gradient(ellipse 65% 55% at 96% 0%, #C8F2E2 0%, rgba(200, 242, 226, 0) 70%),
+    linear-gradient(180deg, #FFF7F9 0%, #FFFFFF 100%);
   background-repeat: no-repeat;
-  background-size: 100% 100%;
+  background-position: top center;
+  background-size: 100% 840px;
 }
 
 .page-body {
@@ -110,13 +112,14 @@
 
   .grid-content {
     padding: 20px;
+    background-size: 100% 640px;
   }
 }
 
 /* --- Breakpoint Mobile (< 768px) --- */
 @media (max-width: 767px) {
   .grid-header {
-    padding: 0 16px;
+    padding: 0 0px;
     min-height: 64px;
   }
 
@@ -126,6 +129,7 @@
 
   .grid-content {
     padding: 0px;
+    background-size: 100% 440px;
   }
 
   .grid-footer {
@@ -169,8 +173,16 @@
   }
 
   .grid-container {
-    height: auto !important;
-    flex: 1;
+    height: 0 !important;
+    flex: 1 1 0%;
     min-height: 0;
+    overflow: hidden;
+  }
+
+  .grid-main-wrapper {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    overflow-y: auto;
   }
 }

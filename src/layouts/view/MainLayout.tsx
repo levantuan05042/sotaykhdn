@@ -1,14 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import HeaderBar from '../../components/view/HeaderBar';
 import Sidebar from '../../components/view/Sidebar';
 import styles from './MainLayout.module.css';
 import EmailIcon from '../../assets/icon/email.svg';
 import PhoneIcon from '../../assets/icon/phone.svg';
+import { useViewScrollRestoration } from '../../hooks/useViewScrollRestoration';
+import { ViewKeepAliveOutlet } from './ViewKeepAliveOutlet';
 
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useViewScrollRestoration(scrollRef);
 
   // Gắn class để /view co 80% trên desktop/laptop < 1600px (giống Ctrl -)
   useEffect(() => {
@@ -49,11 +53,11 @@ const MainLayout: React.FC = () => {
         {/* Sidebar quản lý trạng thái mở/đóng trực tiếp */}
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
-        <div className={styles['grid-main-wrapper']}>
+        <div className={styles['grid-main-wrapper']} ref={scrollRef} data-view-scroll>
           <main className={styles['grid-content']}>
             {/* Đã cập nhật class theo cú pháp CSS Module */}
             <div className={styles['page-body']}>
-              <Outlet />
+              <ViewKeepAliveOutlet />
             </div>
           </main>
 

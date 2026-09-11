@@ -80,13 +80,15 @@
   justify-content: space-between;
   align-items: center;
   border-radius: 12px;
+  border: 1px solid transparent;
   background: #F2EFF3;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .list-row-item:hover {
-  background: #EAE7EC;
+  background: rgba(254, 238, 242, 0.5);
+  border-color: #FCDFE6;
 }
 
 .list-row-item.expanded {
@@ -169,7 +171,8 @@
 }
 
 .list-row-item.nested:hover {
-  background-color: #f9fafb;
+  background-color: rgba(254, 238, 242, 0.5);
+  border-color: #FCDFE6;
 }
 
 .list-row-item.nested .list-row-title {
@@ -244,7 +247,6 @@
   width: 100%;
   margin-left: auto;
   margin-right: auto;
-  padding: 32px 16px;
   box-sizing: border-box;
 }
 
@@ -366,17 +368,21 @@
 
 .product-copied-tip {
   position: absolute;
-  bottom: calc(100% + 8px); 
+  bottom: calc(100% + 6px);
   right: -10px;
-  background: #111827;
-  color: #fff;
-  font-size: 12px;
-  padding: 5px 10px;
+  background-color: #FDEBEB;
+  color: #1A191B;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 6px 12px;
   border-radius: 6px;
+  border: 1px solid #FECDD3;
   white-space: nowrap;
-  animation: tooltipFadeIn 0.15s ease;
+  animation: tooltipFadeIn 0.12s ease-out;
   z-index: 30;
-  pointer-events: none; 
+  pointer-events: none;
 }
 
 @keyframes tooltipFadeIn {

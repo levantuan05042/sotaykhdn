@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { BASE_URL } from '../../../config/view/apiConfig';
 import { copyTextToClipboard, getViewProductShareUrl } from '../../../utils/clipboard';
 import './ProductCard.css';
@@ -59,6 +60,62 @@ const ProductCard = ({
   const [imgError, setImgError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(initiallySaved);
+  const [isHovered, setIsHovered] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const tooltipText = isCopied ? 'Đã copy' : (product.name || '');
+
+  const updatePosition = useCallback(() => {
+    const titleEl = titleRef.current || cardRef.current;
+    if (!titleEl) return;
+
+    const range = document.createRange();
+    range.selectNodeContents(titleEl);
+    const textRects = Array.from(range.getClientRects());
+    const lastLine = textRects[textRects.length - 1];
+    const firstLine = textRects[0];
+    const box = titleEl.getBoundingClientRect();
+    const anchor = lastLine || box;
+
+    const tooltipWidth = tooltipRef.current ? tooltipRef.current.offsetWidth : 100;
+    const tooltipHeight = tooltipRef.current ? tooltipRef.current.offsetHeight : 32;
+
+    const textLeft = firstLine ? firstLine.left : box.left;
+    const textRight = textRects.length
+      ? Math.max(...textRects.map((r) => r.right))
+      : box.right;
+    let left = (textLeft + textRight) / 2 - tooltipWidth / 2;
+    if (left + tooltipWidth > window.innerWidth - 12) left = window.innerWidth - tooltipWidth - 12;
+    if (left < 12) left = 12;
+
+    let top = anchor.bottom + 2;
+    if (top + tooltipHeight > window.innerHeight - 8) {
+      top = (firstLine || box).top - tooltipHeight - 2;
+    }
+
+    setCoords((prev) => {
+      if (prev && Math.abs(prev.top - top) < 0.5 && Math.abs(prev.left - left) < 0.5) return prev;
+      return { top, left };
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isHovered) updatePosition();
+  }, [isHovered, tooltipText, updatePosition]);
+
+  useEffect(() => {
+    if (!isHovered) return;
+    const onScrollOrResize = () => updatePosition();
+    window.addEventListener('scroll', onScrollOrResize, true);
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', onScrollOrResize, true);
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [isHovered, updatePosition]);
 
   useEffect(() => {
     let isMounted = true;
@@ -121,7 +178,17 @@ const ProductCard = ({
   const totalViews = product.viewCount ?? product.views ?? 0;
 
   return (
-    <div className="product-card" onClick={onClick}>
+    <div
+      ref={cardRef}
+      className="product-card"
+      data-product-id={product.id}
+      onClick={onClick}
+      onMouseEnter={() => {
+        updatePosition();
+        setIsHovered(true);
+      }}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <div className="product-img-wrapper">
         {imageUrl && !imgError ? (
           <img 
@@ -138,7 +205,7 @@ const ProductCard = ({
       </div>
       
       <div className="product-info">
-        <h4 className="product-title" title={product.name}>{product.name}</h4>
+        <h4 ref={titleRef} className="product-title">{product.name}</h4>
         
         <div className="product-meta-row product-date">
           <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
@@ -149,7 +216,7 @@ const ProductCard = ({
         </div>
 
         <div className="product-footer">
-          <div className="product-meta-row" title="Lượt xem">
+          <div className="product-meta-row">
             <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
             </svg>
@@ -157,17 +224,14 @@ const ProductCard = ({
           </div>
 
           <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-            <div className="product-share-wrapper">
-              <button type="button" className="product-action-btn" onClick={handleCopyLink} title="Chia sẻ">
-                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-              </button>
-              {isCopied && <span className="product-copied-tip">Đã copy</span>}
-            </div>
+            <button type="button" className="product-action-btn" onClick={handleCopyLink}>
+              <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
             
-            <button type="button" className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} onClick={handleToggleSave} title={isSaved ? "Bỏ lưu" : "Lưu"}>
+            <button type="button" className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} onClick={handleToggleSave}>
               <svg width="22" height="22" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
               </svg>
@@ -175,6 +239,17 @@ const ProductCard = ({
           </div>
         </div>
       </div>
+
+      {isHovered && tooltipText && coords && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={tooltipRef}
+          className="custom-tooltip-portal"
+          style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 2147483647 }}
+        >
+          {tooltipText}
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

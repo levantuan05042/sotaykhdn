@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
 import styles from './MainLayout.module.css'; // Đã dùng CSS Module
 import axios from 'axios';
 import { AUTH_ME_URL, BEADMIN_USERS_URL, AUTH_SERVICE_LOGIN_URL } from '../config/apiConfig';
 import { getAllowedModesForRole, normalizeRole } from '../config/menuConfig';
+import { AdminKeepAliveOutlet } from './AdminKeepAliveOutlet';
+import { useViewScrollRestoration } from '../hooks/useViewScrollRestoration';
 
 import emailIcon from '../assets/icon/email.svg';
 import phoneIcon from '../assets/icon/phone.svg';
@@ -13,6 +15,8 @@ import phoneIcon from '../assets/icon/phone.svg';
 const MainLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useViewScrollRestoration(scrollRef);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(() => {
     return localStorage.getItem('currentUserRole');
   });
@@ -152,8 +156,8 @@ const MainLayout: React.FC = () => {
         </aside>
 
         <main className={styles['grid-content']}>
-          <div className={styles['page-body']}>
-            <Outlet /> 
+          <div className={styles['page-body']} ref={scrollRef}>
+            <AdminKeepAliveOutlet />
           </div>
 
           <footer className={styles['grid-footer']}>
