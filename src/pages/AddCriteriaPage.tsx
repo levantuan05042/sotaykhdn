@@ -6,6 +6,8 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 const AddCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -129,6 +131,16 @@ const AddCriteriaPage: React.FC = () => {
 
   // --- VALIDATE FORM TRƯỚC KHI LƯU NHÁP HOẶC MỞ MODAL DUYỆT ---
   const onSaveDraftClick = () => {
+    const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
+    if (codeErr) {
+      toast.error(codeErr, { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên tiêu chí');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     setConfirmAction('DRAFT');
   };
 
@@ -137,8 +149,18 @@ const AddCriteriaPage: React.FC = () => {
       toast.error("Vui lòng nhập mã tiêu chí", { position: 'top-center' });
       return;
     }
+    const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
+    if (codeErr) {
+      toast.error(codeErr, { position: 'top-center' });
+      return;
+    }
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên tiêu chí", { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên tiêu chí');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
       return;
     }
     if (formData.groupIds.length === 0) {
@@ -151,6 +173,16 @@ const AddCriteriaPage: React.FC = () => {
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
     if (isSubmitting) return;
+    const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
+    if (codeErr) {
+      toast.error(codeErr, { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên tiêu chí');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     try {
       setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CRITERIA.LIST, {
@@ -277,10 +309,15 @@ const AddCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="code" 
-                  className="input" 
+                  className={`input ${getCodeError(formData.code, 'Mã tiêu chí') ? 'input-invalid' : ''}`}
                   placeholder="Nhập mã tiêu chí..."
                   value={formData.code} 
                   onChange={handleInputChange} 
+                />
+                <CharCountHint
+                  current={formData.code.length}
+                  max={FIELD_LIMITS.code}
+                  error={getCodeError(formData.code, 'Mã tiêu chí')}
                 />
               </div>
 
@@ -290,10 +327,15 @@ const AddCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${getNameError(formData.name, 'Tên tiêu chí') ? 'input-invalid' : ''}`}
                   placeholder="Nhập tên tiêu chí..."
                   value={formData.name} 
                   onChange={handleInputChange} 
+                />
+                <CharCountHint
+                  current={formData.name.length}
+                  max={FIELD_LIMITS.name}
+                  error={getNameError(formData.name, 'Tên tiêu chí')}
                 />
               </div>
               

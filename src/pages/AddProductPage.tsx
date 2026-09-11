@@ -12,10 +12,13 @@ import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
+import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, stripHtmlText } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
   id: string;
   name: string;
+  code?: string;
   isRequired: boolean;
   isSelected: boolean; 
   value: string; 
@@ -306,6 +309,7 @@ const AddProductPage: React.FC = () => {
         const formattedCriteria: Criterion[] = response.data.map((item: any) => ({
           id: item.id || item.criteriaId,
           name: item.name,
+          code: item.code,
           isRequired: item.isRequired,
           isSelected: item.isRequired ? true : false,
           value: ''
@@ -439,6 +443,11 @@ const AddProductPage: React.FC = () => {
   const { allowLeave, dialog } = useUnsavedChangesGuard(isFormDirty);
 
   const onSaveDraftClick = () => {
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
+      return;
+    }
     setConfirmAction('DRAFT');
   };
 
@@ -454,11 +463,21 @@ const AddProductPage: React.FC = () => {
       });
       return; 
     }
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
+      return;
+    }
     setConfirmAction('PENDING_APPROVAL');
   };
 
   const handleCreateProduct = async (status: 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
     if (isSubmitting) return;
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
+      return;
+    }
     if (!formData.productGroupId && status !== 'DRAFT') {
       toast.error("Vui lòng chọn Nhóm sản phẩm", { position: 'top-center' });
       return;
@@ -839,8 +858,13 @@ const AddProductPage: React.FC = () => {
                       <QuillEditor 
                         value={criterion.value}
                         placeholder={criterion.isRequired ? "Tiêu chí này bắt buộc phải nhập..." : "Nhập nội dung chi tiết..."}
-                        hasError={criterion.isRequired && !criterion.value.trim()}
+                        hasError={(criterion.isRequired && !criterion.value.trim()) || Boolean(getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code)))}
                         onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
+                      />
+                      <CharCountHint
+                        current={stripHtmlText(criterion.value).length}
+                        max={getCriteriaMaxLength(criterion.name, criterion.code)}
+                        error={getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code))}
                       />
                     </div>
                   </div>

@@ -232,6 +232,18 @@
   box-sizing: border-box;
 }
 
+.input.input-invalid {
+  border-color: #DC2626;
+}
+
+.field-hint-error {
+  margin: 6px 0 0;
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 .custom-select-container {
   position: relative;
   width: 100%;

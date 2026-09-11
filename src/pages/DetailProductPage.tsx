@@ -26,10 +26,13 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
+import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, stripHtmlText } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
   id: string;
   name: string;
+  code?: string;
   isRequired: boolean;
   isSelected: boolean;
   value: string;
@@ -128,6 +131,7 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Cri
     return {
       id: String(item.id || item.criteriaId),
       name,
+      code: item.code || item.maTieuChi || '',
       isRequired: checkIsRequired(item),
       isSelected: false,
       value: '',
@@ -158,6 +162,7 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Cri
     merged.push({
       id,
       name,
+      code: fromCatalog?.code || s.code || s.maTieuChi || '',
       isRequired: fromCatalog?.isRequired ?? checkIsRequired(s),
       isSelected: true,
       value: sVal,
@@ -716,6 +721,11 @@ const DetailProductPage: React.FC = () => {
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id || submittingRef.current || isSubmitting) return;
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
+      return;
+    }
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -741,6 +751,11 @@ const DetailProductPage: React.FC = () => {
     const missingRequiredCriterion = criteria.find(c => c.isRequired && c.isSelected && isHtmlEmpty(c.value));
     if (missingRequiredCriterion) {
       toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc mới: ${missingRequiredCriterion.name}`, { position: 'top-center' });
+      return;
+    }
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
       return;
     }
     const productStatus = String(productData?.status || '').toUpperCase();
@@ -1076,6 +1091,11 @@ const DetailProductPage: React.FC = () => {
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isReadOnly || !id) return;
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
+      return;
+    }
     if (status !== 'ARCHIVED' && status !== 'ACTIVE' && status !== 'DRAFT') {
       if (!formData.productGroupId && !productData?.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
     }
@@ -1605,7 +1625,8 @@ const DetailProductPage: React.FC = () => {
 
               {/* CRITERIA LIST - HỖ TRỢ ĐỔI THỨ TỰ (CHỈ KÉO THẢ BẰNG ⠿) */}
               {criteria.filter(c => c.isSelected).map((criterion) => {
-                const hasErr = !isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value);
+                const lengthErr = getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code));
+                const hasErr = (!isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value)) || Boolean(lengthErr);
                 const isDraggingThis = draggedCriterionId === criterion.id;
                 const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
                 const isNewInThisVersion = criterion.isRequired && !originalCriteria.some(o => o.id === criterion.id);
@@ -1788,6 +1809,11 @@ const DetailProductPage: React.FC = () => {
                         readOnly={isReadOnly}
                         isRejected={isRejected}
                         onChange={(v) => handleCriterionValueChange(criterion.id, v)}
+                      />
+                      <CharCountHint
+                        current={stripHtmlText(criterion.value).length}
+                        max={getCriteriaMaxLength(criterion.name, criterion.code)}
+                        error={lengthErr}
                       />
                     </div>
                   </div>

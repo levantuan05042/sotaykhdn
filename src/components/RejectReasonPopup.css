@@ -78,10 +78,22 @@
   box-sizing: border-box;
 }
 
+.custom-popup-textarea.input-invalid {
+  border-color: #DC2626;
+}
+
 .custom-popup-textarea:focus {
   outline: none;
   border-color: #AE1C3F;
   box-shadow: 0 0 0 3px rgba(174, 28, 63, 0.1);
+}
+
+.field-hint-error {
+  margin: 6px 0 0;
+  color: #DC2626;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
 }
 
 .custom-popup-footer {

@@ -11,6 +11,8 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
@@ -374,8 +376,18 @@ const DetailCriteriaPage: React.FC = () => {
       toast.error("Vui lòng nhập mã tiêu chí sản phẩm", { position: 'top-center' });
       return false;
     }
+    const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
+    if (codeErr) {
+      toast.error(codeErr, { position: 'top-center' });
+      return false;
+    }
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên tiêu chí sản phẩm", { position: 'top-center' });
+      return false;
+    }
+    const nameErr = getNameError(formData.name, 'Tên tiêu chí');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
       return false;
     }
     if (formData.groupIds.length === 0) {
@@ -388,6 +400,17 @@ const DetailCriteriaPage: React.FC = () => {
 
   const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isReadOnly || !id) return;
+
+    const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
+    if (codeErr) {
+      toast.error(codeErr, { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên tiêu chí');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
 
     if (status === 'PENDING_APPROVAL') {
       if (!validateFormBeforeSubmit()) return;
@@ -737,7 +760,7 @@ const DetailCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="code" 
-                  className={`input ${isReadOnly ? 'is-disabled' : ''}`}
+                  className={`input ${isReadOnly ? 'is-disabled' : ''} ${getCodeError(formData.code, 'Mã tiêu chí') ? 'input-invalid' : ''}`}
                   value={formData.code} 
                   onChange={handleInputChange} 
                   readOnly={isReadOnly}
@@ -745,19 +768,29 @@ const DetailCriteriaPage: React.FC = () => {
                   style={{ cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập mã tiêu chí"
                 />
+                <CharCountHint
+                  current={(formData.code || '').length}
+                  max={FIELD_LIMITS.code}
+                  error={getCodeError(formData.code, 'Mã tiêu chí')}
+                />
               </div>
               <div className="formGroup">
                 <label className="label"> Tên tiêu chí <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${isReadOnly ? 'is-disabled' : ''}`}
+                  className={`input ${isReadOnly ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên tiêu chí') ? 'input-invalid' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isReadOnly}
                   disabled={isReadOnly}
                   style={{ cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập tên tiêu chí"
+                />
+                <CharCountHint
+                  current={(formData.name || '').length}
+                  max={FIELD_LIMITS.name}
+                  error={getNameError(formData.name, 'Tên tiêu chí')}
                 />
               </div>
 

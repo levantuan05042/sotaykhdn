@@ -392,7 +392,10 @@ const ProductDetailView: React.FC = () => {
   return (
     <div className="dp-container">
       {isUpdating && (
-        <LoadingOverlay title={`Đang cập nhật sản phẩm (${updatingName || product.name})`} />
+        <LoadingOverlay
+          title={`Đang cập nhật phiên bản mới của ${updatingName || product.name}`}
+          subtitle="Vui lòng đợi trong giây lát"
+        />
       )}
       <div className={`dp-layout ${isMoreDrawerOpen ? 'sidebar-open' : ''}`}>
         
