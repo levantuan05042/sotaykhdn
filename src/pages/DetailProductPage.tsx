@@ -23,6 +23,7 @@ import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 
@@ -1053,6 +1054,7 @@ const DetailProductPage: React.FC = () => {
 
   const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
   const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+  useDragAutoScroll(Boolean(draggedCriterionId));
 
   const moveCriterion = (draggedId: string, targetId: string) => {
     if (isReadOnly || draggedId === targetId) return;

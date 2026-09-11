@@ -1,16 +1,23 @@
 .dp-container {
   width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
   padding: 32px;
+  flex: 1;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   box-sizing: border-box;
+  background: transparent;
 }
 
 .dp-layout {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   width: 100%;
+  flex: 1;
+  min-height: 100%;
 }
 
 .dp-main-column {
@@ -34,17 +41,27 @@
 }
 
 .dp-layout.sidebar-open .dp-sidebar-wrapper {
-  width: 460px;
+  width: 428px;
   opacity: 1;
   visibility: visible;
   border-left-color: #E5E7EB;
-  margin-left: 40px;
-  padding-left: 32px;
+  margin: -32px -32px 0 24px;
+  padding: 42px 32px 40px 32px;
+  background: #FFFFFF;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: calc(100vh - 80px);
+  max-height: calc(100vh - 80px);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .dp-sidebar-inner {
-  width: 387px;
-  padding-top: 10px;
+  width: 100%;
+  padding-top: 0;
+  background: #FFFFFF;
 }
 
 .dp-sidebar-title {
@@ -92,7 +109,12 @@
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  margin: -32px 0 24px;
+  padding: 20px 0 16px;
+  background: transparent;
 }
 
 .dp-breadcrumb {
@@ -442,20 +464,27 @@
 @media (max-width: 1024px) {
   .dp-layout.sidebar-open { flex-direction: column; }
   .dp-layout.sidebar-open .dp-sidebar-wrapper {
-    width: 100%; 
-    margin-left: 0; 
-    padding-left: 0;
-    border-left: none; 
+    position: static;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    margin: 32px 0 0 0;
+    padding: 32px 0 0 0;
+    border-left: none;
     border-top: 1px solid #E5E7EB;
-    margin-top: 32px; 
-    padding-top: 32px;
+    overflow: visible;
   }
   .dp-sidebar-inner { width: 100%; }
 }
 
 @media (max-width: 768px) {
   .dp-container { padding: 20px; }
-  .dp-top-row { flex-direction: column; align-items: flex-start; gap: 16px; }
+  .dp-top-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: -20px;
+  }
   .dp-actions { width: 100%; justify-content: space-between; }
   .dp-action-btn { flex: 1; }
   .dp-product-header { flex-direction: column; gap: 16px; }

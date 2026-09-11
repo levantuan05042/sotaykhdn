@@ -358,23 +358,42 @@
 }
 
 .custom-tooltip-container.status-detail-cell .truncate-text {
-  display: flex !important;
-  align-items: center !important;
-  flex-wrap: nowrap !important;
-  white-space: nowrap !important;
+  display: block !important;
+  white-space: normal !important;
   overflow: hidden !important;
-  max-height: none !important;
+  max-height: 40px !important;
   -webkit-line-clamp: unset !important;
   -webkit-box-orient: unset !important;
 }
 
 .status-detail-row {
   display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 6px;
-  white-space: nowrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  flex-wrap: wrap;
+  gap: 3px 4px;
+  width: 100%;
+  max-height: 36px;
   overflow: hidden;
+}
+
+.status-detail-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid;
+  border-radius: 9999px;
+  padding: 0 5px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 15px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.status-detail-chip-count {
+  font-weight: 700;
 }
 
 .btn-view-detail {

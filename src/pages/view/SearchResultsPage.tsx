@@ -8,11 +8,13 @@ import './Search.css';
 
 interface SearchProductItem {
   id: string;
-  name: string; // Đã đổi thành string bắt buộc để khớp với ProductInfo
+  name: string;
   title?: string;
   image?: string;
+  imageUrl?: string;
   categoryTag?: string;
   views?: number;
+  viewCount?: number;
   createdAt?: string;
   businessName?: string;
   categoryName?: string;
@@ -47,7 +49,11 @@ export const SearchResultsPage = () => {
         // Map dữ liệu để đảm bảo trường 'name' luôn có giá trị hợp lệ
         const productList: SearchProductItem[] = rawData.map((item: any) => ({
           ...item,
-          name: item.name || item.title || 'Sản phẩm không tên'
+          id: item.id,
+          name: item.name || item.title || 'Sản phẩm không tên',
+          imageUrl: item.imageUrl || item.image_url || item.image || '',
+          views: item.viewCount ?? item.views ?? 0,
+          viewCount: item.viewCount ?? item.views ?? 0,
         }));
 
         setResults({
@@ -82,7 +88,7 @@ export const SearchResultsPage = () => {
       </div>
 
       {results.products && results.products.length > 0 ? (
-        <div className="products-result-grid">
+        <div className="products-grid">
           {results.products.map((product) => (
             <ProductCard 
               key={product.id} 
