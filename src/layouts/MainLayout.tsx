@@ -126,6 +126,18 @@ const MainLayout: React.FC = () => {
     }
   }, [location.pathname, currentUserRole, navigate]);
 
+  const APPROVER_LIST_PATHS = [
+    '/approver/request-list',
+    '/approver/product-groups',
+    '/approver/product-category',
+    '/approver/products/single',
+    '/approver/business',
+    '/approver/criteria',
+  ];
+  const hideApproverDetailFooter =
+    location.pathname.startsWith('/approver/') &&
+    !APPROVER_LIST_PATHS.includes(location.pathname);
+
   if (loading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: '16px', background: '#f5f5f5', fontFamily: 'sans-serif' }}>
@@ -156,24 +168,26 @@ const MainLayout: React.FC = () => {
             <Outlet /> 
           </div>
 
-          <footer className={styles['grid-footer']}>
-            <div className={styles['footer-content']}>
-              <div>
-                © Bản quyền thuộc Agribank <br />
-                Phiên bản 1.1 cập nhật 08/09/2026
+          {!hideApproverDetailFooter && (
+            <footer className={styles['grid-footer']}>
+              <div className={styles['footer-content']}>
+                <div>
+                  © Bản quyền thuộc Agribank <br />
+                  Phiên bản 1.1 cập nhật 08/09/2026
+                </div>
+                <div className={styles['footer-right']} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <img src={emailIcon} alt="Email" style={{ width: '16px', height: '16px' }} /> 
+                    bannganhangso@agribank.com.vn
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <img src={phoneIcon} alt="Phone" style={{ width: '16px', height: '16px' }} /> 
+                    0123456789 - Văn thư Ban NHS
+                  </span>
+                </div>
               </div>
-              <div className={styles['footer-right']} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <img src={emailIcon} alt="Email" style={{ width: '16px', height: '16px' }} /> 
-                  bannganhangso@agribank.com.vn
-                </span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <img src={phoneIcon} alt="Phone" style={{ width: '16px', height: '16px' }} /> 
-                  0123456789 - Văn thư Ban NHS
-                </span>
-              </div>
-            </div>
-          </footer>
+            </footer>
+          )}
         </main>
       </div>
     </div>

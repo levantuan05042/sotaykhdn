@@ -4,12 +4,15 @@ import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { getRandomAvatar } from '../utils/avatarUtils';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
 import ProductImageCard from '../components/ui/ProductImageCard';
 import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
 import AuditLogTimeline from '../components/AuditLogTimeline';
 import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
+import iconChat from '../assets/icon/iconchat.svg';
+import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverProductDetailPage.css';
 
 interface ApproverProductDetailPageProps {
@@ -45,13 +48,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
           data.notes = initialNotes;
         }
         setDetail(data);
-        if (initialFeedback !== undefined) {
-          setNewComment(initialFeedback);
-        } else if (data.comments && data.comments.length > 0) {
-          setNewComment(data.comments[data.comments.length - 1].comment || '');
-        } else if (data.rejectReason) {
-          setNewComment(data.rejectReason);
-        }
+        setNewComment('');
       } catch (error) {
         console.error("Error fetching product detail:", error);
         toast.error("Không thể tải chi tiết sản phẩm!");
@@ -99,16 +96,6 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     fetchBusinesses();
   }, [detail?.productCategoryId]);
 
-  const handleFieldChange = (key: string, value: any) => {
-    setDetail((prev: any) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        [key]: value
-      };
-    });
-  };
-
   const handleBack = () => {
     if (onClose) {
       onClose({
@@ -141,18 +128,32 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         approvedBy: approvedByStr
       });
 
+      const currentUserName = localStorage.getItem('currentUserFullName') || username;
       setDetail((prev: any) => ({
         ...prev,
-        notes: notesVal
+        notes: notesVal,
+        comments: newComment.trim()
+          ? [
+              ...(prev.comments || []),
+              {
+                id: `local-${Date.now()}`,
+                createdBy: currentUserName,
+                createdByFullName: currentUserName,
+                createdAt: new Date().toISOString(),
+                comment: newComment.trim(),
+              },
+            ]
+          : prev.comments,
       }));
+      setNewComment('');
       setAuditRefreshKey((prev) => prev + 1);
 
       const labelMap: Record<string, string> = {
         '0': 'Yêu cầu chỉnh sửa',
         '1': 'Từ chối',
         '2': 'Duyệt',
-        '3': 'Đã Review',
-        'REVIEWED': 'Đã Review'
+        '3': 'Đã xem',
+        'REVIEWED': 'Đã xem'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[notesVal] || notesVal}) thành công!`);
 
@@ -181,91 +182,30 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
     return `${day}/${month}/${year}`;
   };
 
-  const renderNoteBadge = (notesValue: string | null) => {
+  const renderHeaderNoteTag = (notesValue: string | null) => {
     if (notesValue === '0') {
       return (
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '5px 12px',
-          borderRadius: '9999px',
-          fontSize: '13px',
-          fontWeight: 600,
-          backgroundColor: '#FEF9C3',
-          color: '#854D0E'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-          </svg>
-          Yêu cầu chỉnh sửa
+        <span className="header-note-tag header-note-tag--yccs">
+          <img src={iconPen} alt="" />
+          YCCS
         </span>
       );
     }
     if (notesValue === '1') {
-      return (
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '5px 12px',
-          borderRadius: '9999px',
-          fontSize: '13px',
-          fontWeight: 600,
-          backgroundColor: '#FEE2E2',
-          color: '#991B1B'
-        }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-          </svg>
-          Từ chối
-        </span>
-      );
+      return <span className="header-note-tag header-note-tag--reject">Từ chối</span>;
     }
     if (notesValue === '3' || notesValue === 'REVIEWED') {
-      return (
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 14px',
-          borderRadius: '9999px',
-          fontSize: '13px',
-          fontWeight: 600,
-          backgroundColor: '#D1FAE5',
-          color: '#065F46'
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9 12l2 2 4-4" />
-          </svg>
-          Đã review
-        </span>
-      );
+      return <span className="header-note-tag header-note-tag--reviewed">Đã xem</span>;
     }
     if (notesValue === '2') {
-      return (
-        <span style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 14px',
-          borderRadius: '9999px',
-          fontSize: '13px',
-          fontWeight: 600,
-          backgroundColor: '#D1FAE5',
-          color: '#065F46'
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M9 12l2 2 4-4" />
-          </svg>
-          Đã duyệt
-        </span>
-      );
+      return <span className="header-note-tag header-note-tag--reviewed">Đã duyệt</span>;
     }
-    return <span style={{ color: '#8C8C8C' }}>Chưa có</span>;
+    return null;
+  };
+
+  const formatCommentDate = (dateStr?: any) => {
+    if (!dateStr) return '—';
+    return formatDateDDMMYYYY(dateStr);
   };
 
   if (loading || !detail) {
@@ -286,8 +226,8 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
       <Toaster position="top-right" />
 
       {/* HEADER BAR */}
-      <header className="detail-header shadow-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px' }}>
-        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <header className="detail-header shadow-sm">
+        <div className="header-left">
           <button className="btn-back-only" onClick={handleBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -295,80 +235,51 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
             </svg>
           </button>
 
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8C8C8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '4px' }}>
-            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-            <line x1="7" y1="7" x2="7.01" y2="7"></line>
-          </svg>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px' }}>
-            <span style={{ color: '#8C8C8C', fontWeight: 500 }}>Lô {detail.requestName || '1250384'}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C8C8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-            <span style={{ color: '#171717', fontWeight: 600 }}>{detail.name}</span>
+          <div className="detail-breadcrumb">
+            <button type="button" className="detail-breadcrumb-link" onClick={() => navigate('/approver/request-list')}>
+              Danh sách yêu cầu
+            </button>
+            <span className="detail-breadcrumb-sep">&rsaquo;</span>
+            <span className="detail-breadcrumb-muted">{detail.requestName || 'Lô sản phẩm'}</span>
+            <span className="detail-breadcrumb-sep">&rsaquo;</span>
+            <span className="detail-breadcrumb-active">{detail.name}</span>
           </div>
         </div>
 
-        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {(detail.status === 'PENDING_APPROVAL' || detail.requestStatus === 'PENDING_APPROVAL') && (() => {
-            const origComment = (initialFeedback || detail?.comments?.[detail.comments.length - 1]?.comment || detail?.rejectReason || '').trim();
-            const currentComment = newComment.trim();
-            const isCommentModified = Boolean(currentComment && currentComment !== origComment);
+        <div className="header-actions">
+          {renderHeaderNoteTag(detail.notes) && (
+            <div className="header-note-wrap">
+              <span className="header-note-label">Ghi chú:</span>
+              {renderHeaderNoteTag(detail.notes)}
+            </div>
+          )}
+          {(detail.status === 'PENDING_APPROVAL' || detail.requestStatus === 'PENDING_APPROVAL') && (
+            <>
+              <button
+                className="btn-reject"
+                onClick={() => handleSaveReview('1')}
+              >
+                Từ chối
+              </button>
 
-            return (
-              <>
+              {newComment.trim() ? (
                 <button
-                  className="btn-reject"
-                  onClick={() => handleSaveReview('1')}
-                  style={{
-                    backgroundColor: '#ffffff',
-                    color: '#171717',
-                    border: '1px solid #d9d9d9',
-                    padding: '8px 24px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: 600
-                  }}
+                  className="btn-revision-request-yellow"
+                  onClick={() => handleSaveReview('0')}
                 >
-                  Từ chối
+                  <img src={iconPen} alt="" />
+                  Yêu cầu chỉnh sửa
                 </button>
-
-                {isCommentModified ? (
-                  <button
-                    className="btn-revision-request-yellow"
-                    onClick={() => handleSaveReview('0')}
-                    style={{
-                      backgroundColor: '#FEF08A',
-                      color: '#854D0E',
-                      border: '1px solid #FEF08A',
-                      padding: '8px 24px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    Yêu cầu chỉnh sửa
-                  </button>
-                ) : (
-                  <button
-                    className="btn-action-approve"
-                    onClick={() => handleSaveReview('3')}
-                    style={{
-                      backgroundColor: '#053E2B',
-                      color: '#ffffff',
-                      border: 'none',
-                      padding: '8px 24px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      fontWeight: 600
-                    }}
-                  >
-                    Đã review
-                  </button>
-                )}
-              </>
-            );
-          })()}
+              ) : (
+                <button
+                  className="btn-action-approve"
+                  onClick={() => handleSaveReview('3')}
+                >
+                  Đã xem
+                </button>
+              )}
+            </>
+          )}
         </div>
       </header>
 
@@ -484,86 +395,86 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         {/* RIGHT COLUMN: INFO PANEL & COMMENTS */}
         <section className="detail-right-panel">
 
-          {/* Trạng thái sản phẩm & Trạng thái hiển thị */}
-          <CollapsibleRightCard title="Trạng thái" className="right-card shadow-sm">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
-                  Trạng thái sản phẩm
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                  </svg>
-                </h3>
+          <div className="status-pair-card shadow-sm">
+            <div className="status-pair-grid">
+              <div className="status-pair-col">
+                <span className="status-pair-label">Trạng thái sản phẩm</span>
                 <StatusBadge status={detail.requestStatus || detail.status || 'PENDING_APPROVAL'} />
               </div>
-
-              <div style={{ borderTop: '1px solid #E3DFE6', paddingTop: '12px' }}>
-                <h3 className="right-card-title" style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
-                  Trạng thái hiển thị
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                  </svg>
-                </h3>
-                <select
-                  className="form-select"
-                  value={detail.active ? 'Hiển thị' : 'Ẩn'}
-                  disabled
-                  onChange={(e) => handleFieldChange('active', e.target.value === 'Hiển thị')}
-                >
-                  <option value="Ẩn">Ẩn</option>
-                  <option value="Hiển thị">Hiển thị</option>
-                </select>
+              <div className="status-pair-col">
+                <span className="status-pair-label">Trạng thái hiển thị</span>
+                <StatusBadge status={detail.active ? 'VISIBLE' : 'HIDDEN'} />
               </div>
             </div>
-          </CollapsibleRightCard>
+          </div>
 
-          {/* Thông tin sản phẩm */}
-          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm">
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              padding: '16px 20px',
-              backgroundColor: '#FFFFFF',
-              border: 'none',
-              borderRadius: '12px',
-            }}>
+          <div className="comments-container shadow-sm">
+            <h2 className="comments-header">
+              <img src={iconChat} alt="" className="comments-header-icon" />
+              <span>Bình luận</span>
+            </h2>
+
+            {detail.comments && detail.comments.length > 0 ? (
+              <div className="comments-list">
+                {detail.comments.map((comment: any, index: number) => (
+                  <div className="comment-item" key={comment.id || index}>
+                    <div className="comment-meta">
+                      <div className="comment-avatar">
+                        <img src={getRandomAvatar(comment.createdBy)} alt="" />
+                      </div>
+                      <div className="comment-author-info">
+                        <span className="comment-author">{formatApprovedBy(comment.createdByFullName || comment.createdBy) || 'Cán bộ duyệt'}</span>
+                        <span className="comment-date">{formatCommentDate(comment.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="comment-body">
+                      {comment.content || comment.comment}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-comments">Chưa có bình luận nào</p>
+            )}
+
+            <div className="comment-input-area">
+              <textarea
+                className="comment-textarea"
+                rows={3}
+                placeholder="Nhập nội dung bình luận..."
+                value={newComment}
+                disabled={detail.status !== 'PENDING_APPROVAL' && detail.requestStatus !== 'PENDING_APPROVAL'}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm" defaultOpen={false}>
+            <div className="meta-info-white-box">
               {/* Row 1: Người tạo & Người Phê duyệt */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="meta-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Người tạo</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
+                  <span className="meta-label">Người tạo</span>
+                  <span className="meta-value">{formatApprovedBy(detail.createdByFullName || detail.createdBy)}</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Người Phê duyệt</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
+                  <span className="meta-label">Người Phê duyệt</span>
+                  <span className="meta-value">{formatApprovedBy(detail.approvedByFullName || detail.approvedBy)}</span>
                 </div>
               </div>
 
               {/* Row 2: Thời gian tạo & Phiên bản */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="meta-grid">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Thời gian tạo</span>
-                  <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+                  <span className="meta-label">Thời gian tạo</span>
+                  <span className="meta-value">
                     {detail.createdAt ? formatDateDDMMYYYY(detail.createdAt) : '—'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B7280' }}>Phiên bản</span>
+                <div className="meta-item-vertical">
+                  <span className="meta-label">Phiên bản</span>
                   <div>
-                    <span style={{
-                      backgroundColor: '#ECFDF5',
-                      color: '#065F46',
-                      padding: '4px 8px',
-                      borderRadius: '12px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      display: 'inline-block'
-                    }}>
+                    <span className="badge-version">
                       {detail.version !== null && detail.version !== undefined ? `Phiên bản ${detail.version}` : '---'}
                     </span>
                   </div>
@@ -574,27 +485,27 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               <div style={{ height: '1px', backgroundColor: '#F3F4F6', margin: '2px 0' }} />
 
               {/* Row 3: Lượt xem & Lượt lưu */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6B7280', fontSize: '13px' }}>
+              <div className="meta-grid">
+                <div className="meta-item-vertical">
+                  <div className="meta-label-row meta-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                       <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                     <span>Lượt xem</span>
                   </div>
-                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                  <span className="meta-value">
                     {detail.viewCount !== null && detail.viewCount !== undefined ? detail.viewCount : 'Chưa có'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#6B7280', fontSize: '13px' }}>
+                <div className="meta-item-vertical">
+                  <div className="meta-label-row meta-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
                     </svg>
                     <span>Lượt lưu</span>
                   </div>
-                  <span style={{ fontSize: '15px', fontWeight: 600, color: '#111827' }}>
+                  <span className="meta-value">
                     {detail.savedCount !== null && detail.savedCount !== undefined ? detail.savedCount : 0}
                   </span>
                 </div>
@@ -604,50 +515,22 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               <div style={{ height: '1px', backgroundColor: '#F3F4F6', margin: '2px 0' }} />
 
               {/* Row 4: Thuộc yêu cầu */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '13px', color: '#6B7280' }}>Thuộc yêu cầu</span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#053E2B', textDecoration: 'underline', cursor: 'pointer' }}>
+              <div className="meta-item-vertical">
+                <span className="meta-label">Thuộc yêu cầu</span>
+                <span className="meta-value" style={{ color: '#053E2B', textDecoration: 'underline', cursor: 'pointer' }}>
                   {detail.requestName || '—'}
                 </span>
               </div>
 
-              {/* Row 5: Thời gian tạo yêu cầu */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <span style={{ fontSize: '13px', color: '#6B7280' }}>Thời gian tạo yêu cầu</span>
-                <span style={{ fontSize: '14px', fontWeight: 600, color: '#111827' }}>
+              <div className="meta-item-vertical">
+                <span className="meta-label">Thời gian tạo yêu cầu</span>
+                <span className="meta-value">
                   {detail.requestCreatedAt ? formatDateDDMMYYYY(detail.requestCreatedAt) : '—'}
                 </span>
               </div>
 
-              {/* Row 6: Ghi chú */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <span style={{ fontSize: '13px', color: '#6B7280' }}>Ghi chú</span>
-                <div>{renderNoteBadge(detail.notes)}</div>
-              </div>
-
             </div>
           </CollapsibleRightCard>
-
-          {/* Bình luận phản hồi */}
-          <div className="comments-container shadow-sm">
-            <h2 className="comments-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#AE1C3F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-              <span>Bình luận phản hồi</span>
-            </h2>
-
-            <div className="comment-input-area">
-              <textarea
-                className="comment-textarea"
-                rows={4}
-                placeholder="Nhập nội dung bình luận phản hồi..."
-                value={newComment}
-                disabled={detail.status !== 'PENDING_APPROVAL' && detail.requestStatus !== 'PENDING_APPROVAL'}
-                onChange={(e) => setNewComment(e.target.value)}
-              />
-            </div>
-          </div>
 
         </section>
 

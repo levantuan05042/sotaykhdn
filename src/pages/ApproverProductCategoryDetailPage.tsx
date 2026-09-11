@@ -122,6 +122,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
       version={detail.version}
       comments={detail.comments}
       isPending={detail.status === 'PENDING_APPROVAL'}
+      isActive={!!detail.active}
       loading={loading}
       onBack={handleBack}
       onSaveReview={handleSaveReview}

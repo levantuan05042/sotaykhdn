@@ -21,14 +21,14 @@ export const ProductImageCard: React.FC<ProductImageCardProps> = ({
     <div
       className={`product-image-card-container ${className}`}
       style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '12px',
-        border: '1px solid #D1D5DB',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-        padding: '20px 24px',
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        border: 'none',
+        boxShadow: 'none',
+        padding: 0,
         boxSizing: 'border-box',
         width: '100%',
-        margin: '16px 0',
+        margin: 0,
         ...style
       }}
     >
@@ -37,15 +37,16 @@ export const ProductImageCard: React.FC<ProductImageCardProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '16px'
+          marginBottom: '8px'
         }}
       >
         <h3
           style={{
             margin: 0,
             fontSize: '16px',
-            fontWeight: 600,
-            color: '#111827'
+            fontWeight: 500,
+            lineHeight: '24px',
+            color: '#404040'
           }}
         >
           {title}
@@ -54,15 +55,15 @@ export const ProductImageCard: React.FC<ProductImageCardProps> = ({
 
       <div
         style={{
-          border: '1px solid #F3F4F6',
-          borderRadius: '12px',
-          backgroundColor: '#FAFAFA',
-          padding: '32px 16px',
+          border: '1px solid #E3DFE6',
+          borderRadius: '8px',
+          backgroundColor: '#FFFFFF',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          minHeight: '160px',
+          minHeight: '140px',
           boxSizing: 'border-box',
           width: '100%'
         }}

@@ -11,6 +11,8 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ApproveConfirmPopup from '../components/ApproveConfirmPopup';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import iconChat from '../assets/icon/iconchat.svg';
+import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
@@ -212,8 +214,8 @@ const ApproverBatchDetailPage: React.FC = () => {
         '0': 'Yêu cầu chỉnh sửa',
         '1': 'Từ chối',
         '2': 'Duyệt',
-        '3': 'Đã Review',
-        'REVIEWED': 'Đã Review'
+        '3': 'Đã xem',
+        'REVIEWED': 'Đã xem'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[targetNotes] || targetNotes}) cho sản phẩm thành công!`);
       return true;
@@ -256,9 +258,7 @@ const ApproverBatchDetailPage: React.FC = () => {
     if (notesValue === '0') {
       return (
         <span className="note-badge note-badge--revision">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-          </svg>
+          <img src={iconPen} alt="" width={14} height={14} />
           Yêu cầu chỉnh sửa
         </span>
       );
@@ -280,7 +280,7 @@ const ApproverBatchDetailPage: React.FC = () => {
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          Đã review
+          Đã xem
         </span>
       );
     }
@@ -468,9 +468,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                 {/* Bottom Feedback Box */}
                 <div className="quickview-card quickview-card--green-border">
                   <label className="quickview-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#AE1C3F', fontSize: '14px', fontWeight: 700 }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AE1C3F" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                    </svg>
+                    <img src={iconChat} alt="" width={16} height={16} />
                     <span>Bình luận phản hồi</span>
                   </label>
                   <textarea 
@@ -512,7 +510,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                       className="btn-qv-reviewed" 
                       onClick={() => handleAction('REVIEWED')}
                     >
-                      Đã Review
+                      Đã xem
                     </button>
                   )}
                 </div>

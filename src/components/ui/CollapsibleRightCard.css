@@ -19,10 +19,11 @@
 }
 
 .collapsible-right-card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #171717;
-  line-height: 1.4;
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1A191B;
+  line-height: 24px;
 }
 
 .collapsible-right-card-chevron {
@@ -36,7 +37,7 @@
 }
 
 .collapsible-right-card-body {
-  margin-top: 12px;
+  margin-top: 16px;
 }
 
 .collapsible-right-card.right-card,
@@ -46,5 +47,5 @@
 }
 
 .collapsible-right-card.is-collapsed {
-  padding-bottom: 16px;
+  padding-bottom: 24px;
 }

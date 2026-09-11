@@ -19,7 +19,9 @@ const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', variant: 'revision' },
   REJECTED: { label: 'Từ chối', variant: 'rejected' },
   DRAFT: { label: 'Lưu nháp', variant: 'draft' },
-  REVIEWED: { label: 'Đã Review', variant: 'completed' },
+  REVIEWED: { label: 'Đã xem', variant: 'completed' },
+  VISIBLE: { label: 'Hiển thị', variant: 'completed' },
+  HIDDEN: { label: 'Ẩn', variant: 'rejected' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, className = '' }) => {

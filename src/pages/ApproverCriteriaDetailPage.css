@@ -1,9 +1,9 @@
 .approver-criteria-groups-box {
   box-sizing: border-box;
-  min-height: 48px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #D1D5DB;
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #E3DFE6;
   background-color: #ffffff;
   display: flex;
   flex-direction: column;
@@ -28,7 +28,7 @@
   padding: 8px 12px;
   border-radius: 8px;
   background: #F5F3F6;
-  color: #1A191B;
+  color: #8A858F;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.35;

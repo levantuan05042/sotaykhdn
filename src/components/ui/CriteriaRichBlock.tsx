@@ -23,13 +23,15 @@ export const CriteriaRichBlock: React.FC<CriteriaRichBlockProps> = ({
   const cleanLabel = label.replace(/\s*\(\*\)/g, '').trim();
 
   return (
-    <div style={{ marginBottom: '20px', width: '100%', boxSizing: 'border-box' }}>
+    <div style={{ width: '100%', boxSizing: 'border-box' }}>
       <label
         style={{
           display: 'block',
-          fontSize: '13px',
-          fontWeight: 700,
-          color: '#1A191B',
+          fontFamily: 'Inter, sans-serif',
+          fontSize: '16px',
+          fontWeight: 500,
+          lineHeight: '24px',
+          color: '#404040',
           marginBottom: '8px',
         }}
       >
@@ -39,11 +41,10 @@ export const CriteriaRichBlock: React.FC<CriteriaRichBlockProps> = ({
 
       <div
         style={{
-          border: '1px solid #D1D5DB',
-          borderRadius: '12px',
+          border: '1px solid #E3DFE6',
+          borderRadius: '8px',
           backgroundColor: '#FFFFFF',
           overflow: 'hidden',
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.03)',
         }}
       >
         {/* Toolbar Header matching Design Image 1 */}
@@ -210,11 +211,11 @@ export const CriteriaRichBlock: React.FC<CriteriaRichBlockProps> = ({
         {/* Content Body Area */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '12px 14px',
             fontSize: '14px',
-            color: '#4B5563',
-            lineHeight: '1.6',
-            minHeight: '120px',
+            color: '#8A858F',
+            lineHeight: '20px',
+            minHeight: '88px',
             wordBreak: 'break-word',
           }}
           dangerouslySetInnerHTML={{ __html: formatContent(value) }}

@@ -4,7 +4,11 @@ import RejectReasonPopup from './RejectReasonPopup';
 import ApproveConfirmPopup from './ApproveConfirmPopup';
 import AuditLogTimeline from './AuditLogTimeline';
 import CollapsibleRightCard from './ui/CollapsibleRightCard';
+import StatusBadge from './ui/StatusBadge';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { getRandomAvatar } from '../utils/avatarUtils';
+import iconChat from '../assets/icon/iconchat.svg';
+import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverDetailWrapper.css';
 
 interface CommentItem {
@@ -26,6 +30,7 @@ interface ApproverDetailWrapperProps {
   version: number;
   comments: CommentItem[];
   isPending: boolean;
+  isActive?: boolean;
   loading: boolean;
   onBack: () => void;
   onSaveReview: (status: string, comment: string) => Promise<void>;
@@ -61,6 +66,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
   version,
   comments,
   isPending,
+  isActive = false,
   loading,
   onBack,
   onSaveReview,
@@ -78,13 +84,25 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
     setIsRejectReasonOpen(true);
   };
 
+  const submitReview = async (statusVal: string, commentVal: string) => {
+    await onSaveReview(statusVal, commentVal);
+    setNewComment('');
+  };
+
+  const formatCommentDate = (dateStr?: string) => {
+    if (!dateStr) return '—';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('vi-VN');
+  };
+
   return (
     <div className="approver-detail-wrapper">
       <Toaster position="top-right" />
 
       {/* HEADER BAR */}
-      <header className="detail-header shadow-sm" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px' }}>
-        <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <header className="detail-header shadow-sm">
+        <div className="header-left">
           <button className="btn-back-only" onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#595959" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -97,20 +115,18 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
             <line x1="7" y1="7" x2="7.01" y2="7"></line>
           </svg>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px' }}>
-            <span style={{ color: '#8C8C8C', fontWeight: 500 }}>{mapModuleBreadcrumb(moduleName)}</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8C8C8C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-            <span style={{ color: '#171717', fontWeight: 600 }}>{itemName}</span>
+          <div className="detail-breadcrumb">
+            <span className="detail-breadcrumb-muted">{mapModuleBreadcrumb(moduleName)}</span>
+            <span className="detail-breadcrumb-sep">&rsaquo;</span>
+            <span className="detail-breadcrumb-active">{itemName}</span>
           </div>
 
-          <span className={`status-badge-text badge--${status.toLowerCase()}`} style={{ marginLeft: '12px', fontSize: '15px', padding: '4px 10px', borderRadius: '20px' }}>
+          <span className={`status-badge-text badge--${status.toLowerCase()}`} style={{ marginLeft: '8px', fontSize: '15px', padding: '4px 10px', borderRadius: '20px' }}>
             {STATUS_LABELS[status] || status}
           </span>
         </div>
 
-        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="header-actions">
           {isPending && (
             <>
               <button 
@@ -123,9 +139,10 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
               {newComment.trim() !== '' ? (
                 <button 
                   className="btn-action-revision" 
-                  onClick={() => onSaveReview('NEEDS_REVISION', newComment)} 
+                  onClick={() => submitReview('NEEDS_REVISION', newComment)} 
                   disabled={loading}
                 >
+                  <img src={iconPen} alt="" />
                   Yêu cầu chỉnh sửa
                 </button>
               ) : (
@@ -157,17 +174,63 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
 
         {/* Right Column: Metadata & Comments */}
         <section className="detail-right-panel">
-          
-          {/* Status Display Card */}
-          <CollapsibleRightCard title="Trạng thái hiển thị" className="status-display-card shadow-sm">
-            <select className="formSelect" disabled value={status === 'ACTIVE' ? 'active' : 'inactive'}>
-              <option value="active">Hiển thị</option>
-              <option value="inactive">Ẩn</option>
-            </select>
-          </CollapsibleRightCard>
 
-          {/* Metadata Card */}
-          <CollapsibleRightCard title="Thông tin sản phẩm" className="meta-info-card shadow-sm">
+          <div className="status-pair-card shadow-sm">
+            <div className="status-pair-grid">
+              <div className="status-pair-col">
+                <span className="status-pair-label">Trạng thái sản phẩm</span>
+                <StatusBadge status={status} />
+              </div>
+              <div className="status-pair-col">
+                <span className="status-pair-label">Trạng thái hiển thị</span>
+                <StatusBadge status={isActive ? 'VISIBLE' : 'HIDDEN'} />
+              </div>
+            </div>
+          </div>
+
+          <div className="comments-container shadow-sm">
+            <h3 className="comments-header">
+              <img src={iconChat} alt="" className="comments-header-icon" />
+              <span>Bình luận</span>
+            </h3>
+
+            {comments && comments.length > 0 ? (
+              <div className="comments-list">
+                {comments.map((comment, index) => (
+                  <div className="comment-item" key={comment.id || index}>
+                    <div className="comment-meta">
+                      <div className="comment-avatar">
+                        <img src={getRandomAvatar(comment.createdBy)} alt="" />
+                      </div>
+                      <div className="comment-author-info">
+                        <span className="comment-author">{formatApprovedBy(comment.createdBy) || 'Cán bộ duyệt'}</span>
+                        <span className="comment-date">{formatCommentDate(comment.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="comment-body">
+                      {comment.content || comment.comment}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="no-comments">Chưa có bình luận nào</p>
+            )}
+
+            {isPending && (
+              <div className="comment-input-area">
+                <textarea
+                  className="comment-textarea"
+                  rows={3}
+                  placeholder="Nhập nội dung bình luận..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="meta-info-card shadow-sm" defaultOpen={false}>
             <div className="meta-info-white-box">
               <div className="meta-grid">
                 <div className="meta-item-vertical">
@@ -193,50 +256,6 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
               </div>
             </div>
           </CollapsibleRightCard>
-
-          {/* Comments Card */}
-          <div className="comments-container shadow-sm" style={{ marginTop: '16px' }}>
-            <h3 className="comments-header">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: 'scaleX(-1)' }}>
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-              <span>Bình luận phản hồi</span>
-            </h3>
-
-            <div className="comments-list">
-              {comments && comments.map((comment) => {
-                const dateStr = comment.createdAt ? new Date(comment.createdAt).toLocaleDateString('vi-VN') : '—';
-                return (
-                  <div className="comment-item" key={comment.id}>
-                    <div className="comment-meta">
-                      <div className="comment-avatar">
-                        <img src="https://scontent-hkg1-2.xx.fbcdn.net/v/t39.30808-1/496859882_2213309762459479_7876539183003247432_n.jpg?stp=dst-jpg_s200x200_tt6&_nc_cat=107&ccb=1-7&_nc_sid=e99d92" alt="Avatar" />
-                      </div>
-                      <div className="comment-author-info">
-                        <span className="comment-author">{formatApprovedBy(comment.createdBy) || 'Cán bộ duyệt'}</span>
-                        <span className="comment-date">{dateStr}</span>
-                      </div>
-                    </div>
-                    <div className="comment-body">
-                      {comment.content || comment.comment}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {isPending && (
-              <div className="comment-input-area">
-                <textarea
-                  className="comment-textarea"
-                  rows={3}
-                  placeholder="Nhập nội dung chỉnh sửa..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
         </section>
 
       </main>
@@ -246,7 +265,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
         onClose={() => setIsApproveConfirmOpen(false)}
         onConfirm={async () => {
           setIsApproveConfirmOpen(false);
-          await onSaveReview('ACTIVE', '');
+          await submitReview('ACTIVE', '');
         }}
         itemName={itemName}
       />
@@ -256,7 +275,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
         onClose={() => setIsRejectReasonOpen(false)}
         onSubmit={async (reason) => {
           setIsRejectReasonOpen(false);
-          await onSaveReview('REJECTED', reason);
+          await submitReview('REJECTED', reason);
         }}
       />
     </div>
