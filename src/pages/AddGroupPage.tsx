@@ -6,6 +6,8 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -33,12 +35,22 @@ const AddProductPage: React.FC = () => {
   const handleGoBack = () => navigate('/product-groups');
 
   const onSaveDraftClick = () => {
+    const nameErr = getNameError(formData.name, 'Tên nhóm sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     setConfirmAction('DRAFT');
   };
 
   const onSubmitClick = () => {
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên nhóm sản phẩm", { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên nhóm sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
       return;
     }
     if (!formData.superGroup) {
@@ -51,6 +63,11 @@ const AddProductPage: React.FC = () => {
 
   const handleCreateProduct = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     if (isSubmitting) return;
+    const nameErr = getNameError(formData.name, 'Tên nhóm sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     try {
       setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_GROUPS.LIST, { 
@@ -96,7 +113,8 @@ const AddProductPage: React.FC = () => {
   const isDirty = formData.name.trim() !== '' || formData.superGroup !== '' || isActive !== true;
   const { allowLeave, dialog } = useUnsavedChangesGuard(isDirty);
   const canSaveDraft = !isSubmitting;
-  const canSubmit = isDirty && formData.name.trim() !== '' && formData.superGroup !== '' && !isSubmitting; 
+  const canSubmit = isDirty && formData.name.trim() !== '' && formData.superGroup !== '' && !isSubmitting;
+  const nameError = getNameError(formData.name, 'Tên nhóm sản phẩm'); 
 
   return (
     <div className="pageWrapper">
@@ -179,11 +197,12 @@ const AddProductPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${nameError ? 'input-invalid' : ''}`}
                   placeholder="Nhập tên nhóm sản phẩm..."
                   value={formData.name} 
                   onChange={handleInputChange} 
                 />
+                <CharCountHint current={formData.name.length} max={FIELD_LIMITS.name} error={nameError} />
               </div>
             </div>
           </div>

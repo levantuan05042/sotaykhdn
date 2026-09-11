@@ -46,7 +46,9 @@ const getImportErrorTitle = (message: string): string => {
   if (lower.includes('.xlsx') || lower.includes('.xls') || lower.includes('định dạng')) {
     return 'Định dạng tệp không hợp lệ';
   }
-  if (lower.includes('10mb') || lower.includes('dung lượng')) return 'Dung lượng tệp quá lớn';
+  if (lower.includes('ký tự') || lower.includes('kí tự') || lower.includes('chỉ được nhập')) {
+    return 'Dữ liệu không đúng định dạng';
+  }
   if (lower.includes('trùng') || lower.includes('đã tồn tại')) return 'Tên sản phẩm trùng';
   if (lower.includes('thiếu') || lower.includes('bắt buộc')) return 'Thiếu thông tin bắt buộc';
   if (lower.includes('không tồn tại') || lower.includes('không thuộc') || lower.includes('không có sheet')) {

@@ -6,6 +6,8 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 const AddBusinessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -81,12 +83,22 @@ const AddBusinessPage: React.FC = () => {
   const handleGoBack = () => navigate('/business-management');
 
   const onSaveDraftClick = () => {
+    const nameErr = getNameError(formData.name, 'Tên nghiệp vụ sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     setConfirmAction('DRAFT');
   };
 
   const onSubmitClick = () => {
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên nghiệp vụ sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
       return;
     }
     if (!formData.productCategoryId) {
@@ -99,6 +111,11 @@ const AddBusinessPage: React.FC = () => {
 
   const handleCreateBusiness = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     if (isSubmitting) return;
+    const nameErr = getNameError(formData.name, 'Tên nghiệp vụ sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -296,10 +313,15 @@ const AddBusinessPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${getNameError(formData.name, 'Tên nghiệp vụ sản phẩm') ? 'input-invalid' : ''}`}
                   placeholder="Nhập tên nghiệp vụ..."
                   value={formData.name} 
                   onChange={handleInputChange} 
+                />
+                <CharCountHint
+                  current={formData.name.length}
+                  max={FIELD_LIMITS.name}
+                  error={getNameError(formData.name, 'Tên nghiệp vụ sản phẩm')}
                 />
               </div>
 

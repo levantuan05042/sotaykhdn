@@ -11,6 +11,8 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
@@ -351,6 +353,11 @@ const DetailBusinessPage: React.FC = () => {
       toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
       return;
     }
+    const nameErr = getNameError(formData.name || nameVal, 'Tên nghiệp vụ sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     if (!categoryVal) {
       toast.error("Vui lòng chọn danh mục sản phẩm thuộc về", { position: 'top-center' });
       setIsOpen(true);
@@ -368,6 +375,12 @@ const DetailBusinessPage: React.FC = () => {
 
   const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isFormDisabled || !id) return;
+
+    const nameErr = getNameError(formData.name || businessData?.name || '', 'Tên nghiệp vụ sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
 
     if (status === 'PENDING_APPROVAL') {
       const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
@@ -637,12 +650,17 @@ const DetailBusinessPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${isFormDisabled ? 'is-disabled' : ''}`}
+                  className={`input ${isFormDisabled ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên nghiệp vụ sản phẩm') ? 'input-invalid' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isFormDisabled}
                   disabled={isFormDisabled}
                   style={{ cursor: isFormDisabled ? 'not-allowed' : 'text' }}
+                />
+                <CharCountHint
+                  current={(formData.name || '').length}
+                  max={FIELD_LIMITS.name}
+                  error={getNameError(formData.name, 'Tên nghiệp vụ sản phẩm')}
                 />
               </div>
             </div>

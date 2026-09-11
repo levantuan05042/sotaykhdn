@@ -6,6 +6,8 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -80,12 +82,22 @@ const AddCategoryPage: React.FC = () => {
   const handleGoBack = () => navigate('/product-category');
 
   const onSaveDraftClick = () => {
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     setConfirmAction('DRAFT');
   };
 
   const onSubmitClick = () => {
     if (!formData.name.trim()) {
       toast.error("Vui lòng nhập tên danh mục sản phẩm", { position: 'top-center' });
+      return;
+    }
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
       return;
     }
     if (!formData.groupId) {
@@ -98,6 +110,11 @@ const AddCategoryPage: React.FC = () => {
 
   const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     if (isSubmitting) return;
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
     try {
       setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
@@ -298,10 +315,15 @@ const AddCategoryPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className="input" 
+                  className={`input ${getNameError(formData.name, 'Tên danh mục sản phẩm') ? 'input-invalid' : ''}`}
                   placeholder="Nhập tên danh mục sản phẩm..."
                   value={formData.name} 
                   onChange={handleInputChange} 
+                />
+                <CharCountHint
+                  current={formData.name.length}
+                  max={FIELD_LIMITS.name}
+                  error={getNameError(formData.name, 'Tên danh mục sản phẩm')}
                 />
               </div>
 

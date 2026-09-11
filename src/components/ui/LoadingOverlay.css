@@ -21,6 +21,13 @@
   animation: logo-bounce 2s infinite ease-in-out;
 }
 
+.loading-agri-logo {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
 @keyframes logo-bounce {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
@@ -65,7 +72,7 @@
   font-weight: 600;
   color: #374151;
   margin-bottom: 14px;
-  max-width: 420px;
+  max-width: 520px;
   text-align: center;
   padding: 0 16px;
   line-height: 1.4;

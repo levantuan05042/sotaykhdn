@@ -18,10 +18,13 @@ import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
+import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, getNameError, isProductNameCriteria, stripHtmlText } from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
   id: string;
   name: string;
+  code?: string;
   isRequired: boolean;
   isSelected: boolean;
   value: string;
@@ -662,6 +665,7 @@ const DetailProductPage: React.FC = () => {
           const mapped: Criterion[] = rawDetails.map((item: any, i: number) => ({
             id:         String(item.id || item.criteriaId || item.stt || i),
             name:       (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, ''),
+            code:       item.code || item.maTieuChi || '',
             isRequired: checkIsRequired(item),
             isSelected: true,
             value:      item.noiDung || item.value || '',
@@ -711,6 +715,7 @@ const DetailProductPage: React.FC = () => {
           return {
             id: String(item.id || item.criteriaId),
             name,
+            code: item.code || item.maTieuChi || '',
             isRequired: checkIsRequired(item),
             isSelected: false,
             value: '',
@@ -730,6 +735,7 @@ const DetailProductPage: React.FC = () => {
           merged.push({
             id,
             name,
+            code: fromCatalog?.code || s.code || '',
             isRequired: fromCatalog?.isRequired ?? s.isRequired,
             isSelected: true,
             value: s.value,
@@ -851,6 +857,16 @@ const DetailProductPage: React.FC = () => {
       return;
     }
     if (!id) return;
+    const nameErr = getNameError(productName, 'Tên sản phẩm');
+    if (nameErr) {
+      toast.error(nameErr, { position: 'top-center' });
+      return;
+    }
+    const criteriaErr = getFirstCriteriaValueError(criteria);
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
+      return;
+    }
     if (status !== 'ARCHIVED' && status !== 'ACTIVE') {
       if (!formData.productGroupId) { toast.error('Vui lòng chọn Nhóm sản phẩm', { position: 'top-center' }); return; }
       if (!productName.trim()) { toast.error('Vui lòng nhập Tên sản phẩm dịch vụ', { position: 'top-center' }); return; }
@@ -1152,7 +1168,8 @@ const DetailProductPage: React.FC = () => {
               {formData.productGroupId && (
                 <>
                   {selectedCriteria.map((criterion) => {
-                    const hasErr = !isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value);
+                    const lengthErr = getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code));
+                    const hasErr = (!isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value)) || Boolean(lengthErr);
                     const isDraggingThis = draggedCriterionId === criterion.id;
                     const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
                     const isNewInThisVersion = criterion.isRequired && !originalCriteria.some(o => o.id === criterion.id);
@@ -1331,6 +1348,11 @@ const DetailProductPage: React.FC = () => {
                             hasError={hasErr}
                             readOnly={isReadOnly}
                             onChange={(v) => handleCriterionValueChange(criterion.id, v)}
+                          />
+                          <CharCountHint
+                            current={stripHtmlText(criterion.value).length}
+                            max={getCriteriaMaxLength(criterion.name, criterion.code)}
+                            error={lengthErr}
                           />
                         </div>
                       </div>
