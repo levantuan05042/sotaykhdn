@@ -17,6 +17,7 @@ import ProductInfoCard from '../components/ui/ProductInfoCard';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
+import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
 
 interface Criterion {
   id: string;
@@ -536,6 +537,7 @@ const DetailProductPage: React.FC = () => {
   const [originalCriteria, setOriginalCriteria] = useState<Criterion[]>([]);
   const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
   const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+  useDragAutoScroll(Boolean(draggedCriterionId));
   const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
   const [showVersionModal, setShowVersionModal] = useState(false);
 

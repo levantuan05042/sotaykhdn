@@ -10,6 +10,7 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 
 interface Criterion {
@@ -203,6 +204,7 @@ const AddProductPage: React.FC = () => {
   const [criteria, setCriteria] = useState<Criterion[]>([]);
   const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
   const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+  useDragAutoScroll(Boolean(draggedCriterionId));
 
   const moveCriterion = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
@@ -217,38 +219,6 @@ const AddProductPage: React.FC = () => {
       const reorderedSelected = [...selected];
       const [movedItem] = reorderedSelected.splice(dragIdx, 1);
       reorderedSelected.splice(targetIdx, 0, movedItem);
-
-      return [...reorderedSelected, ...unselected];
-    });
-  };
-
-  const moveCriterionUp = (id: string) => {
-    setCriteria(prev => {
-      const selected = prev.filter(c => c.isSelected);
-      const unselected = prev.filter(c => !c.isSelected);
-      const idx = selected.findIndex(c => c.id === id);
-      if (idx <= 0) return prev;
-
-      const reorderedSelected = [...selected];
-      const temp = reorderedSelected[idx];
-      reorderedSelected[idx] = reorderedSelected[idx - 1];
-      reorderedSelected[idx - 1] = temp;
-
-      return [...reorderedSelected, ...unselected];
-    });
-  };
-
-  const moveCriterionDown = (id: string) => {
-    setCriteria(prev => {
-      const selected = prev.filter(c => c.isSelected);
-      const unselected = prev.filter(c => !c.isSelected);
-      const idx = selected.findIndex(c => c.id === id);
-      if (idx === -1 || idx >= selected.length - 1) return prev;
-
-      const reorderedSelected = [...selected];
-      const temp = reorderedSelected[idx];
-      reorderedSelected[idx] = reorderedSelected[idx + 1];
-      reorderedSelected[idx + 1] = temp;
 
       return [...reorderedSelected, ...unselected];
     });
@@ -728,8 +698,8 @@ const AddProductPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* CRITERIA LIST - HỖ TRỢ ĐỔI THỨ TỰ (CHỈ KÉO KHI NHẤN GIỮ ⠿ & NÚT LÊN/XUỐNG) */}
-              {criteria.filter(c => c.isSelected).map((criterion, idx, arr) => {
+              {/* CRITERIA LIST - ĐỔI THỨ TỰ BẰNG KÉO THẢ */}
+              {criteria.filter(c => c.isSelected).map((criterion) => {
                 const isDraggingThis = draggedCriterionId === criterion.id;
                 const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
 
@@ -827,93 +797,12 @@ const AddProductPage: React.FC = () => {
                           </svg>
                         </div>
 
-                        {/* Thứ tự badge */}
-                        <span
-                          style={{
-                            backgroundColor: '#F3F4F6',
-                            color: '#374151',
-                            borderRadius: '4px',
-                            padding: '2px 7px',
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            border: '1px solid #E5E7EB',
-                            userSelect: 'none',
-                          }}
-                          title={`Tiêu chí thứ ${idx + 1}`}
-                        >
-                          #{idx + 1}
-                        </span>
-
                         <label className="label" style={{ fontWeight: 600, margin: 0, fontSize: '14px', color: '#1F2937' }}>
                           {criterion.name} {criterion.isRequired && <span style={{ color: '#EF4444' }}>(*)</span>}
                         </label>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {/* Nút di chuyển lên */}
-                        <button
-                          type="button"
-                          onClick={() => moveCriterionUp(criterion.id)}
-                          disabled={idx === 0}
-                          title={idx === 0 ? 'Đang ở vị trí đầu tiên' : 'Di chuyển lên trên'}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '26px',
-                            height: '26px',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '4px',
-                            backgroundColor: '#FFFFFF',
-                            color: idx === 0 ? '#D1D5DB' : '#374151',
-                            cursor: idx === 0 ? 'not-allowed' : 'pointer',
-                            padding: 0,
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (idx !== 0) e.currentTarget.style.backgroundColor = '#F3F4F6';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#FFFFFF';
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                            <path d="M5 12.5L10 7.5L15 12.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-
-                        {/* Nút di chuyển xuống */}
-                        <button
-                          type="button"
-                          onClick={() => moveCriterionDown(criterion.id)}
-                          disabled={idx === arr.length - 1}
-                          title={idx === arr.length - 1 ? 'Đang ở vị trí cuối cùng' : 'Di chuyển xuống dưới'}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: '26px',
-                            height: '26px',
-                            border: '1px solid #D1D5DB',
-                            borderRadius: '4px',
-                            backgroundColor: '#FFFFFF',
-                            color: idx === arr.length - 1 ? '#D1D5DB' : '#374151',
-                            cursor: idx === arr.length - 1 ? 'not-allowed' : 'pointer',
-                            padding: 0,
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (idx !== arr.length - 1) e.currentTarget.style.backgroundColor = '#F3F4F6';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#FFFFFF';
-                          }}
-                        >
-                          <svg width="14" height="14" viewBox="0 0 20 20" fill="none">
-                            <path d="M5 7.5L10 12.5L15 7.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
-
                         {/* Bỏ tiêu chí thừa (nếu không bắt buộc) */}
                         {!criterion.isRequired && (
                           <button
@@ -954,11 +843,6 @@ const AddProductPage: React.FC = () => {
                         onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
                       />
                     </div>
-                    {criterion.isRequired && !criterion.value.trim() && (
-                      <span style={{ color: '#EF4444', fontSize: '13px', marginTop: '6px', display: 'block', fontWeight: 500 }}>
-                        ⚠️ Trường bắt buộc, vui lòng nhập nội dung.
-                      </span>
-                    )}
                   </div>
                 );
               })}

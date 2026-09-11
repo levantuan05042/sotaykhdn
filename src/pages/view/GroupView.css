@@ -5,9 +5,14 @@
   display: flex;
   flex-direction: column;
   font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
-  /* Mặc định padding cho Mobile (SM) */
-  padding: 16px; 
-  min-height: 100vh;
+  width: 100%;
+  max-width: 1214px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 32px 16px;
+  box-sizing: border-box;
+  min-height: 100%;
+  background: transparent;
 }
 
 /* =======================================
@@ -92,51 +97,6 @@
   filter: grayscale(0.25);
 }
 
-/* =======================================
-   CARD CHUNG (Sản phẩm / Danh mục)
-======================================= */
-.product-card {
-  background: #ffffff;
-  border: 1px solid #F0F0F0;
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-}
-
-.product-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0,0,0,0.06);
-}
-
-.product-img-wrapper {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  background: #f5f5f5;
-  border-bottom: 1px solid #F5F5F5;
-}
-
-.product-img-wrapper img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.product-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  font-weight: 600;
-  color: white;
-}
-
 .state-message {
   text-align: center;
   padding: 48px;
@@ -153,47 +113,26 @@
 ======================================= */
 
 /* 1. Màn hình SM (Mobile: < 768px) */
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(1, 1fr); /* Sản phẩm: 1 item/hàng */
-  gap: 16px;
-  align-items: stretch; 
-}
-
-.categories-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Danh mục: 2 items/hàng */
-  gap: 16px;
-  align-items: stretch;
+@media (max-width: 767px) {
+  .group-view {
+    max-width: 358px;
+    padding: 16px;
+  }
 }
 
 /* 2. Màn hình MD (Tablet: 768px - 1279px) */
-@media (min-width: 768px) {
-  .group-view { padding: 30px 24px; }
-  
-  .products-grid {
-    grid-template-columns: repeat(2, 1fr); /* Sản phẩm: 2 items/hàng */
-    gap: 20px;
-  }
-  
-  .categories-grid {
-    grid-template-columns: repeat(3, 1fr); /* Danh mục: 3 items/hàng */
-    gap: 20px;
+@media (min-width: 768px) and (max-width: 1279px) {
+  .group-view {
+    max-width: 722px;
+    padding: 32px 24px;
   }
 }
 
-/* 3. Desktop / laptop (>=1280px): layout XL; dưới 1600px được zoom 80% giống Ctrl - */
+/* 3. Desktop (>=1280px) */
 @media (min-width: 1280px) {
-  .group-view { padding: 40px 60px; }
-  
-  .products-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
-  }
-  
-  .categories-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 24px;
+  .group-view {
+    max-width: 1214px;
+    padding: 32px 16px;
   }
 }
 

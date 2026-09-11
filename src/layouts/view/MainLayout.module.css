@@ -27,31 +27,38 @@
 
 .grid-main-wrapper {
   height: 100%;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
 }
 
 .grid-content {
-  flex: 1;
-  background-color: #F8F9FA;
-  background-image: 
-    linear-gradient(to bottom, rgba(248, 249, 250, 0) 0%, rgba(248, 249, 250, 0.6) 40%, rgba(248, 249, 250, 1) 80%),
-    linear-gradient(to right, rgba(249, 168, 212, 0.25) 0%, rgba(125, 211, 252, 0.25) 100%);
-  background-repeat: no-repeat;
-}
-
-/* Bổ sung class page-body để kiểm soát nội dung và thanh cuộn */
-.page-body {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
-  overflow: auto;
-  min-height: 0;
+  /* Figma 4039:74161 — nền trắng, glow hồng trái + mint phải */
+  background-color: #FFFFFF;
+  background-image:
+    radial-gradient(ellipse 90% 70% at 8% 8%, #FDE6EC 0%, rgba(253, 230, 236, 0) 62%),
+    radial-gradient(ellipse 85% 75% at 96% 4%, #C8F2E2 0%, rgba(200, 242, 226, 0) 58%),
+    linear-gradient(180deg, #FFF7F9 0%, #FFFFFF 55%);
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.page-body {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
+  background: transparent;
 }
 
 .grid-footer {
   width: 100%;
+  flex-shrink: 0;
+  margin-top: auto;
   background-color: #ffffff;
   border-top: 1px solid #E5E5E5;
   padding: 20px 40px;

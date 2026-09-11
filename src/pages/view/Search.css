@@ -6,7 +6,12 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 32px;
-  padding: 40px;
+  width: 100%;
+  max-width: 1214px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 32px 16px;
+  box-sizing: border-box;
   flex: 1;
   background-color: transparent;
 }
@@ -45,12 +50,25 @@
   font-weight: 500;
 }
 
-/* Grid sản phẩm 3 cột theo Figma */
-.products-result-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 24px;
-  width: 100%;
+/* Responsive */
+@media (max-width: 767px) {
+  .search-results-page {
+    max-width: 358px;
+    padding: 16px;
+  }
+
+  .search-results-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1279px) {
+  .search-results-page {
+    max-width: 722px;
+    padding: 32px 24px;
+  }
 }
 
 /* Trạng thái trống */
@@ -77,23 +95,4 @@
   color: #9CA3AF;
   font-size: 15px;
   text-align: center;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .products-result-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .products-result-grid {
-    grid-template-columns: repeat(1, 1fr);
-  }
-
-  .search-results-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
 }
