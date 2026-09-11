@@ -7,7 +7,7 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import { AUTH_SERVICE_LOGOUT_URL } from '../../config/apiConfig';
 import { type UserRole } from '../../config/menuConfig';
 import { getUserAvatar } from '../../utils/avatarUtils';
-import { addRecentSearch, clearRecentSearches, getRecentSearches } from '../../utils/userHistoryStorage';
+import { addRecentSearch, getRecentSearches } from '../../utils/userHistoryStorage';
 
 import tracuuIcon from '../../assets/icon/tracuu.svg';
 import qlNoidungIcon from '../../assets/icon/ql-noidung.svg';
@@ -44,11 +44,11 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
   const [role, setRole] = useState<UserRole>(() => {
@@ -89,11 +89,20 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
     setRecentSearches(addRecentSearch(keyword));
   };
 
+  const closeSearch = () => setIsSearchOpen(false);
+
+  const toggleSearch = () => {
+    setIsSearchOpen((prev) => {
+      const next = !prev;
+      if (next) setIsDropdownOpen(false);
+      return next;
+    });
+  };
+
   const handleSearch = () => {
     if (!searchQuery.trim()) return;
     saveRecentSearch(searchQuery);
-    setShowDropdown(false);
-    setIsMobileSearchOpen(false);
+    closeSearch();
     navigate(`/view/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
@@ -109,6 +118,8 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
       return;
     }
 
+    if (!isSearchOpen) return;
+
     const timeout = setTimeout(async () => {
       try {
         setLoadingSearch(true);
@@ -116,7 +127,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
           params: { keyword }
         });
         setSearchResult(response.data);
-        setShowDropdown(true);
       } catch (error) {
         console.error(error);
       } finally {
@@ -125,7 +135,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [searchQuery, recentSearches.length]);
+  }, [searchQuery, isSearchOpen, recentSearches.length]);
 
   const hasResult =
     searchResult &&
@@ -135,8 +145,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
       searchResult.products.length > 0);
 
   const handleNavigate = (type: string, id: string) => {
-    setShowDropdown(false);
-    setIsMobileSearchOpen(false);
+    closeSearch();
     switch (type) {
       case 'group': navigate(`/view/groups/${id}`); break;
       case 'category': navigate(`/view/category/${id}`); break;
@@ -149,8 +158,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-        setIsMobileSearchOpen(false);
+        setIsSearchOpen(false);
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
@@ -159,6 +167,16 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    searchInputRef.current?.focus();
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsSearchOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isSearchOpen]);
 
   useEffect(() => {
     const handleRoleChange = () => {
@@ -217,189 +235,147 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
           </button>
         </div>
 
-        <div className={`${styles['header-search-wrapper']} ${isMobileSearchOpen ? styles['mobile-active'] : ''}`} ref={dropdownRef}>
-          <form
-            className={styles['header-search']}
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSearch();
-            }}
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              className={styles['header-search-icon']}
+        <div className={styles['header-right']}>
+          <div className={styles['header-search']} ref={dropdownRef}>
+            <button
+              type="button"
+              className={`${styles['search-trigger']} ${isSearchOpen ? styles['search-trigger-active'] : ''}`}
+              onClick={toggleSearch}
+              aria-label="Tìm kiếm"
+              aria-expanded={isSearchOpen}
             >
-              <path
-                d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <input
-              type="text"
-              className={styles['header-search-input']}
-              placeholder="Tìm kiếm"
-              value={searchQuery}
-              onFocus={() => setShowDropdown(true)}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </form>
+              <img src={tracuuIcon} alt="" className={styles['search-trigger-icon']} />
+            </button>
 
-          {showDropdown && (
-            <div className={styles['search-dropdown']}>
-              <div className={styles['search-dropdown-content']}>
-                {!searchQuery.trim() && recentSearches.length > 0 && (
-                  <>
-                    <div className={styles['search-history-header']}>
-                      <span>Tìm kiếm gần đây</span>
-                      <button
-                        type="button"
-                        className={styles['clear-history-btn']}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearRecentSearches();
-                          setRecentSearches([]);
-                          setShowDropdown(false);
-                        }}
-                      >
-                        Xóa tất cả
-                      </button>
-                    </div>
-                    <div className={styles['recent-searches-container']}>
-                      {recentSearches.map(keyword => (
+            {isSearchOpen && (
+              <div className={styles['search-dropdown']}>
+                <form
+                  className={styles['search-dropdown-field']}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSearch();
+                  }}
+                >
+                  <img src={tracuuIcon} alt="" className={styles['search-dropdown-field-icon']} />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className={styles['search-dropdown-input']}
+                    placeholder="Tìm kiếm"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </form>
+
+                <div className={styles['search-dropdown-content']}>
+                  {!searchQuery.trim() && recentSearches.length > 0 && (
+                    <>
+                      <div className={styles['search-history-header']}>
+                        <span>Tìm kiếm gần đây</span>
+                      </div>
+                      {recentSearches.map((keyword) => (
                         <div
                           key={keyword}
-                          className={styles['recent-item']}
+                          className={styles['search-item']}
                           onClick={() => setSearchQuery(keyword)}
                         >
-                          <svg className={styles['recent-item-icon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <circle cx="11" cy="11" r="8"></circle>
-                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                          </svg>
+                          <div className={styles['item-icon']}>
+                            <img src={tracuuIcon} alt="" />
+                          </div>
                           <span className={styles['history-text']}>{keyword}</span>
                         </div>
                       ))}
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
 
-                {loadingSearch && <div className={styles['search-loading']}>Đang tìm kiếm dữ liệu...</div>}
+                  {loadingSearch && <div className={styles['search-loading']}>Đang tìm kiếm dữ liệu...</div>}
 
-                {!loadingSearch && searchQuery.trim() && !hasResult && (
-                  <div className={styles['search-empty']}>Không tìm thấy dữ liệu phù hợp</div>
-                )}
+                  {!loadingSearch && searchQuery.trim() && !hasResult && (
+                    <div className={styles['search-empty']}>Không tìm thấy dữ liệu phù hợp</div>
+                  )}
 
-                {!loadingSearch && hasResult && (() => {
-                  const highlightText = (text: string, highlight: string) => {
-                    if (!highlight.trim()) return text;
-                    const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+                  {!loadingSearch && hasResult && (() => {
+                    const highlightText = (text: string, highlight: string) => {
+                      if (!highlight.trim()) return text;
+                      const parts = text.split(new RegExp(`(${highlight})`, 'gi'));
+                      return (
+                        <>
+                          {parts.map((part, index) =>
+                            part.toLowerCase() === highlight.toLowerCase() ? (
+                              <span key={index} className={styles['highlight-text']}>{part}</span>
+                            ) : (
+                              part
+                            )
+                          )}
+                        </>
+                      );
+                    };
+
+                    const renderItems = (items: SearchItem[], type: string, subtitle: string, svgPath: React.ReactNode) => {
+                      return items.map((item) => (
+                        <div key={`${type}-${item.id}`} className={styles['search-item']} onClick={() => handleNavigate(type, item.id)}>
+                          <div className={styles['item-icon']}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                              {svgPath}
+                            </svg>
+                          </div>
+                          <div className={styles['item-content']}>
+                            <div className={styles['item-title']}>{highlightText(item.name, searchQuery)}</div>
+                            <div className={styles['item-subtitle']}>{subtitle}</div>
+                          </div>
+                        </div>
+                      ));
+                    };
+
                     return (
                       <>
-                        {parts.map((part, index) =>
-                          part.toLowerCase() === highlight.toLowerCase() ? (
-                            <span key={index} className={styles['highlight-text']}>{part}</span>
-                          ) : (
-                            part
-                          )
-                        )}
+                        {searchResult?.groups && searchResult.groups.length > 0 &&
+                          renderItems(searchResult.groups, 'group', 'Nhóm sản phẩm', (
+                            <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></>
+                          ))
+                        }
+
+                        {searchResult?.categories && searchResult.categories.length > 0 &&
+                          renderItems(searchResult.categories, 'category', 'Danh mục', (
+                            <><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></>
+                          ))
+                        }
+
+                        {searchResult?.businesses && searchResult.businesses.length > 0 &&
+                          renderItems(searchResult.businesses, 'business', 'Nghiệp vụ', (
+                            <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></>
+                          ))
+                        }
+
+                        {searchResult?.products && searchResult.products.length > 0 &&
+                          renderItems(searchResult.products, 'product', 'Sản phẩm', (
+                            <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></>
+                          ))
+                        }
                       </>
                     );
-                  };
-
-                  const renderItems = (items: SearchItem[], type: string, subtitle: string, svgPath: React.ReactNode) => {
-                    return items.map(item => (
-                      <div key={`${type}-${item.id}`} className={styles['search-item']} onClick={() => handleNavigate(type, item.id)}>
-                        <div className={styles['item-icon']}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                            {svgPath}
-                          </svg>
-                        </div>
-                        <div className={styles['item-content']}>
-                          <div className={styles['item-title']}>{highlightText(item.name, searchQuery)}</div>
-                          <div className={styles['item-subtitle']}>{subtitle}</div>
-                        </div>
-                      </div>
-                    ));
-                  };
-
-                  return (
-                    <>
-                      {searchResult?.groups && searchResult.groups.length > 0 && 
-                        renderItems(searchResult.groups, 'group', 'Nhóm sản phẩm', (
-                          <><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></>
-                        ))
-                      }
-
-                      {searchResult?.categories && searchResult.categories.length > 0 && 
-                        renderItems(searchResult.categories, 'category', 'Danh mục', (
-                          <><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></>
-                        ))
-                      }
-
-                      {searchResult?.businesses && searchResult.businesses.length > 0 && 
-                        renderItems(searchResult.businesses, 'business', 'Nghiệp vụ', (
-                          <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></>
-                        ))
-                      }
-
-                      {searchResult?.products && searchResult.products.length > 0 && 
-                        renderItems(searchResult.products, 'product', 'Sản phẩm', (
-                          <><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></>
-                        ))
-                      }
-                    </>
-                  );
-                })()}
-              </div>
-
-              {!loadingSearch && searchQuery.trim() && (
-                <div
-                  className={styles['search-view-all']}
-                  onClick={() => {
-                    handleSearch();
-                    setShowDropdown(false);
-                    setIsMobileSearchOpen(false);
-                  }}
-                >
-                  <div className={styles['item-icon']}>
-                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                       <circle cx="11" cy="11" r="8"></circle>
-                       <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                     </svg>
-                  </div>
-                  <span>Tìm kiếm</span>
+                  })()}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
 
-        <div className={styles['header-right']}>
-          <button
-            type="button"
-            className={styles['mobile-search-trigger']}
-            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path
-                d="M21 21L15 15M17 10C17 13.866 13.866 17 10 17C6.13401 17 3 13.866 3 10C3 6.13401 6.13401 3 10 3C13.866 3 17 6.13401 17 10Z"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </button>
+                {!loadingSearch && searchQuery.trim() && (
+                  <div className={styles['search-view-all']} onClick={handleSearch}>
+                    <div className={styles['item-icon']}>
+                      <img src={tracuuIcon} alt="" />
+                    </div>
+                    <span>Tìm kiếm</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className={styles['user-profile-container']} ref={userMenuRef}>
             <div
               className={styles['user-profile-trigger']}
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              onClick={() => {
+                setIsDropdownOpen(!isDropdownOpen);
+                setIsSearchOpen(false);
+              }}
             >
               <div className={styles['user-text']}>
                 <p className={styles['user-name']}>{displayName}</p>
