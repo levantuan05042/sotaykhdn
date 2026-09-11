@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import './DetailGroupPage.css';
 import './DetailProductsPage.module.css';
 import toast from 'react-hot-toast';
 import Quill from 'quill';
@@ -13,10 +12,9 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import StatusBadgeListRequest from '../components/ui/StatusBadgeListRequest';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
-import ProductInfoCard from '../components/ui/ProductInfoCard';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
-import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
+import { CASCADE_LOCK_MESSAGE, isCascadeHidden, filterApprovedVersions, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 
 interface Criterion {
   id: string;
@@ -43,6 +41,8 @@ const stripHtml = (htmlString?: string | null) => {
   if (!htmlString) return '';
   return String(htmlString).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 };
+
+const getVersionStatusBadge = () => ({ bg: '#E0F9EC', text: '#14532D', label: 'Đã duyệt' });
 
 const isHtmlEmpty = (html: string) => {
   if (!html) return true;
@@ -509,6 +509,7 @@ const DetailProductPage: React.FC = () => {
   const categoryRef  = useRef<HTMLDivElement>(null);
   const operationRef = useRef<HTMLDivElement>(null);
   const statusRef    = useRef<HTMLDivElement>(null);
+  const versionDropdownRef = useRef<HTMLDivElement>(null);
 
   const [isGroupOpen,       setIsGroupOpen]       = useState(false);
   const [isCategoryOpen,    setIsCategoryOpen]    = useState(false);
@@ -536,6 +537,7 @@ const DetailProductPage: React.FC = () => {
   const [originalCriteria, setOriginalCriteria] = useState<Criterion[]>([]);
   const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
   const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+  const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false);
   const [previewVersionItem, setPreviewVersionItem] = useState<VersionItem | null>(null);
   const [showVersionModal, setShowVersionModal] = useState(false);
 
@@ -569,16 +571,6 @@ const DetailProductPage: React.FC = () => {
   const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked || isApproved || isPendingApproval;
   const isDisplayStatusDisabled = isReadOnly || productStatus !== 'ACTIVE';
   const canShowNewCriteriaNotice = (isApproved || isDraft || isNeedsRevision) && !isPendingApproval;
-
-  const getCreatorDisplayName = () => {
-    if (productData?.createdByFullName) return productData.createdByFullName;
-    return productData?.createdBy || productData?.created_by || productData?.creator || '—';
-  };
-
-  const getApproverDisplayName = () => {
-    if (productData?.approvedByFullName) return productData.approvedByFullName;
-    return productData?.approvedBy || productData?.reviewer || '—';
-  };
 
   useEffect(() => {
     if (productData?.imageUrl) setPreviewImage(toDisplayUrl(productData.imageUrl));
@@ -625,6 +617,7 @@ const DetailProductPage: React.FC = () => {
       if (categoryRef.current  && !categoryRef.current.contains(e.target as Node))  setIsCategoryOpen(false);
       if (operationRef.current && !operationRef.current.contains(e.target as Node)) setIsOperationOpen(false);
       if (statusRef.current    && !statusRef.current.contains(e.target as Node))    setIsStatusOpen(false);
+      if (versionDropdownRef.current && !versionDropdownRef.current.contains(e.target as Node)) setIsVersionDropdownOpen(false);
     };
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
@@ -920,6 +913,8 @@ const DetailProductPage: React.FC = () => {
   const selectedCriteria = criteria.filter(c => c.isSelected);
   const requestNameDisplay = stripHtml(routeState?.requestName || productData?.requestName) || 'Quay lại';
   const requestIdForBack = routeState?.requestId || productData?.requestId;
+  const versions: VersionItem[] = filterApprovedVersions(productData?.versions || []);
+  const hasMultipleVersions = versions.length > 0;
 
   const handleBack = () => {
     if (requestIdForBack) {
@@ -1572,22 +1567,163 @@ const DetailProductPage: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ width: 340 }}>
-              <ProductInfoCard
-                creatorName={getCreatorDisplayName()}
-                approverName={getApproverDisplayName()}
-                createdAt={formatDateTime(productData?.createdAt)}
-                version={productData?.version || 1}
-                versions={productData?.versions || []}
-                currentId={id}
-                onSelectVersion={(v) => {
-                  setPreviewVersionItem(v);
-                  setShowVersionModal(true);
-                }}
-                showEngagementStats={productStatus === 'ACTIVE'}
-                viewCount={productData?.viewCount}
-                savedCount={productData?.savedCount}
-              />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: 340 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+                <span style={{ color: '#1A191B', fontSize: 16, fontWeight: 500, lineHeight: '24px' }}>Thông tin sản phẩm</span>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ cursor: 'pointer' }}>
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </div>
+              <div className="formCard" style={{ borderRadius: 12, background: '#FFFFFF', display: 'flex', width: '100%', padding: 20, flexDirection: 'column', gap: 16, border: '1px solid #E5E7EB', boxSizing: 'border-box' }}>
+                <div style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Người tạo</div>
+                    <div style={{ color: '#1A191B', fontSize: '14px', fontWeight: 500 }}>{productData?.createdBy || '—'}</div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Người kiểm duyệt</div>
+                    <div style={{ color: '#1A191B', fontSize: '14px', fontWeight: 500 }}>{productData?.approvedBy || productData?.reviewer || '—'}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Thời gian tạo</div>
+                    <div style={{ color: '#1A191B', fontSize: '14px', fontWeight: 500 }}>{formatDateTime(productData?.createdAt)}</div>
+                  </div>
+                  <div style={{ flex: 1 }} ref={versionDropdownRef}>
+                    <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Phiên bản</div>
+                    <div style={{ position: 'relative' }}>
+                      <span
+                        onClick={() => {
+                          if (hasMultipleVersions) setIsVersionDropdownOpen(v => !v);
+                        }}
+                        title={hasMultipleVersions ? 'Nhấn để chọn xem phiên bản khác' : undefined}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '2px 10px',
+                          background: '#E6F4EA',
+                          color: '#137333',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: hasMultipleVersions ? 'pointer' : 'default',
+                          userSelect: 'none',
+                        }}
+                      >
+                        {productData?.version !== undefined && productData?.version !== null && String(productData.version).trim() !== '' && String(productData.version).toLowerCase() !== 'null'
+                          ? `Phiên bản ${productData.version}`
+                          : '---'}
+                        {hasMultipleVersions && (
+                          <svg
+                            width="12" height="12" viewBox="0 0 20 20" fill="none"
+                            style={{ transform: isVersionDropdownOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+                          >
+                            <path d="M5 7.5L10 12.5L15 7.5" stroke="#14532D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </span>
+
+                      {isVersionDropdownOpen && hasMultipleVersions && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            right: 0,
+                            minWidth: 270,
+                            maxWidth: 340,
+                            backgroundColor: '#FFFFFF',
+                            borderRadius: 10,
+                            border: '1px solid #E5E7EB',
+                            boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.05)',
+                            zIndex: 2000,
+                            padding: '6px 0',
+                          }}
+                        >
+                          <div style={{ padding: '8px 14px 6px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Lịch sử phiên bản ({versions.length})</span>
+                            <span style={{ fontSize: 11, color: '#9CA3AF' }}>Chọn để xem</span>
+                          </div>
+                          <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                            {versions.map((v) => {
+                              const isCurrent = id ? v.id === id : String(v.version) === String(productData?.version);
+                              const badge = getVersionStatusBadge();
+                              const versionDisplay = (v.version !== null && v.version !== undefined && String(v.version).trim() !== '' && String(v.version).toLowerCase() !== 'null')
+                                ? `Phiên bản ${v.version}`
+                                : (v.status === 'DRAFT' ? 'Bản nháp' : '---');
+                              return (
+                                <div
+                                  key={v.id}
+                                  onClick={() => {
+                                    setIsVersionDropdownOpen(false);
+                                    setPreviewVersionItem(v);
+                                    setShowVersionModal(true);
+                                  }}
+                                  style={{
+                                    padding: '10px 14px',
+                                    cursor: 'pointer',
+                                    backgroundColor: isCurrent ? '#FDF2F4' : 'transparent',
+                                    borderBottom: '1px solid #F9FAFB',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 4,
+                                  }}
+                                  onMouseEnter={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = '#F9FAFB'; }}
+                                  onMouseLeave={(e) => { if (!isCurrent) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                      <span style={{ fontSize: 13, fontWeight: isCurrent ? 700 : 600, color: isCurrent ? '#AE1C3F' : '#111827' }}>{versionDisplay}</span>
+                                      {isCurrent && (
+                                        <span style={{ fontSize: 10, backgroundColor: '#AE1C3F', color: '#FFF', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>Đang xem</span>
+                                      )}
+                                    </div>
+                                    <span style={{ fontSize: 11, backgroundColor: badge.bg, color: badge.text, borderRadius: 100, padding: '2px 8px', fontWeight: 500 }}>{badge.label}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#6B7280' }}>
+                                    <span>{v.createdByFullName || '---'}</span>
+                                    <span>{formatDateTime(v.createdAt)}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <hr style={{ border: 'none', borderTop: '1px solid #E5E7EB', margin: '0' }} />
+
+                <div>
+                  <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Thuộc yêu cầu</div>
+                  <a
+                    href="#request"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      handleBack();
+                    }}
+                    style={{ color: '#137333', fontSize: '14px', fontWeight: 500, textDecoration: 'underline', cursor: 'pointer' }}
+                  >
+                    {stripHtml(productData?.requestName || productData?.requestCode) || '—'}
+                  </a>
+                </div>
+
+                <div>
+                  <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Thời gian tạo yêu cầu</div>
+                  <div style={{ color: '#1A191B', fontSize: '14px', fontWeight: 500 }}>{formatDateTime(productData?.createdAt)}</div>
+                </div>
+
+                <div>
+                  <div style={{ color: '#6B7280', fontSize: '13px', marginBottom: '4px' }}>Ghi chú</div>
+                  <div style={{ color: '#1A191B', fontSize: '14px', display: 'flex', alignItems: 'center' }}>
+                    {renderNote(productData?.notes || productData?.note)}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="commentCard emptyComment" style={{ width: 340, boxSizing: 'border-box', position: 'relative' }}>
