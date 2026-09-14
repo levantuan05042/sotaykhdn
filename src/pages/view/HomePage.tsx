@@ -4,7 +4,7 @@ import './HomePage.css';
 import { BASE_URL } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
-import { addRecentSearch, getRecentSearches, getRecentlyViewed, setRecentlyViewed } from '../../utils/userHistoryStorage';
+import { addRecentSearch, getRecentSearches, getRecentlyViewed } from '../../utils/userHistoryStorage';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
@@ -126,7 +126,7 @@ const HomePage: React.FC = () => {
       const response = await fetch(`${BASE_URL}/api/v1/products?_t=${Date.now()}`);
       if (response.ok) {
         const data = await response.json();
-        const products = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
+        const products: ProductInfo[] = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
         const counts: Record<string, number> = {};
 
         products.forEach((product: any) => {
@@ -162,20 +162,19 @@ const HomePage: React.FC = () => {
         const newProducts = sortedByDate.filter((p: any) => (p.version ?? 1) === 1);
         setNewlyCreatedProducts(newProducts.slice(0, 6));
         try {
-          const parsedSaved = getRecentlyViewed<any>();
+          const parsedSaved = getRecentlyViewed<ProductInfo>();
           if (parsedSaved.length > 0) {
-            const liveById = new Map(products.map((p: any) => [p.id, p]));
+            const liveById = new Map(products.map((p) => [p.id, p]));
             const syncedAndFilteredProducts = parsedSaved
-              .map((savedItem: any) => liveById.get(savedItem.id))
-              .filter(Boolean)
-              .filter((product: any) => {
+              .map((savedItem) => liveById.get(savedItem.id))
+              .filter((product): product is ProductInfo => {
+                if (!product) return false;
                 const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
                 const isActive = product.isactive === true || product.isActive === true || product.active === true;
                 const isCascadeHidden = Boolean(product.cascadeHiddenBy);
                 return isStatusActive && isActive && !isCascadeHidden;
               });
             setRecentProducts(syncedAndFilteredProducts.slice(0, 6));
-            setRecentlyViewed(syncedAndFilteredProducts.slice(0, 6));
           } else {
             setRecentProducts([]);
           }
