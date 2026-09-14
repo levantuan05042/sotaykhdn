@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './HomePage.css';
 import { BASE_URL } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 import { addRecentSearch, getRecentSearches, getRecentlyViewed, setRecentlyViewed } from '../../utils/userHistoryStorage';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
 import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
@@ -108,98 +109,90 @@ const HomePage: React.FC = () => {
   };
 
   useEffect(() => {
-    try {
-      setRecentProducts(getRecentlyViewed<ProductInfo>().slice(0, 6));
-    } catch (error) { 
-      console.error(error); 
-    }
-
     setRecentSearches(getRecentSearches());
   }, [location]);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(`${BASE_URL}/api/v1/product-groups?status=ACTIVE&active=true`); 
-        if (response.ok) {
-          const data = await response.json();
-          setCategories(data);
-        }
-      } catch (error) { 
-        console.error(error); 
+  const loadViewData = useCallback(async () => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/product-groups?status=ACTIVE&active=true&_t=${Date.now()}`);
+      if (response.ok) {
+        setCategories(await response.json());
       }
-    };
-    fetchCategories();
-  }, []);
+    } catch (error) {
+      console.error(error);
+    }
 
-  useEffect(() => {
-    const fetchAndCountProducts = async () => {
-      try {
-        const response = await fetch(`${BASE_URL}/api/v1/products`);
-        if (response.ok) {
-          const data = await response.json();
-          const products = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
-          const counts: Record<string, number> = {};
-          
-          products.forEach((product: any) => {
-            const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
-            const isActive = product.isactive === true || product.isActive === true || product.active === true;
-            const isCascadeHidden = Boolean(product.cascadeHiddenBy);
-            const isBusinessNull = product.businessId === null && product.businessName === null;
-            const isCategoryNull = product.productCategoryId === null && product.productCategoryName === null;
-            
-            if (isStatusActive && isActive && !isCascadeHidden && isBusinessNull && isCategoryNull) {
-              const groupId = product.productGroupId || product.groupId || product.product_group_id;
-              if (groupId) {
-                counts[groupId] = (counts[groupId] || 0) + 1;
-              }
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/products?_t=${Date.now()}`);
+      if (response.ok) {
+        const data = await response.json();
+        const products = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
+        const counts: Record<string, number> = {};
+
+        products.forEach((product: any) => {
+          const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
+          const isActive = product.isactive === true || product.isActive === true || product.active === true;
+          const isCascadeHidden = Boolean(product.cascadeHiddenBy);
+          const isBusinessNull = product.businessId === null && product.businessName === null;
+          const isCategoryNull = product.productCategoryId === null && product.productCategoryName === null;
+
+          if (isStatusActive && isActive && !isCascadeHidden && isBusinessNull && isCategoryNull) {
+            const groupId = product.productGroupId || product.groupId || product.product_group_id;
+            if (groupId) {
+              counts[groupId] = (counts[groupId] || 0) + 1;
             }
-          });
-          setGroupProductCounts(counts);
-
-          const activeProductsForUpdate = products.filter((product: any) => {
-            const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
-            const isActive = product.isactive === true || product.isActive === true || product.active === true;
-            const isCascadeHidden = Boolean(product.cascadeHiddenBy);
-            return isStatusActive && isActive && !isCascadeHidden;
-          });
-
-          const sortedByDate = activeProductsForUpdate.sort((a: any, b: any) => {
-            const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-            const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-            return dateB - dateA; 
-          });
-
-          setRecentUpdates(sortedByDate.slice(0, 4));
-          const newProducts = sortedByDate.filter((p: any) => (p.version ?? 1) === 1);
-          setNewlyCreatedProducts(newProducts.slice(0, 6));
-          try {
-            const parsedSaved = getRecentlyViewed<any>();
-            if (parsedSaved.length > 0) {
-              const syncedAndFilteredProducts = parsedSaved
-                .map((savedItem: any) => {
-                  const liveProduct = products.find((p: any) => p.id === savedItem.id);
-                  return liveProduct || savedItem;
-                })
-                .filter((product: any) => {
-                  const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
-                  const isActive = product.isactive === true || product.isActive === true || product.active === true;
-                  const isCascadeHidden = Boolean(product.cascadeHiddenBy);
-                  return isStatusActive && isActive && !isCascadeHidden;
-                });              
-              setRecentProducts(syncedAndFilteredProducts.slice(0, 6));
-              setRecentlyViewed(syncedAndFilteredProducts.slice(0, 6));
-            }
-          } catch (err) {
-            console.error(err);
           }
+        });
+        setGroupProductCounts(counts);
+
+        const activeProductsForUpdate = products.filter((product: any) => {
+          const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
+          const isActive = product.isactive === true || product.isActive === true || product.active === true;
+          const isCascadeHidden = Boolean(product.cascadeHiddenBy);
+          return isStatusActive && isActive && !isCascadeHidden;
+        });
+
+        const sortedByDate = activeProductsForUpdate.sort((a: any, b: any) => {
+          const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+          const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+
+        setRecentUpdates(sortedByDate.slice(0, 4));
+        const newProducts = sortedByDate.filter((p: any) => (p.version ?? 1) === 1);
+        setNewlyCreatedProducts(newProducts.slice(0, 6));
+        try {
+          const parsedSaved = getRecentlyViewed<any>();
+          if (parsedSaved.length > 0) {
+            const liveById = new Map(products.map((p: any) => [p.id, p]));
+            const syncedAndFilteredProducts = parsedSaved
+              .map((savedItem: any) => liveById.get(savedItem.id))
+              .filter(Boolean)
+              .filter((product: any) => {
+                const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
+                const isActive = product.isactive === true || product.isActive === true || product.active === true;
+                const isCascadeHidden = Boolean(product.cascadeHiddenBy);
+                return isStatusActive && isActive && !isCascadeHidden;
+              });
+            setRecentProducts(syncedAndFilteredProducts.slice(0, 6));
+            setRecentlyViewed(syncedAndFilteredProducts.slice(0, 6));
+          } else {
+            setRecentProducts([]);
+          }
+        } catch (err) {
+          console.error(err);
         }
-      } catch (error) { 
-        console.error(error); 
       }
-    };
-    fetchAndCountProducts();
+    } catch (error) {
+      console.error(error);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadViewData();
+  }, [location, loadViewData]);
+
+  useViewAutoRefresh(loadViewData);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

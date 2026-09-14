@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BASE_URL } from '../../config/view/apiConfig';
@@ -6,34 +6,38 @@ import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 import './GroupView.css';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 const SavedProductsView: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [products, setProducts] = useState<ProductInfo[]>([]);
 
-  useEffect(() => {
-    const fetchSavedProducts = async () => {
-      setLoading(true);
-      try {
-        const res = await axios.get(`${BASE_URL}/api/saved-products/list`, {
-          withCredentials: true,
-        });
-        const list: ProductInfo[] = (res.data || []).map((item: any) => ({
-          ...item,
-          imageUrl: item.imageUrl || item.image_url || item.image || '',
-          viewCount: item.viewCount ?? item.views ?? 0,
-        }));
-        setProducts(list);
-      } catch (error) {
-        console.error('Lỗi khi tải danh sách sản phẩm đã lưu:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSavedProducts();
+  const fetchSavedProducts = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const res = await axios.get(`${BASE_URL}/api/saved-products/list`, {
+        withCredentials: true,
+        params: { _t: Date.now() },
+      });
+      const list: ProductInfo[] = (res.data || []).map((item: any) => ({
+        ...item,
+        imageUrl: item.imageUrl || item.image_url || item.image || '',
+        viewCount: item.viewCount ?? item.views ?? 0,
+      }));
+      setProducts(list);
+    } catch (error) {
+      console.error('Lỗi khi tải danh sách sản phẩm đã lưu:', error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchSavedProducts();
+  }, [fetchSavedProducts]);
+
+  useViewAutoRefresh(() => fetchSavedProducts(true));
 
   const handleUnsave = (productId: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== productId));

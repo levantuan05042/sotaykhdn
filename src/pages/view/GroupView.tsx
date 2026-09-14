@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import './GroupView.css';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 // TODO: Điều chỉnh đường dẫn import này cho đúng với cấu trúc thư mục của dự án
 import EmptyIcon from '../../assets/icon/khong_san_pham.svg'; 
@@ -61,19 +62,24 @@ const BusinessSection = ({ business, onNavigate }: { business: BusinessItem; onN
   const [products, setProducts] = useState<ProductInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(business.id));
-        setProducts(res.data || []);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
+  const fetchProducts = useCallback(async (isBackground = false) => {
+    try {
+      const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(business.id), {
+        params: { _t: Date.now() },
+      });
+      setProducts(res.data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
   }, [business.id]);
+
+  useEffect(() => {
+    void fetchProducts();
+  }, [fetchProducts]);
+
+  useViewAutoRefresh(() => fetchProducts(true), [business.id]);
 
   if (loading || products.length === 0) return null;
 
@@ -96,19 +102,24 @@ const CategorySection = ({ category, onNavigate }: { category: CategoryItem; onN
   const [catData, setCatData] = useState<CategoryDetailData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCatData = async () => {
-      try {
-        const res = await axios.get<CategoryDetailData>(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(category.id));
-        setCatData(res.data);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCatData();
+  const fetchCatData = useCallback(async (isBackground = false) => {
+    try {
+      const res = await axios.get<CategoryDetailData>(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(category.id), {
+        params: { _t: Date.now() },
+      });
+      setCatData(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
   }, [category.id]);
+
+  useEffect(() => {
+    void fetchCatData();
+  }, [fetchCatData]);
+
+  useViewAutoRefresh(() => fetchCatData(true), [category.id]);
 
   if (loading || !catData) return null;
 
@@ -152,34 +163,39 @@ const GroupView: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [groupData, setGroupData] = useState<GroupDetailData | null>(null);
 
-  useEffect(() => {
-    const fetchGroupDetail = async () => {
-      if (!groupId) return;
-      setLoading(true);
-      try {
-        const res = await axios.get<GroupDetailData>(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL_FULL(groupId));
-        let currentData = res.data;
-        
-        if (!currentData.superGroup) {
-          try {
-            const listRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
-              params: { status: 'ACTIVE', active: true },
-            });
-            const matchedGroup = (listRes.data || []).find((g: any) => g.id === groupId);
-            if (matchedGroup && matchedGroup.superGroup) {
-              currentData = { ...currentData, superGroup: matchedGroup.superGroup };
-            }
-          } catch (listError) {}
-        }
-        setGroupData(currentData);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
+  const fetchGroupDetail = useCallback(async (isBackground = false) => {
+    if (!groupId) return;
+    if (!isBackground) setLoading(true);
+    try {
+      const res = await axios.get<GroupDetailData>(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL_FULL(groupId), {
+        params: { _t: Date.now() },
+      });
+      let currentData = res.data;
+
+      if (!currentData.superGroup) {
+        try {
+          const listRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
+            params: { status: 'ACTIVE', active: true, _t: Date.now() },
+          });
+          const matchedGroup = (listRes.data || []).find((g: any) => g.id === groupId);
+          if (matchedGroup && matchedGroup.superGroup) {
+            currentData = { ...currentData, superGroup: matchedGroup.superGroup };
+          }
+        } catch (listError) {}
       }
-    };
-    fetchGroupDetail();
+      setGroupData(currentData);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
   }, [groupId]);
+
+  useEffect(() => {
+    void fetchGroupDetail();
+  }, [fetchGroupDetail]);
+
+  useViewAutoRefresh(() => fetchGroupDetail(true), [groupId]);
 
   const handleNavigate = (id: string) => navigate(`/view/product-detail/${id}`);
 

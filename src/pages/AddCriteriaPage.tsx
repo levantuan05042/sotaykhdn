@@ -8,6 +8,7 @@ import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 
 const AddCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,15 +34,10 @@ const AddCriteriaPage: React.FC = () => {
   });
 
   // --- EFFECT: ĐÓNG DROPDOWN KHI BẤM RA NGOÀI ---
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useCloseOnOutsideClick([
+    { ref: dropdownRef, close: () => setIsOpen(false) },
+    { ref: statusRef, close: () => setIsStatusOpen(false) },
+  ]);
 
   // --- EFFECT: RESET TỪ KHÓA TÌM KIẾM KHI ĐÓNG DROPDOWN ---
   useEffect(() => {
@@ -301,7 +297,7 @@ const AddCriteriaPage: React.FC = () => {
         {/* CONTENT */}
         <div className="contentGrid">
           <div className="leftCol">
-            <div className="formCard" style={{ overflow: 'visible', paddingBottom: '250px' }}>
+            <div className="formCard" style={{ overflow: 'visible' }}>
 
               {/* INPUT MÃ TIÊU CHÍ */}
               <div className="formGroup">
@@ -467,7 +463,7 @@ const AddCriteriaPage: React.FC = () => {
               </div>
 
               {/* CHECKBOX BẮT BUỘC */}
-              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '15px', cursor: 'pointer' }}>
+              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
                   id="required"

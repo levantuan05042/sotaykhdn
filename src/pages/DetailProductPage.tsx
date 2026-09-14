@@ -23,10 +23,10 @@ import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
-import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
+import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
-import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, stripHtmlText } from '../utils/fieldValidation';
+import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
@@ -1067,10 +1067,6 @@ const DetailProductPage: React.FC = () => {
     }));
   };
 
-  const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
-  const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
-  useDragAutoScroll(Boolean(draggedCriterionId));
-
   const moveCriterion = (draggedId: string, targetId: string) => {
     if (isReadOnly || draggedId === targetId) return;
     setCriteria(prev => {
@@ -1088,6 +1084,7 @@ const DetailProductPage: React.FC = () => {
       return [...reorderedSelected, ...unselected];
     });
   };
+  const { draggedCriterionId, dragOverCriterionId, startDrag } = useCriteriaPointerDrag(moveCriterion, !isReadOnly);
 
   const handleUpdateProduct = async (status: 'ARCHIVED' | 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isReadOnly || !id) return;
@@ -1489,8 +1486,8 @@ const DetailProductPage: React.FC = () => {
             )}
             <div className="formCard">
 
-              <div className="formGroup" style={{ marginBottom: 16 }}>
-                <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>
+              <div className="formGroup">
+                <label className="label">
                   Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span>
                 </label>
                 <div className="custom-select-container" ref={groupRef}>
@@ -1535,9 +1532,9 @@ const DetailProductPage: React.FC = () => {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 20 }}>
+              <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Danh mục sản phẩm</label>
+                  <label className="label">Danh mục sản phẩm</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${(isReadOnly || !formData.productGroupId) ? 'is-disabled' : ''}`} 
@@ -1580,7 +1577,7 @@ const DetailProductPage: React.FC = () => {
                 </div>
 
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label" style={{ fontWeight: 600, marginBottom: 8, display: 'block' }}>Nghiệp vụ</label>
+                  <label className="label">Nghiệp vụ</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${(isReadOnly || !formData.productCategoryId) ? 'is-disabled' : ''}`} 
@@ -1635,32 +1632,11 @@ const DetailProductPage: React.FC = () => {
                   <div
                     key={criterion.id}
                     id={`criterion-${criterion.id}`}
+                    data-criterion-id={criterion.id}
                     className="formGroup criterion-card"
-                    onDragOver={(e) => {
-                      if (isReadOnly) return;
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragOverCriterionId !== criterion.id) {
-                        setDragOverCriterionId(criterion.id);
-                      }
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverCriterionId === criterion.id) {
-                        setDragOverCriterionId(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      if (isReadOnly) return;
-                      e.preventDefault();
-                      if (draggedCriterionId && draggedCriterionId !== criterion.id) {
-                        moveCriterion(draggedCriterionId, criterion.id);
-                      }
-                      setDraggedCriterionId(null);
-                      setDragOverCriterionId(null);
-                    }}
                     style={{
-                      marginTop: 16,
-                      marginBottom: 20,
+                      marginTop: 0,
+                      marginBottom: 0,
                       backgroundColor: '#FFFFFF',
                       borderRadius: 10,
                       border: isDragOverThis
@@ -1689,25 +1665,10 @@ const DetailProductPage: React.FC = () => {
                         {/* Drag handle - CHỈ CHO PHÉP KÉO KHI NHẤN GIỮ NÚT NÀY */}
                         {!isReadOnly && (
                           <div
-                            draggable={true}
-                            onDragStart={(e) => {
-                              e.stopPropagation();
-                              e.dataTransfer.setData('text/plain', criterion.id);
-                              e.dataTransfer.effectAllowed = 'move';
-                              const card = (e.currentTarget as HTMLElement).closest('.criterion-card') as HTMLElement;
-                              if (card && e.dataTransfer.setDragImage) {
-                                e.dataTransfer.setDragImage(card, 20, 20);
-                              }
-                              setDraggedCriterionId(criterion.id);
-                            }}
-                            onDragEnd={(e) => {
-                              e.stopPropagation();
-                              setDraggedCriterionId(null);
-                              setDragOverCriterionId(null);
-                            }}
+                            onPointerDown={(e) => startDrag(criterion.id, e, criterion.name)}
                             title="Nhấn giữ để kéo di chuyển tiêu chí"
                             style={{
-                              cursor: 'grab',
+                              cursor: draggedCriterionId ? 'grabbing' : 'grab',
                               display: 'inline-flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1715,6 +1676,7 @@ const DetailProductPage: React.FC = () => {
                               padding: '4px',
                               borderRadius: 4,
                               userSelect: 'none',
+                              touchAction: 'none',
                               transition: 'all 0.15s ease',
                             }}
                             onMouseEnter={(e) => {
@@ -1724,12 +1686,6 @@ const DetailProductPage: React.FC = () => {
                             onMouseLeave={(e) => {
                               e.currentTarget.style.backgroundColor = 'transparent';
                               e.currentTarget.style.color = '#6B7280';
-                            }}
-                            onMouseDown={(e) => {
-                              e.currentTarget.style.cursor = 'grabbing';
-                            }}
-                            onMouseUp={(e) => {
-                              e.currentTarget.style.cursor = 'grab';
                             }}
                           >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -1801,7 +1757,7 @@ const DetailProductPage: React.FC = () => {
                       )}
                     </div>
 
-                    <div draggable={false} onDragStart={(e) => e.stopPropagation()}>
+                    <div>
                       <QuillEditor
                         value={criterion.value}
                         placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
@@ -1811,7 +1767,7 @@ const DetailProductPage: React.FC = () => {
                         onChange={(v) => handleCriterionValueChange(criterion.id, v)}
                       />
                       <CharCountHint
-                        current={stripHtmlText(criterion.value).length}
+                        current={getCriteriaCountLength(criterion.value, criterion.name, criterion.code)}
                         max={getCriteriaMaxLength(criterion.name, criterion.code)}
                         error={lengthErr}
                       />
@@ -1840,8 +1796,8 @@ const DetailProductPage: React.FC = () => {
                 padding: '20px 24px',
                 boxSizing: 'border-box',
                 width: '100%',
-                marginBottom: '20px',
-                marginTop: '16px'
+                marginBottom: 0,
+                marginTop: 0
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

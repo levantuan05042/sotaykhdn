@@ -9,7 +9,7 @@ interface CharCountHintProps {
 
 export const CharCountHint: React.FC<CharCountHintProps> = ({ current, max, error }) => (
   <div className="field-meta">
-    {error ? <p className="field-hint-error">{error}</p> : <span className="field-meta-spacer" />}
+    {error ? <p className="field-hint-error">{error}</p> : <span />}
     <span className={`field-char-count ${current > max ? 'is-over' : ''}`}>
       {current}/{max}
     </span>

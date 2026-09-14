@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import styles from './Sidebar.module.css';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 // --- IMPORT SVG ICONS ---
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
@@ -188,32 +189,37 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    const fetchGroups = async () => {
+  const fetchGroups = useCallback(async (isBackground = false) => {
+    if (!isBackground) {
       setLoading(true);
       setLoadError(false);
-      try {
-        const res = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
-          params: { status: 'ACTIVE', active: true },
-        });
+    }
+    try {
+      const res = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
+        params: { status: 'ACTIVE', active: true, _t: Date.now() },
+      });
 
-        const formatted = (res.data || []).map((group: any) => ({
-          id: group.id,
-          name: group.name,
-          path: `/view/groups/${group.id}`,
-          superGroup: group.superGroup,
-        }));
+      const formatted = (res.data || []).map((group: any) => ({
+        id: group.id,
+        name: group.name,
+        path: `/view/groups/${group.id}`,
+        superGroup: group.superGroup,
+      }));
 
-        setDynamicGroups(formatted);
-      } catch (error) {
-        setLoadError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchGroups();
+      setDynamicGroups(formatted);
+      setLoadError(false);
+    } catch (error) {
+      if (!isBackground) setLoadError(true);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetchGroups();
+  }, [fetchGroups]);
+
+  useViewAutoRefresh(() => fetchGroups(true));
 
   return (
     <>

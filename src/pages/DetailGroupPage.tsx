@@ -16,6 +16,7 @@ import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import {
   displaySuccessMessage,
   getHideBlockedByPendingCopy,
@@ -68,6 +69,7 @@ const DetailGroupPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const statusRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
   
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
@@ -81,6 +83,11 @@ const DetailGroupPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
+
+  useCloseOnOutsideClick([
+    { ref: groupRef, close: () => setIsOpen(false) },
+    { ref: statusRef, close: () => setIsStatusOpen(false) },
+  ]);
 
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
   const userMap = useMemo(() => getUserMap(), []);
@@ -589,7 +596,7 @@ const DetailGroupPage: React.FC = () => {
             <div className="formCard">
               <div className="formGroup">
                 <label className="label"> Thuộc nhóm <span style={{ color: '#EF4444' }}>(*)</span></label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" ref={groupRef}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''} ${isInputDisabled ? 'is-disabled' : ''}`} 
                     onClick={() => !isInputDisabled && setIsOpen(!isOpen)}

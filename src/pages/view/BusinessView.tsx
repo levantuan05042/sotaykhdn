@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import './GroupView.css'; 
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 // TODO: Đảm bảo đường dẫn import này đúng với thư mục assets của bạn
 import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
@@ -27,81 +28,89 @@ const BusinessView: React.FC = () => {
   const [groupId, setGroupId] = useState<string>('');
   const [groupName, setGroupName] = useState<string>('');
   const [superGroup, setSuperGroup] = useState<string>('');
+  const breadcrumbRef = useRef({ businessName, categoryId, categoryName, groupId, groupName, superGroup });
+  breadcrumbRef.current = { businessName, categoryId, categoryName, groupId, groupName, superGroup };
+
+  const fetchBusinessData = useCallback(async (isBackground = false) => {
+    if (!businessId) return;
+    if (!isBackground) setLoading(true);
+    try {
+      const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(businessId), {
+        params: { _t: Date.now() },
+      });
+      const prods = res.data || [];
+      setProducts(prods);
+
+      if (prods.length > 0) {
+        const firstProd = prods[0];
+        setBusinessName(firstProd.businessName || 'Chi tiết nghiệp vụ');
+        setCategoryId(firstProd.productCategoryId || '');
+        setCategoryName(firstProd.productCategoryName || '');
+        setGroupId(firstProd.productGroupId || '');
+        setGroupName(firstProd.productGroupName || '');
+      }
+
+      if (isBackground) return;
+
+      let currentGroupId = prods[0]?.productGroupId || breadcrumbRef.current.groupId;
+
+      if (!currentGroupId) {
+        try {
+          const listGroupsRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
+            params: { status: 'ACTIVE', active: true },
+          });
+          const groups = listGroupsRes.data || [];
+
+          for (const grp of groups) {
+            try {
+              const groupDetailRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL_FULL(grp.id));
+              const categories = groupDetailRes.data?.categories || [];
+
+              for (const cat of categories) {
+                const catDetailRes = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(cat.id));
+                const businesses = catDetailRes.data?.businesses || [];
+                const matchedBus = businesses.find((b: any) => b.id === businessId);
+
+                if (matchedBus) {
+                  currentGroupId = grp.id;
+                  setGroupId(grp.id);
+                  setGroupName(grp.name);
+                  setSuperGroup(grp.superGroup);
+                  setCategoryId(cat.id);
+                  setCategoryName(cat.name);
+                  if (!breadcrumbRef.current.businessName) setBusinessName(matchedBus.name);
+                  break;
+                }
+              }
+              if (currentGroupId) break;
+            } catch (e) {}
+          }
+        } catch (err) {
+          console.error('Lỗi quét tìm cấp cha của nghiệp vụ:', err);
+        }
+      } else if (!breadcrumbRef.current.superGroup) {
+        try {
+          const listRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
+            params: { status: 'ACTIVE', active: true },
+          });
+          const matchedGroup = (listRes.data || []).find((g: any) => g.id === currentGroupId);
+          if (matchedGroup) {
+            setSuperGroup(matchedGroup.superGroup);
+          }
+        } catch (e) {}
+      }
+    } catch (error) {
+      console.error('Lỗi tải dữ liệu nghiệp vụ:', error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  }, [businessId]);
 
   useEffect(() => {
-    const fetchBusinessData = async () => {
-      if (!businessId) return;
-      setLoading(true);
-      try {
-        const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(businessId));
-        const prods = res.data || [];
-        setProducts(prods);
+    void fetchBusinessData();
+  }, [fetchBusinessData]);
 
-        if (prods.length > 0) {
-          const firstProd = prods[0];
-          setBusinessName(firstProd.businessName || 'Chi tiết nghiệp vụ');
-          setCategoryId(firstProd.productCategoryId || '');
-          setCategoryName(firstProd.productCategoryName || '');
-          setGroupId(firstProd.productGroupId || '');
-          setGroupName(firstProd.productGroupName || '');
-        }
-
-        let currentGroupId = prods[0]?.productGroupId;
-
-        if (!currentGroupId) {
-          try {
-            const listGroupsRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
-              params: { status: 'ACTIVE', active: true },
-            });
-            const groups = listGroupsRes.data || [];
-
-            for (const grp of groups) {
-              try {
-                const groupDetailRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL_FULL(grp.id));
-                const categories = groupDetailRes.data?.categories || [];
-                
-                for (const cat of categories) {
-                  const catDetailRes = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(cat.id));
-                  const businesses = catDetailRes.data?.businesses || [];
-                  const matchedBus = businesses.find((b: any) => b.id === businessId);
-
-                  if (matchedBus) {
-                    currentGroupId = grp.id;
-                    setGroupId(grp.id);
-                    setGroupName(grp.name);
-                    setSuperGroup(grp.superGroup);
-                    setCategoryId(cat.id);
-                    setCategoryName(cat.name);
-                    if (!businessName) setBusinessName(matchedBus.name);
-                    break;
-                  }
-                }
-                if (currentGroupId) break;
-              } catch (e) {}
-            }
-          } catch (err) {
-            console.error('Lỗi quét tìm cấp cha của nghiệp vụ:', err);
-          }
-        } else if (groupId && !superGroup) {
-          try {
-            const listRes = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
-              params: { status: 'ACTIVE', active: true },
-            });
-            const matchedGroup = (listRes.data || []).find((g: any) => g.id === groupId);
-            if (matchedGroup) {
-              setSuperGroup(matchedGroup.superGroup);
-            }
-          } catch (e) {}
-        }
-      } catch (error) {
-        console.error('Lỗi tải dữ liệu nghiệp vụ:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchBusinessData();
-  }, [businessId]);
+  useViewAutoRefresh(() => fetchBusinessData(true), [businessId]);
 
   const handleNavigate = (id: string) => navigate(`/view/product-detail/${id}`);
 

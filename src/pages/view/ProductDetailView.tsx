@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
-import { addRecentlyViewed } from '../../utils/userHistoryStorage';
+import { addRecentlyViewed, removeRecentlyViewed } from '../../utils/userHistoryStorage';
 import { copyTextToClipboard } from '../../utils/clipboard';
 import CellWithTooltip from '../../components/ui/CellWithTooltip';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
@@ -225,13 +225,19 @@ const ProductDetailView: React.FC = () => {
         setLoading(true);
         const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
         if (res.data?.cascadeHiddenBy) {
+          removeRecentlyViewed(String(id));
           setProduct(null);
           productRef.current = null;
           return;
         }
         applyProductData(res.data);
-      } catch (err) {
+      } catch (err: any) {
         console.error(err);
+        const status = err?.response?.status;
+        const message = String(err?.response?.data?.message || err?.message || '');
+        if (status === 404 || status === 400 || message.toLowerCase().includes('không tìm thấy')) {
+          removeRecentlyViewed(String(id));
+        }
       } finally {
         setLoading(false);
       }

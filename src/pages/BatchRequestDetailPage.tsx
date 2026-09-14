@@ -12,6 +12,14 @@ import '../components/ui/DataTable.css';
 import './BatchRequestDetailPage.css';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { formatDetailHtml } from './DetailProductPage';
+import {
+  getCriteriaCountLength,
+  getCriteriaMaxLength,
+  getCriteriaValueError,
+  getFirstCriteriaValueError,
+  isProductNameCriteria,
+} from '../utils/fieldValidation';
+import CharCountHint from '../components/ui/CharCountHint';
 
 const extractUsername = (rawName: string | null | undefined): string => {
   if (!rawName) return '';
@@ -962,9 +970,24 @@ const BatchRequestDetailPage: React.FC = () => {
   const handleLocalSave = async () => {
     if (!quickViewProduct || isUpdating) return;
     
+    const criteriaLengthError = () =>
+      getFirstCriteriaValueError(
+        details.map((d) => ({
+          name: d.tieuChi,
+          code: d.code,
+          value: d.noiDung,
+        }))
+      );
+
     const missingRequired = details.find(d => d.required && isHtmlEmpty(d.noiDung));
     if (!formData.name.trim() || missingRequired) {
       toast.error("Vui lòng điền đầy đủ các trường bắt buộc (*).", { position: 'top-center' });
+      return;
+    }
+
+    const criteriaErr = criteriaLengthError();
+    if (criteriaErr) {
+      toast.error(criteriaErr, { position: 'top-center' });
       return;
     }
 
@@ -1017,6 +1040,17 @@ const BatchRequestDetailPage: React.FC = () => {
 
   const handleSaveDraftToDB = async () => {
     if (isUpdating) return;
+    const lengthErr = getFirstCriteriaValueError(
+      details.map((d) => ({
+        name: d.tieuChi,
+        code: d.code,
+        value: d.noiDung,
+      }))
+    );
+    if (lengthErr) {
+      toast.error(lengthErr, { position: 'top-center' });
+      return;
+    }
     setIsUpdating(true);
     try {
       const updatesToPush = { ...pendingUpdates };
@@ -1049,6 +1083,17 @@ const BatchRequestDetailPage: React.FC = () => {
 
   const handleSend = async () => {
     if (!requestId || isUpdating) return;
+    const lengthErr = getFirstCriteriaValueError(
+      details.map((d) => ({
+        name: d.tieuChi,
+        code: d.code,
+        value: d.noiDung,
+      }))
+    );
+    if (lengthErr) {
+      toast.error(lengthErr, { position: 'top-center' });
+      return;
+    }
     setIsUpdating(true);
     try {
       const updatesToPush = { ...pendingUpdates };
@@ -1140,11 +1185,21 @@ const BatchRequestDetailPage: React.FC = () => {
       </div>
       <QuillEditor
         value={criterion.noiDung}
-        hasError={!isQuickViewRejected && criterion.required && isHtmlEmpty(criterion.noiDung)}
+        hasError={
+          (!isQuickViewRejected && criterion.required && isHtmlEmpty(criterion.noiDung))
+          || Boolean(getCriteriaValueError(criterion.noiDung, criterion.tieuChi, isProductNameCriteria(criterion.tieuChi, criterion.code)))
+        }
         onChange={(value) => handleDetailsChange(criterion.id, value)}
         readOnly={!canEditQuickView}
         isRejected={isQuickViewRejected}
       />
+      {canEditQuickView && (
+        <CharCountHint
+          current={getCriteriaCountLength(criterion.noiDung, criterion.tieuChi, criterion.code)}
+          max={getCriteriaMaxLength(criterion.tieuChi, criterion.code)}
+          error={getCriteriaValueError(criterion.noiDung, criterion.tieuChi, isProductNameCriteria(criterion.tieuChi, criterion.code))}
+        />
+      )}
     </div>
   );
 

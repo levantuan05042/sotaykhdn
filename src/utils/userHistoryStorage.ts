@@ -103,3 +103,9 @@ export const addRecentlyViewed = <T extends { id?: string }>(item: T, limit = 6)
   setRecentlyViewed(next);
   return next;
 };
+
+export const removeRecentlyViewed = (id?: string | null): void => {
+  if (!id) return;
+  const next = getRecentlyViewed<{ id?: string }>().filter((row) => row?.id !== id);
+  setRecentlyViewed(next);
+};
