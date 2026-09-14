@@ -16,6 +16,7 @@ import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
@@ -122,22 +123,10 @@ const DetailCriteriaPage: React.FC = () => {
   const isPending = String(criteriaData?.status || '').toUpperCase() === 'PENDING_APPROVAL' || String(criteriaData?.status || '').toUpperCase() === 'PENDING';
   const isReadOnly = isOwnerLocked || isCascadeLocked || isPending;
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(target) &&
-        dropdownListRef.current && !dropdownListRef.current.contains(target)
-      ) {
-        setIsOpen(false);
-      }
-      if (statusRef.current && !statusRef.current.contains(target)) {
-        setIsStatusOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  useCloseOnOutsideClick([
+    { ref: dropdownRef, close: () => setIsOpen(false) },
+    { ref: statusRef, close: () => setIsStatusOpen(false) },
+  ]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -952,7 +941,7 @@ const DetailCriteriaPage: React.FC = () => {
                   )}
                 </div>
               </div>
-              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', marginTop: '15px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
+              <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
                 <input 
                   type="checkbox" 
                   id="isRequired"

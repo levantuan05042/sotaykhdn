@@ -15,6 +15,7 @@ import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
@@ -68,6 +69,7 @@ const DetailCategoryPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const statusRef = useRef<HTMLDivElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isActive, setIsActive] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -76,7 +78,12 @@ const DetailCategoryPage: React.FC = () => {
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
   const [groupSearchTerm, setGroupSearchTerm] = useState('');
-  
+
+  useCloseOnOutsideClick([
+    { ref: groupRef, close: () => { setIsOpen(false); setGroupSearchTerm(''); } },
+    { ref: statusRef, close: () => setIsStatusOpen(false) },
+  ]);
+
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
   
   const userMap = useMemo(() => getUserMap(), []);
@@ -582,7 +589,7 @@ const DetailCategoryPage: React.FC = () => {
             <div className="formCard">
               <div className="formGroup">
                 <label className="label"> Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" ref={groupRef}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''} ${isFormReadOnly ? 'is-disabled' : ''}`} 
                     onClick={() => !isFormReadOnly && setIsOpen(!isOpen)}

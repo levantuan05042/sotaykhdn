@@ -17,6 +17,30 @@ export const stripHtmlText = (html?: string | null) => {
   return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
 };
 
+/** Oracle VARCHAR2(4000) tính theo byte UTF-8, không phải số ký tự JS. */
+const utf8Encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
+
+export const getUtf8ByteLength = (value?: string | null) => {
+  const text = value ?? '';
+  if (utf8Encoder) return utf8Encoder.encode(text).length;
+  let bytes = 0;
+  for (const ch of text) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (code <= 0x7f) bytes += 1;
+    else if (code <= 0x7ff) bytes += 2;
+    else if (code <= 0xffff) bytes += 3;
+    else bytes += 4;
+  }
+  return bytes;
+};
+
+/** Độ dài thực tế lưu cột VALUE: HTML Quill đo theo byte UTF-8, gồm cả thẻ. */
+export const getStoredCriteriaLength = (html?: string | null) => getUtf8ByteLength(html);
+
+/** Mọi tiêu chí (kể cả tên sản phẩm) đếm cùng chuẩn: byte UTF-8 của HTML lưu. */
+export const getCriteriaCountLength = (html: string, _name?: string, _code?: string) =>
+  getStoredCriteriaLength(html);
+
 export const getNameError = (value: string, label = 'Trường này') => {
   if (value.trim().length > FIELD_LIMITS.name) {
     return `${label}: ${FieldErrors.maxChars(FIELD_LIMITS.name)}`;
@@ -62,10 +86,12 @@ export const getCriteriaMaxLength = (name?: string, code?: string) =>
   isProductNameCriteria(name, code) ? FIELD_LIMITS.name : FIELD_LIMITS.criteriaValue;
 
 export const getCriteriaValueError = (html: string, label: string, isProductName = false) => {
-  const plain = stripHtmlText(html);
-  const max = isProductName ? FIELD_LIMITS.name : FIELD_LIMITS.criteriaValue;
-  if (plain.length > max) {
-    return `${label}: ${FieldErrors.maxChars(max)}`;
+  const stored = getStoredCriteriaLength(html);
+  if (isProductName && stored > FIELD_LIMITS.name) {
+    return `${label}: ${FieldErrors.maxChars(FIELD_LIMITS.name)}`;
+  }
+  if (stored > FIELD_LIMITS.criteriaValue) {
+    return `${label}: ${FieldErrors.maxChars(FIELD_LIMITS.criteriaValue)}`;
   }
   return null;
 };

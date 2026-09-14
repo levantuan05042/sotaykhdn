@@ -10,9 +10,9 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
-import { useDragAutoScroll } from '../hooks/useDragAutoScroll';
+import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
-import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, stripHtmlText } from '../utils/fieldValidation';
+import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
@@ -205,9 +205,6 @@ const AddProductPage: React.FC = () => {
 
   const [isActive, setIsActive] = useState<boolean>(true); 
   const [criteria, setCriteria] = useState<Criterion[]>([]);
-  const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
-  const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
-  useDragAutoScroll(Boolean(draggedCriterionId));
 
   const moveCriterion = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
@@ -226,7 +223,8 @@ const AddProductPage: React.FC = () => {
       return [...reorderedSelected, ...unselected];
     });
   };
-  
+  const { draggedCriterionId, dragOverCriterionId, startDrag } = useCriteriaPointerDrag(moveCriterion);
+
   const [formData, setFormData] = useState({
     productGroupId: '',   
     productCategoryId: '', 
@@ -602,12 +600,12 @@ const AddProductPage: React.FC = () => {
         <div className="contentGrid">
           
           <div className="leftCol">
-            <div className="formCard" style={{ padding: '24px', borderRadius: '8px' }}>
+            <div className="formCard">
               
               {/* 1. PRODUCT GROUP VỚI TÌM KIẾM */}
-              <div className="formGroup" style={{ marginBottom: '16px' }}>
+              <div className="formGroup">
                 {/* HIỂN THỊ DẤU (*) MÀU ĐỎ */}
-                <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block' }}>
+                <label className="label">
                   Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span>
                 </label>
                 <div className="custom-select-container" ref={groupRef} style={{ position: 'relative' }}>
@@ -641,9 +639,9 @@ const AddProductPage: React.FC = () => {
               </div>
 
               {/* 2 & 3. PRODUCT CATEGORY & BUSINESS VỚI TÌM KIẾM */}
-              <div style={{ display: 'flex', gap: '20px' }}>
+              <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: formData.productGroupId ? '#171717' : '#9CA3AF' }}>
+                  <label className="label" style={{ color: formData.productGroupId ? '#404040' : '#9CA3AF' }}>
                     Danh mục sản phẩm
                   </label>
                   <div className="custom-select-container" ref={categoryRef} style={{ position: 'relative' }}>
@@ -684,7 +682,7 @@ const AddProductPage: React.FC = () => {
                 </div>
 
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label" style={{ fontWeight: 600, marginBottom: '8px', display: 'block', color: formData.productCategoryId ? '#171717' : '#9CA3AF' }}>
+                  <label className="label" style={{ color: formData.productCategoryId ? '#404040' : '#9CA3AF' }}>
                     Nghiệp vụ
                   </label>
                   <div className="custom-select-container" ref={operationRef} style={{ position: 'relative' }}>
@@ -725,30 +723,11 @@ const AddProductPage: React.FC = () => {
                 return (
                   <div
                     key={criterion.id}
+                    data-criterion-id={criterion.id}
                     className="formGroup criterion-card"
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragOverCriterionId !== criterion.id) {
-                        setDragOverCriterionId(criterion.id);
-                      }
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverCriterionId === criterion.id) {
-                        setDragOverCriterionId(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (draggedCriterionId && draggedCriterionId !== criterion.id) {
-                        moveCriterion(draggedCriterionId, criterion.id);
-                      }
-                      setDraggedCriterionId(null);
-                      setDragOverCriterionId(null);
-                    }}
                     style={{
-                      marginBottom: '20px',
-                      marginTop: '16px',
+                      marginBottom: 0,
+                      marginTop: 0,
                       backgroundColor: '#FFFFFF',
                       borderRadius: '10px',
                       border: isDragOverThis ? '2px dashed #B01E3E' : '1px solid #E5E7EB',
@@ -763,25 +742,10 @@ const AddProductPage: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {/* Biểu tượng kéo thả - CHỈ CHO PHÉP KÉO KHI NHẤN GIỮ NÚT NÀY */}
                         <div
-                          draggable={true}
-                          onDragStart={(e) => {
-                            e.stopPropagation();
-                            e.dataTransfer.setData('text/plain', criterion.id);
-                            e.dataTransfer.effectAllowed = 'move';
-                            const card = (e.currentTarget as HTMLElement).closest('.criterion-card') as HTMLElement;
-                            if (card && e.dataTransfer.setDragImage) {
-                              e.dataTransfer.setDragImage(card, 20, 20);
-                            }
-                            setDraggedCriterionId(criterion.id);
-                          }}
-                          onDragEnd={(e) => {
-                            e.stopPropagation();
-                            setDraggedCriterionId(null);
-                            setDragOverCriterionId(null);
-                          }}
+                          onPointerDown={(e) => startDrag(criterion.id, e, criterion.name)}
                           title="Nhấn giữ để kéo di chuyển tiêu chí"
                           style={{
-                            cursor: 'grab',
+                            cursor: draggedCriterionId ? 'grabbing' : 'grab',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -789,6 +753,7 @@ const AddProductPage: React.FC = () => {
                             padding: '4px',
                             borderRadius: '4px',
                             userSelect: 'none',
+                            touchAction: 'none',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
@@ -798,12 +763,6 @@ const AddProductPage: React.FC = () => {
                           onMouseLeave={(e) => {
                             e.currentTarget.style.backgroundColor = 'transparent';
                             e.currentTarget.style.color = '#6B7280';
-                          }}
-                          onMouseDown={(e) => {
-                            e.currentTarget.style.cursor = 'grabbing';
-                          }}
-                          onMouseUp={(e) => {
-                            e.currentTarget.style.cursor = 'grab';
                           }}
                         >
                           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -854,7 +813,7 @@ const AddProductPage: React.FC = () => {
                       </div>
                     </div>
 
-                    <div draggable={false} onDragStart={(e) => e.stopPropagation()}>
+                    <div>
                       <QuillEditor 
                         value={criterion.value}
                         placeholder={criterion.isRequired ? "Tiêu chí này bắt buộc phải nhập..." : "Nhập nội dung chi tiết..."}
@@ -862,7 +821,7 @@ const AddProductPage: React.FC = () => {
                         onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
                       />
                       <CharCountHint
-                        current={stripHtmlText(criterion.value).length}
+                        current={getCriteriaCountLength(criterion.value, criterion.name, criterion.code)}
                         max={getCriteriaMaxLength(criterion.name, criterion.code)}
                         error={getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code))}
                       />
@@ -892,8 +851,8 @@ const AddProductPage: React.FC = () => {
                 padding: '20px 24px',
                 boxSizing: 'border-box',
                 width: '100%',
-                marginBottom: '20px',
-                marginTop: '16px'
+                marginBottom: 0,
+                marginTop: 0
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>

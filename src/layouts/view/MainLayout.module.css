@@ -31,12 +31,18 @@
   min-height: 0;
   overflow-y: auto;
   overflow-anchor: none;
+}
+
+.grid-scroll-inner {
+  min-height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 .grid-content {
-  flex: 1 0 auto;
+  /* basis 0: grow to fill short pages, don't add a second viewport under tall content */
+  flex: 1 0 0%;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   /* Figma 4039:74161 — glow chỉ ở dải trên, phần còn lại trắng */
@@ -51,11 +57,16 @@
 }
 
 .page-body {
-  flex: 1 0 auto;
+  flex: 1 0 0%;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   overflow: visible;
   background: transparent;
+}
+
+.page-body > [hidden] {
+  display: none !important;
 }
 
 .grid-footer {

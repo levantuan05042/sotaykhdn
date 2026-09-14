@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
 import './Search.css';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 interface SearchProductItem {
   id: string;
@@ -34,45 +35,47 @@ export const SearchResultsPage = () => {
   const [results, setResults] = useState<SearchData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchSearchResults = async () => {
-      if (!query.trim()) return;
+  const fetchSearchResults = useCallback(async (isBackground = false) => {
+    if (!query.trim()) return;
+    if (!isBackground) setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.SEARCH, {
+        params: { keyword: query, _t: Date.now() }
+      });
 
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.SEARCH, {
-          params: { keyword: query }
-        });
+      const rawData = response.data?.products || response.data || [];
 
-        const rawData = response.data?.products || response.data || [];
-        
-        // Map dữ liệu để đảm bảo trường 'name' luôn có giá trị hợp lệ
-        const productList: SearchProductItem[] = rawData.map((item: any) => ({
-          ...item,
-          id: item.id,
-          name: item.name || item.title || 'Sản phẩm không tên',
-          imageUrl: item.imageUrl || item.image_url || item.image || '',
-          views: item.viewCount ?? item.views ?? 0,
-          viewCount: item.viewCount ?? item.views ?? 0,
-        }));
+      const productList: SearchProductItem[] = rawData.map((item: any) => ({
+        ...item,
+        id: item.id,
+        name: item.name || item.title || 'Sản phẩm không tên',
+        imageUrl: item.imageUrl || item.image_url || item.image || '',
+        views: item.viewCount ?? item.views ?? 0,
+        viewCount: item.viewCount ?? item.views ?? 0,
+      }));
 
-        setResults({
-          total: response.data?.total || productList.length,
-          products: productList
-        });
-      } catch (error) {
-        console.error('Lỗi khi tải kết quả tìm kiếm:', error);
+      setResults({
+        total: response.data?.total || productList.length,
+        products: productList
+      });
+    } catch (error) {
+      console.error('Lỗi khi tải kết quả tìm kiếm:', error);
+      if (!isBackground) {
         setResults({ total: 0, products: [] });
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchSearchResults();
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
   }, [query]);
 
+  useEffect(() => {
+    void fetchSearchResults();
+  }, [fetchSearchResults]);
+
+  useViewAutoRefresh(() => fetchSearchResults(true), [query]);
+
   if (!query) return <div className="search-results-page">Vui lòng nhập từ khóa tìm kiếm.</div>;
-  if (loading) return <div className="search-results-page">Đang tìm kiếm dữ liệu...</div>;
+  if (loading && !results) return <div className="search-results-page">Đang tìm kiếm dữ liệu...</div>;
   if (!results) return null;
 
   return (

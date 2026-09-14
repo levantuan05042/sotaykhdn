@@ -8,6 +8,7 @@ import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
+import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -18,6 +19,7 @@ const GROUP_OPTIONS = [
 const AddProductPage: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false); 
+  const groupRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: '',
     superGroup: ''
@@ -27,6 +29,11 @@ const AddProductPage: React.FC = () => {
   const [isActive, setIsActive] = useState<boolean>(true);
   const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useCloseOnOutsideClick([
+    { ref: groupRef, close: () => setIsOpen(false) },
+    { ref: statusRef, close: () => setIsStatusOpen(false) },
+  ]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -171,7 +178,7 @@ const AddProductPage: React.FC = () => {
             <div className="formCard">
               <div className="formGroup">
                 <label className="label"> Thuộc nhóm <span style={{ color: '#EF4444' }}>(*)</span></label>
-                <div className="custom-select-container">
+                <div className="custom-select-container" ref={groupRef}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span>{GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm cấp trên"}</span>
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>

@@ -54,31 +54,32 @@ const MainLayout: React.FC = () => {
         <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
         <div className={styles['grid-main-wrapper']} ref={scrollRef} data-view-scroll>
-          <main className={styles['grid-content']}>
-            {/* Đã cập nhật class theo cú pháp CSS Module */}
-            <div className={styles['page-body']}>
-              <ViewKeepAliveOutlet />
-            </div>
-          </main>
+          <div className={styles['grid-scroll-inner']}>
+            <main className={styles['grid-content']}>
+              <div className={styles['page-body']}>
+                <ViewKeepAliveOutlet />
+              </div>
+            </main>
 
-          <footer className={styles['grid-footer']}>
-            <div className={styles['footer-content']}>
-              <div className={styles['footer-left']}>
-                © Bản quyền thuộc Agribank <br />
-                Phiên bản 1.1 cập nhật 08/09/2026
-              </div>
-              <div className={styles['footer-right']}>
-                <div className={styles['footer-contact-item']}>
-                  <img src={EmailIcon} alt="Email" className={styles['footer-icon']} />
-                  <span>bannganhangso@agribank.com.vn</span>
+            <footer className={styles['grid-footer']}>
+              <div className={styles['footer-content']}>
+                <div className={styles['footer-left']}>
+                  © Bản quyền thuộc Agribank <br />
+                  Phiên bản 1.1 cập nhật 08/09/2026
                 </div>
-                <div className={styles['footer-contact-item']}>
-                  <img src={PhoneIcon} alt="Phone" className={styles['footer-icon']} />
-                  <span>0123456789 - Văn thư Ban NHS</span>
+                <div className={styles['footer-right']}>
+                  <div className={styles['footer-contact-item']}>
+                    <img src={EmailIcon} alt="Email" className={styles['footer-icon']} />
+                    <span>bannganhangso@agribank.com.vn</span>
+                  </div>
+                  <div className={styles['footer-contact-item']}>
+                    <img src={PhoneIcon} alt="Phone" className={styles['footer-icon']} />
+                    <span>0123456789 - Văn thư Ban NHS</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </footer>
+            </footer>
+          </div>
         </div>
       </div>
     </div>

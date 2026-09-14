@@ -30,7 +30,11 @@ export function ViewKeepAliveOutlet() {
   return (
     <>
       {frozen?.node != null && (
-        <div hidden={isDetail} aria-hidden={isDetail}>
+        <div
+          hidden={isDetail}
+          aria-hidden={isDetail}
+          style={isDetail ? { display: 'none' } : undefined}
+        >
           <UNSAFE_LocationContext.Provider
             value={isDetail ? frozen.locationCtx : locationCtx}
           >
