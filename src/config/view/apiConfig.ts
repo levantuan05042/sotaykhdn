@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
     UPDATE: (id: string | number) => `${BASE_URL}/api/v1/product-groups/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/api/v1/product-groups/delete/${id}`,
     LIST: `${BASE_URL}/api/v1/product-groups`,
+    REORDER: `${BASE_URL}/api/v1/product-groups/reorder`,
   },
 
   PRODUCT_CATEGORY: {

@@ -6,6 +6,10 @@ import AuditLogTimeline from './AuditLogTimeline';
 import CollapsibleRightCard from './ui/CollapsibleRightCard';
 import StatusBadge from './ui/StatusBadge';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { getRandomAvatar } from '../utils/avatarUtils';
+import { stripHtmlText } from '../utils/fieldValidation';
+import iconChat from '../assets/icon/iconchat.svg';
+import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverDetailWrapper.css';
 
 interface CommentItem {
@@ -269,6 +273,13 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
         isOpen={isApproveConfirmOpen}
         onClose={() => { if (!isApproving) setIsApproveConfirmOpen(false); }}
         onConfirm={async () => {
+          setIsApproving(true);
+          try {
+            await submitReview('ACTIVE', newComment);
+            setIsApproveConfirmOpen(false);
+          } finally {
+            setIsApproving(false);
+          }
         }}
         variant="submit"
         title="Xác nhận phê duyệt"

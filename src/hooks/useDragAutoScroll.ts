@@ -27,15 +27,6 @@ function collectPageScrollers(start: HTMLElement | null): Array<HTMLElement | Wi
   return list;
 }
 
-function firstVisibleCard(): HTMLElement | null {
-  const cards = document.querySelectorAll('.criterion-card');
-  for (const card of cards) {
-    const r = (card as HTMLElement).getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) return card as HTMLElement;
-  }
-  return null;
-}
-
 function getScrollTop(target: HTMLElement | Window): number {
   if (target === window) {
     return window.scrollY || document.documentElement.scrollTop || 0;
@@ -79,17 +70,11 @@ function wheelDeltaY(e: WheelEvent): number {
   return e.deltaY;
 }
 
-function cardIdAtPoint(x: number, y: number): string | null {
-  const el = document.elementFromPoint(x, y);
-  const card = el instanceof Element ? el.closest('.criterion-card') : null;
-  return card?.getAttribute('data-criterion-id') || null;
-}
-
-function upsertGhost(label: string, x: number, y: number) {
-  let el = document.getElementById(GHOST_ID);
+function upsertGhost(label: string, x: number, y: number, ghostId = GHOST_ID) {
+  let el = document.getElementById(ghostId);
   if (!el) {
     el = document.createElement('div');
-    el.id = GHOST_ID;
+    el.id = ghostId;
     Object.assign(el.style, {
       position: 'fixed',
       zIndex: '100000',
@@ -114,20 +99,41 @@ function upsertGhost(label: string, x: number, y: number) {
   el.style.top = `${y + 14}px`;
 }
 
-function removeGhost() {
-  document.getElementById(GHOST_ID)?.remove();
+function removeGhost(ghostId = GHOST_ID) {
+  document.getElementById(ghostId)?.remove();
 }
 
-export function useCriteriaPointerDrag(
+export function usePointerListDrag(
+  options: {
+    cardSelector: string;
+    idAttr: string;
+    ghostId?: string;
+  },
   onReorder: (fromId: string, toId: string) => void,
   enabled = true
 ) {
-  const [draggedCriterionId, setDraggedCriterionId] = useState<string | null>(null);
-  const [dragOverCriterionId, setDragOverCriterionId] = useState<string | null>(null);
+  const { cardSelector, idAttr, ghostId = 'pointer-list-ghost' } = options;
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const onReorderRef = useRef(onReorder);
   onReorderRef.current = onReorder;
   const stopRef = useRef<(() => void) | null>(null);
+
+  const firstVisible = useCallback((): HTMLElement | null => {
+    const cards = document.querySelectorAll(cardSelector);
+    for (const card of cards) {
+      const r = (card as HTMLElement).getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) return card as HTMLElement;
+    }
+    return null;
+  }, [cardSelector]);
+
+  const idAtPoint = useCallback((x: number, y: number): string | null => {
+    const el = document.elementFromPoint(x, y);
+    const card = el instanceof Element ? el.closest(cardSelector) : null;
+    return card?.getAttribute(idAttr) || null;
+  }, [cardSelector, idAttr]);
 
   const startDrag = useCallback((id: string, e: React.PointerEvent, label = '') => {
     if (!enabled) return;
@@ -135,35 +141,35 @@ export function useCriteriaPointerDrag(
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
 
-    const draggedId = id;
+    const currentDraggedId = id;
     let overId: string | null = null;
     let lastX = e.clientX;
     let lastY = e.clientY;
-    setDraggedCriterionId(id);
-    setDragOverCriterionId(null);
-    upsertGhost(label, lastX, lastY);
+    setDraggedId(id);
+    setDragOverId(null);
+    upsertGhost(label, lastX, lastY, ghostId);
     document.body.style.cursor = 'grabbing';
     document.body.style.userSelect = 'none';
 
     const syncOver = (x: number, y: number) => {
-      const found = cardIdAtPoint(x, y);
-      const next = found && found !== draggedId ? found : null;
+      const found = idAtPoint(x, y);
+      const next = found && found !== currentDraggedId ? found : null;
       if (overId !== next) {
         overId = next;
-        setDragOverCriterionId(next);
+        setDragOverId(next);
       }
     };
 
     const onPointerMove = (ev: PointerEvent) => {
       lastX = ev.clientX;
       lastY = ev.clientY;
-      upsertGhost(label, lastX, lastY);
+      upsertGhost(label, lastX, lastY, ghostId);
       syncOver(lastX, lastY);
     };
 
     const onWheel = (ev: WheelEvent) => {
       ev.preventDefault();
-      const el = ev.target instanceof HTMLElement ? ev.target : firstVisibleCard();
+      const el = ev.target instanceof HTMLElement ? ev.target : firstVisible();
       scrollChain(collectPageScrollers(el), wheelDeltaY(ev));
       syncOver(lastX, lastY);
     };
@@ -173,12 +179,12 @@ export function useCriteriaPointerDrag(
       if (finished) return;
       finished = true;
       stopRef.current?.();
-      if (overId && overId !== draggedId) onReorderRef.current(draggedId, overId);
-      removeGhost();
+      if (overId && overId !== currentDraggedId) onReorderRef.current(currentDraggedId, overId);
+      removeGhost(ghostId);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      setDraggedCriterionId(null);
-      setDragOverCriterionId(null);
+      setDraggedId(null);
+      setDragOverId(null);
     };
 
     const wheelOpts: AddEventListenerOptions = { capture: true, passive: false };
@@ -189,7 +195,7 @@ export function useCriteriaPointerDrag(
 
     let raf = 0;
     const tick = () => {
-      const targets = collectPageScrollers(firstVisibleCard());
+      const targets = collectPageScrollers(firstVisible());
       const topZone = EDGE_PX;
       const bottomZone = window.innerHeight - EDGE_PX;
       if (lastY < topZone) {
@@ -214,14 +220,30 @@ export function useCriteriaPointerDrag(
       stopRef.current = null;
     };
     stopRef.current = stop;
-  }, [enabled]);
+  }, [enabled, firstVisible, ghostId, idAtPoint]);
 
   useEffect(() => () => {
     stopRef.current?.();
-    removeGhost();
+    removeGhost(ghostId);
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-  }, []);
+  }, [ghostId]);
 
-  return { draggedCriterionId, dragOverCriterionId, startDrag };
+  return { draggedId, dragOverId, startDrag };
+}
+
+export function useCriteriaPointerDrag(
+  onReorder: (fromId: string, toId: string) => void,
+  enabled = true
+) {
+  const { draggedId, dragOverId, startDrag } = usePointerListDrag(
+    {
+      cardSelector: '.criterion-card',
+      idAttr: 'data-criterion-id',
+      ghostId: GHOST_ID,
+    },
+    onReorder,
+    enabled
+  );
+  return { draggedCriterionId: draggedId, dragOverCriterionId: dragOverId, startDrag };
 }

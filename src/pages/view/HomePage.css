@@ -255,6 +255,44 @@
   gap: 16px;
 }
 
+.category-reorder-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #3C393F;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.category-reorder-toggle:hover,
+.category-reorder-toggle.is-active {
+  background: rgba(254, 238, 242, 0.7);
+  border-color: #FCDFE6;
+}
+
+.categories-grid.is-reordering .category-reorder-card {
+  user-select: none;
+  touch-action: none;
+}
+
+.category-reorder-card.is-dragging {
+  opacity: 0.45;
+  border-color: #FCDFE6;
+  background: rgba(254, 238, 242, 0.35);
+}
+
+.category-reorder-card.is-drag-over {
+  background: rgba(254, 238, 242, 0.55);
+  border-color: #AE1C3F;
+  box-shadow: 0 0 0 1px rgba(174, 28, 63, 0.2);
+}
+
 .products-grid {
   display: grid;
   gap: 24px;
