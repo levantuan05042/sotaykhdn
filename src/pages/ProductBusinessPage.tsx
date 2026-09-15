@@ -9,7 +9,6 @@ import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdow
 import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
 import { formatApprovedBy, getCascadeRowClassName } from '../utils/formatUtils';
-import toast from 'react-hot-toast';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import {
   displaySuccessMessage,
@@ -353,7 +352,7 @@ const ProductBusinessPage: React.FC = () => {
       }
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực sản phẩm:", error);
-      toast.error(error.message || 'Không thể cập nhật hiệu lực', { position: 'top-center' });
+      showErrorToast(error.message || 'Không thể cập nhật hiệu lực');
     } finally {
       setIsCascadeProcessing(false);
     }

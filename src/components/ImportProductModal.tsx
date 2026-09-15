@@ -39,17 +39,20 @@ const extractImportErrorMessage = (error: any): string => {
 
 const getImportErrorTitle = (message: string): string => {
   const lower = message.toLowerCase();
+  if (lower.includes('đã tồn tại một bản') || lower.includes('trùng') || lower.includes('đã tồn tại')) {
+    return 'Tên sản phẩm trùng';
+  }
   if (message.includes('\n')) return 'Không thể nhập Excel';
   if (lower.includes('trống')) return 'File Excel trống';
   if (lower.includes('mật khẩu')) return 'File đang khóa mật khẩu';
   if (lower.includes('hỏng') || lower.includes('không đọc được')) return 'Không đọc được file';
+  if (lower.includes('dung lượng') || lower.includes('vượt quá')) return 'Dung lượng tệp vượt quá giới hạn';
   if (lower.includes('.xlsx') || lower.includes('.xls') || lower.includes('định dạng')) {
     return 'Định dạng tệp không hợp lệ';
   }
   if (lower.includes('ký tự') || lower.includes('kí tự') || lower.includes('chỉ được nhập')) {
     return 'Dữ liệu không đúng định dạng';
   }
-  if (lower.includes('trùng') || lower.includes('đã tồn tại')) return 'Tên sản phẩm trùng';
   if (lower.includes('thiếu') || lower.includes('bắt buộc')) return 'Thiếu thông tin bắt buộc';
   if (lower.includes('không tồn tại') || lower.includes('không thuộc') || lower.includes('không có sheet')) {
     return 'Dữ liệu không khớp hệ thống';

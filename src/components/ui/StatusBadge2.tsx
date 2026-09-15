@@ -12,6 +12,7 @@ export const STATUS_MAP: Record<string, { bg: string; color: string; label: stri
   NEEDS_REVISION: { bg: '#FFF8B6', color: '#433D1F', label: 'Yêu cầu chỉnh sửa' },
   REVISION: { bg: '#FFF8B6', color: '#433D1F', label: 'Yêu cầu chỉnh sửa' },
   ARCHIVED: { bg: '#BAE6FD', color: '#0C4A6E', label: 'Lưu trữ' },
+  INACTIVE: { bg: '#EAE7EC', color: '#5C5962', label: 'Ẩn' },
   REVIEWED: { bg: '#CCF4E0', color: '#053E2B', label: 'Đã xem' }
 };
 

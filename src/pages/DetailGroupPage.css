@@ -525,59 +525,6 @@
   margin: 16px 0;
 }
 
-.toast-pill-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #ffffff;
-  padding: 10px 20px;
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-  border: 1px solid #e5e7eb;
-  min-width: 300px;
-  pointer-events: auto;
-  position: relative;
-  z-index: 2147483647 !important;
-  animation: slideInRight 0.3s ease-out;
-}
-
-.toast-pill-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.toast-pill-icon {
-  background: #ecfdf5;
-  color: #10b981;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toast-pill-text {
-  font-size: 15px;
-  font-weight: 500;
-  color: #1f2937;
-}
-
-.toast-pill-close {
-  background: none;
-  border: none;
-  color: #9ca3af;
-  cursor: pointer;
-  display: flex;
-  padding: 4px;
-  transition: color 0.2s;
-}
-
-.toast-pill-close:hover {
-  color: #6b7280;
-}
-
 @keyframes slideInRight {
   from { transform: translateX(100%); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }

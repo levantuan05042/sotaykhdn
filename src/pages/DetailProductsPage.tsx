@@ -18,7 +18,7 @@ import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
-import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, getNameError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
+import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
@@ -845,11 +845,6 @@ const DetailProductPage: React.FC = () => {
       return;
     }
     if (!id) return;
-    const nameErr = getNameError(productName, 'Tên sản phẩm');
-    if (nameErr) {
-      toast.error(nameErr, { position: 'top-center' });
-      return;
-    }
     const criteriaErr = getFirstCriteriaValueError(criteria);
     if (criteriaErr) {
       toast.error(criteriaErr, { position: 'top-center' });

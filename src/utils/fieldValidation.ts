@@ -1,7 +1,9 @@
 export const FIELD_LIMITS = {
+  /** Giữ giới hạn cho tên nhóm/danh mục/nghiệp vụ/tiêu chí master (VARCHAR). */
   name: 255,
   code: 50,
-  criteriaValue: 4000,
+  /** VALUE / tên sản phẩm đã chuyển CLOB — không giới hạn UI. */
+  criteriaValue: Number.POSITIVE_INFINITY,
   rejectReason: 1000,
 } as const;
 
@@ -17,7 +19,6 @@ export const stripHtmlText = (html?: string | null) => {
   return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
 };
 
-/** Oracle VARCHAR2(4000) tính theo byte UTF-8, không phải số ký tự JS. */
 const utf8Encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
 
 export const getUtf8ByteLength = (value?: string | null) => {
@@ -41,6 +42,7 @@ export const getStoredCriteriaLength = (html?: string | null) => getUtf8ByteLeng
 export const getCriteriaCountLength = (html: string, _name?: string, _code?: string) =>
   getStoredCriteriaLength(html);
 
+/** Tên nhóm/danh mục/... vẫn giới hạn 255. Tên sản phẩm (CLOB) không dùng hàm này. */
 export const getNameError = (value: string, label = 'Trường này') => {
   if (value.trim().length > FIELD_LIMITS.name) {
     return `${label}: ${FieldErrors.maxChars(FIELD_LIMITS.name)}`;
@@ -82,19 +84,10 @@ export const isProductNameCriteria = (name?: string, code?: string) => {
   );
 };
 
-export const getCriteriaMaxLength = (name?: string, code?: string) =>
-  isProductNameCriteria(name, code) ? FIELD_LIMITS.name : FIELD_LIMITS.criteriaValue;
+/** Không giới hạn — VALUE/tên SP là CLOB. Trả về undefined để CharCountHint ẩn max. */
+export const getCriteriaMaxLength = (_name?: string, _code?: string): number | undefined => undefined;
 
-export const getCriteriaValueError = (html: string, label: string, isProductName = false) => {
-  const stored = getStoredCriteriaLength(html);
-  if (isProductName && stored > FIELD_LIMITS.name) {
-    return `${label}: ${FieldErrors.maxChars(FIELD_LIMITS.name)}`;
-  }
-  if (stored > FIELD_LIMITS.criteriaValue) {
-    return `${label}: ${FieldErrors.maxChars(FIELD_LIMITS.criteriaValue)}`;
-  }
-  return null;
-};
+export const getCriteriaValueError = (_html: string, _label: string, _isProductName = false) => null;
 
 export const getRejectReasonError = (value: string) => {
   if (value.trim().length > FIELD_LIMITS.rejectReason) {
@@ -104,19 +97,8 @@ export const getRejectReasonError = (value: string) => {
 };
 
 export const getFirstCriteriaValueError = (
-  items: Array<{ name?: string; code?: string; value?: string; isSelected?: boolean }>
-) => {
-  for (const item of items) {
-    if (item.isSelected === false) continue;
-    const err = getCriteriaValueError(
-      item.value || '',
-      item.name || 'Tiêu chí',
-      isProductNameCriteria(item.name, item.code)
-    );
-    if (err) return err;
-  }
-  return null;
-};
+  _items: Array<{ name?: string; code?: string; value?: string; isSelected?: boolean }>
+) => null;
 
 export const parseCriteriaCreatedAt = (value: unknown): number => {
   if (value == null || value === '') return NaN;

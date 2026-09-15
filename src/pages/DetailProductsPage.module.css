@@ -491,50 +491,6 @@
   text-decoration: underline;
 }
 
-.toast-pill-container {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #FFFFFF;
-  padding: 12px 20px;
-  border-radius: 12px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
-  border: 1px solid #E5E7EB;
-  min-width: 320px;
-  pointer-events: auto;
-}
-
-.toast-pill-content {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.toast-pill-icon {
-  background: #ECFDF5;
-  color: #10B981;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.toast-pill-text {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1F2937;
-}
-
-.toast-pill-close {
-  background: none;
-  border: none;
-  color: #9CA3AF;
-  cursor: pointer;
-  padding: 4px;
-}
-
 .confirm-toast-card {
   background: #FFFFFF;
   padding: 20px;

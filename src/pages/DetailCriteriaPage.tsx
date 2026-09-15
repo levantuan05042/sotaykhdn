@@ -18,7 +18,11 @@ import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
-import SuperGroupNestedSelect, { formatSelectedGroupsLabel, SUPER_GROUP_OPTIONS } from '../components/ui/SuperGroupNestedSelect';
+import SuperGroupNestedSelect, {
+  formatSelectedGroupsLabel,
+  SUPER_GROUP_OPTIONS,
+  type NestedGroupOption,
+} from '../components/ui/SuperGroupNestedSelect';
 import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
@@ -83,7 +87,7 @@ const DetailCriteriaPage: React.FC = () => {
   const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   
-  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; hidden?: boolean; superGroup?: string }[]>([]);
+  const [groupOptions, setGroupOptions] = useState<NestedGroupOption[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSuperGroup, setSelectedSuperGroup] = useState('');
   const [showSuperList, setShowSuperList] = useState(true);
@@ -186,6 +190,7 @@ const DetailCriteriaPage: React.FC = () => {
             value: String(g.id),
             hidden: hiddenIds.has(String(g.id)),
             superGroup: g.superGroup || '',
+            fromCatalog: true,
           }));
           attachedGroups.forEach((g: any) => {
             const id = String(g.id);
@@ -486,32 +491,31 @@ const DetailCriteriaPage: React.FC = () => {
         }),
       });
 
-      if (response.status === 409) {
-        toast.error("Mã tiêu chí này đã tồn tại trên hệ thống. Vui lòng kiểm tra lại!", { position: 'top-center' });
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        toast.error(
+          errJson?.message || 'Mã hoặc tên tiêu chí đã tồn tại một bản trùng',
+          { position: 'top-center' }
+        );
         return;
       }
 
-      if (response.ok) {
-        succeeded = true;
-        let message = '';
-        switch (status) {
-          case 'DRAFT': 
-          case 'NEEDS_REVISION':
-            message = "Lưu nháp thành công"; break;
-          case 'ARCHIVED': message = "Lưu trữ thành công"; break;
-          case 'ACTIVE': message = "Hiển thị thành công"; break;
-          case 'PENDING_APPROVAL': message = "Gửi phê duyệt thành công"; break;
-          default: message = "Cập nhật thành công";
-        }
-
-        renderCustomToast(message);
-        allowLeave();
-        setConfirmAction(null);
-        setTimeout(() => navigate('/criteria-management'), 400);
-      } else {
-        const errorData = await response.json();
-        toast.error(errorData.message || 'Có lỗi xảy ra khi cập nhật', { position: 'top-center' });
+      succeeded = true;
+      let message = '';
+      switch (status) {
+        case 'DRAFT':
+        case 'NEEDS_REVISION':
+          message = "Lưu nháp thành công"; break;
+        case 'ARCHIVED': message = "Lưu trữ thành công"; break;
+        case 'ACTIVE': message = "Hiển thị thành công"; break;
+        case 'PENDING_APPROVAL': message = "Gửi phê duyệt thành công"; break;
+        default: message = "Cập nhật thành công";
       }
+
+      renderCustomToast(message);
+      allowLeave();
+      setConfirmAction(null);
+      setTimeout(() => navigate('/criteria-management'), 400);
     } catch (error) {
       toast.error('Lỗi kết nối máy chủ', { position: 'top-center' });
     } finally {
