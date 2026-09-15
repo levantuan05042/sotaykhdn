@@ -347,7 +347,14 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
               </div>
               <div className="status-pair-col">
                 <span className="status-pair-label">Trạng thái hiển thị</span>
-                <StatusBadge status={detail.active ? 'VISIBLE' : 'HIDDEN'} />
+                <select
+                  className="status-pair-select"
+                  value={detail.active ? 'VISIBLE' : 'HIDDEN'}
+                  disabled
+                >
+                  <option value="VISIBLE">Hiển thị</option>
+                  <option value="HIDDEN">Ẩn</option>
+                </select>
               </div>
             </div>
           </div>

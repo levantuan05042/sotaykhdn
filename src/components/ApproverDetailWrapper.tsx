@@ -183,7 +183,14 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
               </div>
               <div className="status-pair-col">
                 <span className="status-pair-label">Trạng thái hiển thị</span>
-                <StatusBadge status={isActive ? 'VISIBLE' : 'HIDDEN'} />
+                <select
+                  className="status-pair-select"
+                  value={isActive ? 'VISIBLE' : 'HIDDEN'}
+                  disabled
+                >
+                  <option value="VISIBLE">Hiển thị</option>
+                  <option value="HIDDEN">Ẩn</option>
+                </select>
               </div>
             </div>
           </div>

@@ -47,6 +47,11 @@
   color: #082F49;
 }
 
+.status-badge--archived {
+  background-color: #BAE6FD;
+  color: #0C4A6E;
+}
+
 .status-badge--default {
   background-color: #EAE7EC;
   color: #5C5962;

@@ -22,6 +22,7 @@ const STATUS_MAP: Record<string, { label: string; variant: string }> = {
   REVIEWED: { label: 'Đã xem', variant: 'completed' },
   VISIBLE: { label: 'Hiển thị', variant: 'completed' },
   HIDDEN: { label: 'Ẩn', variant: 'rejected' },
+  ARCHIVED: { label: 'Lưu trữ', variant: 'archived' },
 };
 
 export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, className = '' }) => {
