@@ -1,8 +1,33 @@
+:global(html.view-app),
+:global(html.view-app body),
+:global(html.view-app #root) {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+:global(html.view-app input),
+:global(html.view-app textarea),
+:global(html.view-app [contenteditable="true"]) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+:global(html.view-app img),
+:global(html.view-app video) {
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+}
+
 .main-layout {
   display: flex;
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .grid-header {

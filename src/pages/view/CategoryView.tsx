@@ -5,6 +5,7 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import './GroupView.css'; 
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
+import FolderCard from './common/FolderCard';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 // TODO: Đảm bảo đường dẫn import này đúng với cấu trúc dự án của bạn
@@ -28,40 +29,14 @@ export interface CategoryDetailData {
   [key: string]: any; 
 }
 
-const BusinessSection = ({ business, onNavigate }: { business: BusinessItem; onNavigate: (id: string) => void }) => {
-  const [products, setProducts] = useState<ProductInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchProducts = useCallback(async (isBackground = false) => {
-    try {
-      const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(business.id), {
-        params: { _t: Date.now() },
-      });
-      setProducts(res.data || []);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (!isBackground) setLoading(false);
-    }
-  }, [business.id]);
-
-  useEffect(() => {
-    void fetchProducts();
-  }, [fetchProducts]);
-
-  useViewAutoRefresh(() => fetchProducts(true), [business.id]);
-
-  if (loading || products.length === 0) return null;
-
-  return (
-    <div className="sub-section-block">
-      <h3 className="section-title" style={{ fontSize: '18px', marginBottom: '16px' }}>{business.name}</h3>
-      <div className="products-grid">
-        {products.map(prod => (
-          <ProductCard key={prod.id} product={prod} onClick={() => onNavigate(prod.id)} />
-        ))}
-      </div>
-    </div>
+const checkHasBusiness = (prod: any): boolean => {
+  return !!(
+    prod.businessId ||
+    prod.productBusinessId ||
+    prod.business ||
+    prod.productBusiness ||
+    prod.businessName ||
+    prod.productBusinessName
   );
 };
 
@@ -160,8 +135,9 @@ const CategoryView: React.FC = () => {
   if (!categoryData) return <div className="group-view"><div className="state-message">Không tìm thấy danh mục này.</div></div>;
 
   const currentCategoryName = categoryData.categoryName || 'Chi tiết danh mục';
-  const directProducts = categoryData.products || [];
   const businesses = categoryData.businesses || [];
+  const directProducts = (categoryData.products || []).filter((prod: any) => !checkHasBusiness(prod));
+  const isEmpty = directProducts.length === 0 && businesses.length === 0;
 
   const superGroupLabel = GROUP_OPTIONS.find((opt) => opt.value === categoryData.superGroup)?.label || 'Nhóm sản phẩm dịch vụ'; 
 
@@ -187,26 +163,25 @@ const CategoryView: React.FC = () => {
 
       <h2 className="group-page-title">{currentCategoryName}</h2>
 
-      {directProducts.length > 0 && (
-        <div className="section-block">
-          <div className="products-grid">
-            {directProducts.map((prod) => (
-              <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {businesses.map((bus) => (
-         <BusinessSection key={bus.id} business={bus} onNavigate={handleNavigate} />
-      ))}
-
-      {/* THAY ĐỔI MỚI: Giao diện Empty State khi không có dữ liệu */}
-      {directProducts.length === 0 && businesses.length === 0 && (
+      {isEmpty ? (
          <div className="empty-data-message">
            <img src={EmptyIcon} alt="Không có dữ liệu" className="empty-state-icon" />
            <span className="empty-state-text">Không có sản phẩm dịch vụ nào</span>
          </div>
+      ) : (
+        <div className="products-grid explorer-grid">
+          {businesses.map((bus) => (
+            <FolderCard
+              key={bus.id}
+              name={bus.name}
+              kind="business"
+              onClick={() => navigate(`/view/business/${bus.id}`)}
+            />
+          ))}
+          {directProducts.map((prod) => (
+            <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
+          ))}
+        </div>
       )}
     </div>
   );

@@ -9,6 +9,8 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
+import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
+import SuperGroupNestedSelect, { formatSelectedGroupsLabel, SUPER_GROUP_OPTIONS } from '../components/ui/SuperGroupNestedSelect';
 
 const AddCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -18,8 +20,10 @@ const AddCriteriaPage: React.FC = () => {
   const [isActive, setIsActive] = useState<boolean>(true);
   
   // --- STATES ---
-  const [isOpen, setIsOpen] = useState(false); 
-  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [selectedSuperGroup, setSelectedSuperGroup] = useState('');
+  const [showSuperList, setShowSuperList] = useState(true);
+  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; superGroup?: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); // State lưu từ khóa tìm kiếm nhóm
 
@@ -57,7 +61,8 @@ const AddCriteriaPage: React.FC = () => {
 
         const options = response.data.map((g: any) => ({
           label: g.name,
-          value: g.id
+          value: String(g.id),
+          superGroup: g.superGroup || '',
         }));
         setGroupOptions(options);
       } catch (error) {
@@ -81,6 +86,8 @@ const AddCriteriaPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
+  const visibleGroupOptions = groupOptions.filter(opt => opt.superGroup === selectedSuperGroup);
+
   const handleToggleGroup = (id: string) => {
     setFormData(prev => {
       const isExist = prev.groupIds.includes(id);
@@ -93,37 +100,42 @@ const AddCriteriaPage: React.FC = () => {
 
   const handleToggleSelectAll = () => {
     setFormData(prev => {
-      if (prev.groupIds.length === groupOptions.length) {
-        return { ...prev, groupIds: [] };
-      } else {
-        const allIds = groupOptions.map(opt => opt.value);
-        return { ...prev, groupIds: allIds };
+      const allIds = visibleGroupOptions.map(opt => opt.value);
+      const allSelected = allIds.length > 0 && allIds.every(id => prev.groupIds.includes(id));
+      if (allSelected) {
+        return { ...prev, groupIds: prev.groupIds.filter(id => !allIds.includes(id)) };
       }
+      return { ...prev, groupIds: [...new Set([...prev.groupIds, ...allIds])] };
     });
+  };
+
+  const handleSelectSuperGroup = (value: string) => {
+    setSelectedSuperGroup(value);
+    setShowSuperList(false);
+    setSearchTerm('');
+    setIsOpen(true);
+  };
+
+  const handleBackToSuperGroups = () => {
+    setShowSuperList(true);
+    setSearchTerm('');
+    setIsOpen(true);
   };
 
   const handleGoBack = () => navigate('/criteria-management');
 
   const getSelectedGroupsLabel = () => {
     if (loadingGroups) return "Đang tải nhóm sản phẩm...";
-    if (formData.groupIds.length === 0) return "Chọn nhóm sản phẩm áp dụng";
-    if (formData.groupIds.length === groupOptions.length) return "Tất cả nhóm sản phẩm";
-    
-    const selectedLabels = groupOptions
-      .filter(opt => formData.groupIds.includes(opt.value))
-      .map(opt => opt.label);
-
-    if (selectedLabels.length <= 3) {
-      return selectedLabels.join(', ');
-    }
-    
-    const firstThree = selectedLabels.slice(0, 3).join(', ');
-    const remainingCount = selectedLabels.length - 3;
-    return `${firstThree} và ${remainingCount} nhóm khác`;
+    return formatSelectedGroupsLabel(groupOptions, formData.groupIds, "Chọn nhóm sản phẩm");
   };
 
+  const selectedCountBySuperGroup = SUPER_GROUP_OPTIONS.reduce((acc, sg) => {
+    acc[sg.value] = groupOptions.filter(opt => opt.superGroup === sg.value && formData.groupIds.includes(opt.value)).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submitKind, beginSubmit, endSubmit } = useSubmitLock();
 
   // --- VALIDATE FORM TRƯỚC KHI LƯU NHÁP HOẶC MỞ MODAL DUYỆT ---
   const onSaveDraftClick = () => {
@@ -168,19 +180,20 @@ const AddCriteriaPage: React.FC = () => {
 
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
-    if (isSubmitting) return;
+    if (!beginSubmit(status === 'DRAFT' ? 'draft' : 'submit')) return;
     const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
     if (codeErr) {
       toast.error(codeErr, { position: 'top-center' });
+      endSubmit();
       return;
     }
     const nameErr = getNameError(formData.name, 'Tên tiêu chí');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
+      endSubmit();
       return;
     }
     try {
-      setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CRITERIA.LIST, {
         code: formData.code.trim() || undefined,
         name: formData.name.trim() || undefined,
@@ -201,30 +214,12 @@ const AddCriteriaPage: React.FC = () => {
       console.error("Lỗi API:", error);
       const errorMessage = error.response?.data?.message || 'Mã hoặc tên tiêu chí đã tồn tại trên hệ thống';
       toast.error(errorMessage, { position: 'top-center' });
-    } finally {
-      setIsSubmitting(false);
+      endSubmit();
     }
   };
 
   const renderCustomToast = (message: string) => {
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   const isFormDirty =
@@ -237,12 +232,6 @@ const AddCriteriaPage: React.FC = () => {
 
   const canSaveDraft = !isSubmitting;
   const canSubmit = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0 && !isSubmitting;
-
-  const filteredOptions = groupOptions.filter(opt => 
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
 
   return (
     <div className="pageWrapper">
@@ -278,7 +267,7 @@ const AddCriteriaPage: React.FC = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 8V21H3V8M1 3H23V8H1V3ZM10 12H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Lưu nháp
+              {draftActionLabel(isSubmitting, submitKind)}
             </button>
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
@@ -289,7 +278,7 @@ const AddCriteriaPage: React.FC = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Gửi phê duyệt
+              {submitActionLabel(isSubmitting, submitKind)}
             </button>
           </div>
         </div>
@@ -335,131 +324,25 @@ const AddCriteriaPage: React.FC = () => {
                 />
               </div>
               
-              {/* DROPDOWN CHỌN NHIỀU NHÓM SẢN PHẨM */}
               <div className="formGroup" ref={dropdownRef}>
-                <label className="label"> Nhóm sản phẩm áp dụng<span style={{ color: '#EF4444' }}>(*)</span></label>
-                <div className="custom-select-container" style={{ position: 'relative' }}>
-                  <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
-                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                      {getSelectedGroupsLabel()}
-                    </span>
-                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
-                      <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-
-                  {isOpen && (
-                    <div 
-                      className="custom-options-list" 
-                      style={{ 
-                        padding: 0, 
-                        zIndex: 999, 
-                        position: 'absolute', 
-                        top: '100%', 
-                        left: 0, 
-                        right: 0, 
-                        marginTop: '4px',
-                        background: '#fff',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        borderRadius: '8px',
-                        border: '1px solid #E5E7EB',
-                        maxHeight: '300px',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column'
-                      }}
-                    >
-                      {/* Ô tìm kiếm cố định */}
-                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
-                        <input
-                          type="text"
-                          className="input"
-                          placeholder="Tìm kiếm nhóm sản phẩm..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          style={{ padding: '6px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #D1D5DB', outline: 'none' }}
-                        />
-                      </div>
-
-                      {/* Danh sách cuộn */}
-                      <div style={{ overflowY: 'auto', flex: 1 }}>
-                        {groupOptions.length > 0 && !searchTerm && (
-                          <div 
-                            className="custom-option select-all-option"
-                            onClick={handleToggleSelectAll}
-                            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', borderBottom: '1px solid #F3F4F6', background: '#F9FAFB', fontWeight: '500', userSelect: 'none' }}
-                          >
-                            {/* Custom Checkbox Chọn Tất Cả */}
-                            <div 
-                              style={{
-                                width: '18px',
-                                height: '18px',
-                                borderRadius: '4px',
-                                border: isAllSelected ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
-                                backgroundColor: isAllSelected ? '#AE1C3F' : '#FFFFFF',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0
-                              }}
-                            >
-                              {isAllSelected && (
-                                <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-                                  <path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                            </div>
-                            <span style={{ fontSize: '14px', color: '#111827' }}>Tất cả nhóm sản phẩm</span>
-                          </div>
-                        )}
-
-                        <div>
-                          {filteredOptions.length === 0 ? (
-                            <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
-                              Không tìm thấy nhóm sản phẩm phù hợp
-                            </div>
-                          ) : (
-                            filteredOptions.map((opt) => {
-                              const isChecked = formData.groupIds.includes(opt.value);
-                              return (
-                                <div 
-                                  key={opt.value} 
-                                  className={`custom-option ${isChecked ? 'selected' : ''}`}
-                                  onClick={() => handleToggleGroup(opt.value)}
-                                  style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', padding: '10px 12px', userSelect: 'none' }}
-                                >
-                                  {/* Custom Checkbox Từng Option */}
-                                  <div 
-                                    style={{
-                                      width: '18px',
-                                      height: '18px',
-                                      borderRadius: '4px',
-                                      border: isChecked ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
-                                      backgroundColor: isChecked ? '#AE1C3F' : '#FFFFFF',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease',
-                                      flexShrink: 0
-                                    }}
-                                  >
-                                    {isChecked && (
-                                      <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-                                        <path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  <span style={{ fontSize: '14px', color: '#1F2937' }}>{opt.label}</span>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <label className="label"> Nhóm sản phẩm áp dụng <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <SuperGroupNestedSelect
+                  isOpen={isOpen}
+                  onToggleOpen={() => setIsOpen(!isOpen)}
+                  selectedSuperGroup={selectedSuperGroup}
+                  showSuperList={showSuperList}
+                  onSelectSuperGroup={handleSelectSuperGroup}
+                  onBackToSuperGroups={handleBackToSuperGroups}
+                  options={visibleGroupOptions}
+                  selectedIds={formData.groupIds}
+                  onToggleGroup={handleToggleGroup}
+                  onToggleSelectAll={handleToggleSelectAll}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  closedLabel={getSelectedGroupsLabel()}
+                  loading={loadingGroups}
+                  selectedCountBySuperGroup={selectedCountBySuperGroup}
+                />
               </div>
 
               {/* CHECKBOX BẮT BUỘC */}
@@ -555,7 +438,7 @@ const AddCriteriaPage: React.FC = () => {
       <ActionConfirmModal
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => confirmAction && submitCriteriaData(confirmAction)}
+        onConfirm={() => confirmAction ? submitCriteriaData(confirmAction) : undefined}
         variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp tiêu chí không?' : 'Bạn có chắc chắn muốn gửi phê duyệt tiêu chí không?'}

@@ -9,10 +9,8 @@ import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import ApproverProductDetailPage from './ApproverProductDetailPage';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
-import ApproveConfirmPopup from '../components/ApproveConfirmPopup';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
-import iconChat from '../assets/icon/iconchat.svg';
-import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
@@ -36,6 +34,7 @@ const ApproverBatchDetailPage: React.FC = () => {
   const [selectedDetailProductId, setSelectedDetailProductId] = useState<string | null>(null);
   const [batchRequest, setBatchRequest] = useState<any>(null);
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -545,14 +544,24 @@ const ApproverBatchDetailPage: React.FC = () => {
         })(),
         document.body
       )}
-      <ApproveConfirmPopup
+      <ActionConfirmModal
         isOpen={isApproveConfirmOpen}
-        onClose={() => setIsApproveConfirmOpen(false)}
-        onConfirm={() => {
-          setIsApproveConfirmOpen(false);
-          handleApproveBatchSubmit();
+        onClose={() => { if (!isApproving) setIsApproveConfirmOpen(false); }}
+        onConfirm={async () => {
+          setIsApproving(true);
+          try {
+            await handleApproveBatchSubmit();
+            setIsApproveConfirmOpen(false);
+          } finally {
+            setIsApproving(false);
+          }
         }}
-        itemName={batchRequest?.name || 'Lô sản phẩm'}
+        variant="submit"
+        title="Xác nhận phê duyệt"
+        desc={`Bạn muốn phê duyệt "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`}
+        confirmText="Phê duyệt"
+        cancelText="Hủy"
+        loading={isApproving}
       />
 
       <RejectReasonPopup

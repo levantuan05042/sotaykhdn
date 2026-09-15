@@ -11,12 +11,14 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
+import SuperGroupNestedSelect, { formatSelectedGroupsLabel, SUPER_GROUP_OPTIONS } from '../components/ui/SuperGroupNestedSelect';
 import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
 import {
   displaySuccessMessage,
@@ -81,8 +83,10 @@ const DetailCriteriaPage: React.FC = () => {
   const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   
-  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; hidden?: boolean }[]>([]);
+  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; hidden?: boolean; superGroup?: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSuperGroup, setSelectedSuperGroup] = useState('');
+  const [showSuperList, setShowSuperList] = useState(true);
 
   const [formData, setFormData] = useState<{ code: string; name: string; groupIds: string[]; isRequired: boolean }>({
     code: '',
@@ -181,22 +185,47 @@ const DetailCriteriaPage: React.FC = () => {
             label: g.name,
             value: String(g.id),
             hidden: hiddenIds.has(String(g.id)),
+            superGroup: g.superGroup || '',
           }));
           attachedGroups.forEach((g: any) => {
             const id = String(g.id);
-            if (!options.some((opt: any) => opt.value === id)) {
-              options.push({ label: g.name, value: id, hidden: g.active === false });
+            const existing = options.find((opt: any) => opt.value === id);
+            if (existing) {
+              if (!existing.superGroup && g.superGroup) existing.superGroup = g.superGroup;
+              existing.hidden = g.active === false;
+            } else {
+              options.push({
+                label: g.name,
+                value: id,
+                hidden: g.active === false,
+                superGroup: g.superGroup || '',
+                fromCatalog: false,
+              });
             }
           });
           setGroupOptions(options);
+          const superGroupsInSelection = Array.from(new Set(
+            attachedGroups
+              .map((g: any) => g.superGroup || options.find((opt: any) => opt.value === String(g.id))?.superGroup)
+              .filter((v: string) => Boolean(v))
+          ));
+          setSelectedSuperGroup(superGroupsInSelection[0] || '');
+          setShowSuperList(superGroupsInSelection.length !== 1);
         } else {
           setGroupOptions(
             attachedGroups.map((g: any) => ({
               label: g.name,
               value: String(g.id),
               hidden: g.active === false,
+              superGroup: g.superGroup || '',
+              fromCatalog: false,
             }))
           );
+          const superGroupsInSelection = Array.from(new Set(
+            attachedGroups.map((g: any) => g.superGroup).filter((v: string) => Boolean(v))
+          ));
+          setSelectedSuperGroup(superGroupsInSelection[0] || '');
+          setShowSuperList(superGroupsInSelection.length !== 1);
         }
 
       } catch (error) {
@@ -252,14 +281,31 @@ const DetailCriteriaPage: React.FC = () => {
             attachedGroups.filter((g: any) => g.active === false).map((g: any) => String(g.id))
           );
           setGroupOptions((prev) => {
-            const next = prev.map((opt) => ({ ...opt, hidden: hiddenIds.has(opt.value) }));
+            const next = prev.map((opt) => ({
+              ...opt,
+              hidden: hiddenIds.has(opt.value),
+            }));
             attachedGroups.forEach((g: any) => {
               const id = String(g.id);
-              if (!next.some((opt) => opt.value === id)) {
-                next.push({ label: g.name, value: id, hidden: g.active === false });
+              const existing = next.find((opt) => opt.value === id);
+              if (existing) {
+                if (!existing.superGroup && g.superGroup) existing.superGroup = g.superGroup;
+                existing.hidden = g.active === false;
+              } else {
+                next.push({
+                  label: g.name,
+                  value: id,
+                  hidden: g.active === false,
+                  superGroup: g.superGroup || '',
+                  fromCatalog: false,
+                });
               }
             });
             return next;
+          });
+          setSelectedSuperGroup((prev) => {
+            if (prev) return prev;
+            return attachedGroups.find((g: any) => g.superGroup)?.superGroup || '';
           });
         }
       } catch (e) {}
@@ -307,13 +353,28 @@ const DetailCriteriaPage: React.FC = () => {
   const handleToggleSelectAll = () => {
     if (isReadOnly) return;
     setFormData(prev => {
-      if (prev.groupIds.length === groupOptions.length) {
-        return { ...prev, groupIds: [] };
-      } else {
-        const allIds = groupOptions.map(opt => String(opt.value));
-        return { ...prev, groupIds: allIds };
+      const allIds = visibleGroupOptions.map(opt => String(opt.value));
+      const allSelected = allIds.length > 0 && allIds.every(id => prev.groupIds.includes(id));
+      if (allSelected) {
+        return { ...prev, groupIds: prev.groupIds.filter(id => !allIds.includes(id)) };
       }
+      return { ...prev, groupIds: [...new Set([...prev.groupIds, ...allIds])] };
     });
+  };
+
+  const handleSelectSuperGroup = (value: string) => {
+    if (isReadOnly) return;
+    setSelectedSuperGroup(value);
+    setShowSuperList(false);
+    setSearchTerm('');
+    setIsOpen(true);
+  };
+
+  const handleBackToSuperGroups = () => {
+    if (isReadOnly) return;
+    setShowSuperList(true);
+    setSearchTerm('');
+    setIsOpen(true);
   };
 
   const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION' | null>(null);
@@ -418,7 +479,7 @@ const DetailCriteriaPage: React.FC = () => {
         body: JSON.stringify({
           code: formData.code.trim() || criteriaData.code,
           name: formData.name.trim() || criteriaData.name,
-          groupIds: formData.groupIds, 
+          groupIds: formData.groupIds,
           isRequired: formData.isRequired, 
           active: isActive, 
           status
@@ -561,24 +622,7 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   const getCreatorDisplayName = () => {
@@ -607,46 +651,26 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const getSelectedGroupsLabel = () => {
-    if (formData.groupIds.length === 0) return "Chọn nhóm sản phẩm";
-    if (formData.groupIds.length === groupOptions.length && groupOptions.length > 0) return "Tất cả nhóm sản phẩm";
-
-    const selected = groupOptions.filter(opt => formData.groupIds.includes(opt.value));
-    const visibleSelected = selected.slice(0, 3);
-    const remainingCount = selected.length - visibleSelected.length;
-
-    return (
-      <>
-        {visibleSelected.map((opt, index) => (
-          <span
-            key={opt.value}
-            title={opt.hidden ? 'Nhóm đang bị ẩn' : undefined}
-            style={{
-              opacity: opt.hidden ? 0.42 : 1,
-              color: opt.hidden ? '#6B7280' : undefined,
-            }}
-          >
-            {opt.label}{index < visibleSelected.length - 1 || remainingCount > 0 ? ', ' : ''}
-          </span>
-        ))}
-        {remainingCount > 0 && <span>và {remainingCount} nhóm khác</span>}
-      </>
+    return formatSelectedGroupsLabel(
+      groupOptions,
+      formData.groupIds,
+      isReadOnly ? '---' : 'Chọn nhóm sản phẩm',
     );
   };
 
+  const selectedCountBySuperGroup = SUPER_GROUP_OPTIONS.reduce((acc, sg) => {
+    acc[sg.value] = groupOptions.filter(opt => opt.superGroup === sg.value && formData.groupIds.includes(opt.value)).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   const isFormValid = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0;
-  const canSubmit = !isReadOnly && isFormValid;
-  const canSaveDraft = !isReadOnly;
+  const canSubmit = !isReadOnly && isFormValid && !isSubmitting;
+  const canSaveDraft = !isReadOnly && !isSubmitting;
 
-  const filteredOptions = groupOptions.filter(opt => 
-    opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const visibleGroupOptions = selectedSuperGroup
+    ? groupOptions.filter(opt => opt.superGroup === selectedSuperGroup)
+    : (isReadOnly ? groupOptions.filter(opt => formData.groupIds.includes(opt.value)) : []);
 
-  const displayOptions = useMemo(() => {
-    if (!isReadOnly) return filteredOptions;
-    return filteredOptions.filter((opt) => formData.groupIds.includes(opt.value));
-  }, [filteredOptions, isReadOnly, formData.groupIds]);
-
-  const isAllSelected = groupOptions.length > 0 && formData.groupIds.length === groupOptions.length;
   const canChangeActiveStatus = !isOwnerLocked && isStatusActive;
   const shownActive = isCascadeLocked ? false : isActive;
 
@@ -705,11 +729,11 @@ const DetailCriteriaPage: React.FC = () => {
                     </button>
                     <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
                     <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}
@@ -718,11 +742,11 @@ const DetailCriteriaPage: React.FC = () => {
                   <>
                     <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick(criteriaData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
                     <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}
@@ -743,7 +767,7 @@ const DetailCriteriaPage: React.FC = () => {
 
         <div className="contentGrid">
           <div className="leftCol">
-            <div className="formCard">
+            <div className="formCard" style={{ overflow: 'visible' }}>
               <div className="formGroup">
                 <label className="label"> Mã tiêu chí <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
@@ -785,161 +809,31 @@ const DetailCriteriaPage: React.FC = () => {
 
               <div className="formGroup" ref={dropdownRef}>
                 <label className="label"> Nhóm sản phẩm áp dụng <span style={{ color: '#EF4444' }}>(*)</span></label>
-                <div className="custom-select-container" style={{ position: 'relative' }}>
-                  <div 
-                    className={`select-custom ${isOpen ? 'open' : ''}`} 
-                    onClick={handleToggleDropdown}
-                    style={{
-                      backgroundColor: isReadOnly ? '#F9FAFB' : '#FFFFFF',
-                      color: '#374151',
-                      cursor: 'pointer',
-                    }}
-                    title={isReadOnly ? 'Xem danh sách nhóm sản phẩm áp dụng' : undefined}
-                  >
-                    <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', display: 'block' }}>
-                      {getSelectedGroupsLabel()}
-                    </span>
-                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
-                      <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                  
-                  {isOpen && (
-                    <div 
-                      ref={dropdownListRef}
-                      className="custom-options-list" 
-                      style={{ 
-                        position: 'absolute',
-                        top: 'calc(100% + 4px)',
-                        left: 0,
-                        right: 0,
-                        zIndex: 99,
-                        padding: 0, 
-                        background: '#fff',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        borderRadius: '8px',
-                        border: '1px solid #E5E7EB',
-                        maxHeight: '300px',
-                        overflow: 'hidden',
-                        display: 'flex',
-                        flexDirection: 'column'
-                      }}
-                    >
-                      <div className="dropdown-search-wrapper" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
-                        <input
-                          type="text"
-                          className="input"
-                          placeholder="Tìm kiếm nhóm sản phẩm..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          style={{ padding: '6px 12px', fontSize: '14px', width: '100%', boxSizing: 'border-box', borderRadius: '4px', border: '1px solid #D1D5DB', outline: 'none' }}
-                        />
-                      </div>
-
-                      <div style={{ overflowY: 'auto', flex: 1 }}>
-                        {groupOptions.length > 0 && !searchTerm && !isReadOnly && (
-                          <div 
-                            className="custom-option select-all-option"
-                            onClick={handleToggleSelectAll}
-                            style={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              gap: '10px', 
-                              cursor: 'pointer', 
-                              padding: '10px 12px', 
-                              borderBottom: '1px solid #F3F4F6', 
-                              background: '#F9FAFB', 
-                              fontWeight: '500', 
-                              userSelect: 'none' 
-                            }}
-                          >
-                            <div 
-                              style={{
-                                width: '18px',
-                                height: '18px',
-                                borderRadius: '4px',
-                                border: isAllSelected ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
-                                backgroundColor: isAllSelected ? '#AE1C3F' : '#FFFFFF',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                transition: 'all 0.15s ease',
-                                flexShrink: 0
-                              }}
-                            >
-                              {isAllSelected && (
-                                <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-                                  <path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                            </div>
-                            <span style={{ fontSize: '14px', color: '#111827' }}>Tất cả nhóm sản phẩm</span>
-                          </div>
-                        )}
-
-                        <div>
-                          {displayOptions.length === 0 ? (
-                            <div className="custom-option disabled" style={{ padding: '12px', color: '#9CA3AF', textAlign: 'center', fontSize: '14px' }}>
-                              {isReadOnly && !searchTerm
-                                ? 'Chưa có nhóm sản phẩm áp dụng'
-                                : 'Không tìm thấy nhóm sản phẩm phù hợp'}
-                            </div>
-                          ) : (
-                            displayOptions.map((opt) => {
-                              const isChecked = formData.groupIds.includes(opt.value);
-                              return (
-                                <div 
-                                  key={opt.value} 
-                                  className={`custom-option ${isChecked ? 'selected' : ''}`}
-                                  onClick={() => handleToggleGroup(opt.value)}
-                                  style={{ 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '10px', 
-                                    cursor: isReadOnly ? 'default' : 'pointer', 
-                                    padding: '10px 12px', 
-                                    userSelect: 'none' 
-                                  }}
-                                >
-                                  <div 
-                                    style={{
-                                      width: '18px',
-                                      height: '18px',
-                                      borderRadius: '4px',
-                                      border: isChecked ? '1.5px solid #AE1C3F' : '1.5px solid #D1D5DB',
-                                      backgroundColor: isChecked ? '#AE1C3F' : (isReadOnly ? '#F9FAFB' : '#FFFFFF'),
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease',
-                                      flexShrink: 0
-                                    }}
-                                  >
-                                    {isChecked && (
-                                      <svg width="12" height="10" viewBox="0 0 12 10" fill="none">
-                                        <path d="M1 5L4.5 8.5L11 1.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                                      </svg>
-                                    )}
-                                  </div>
-                                  <span
-                                    style={{
-                                      fontSize: '14px',
-                                      color: opt.hidden ? '#6B7280' : '#1F2937',
-                                      opacity: opt.hidden ? 0.55 : 1,
-                                    }}
-                                    title={opt.hidden ? 'Nhóm đang bị ẩn' : undefined}
-                                  >
-                                    {opt.label}{opt.hidden ? ' (Đang ẩn)' : ''}
-                                  </span>
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <SuperGroupNestedSelect
+                  isOpen={isOpen}
+                  onToggleOpen={handleToggleDropdown}
+                  selectedSuperGroup={selectedSuperGroup}
+                  showSuperList={showSuperList}
+                  onSelectSuperGroup={handleSelectSuperGroup}
+                  onBackToSuperGroups={handleBackToSuperGroups}
+                  options={isReadOnly
+                    ? groupOptions.filter(opt => formData.groupIds.includes(opt.value))
+                    : visibleGroupOptions}
+                  selectedIds={formData.groupIds}
+                  onToggleGroup={handleToggleGroup}
+                  onToggleSelectAll={handleToggleSelectAll}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  closedLabel={getSelectedGroupsLabel()}
+                  listRef={dropdownListRef}
+                  readOnly={isReadOnly}
+                  triggerStyle={{
+                    backgroundColor: isReadOnly ? '#F9FAFB' : '#FFFFFF',
+                    color: '#374151',
+                    cursor: 'pointer',
+                  }}
+                  selectedCountBySuperGroup={selectedCountBySuperGroup}
+                />
               </div>
               <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>
                 <input 

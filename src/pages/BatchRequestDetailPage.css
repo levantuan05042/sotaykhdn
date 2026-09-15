@@ -434,6 +434,53 @@
 /* =========================================
    BUTTON ACTIONS (PRIMARY & SECONDARY)
 ========================================= */
+.btnDraft {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #E3DFE6;
+  border: none;
+  color: #1A191B;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btnDraft:disabled,
+.btnDraft.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnDraft:not(:disabled):hover {
+  background: #d4cfd8;
+}
+
+.btnSubmit {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #AE1C3F;
+  border: none;
+  color: #FFFFFF;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btnSubmit:disabled,
+.btnSubmit.disabled {
+  background: #cc8d9c;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btnSubmit:not(:disabled):hover {
+  background: #8e1734;
+}
+
 .btn-primary-action {
   display: flex;
   padding: 10px 18px;

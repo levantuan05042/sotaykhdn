@@ -1,14 +1,11 @@
 import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import RejectReasonPopup from './RejectReasonPopup';
-import ApproveConfirmPopup from './ApproveConfirmPopup';
+import ActionConfirmModal from './ui/ActionConfirmModal';
 import AuditLogTimeline from './AuditLogTimeline';
 import CollapsibleRightCard from './ui/CollapsibleRightCard';
 import StatusBadge from './ui/StatusBadge';
 import { formatApprovedBy } from '../utils/formatUtils';
-import { getRandomAvatar } from '../utils/avatarUtils';
-import iconChat from '../assets/icon/iconchat.svg';
-import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverDetailWrapper.css';
 
 interface CommentItem {
@@ -74,6 +71,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
 }) => {
   const [newComment, setNewComment] = useState('');
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
 
   const handleApprove = () => {
@@ -267,14 +265,17 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
 
       </main>
 
-      <ApproveConfirmPopup
+      <ActionConfirmModal
         isOpen={isApproveConfirmOpen}
-        onClose={() => setIsApproveConfirmOpen(false)}
+        onClose={() => { if (!isApproving) setIsApproveConfirmOpen(false); }}
         onConfirm={async () => {
-          setIsApproveConfirmOpen(false);
-          await submitReview('ACTIVE', '');
         }}
-        itemName={itemName}
+        variant="submit"
+        title="Xác nhận phê duyệt"
+        desc={`Bạn muốn phê duyệt "${stripHtmlText(itemName) || itemName || 'hạng mục'}"?`}
+        confirmText="Phê duyệt"
+        cancelText="Hủy"
+        loading={isApproving}
       />
 
       <RejectReasonPopup

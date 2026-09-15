@@ -219,7 +219,7 @@
 .table-placeholder table {
   width: 100%;
   min-width: 1300px !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse;
 }
 

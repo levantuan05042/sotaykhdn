@@ -8,6 +8,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { matchesSearch } from '../utils/searchText';
 import './ApproverCriteriaListPage.css';
 
 interface ProductGroupItem {
@@ -235,8 +236,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
 
   const filteredCriteria = criteriaList.filter((item) => {
     if (item.status === 'ARCHIVED') return false;
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          item.code.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearchText = matchesSearch(item.name, searchTerm) || matchesSearch(item.code, searchTerm);
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesGroup = selectedGroupIds.length === 0
       || selectedGroupIds.some((id) => {
@@ -245,7 +245,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
         if (!group) return false;
         return item.productGroups.some((g) => g.name === group.label) || item.groupName === group.label;
       });
-    return matchesSearch && matchesStatus && matchesGroup;
+    return matchesSearchText && matchesStatus && matchesGroup;
   }).map((item, index) => ({
     ...item,
     stt: index + 1

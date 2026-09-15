@@ -26,6 +26,7 @@
   border-collapse: collapse;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
+  table-layout: auto;
 }
 
 .data-table thead {
@@ -41,8 +42,60 @@
   color: #171717;
   font-weight: 600;
   padding: 16px;
-  border-bottom: 1px solid #E5E5E5;
+  border-bottom: 1px solid #E5E7EB;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  min-width: max-content;
+}
+
+.th-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  min-width: max-content;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.th-sort-label {
+  flex-shrink: 0;
   white-space: nowrap;
+}
+
+.th-sort-icons {
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 1px;
+  flex-shrink: 0;
+  color: #D1D5DB;
+}
+
+.th-sort-icons svg {
+  display: block;
+}
+
+.th-sort:hover .th-sort-icons {
+  color: #9CA3AF;
+}
+
+.th-sort-icons.is-asc .th-sort-up,
+.th-sort-icons.is-desc .th-sort-down {
+  color: #AE1C3F;
+}
+
+.th-sort.is-active {
+  color: #171717;
 }
 
 .data-table td {

@@ -8,6 +8,7 @@ import CellWithTooltip from '../components/ui/CellWithTooltip';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig'; 
 import { getUserMap, getFullName } from '../utils/userUtils';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { matchesSearch } from '../utils/searchText';
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -94,7 +95,6 @@ const ProductBusinessPage: React.FC = () => {
     try {
       const response = await axios.get(API_ENDPOINTS.PRODUCT_BUSINESS.LIST, {
         params: {
-          keyword: searchTerm.trim() || undefined,
           status: selectedStatus || undefined,
           categoryIds: selectedCategories.length > 0 ? selectedCategories : undefined, 
         },
@@ -115,7 +115,7 @@ const ProductBusinessPage: React.FC = () => {
       const rawList = Array.isArray(resultData) ? resultData : [];
       const userMap = getUserMap();
 
-      const enrichedData = rawList.map((item: any) => {
+      let enrichedData = rawList.map((item: any) => {
         const creatorRaw =
           item.createdByFullName ||
           item.CREATED_BY_FULL_NAME ||
@@ -138,6 +138,12 @@ const ProductBusinessPage: React.FC = () => {
           approvedBy: approver
         };
       });
+
+      if (searchTerm.trim()) {
+        enrichedData = enrichedData.filter(
+          (item: any) => matchesSearch(item.name, searchTerm) || matchesSearch(item.id, searchTerm)
+        );
+      }
 
       setData(enrichedData);
 
@@ -184,9 +190,7 @@ const ProductBusinessPage: React.FC = () => {
     }
   };
 
-  const filteredCategoryOptions = categoryOptions.filter(opt =>
-    opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())
-  );
+  const filteredCategoryOptions = categoryOptions.filter(opt => matchesSearch(opt.label, categorySearchTerm));
 
   const handleToggleActive = async (item: ProductBusinessItem, currentActive: boolean) => {
     const newActiveStatus = !currentActive;

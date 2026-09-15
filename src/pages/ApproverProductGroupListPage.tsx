@@ -8,6 +8,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { matchesSearch } from '../utils/searchText';
 import './ApproverProductGroupListPage.css';
 
 interface ProductGroupItem {
@@ -57,7 +58,6 @@ export const ApproverProductGroupListPage: React.FC = () => {
       try {
         const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST, {
           params: {
-            keyword: searchTerm || undefined,
             status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
             types: selectedGroupTypes.length ? selectedGroupTypes : undefined,
             forApproval: true,
@@ -80,6 +80,12 @@ export const ApproverProductGroupListPage: React.FC = () => {
 
         if (selectedStatuses.length > 1) {
           mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+        }
+
+        if (searchTerm.trim()) {
+          mapped = mapped.filter(
+            (item) => matchesSearch(item.name, searchTerm) || matchesSearch(item.id, searchTerm)
+          );
         }
 
         setProductGroups(mapped);

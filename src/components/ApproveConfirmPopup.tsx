@@ -22,7 +22,7 @@ export const ApproveConfirmPopup: React.FC<ApproveConfirmPopupProps> = ({
       <div className="custom-popup-confirm-card" onClick={(e) => e.stopPropagation()}>
         <div className="custom-confirm-body">
           <p className="custom-confirm-text">
-            Bạn muốn gửi Phê duyệt <span className="custom-confirm-highlight">{itemName}</span>
+            Bạn muốn phê duyệt <span className="custom-confirm-highlight">{itemName}</span>
           </p>
         </div>
         <div className="custom-confirm-footer">

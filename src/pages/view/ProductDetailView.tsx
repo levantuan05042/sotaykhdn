@@ -7,6 +7,8 @@ import { copyTextToClipboard } from '../../utils/clipboard';
 import CellWithTooltip from '../../components/ui/CellWithTooltip';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
 import { showSuccessToast } from '../../utils/appToast';
+import { stripHtmlText } from '../../utils/fieldValidation';
+import 'quill/dist/quill.snow.css';
 import './ProductDetailView.css';
 
 const getImageUrl = (path?: string | null) => {
@@ -95,12 +97,28 @@ const toVersionNum = (value: unknown) => {
 
 const isActiveStatus = (status: unknown) => String(status || '').toUpperCase() === 'ACTIVE';
 
+const unescapeStoredHtml = (val: string) => {
+  const trimmed = val.trim();
+  const hasRealTag = /<[a-z/][\s\S]*>/i.test(trimmed);
+  const hasEscapedTag = /&lt;\/?[a-z]/i.test(trimmed);
+  if (!hasRealTag && hasEscapedTag) {
+    return trimmed
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&amp;/g, '&');
+  }
+  return val;
+};
+
 const formatDetailHtml = (val?: string): string => {
   if (!val || !val.trim()) return '';
-  if (/<[a-z][\s\S]*>/i.test(val)) {
-    return val;
+  const decoded = unescapeStoredHtml(val);
+  if (/<[a-z][\s\S]*>/i.test(decoded)) {
+    return decoded;
   }
-  const normalized = val.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const normalized = decoded.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const lines = normalized.split('\n');
   let start = 0;
   while (start < lines.length && !lines[start].trim()) start++;
@@ -389,7 +407,10 @@ const ProductDetailView: React.FC = () => {
     openedCriteriaForIdRef.current = product.id;
     setOpenCriteriaKeys(new Set(sortedDetails.map((detail, idx) => String(detail.id || idx))));
   }
-  const breadcrumbItems = buildBreadcrumbs();
+  const productTitle = stripHtmlText(product.name) || product.name || '';
+  const breadcrumbItems = buildBreadcrumbs().map((item) =>
+    item.type === 'product' ? { ...item, name: productTitle } : item
+  );
 
   const displayBreadcrumbs = breadcrumbItems.length > 4 
     ? [breadcrumbItems[0], { name: '...', type: 'ellipsis', id: 'ellipsis' }, breadcrumbItems[breadcrumbItems.length - 2], breadcrumbItems[breadcrumbItems.length - 1]]
@@ -399,7 +420,7 @@ const ProductDetailView: React.FC = () => {
     <div className="dp-container">
       {isUpdating && (
         <LoadingOverlay
-          title={`Đang cập nhật phiên bản mới của ${updatingName || product.name}`}
+          title={`Đang cập nhật phiên bản mới của ${stripHtmlText(updatingName) || updatingName || productTitle}`}
           subtitle="Vui lòng đợi trong giây lát"
         />
       )}
@@ -488,10 +509,10 @@ const ProductDetailView: React.FC = () => {
             <div className="dp-header-left">
               <div className="dp-header-thumbnail">
                 {selectedImage && !imgError ? (
-                  <img src={getImageUrl(selectedImage)} alt={product.name} onError={() => setImgError(true)} />
+                  <img src={getImageUrl(selectedImage)} alt={productTitle} onError={() => setImgError(true)} />
                 ) : (
-                  <div className="dp-fallback-img" style={{ background: stringToColor(product.name) }}>
-                    {product.name.charAt(0).toUpperCase()}
+                  <div className="dp-fallback-img" style={{ background: stringToColor(productTitle) }}>
+                    {(productTitle.charAt(0) || '?').toUpperCase()}
                   </div>
                 )}
               </div>
@@ -514,7 +535,7 @@ const ProductDetailView: React.FC = () => {
             </div>
 
             <div className="dp-header-info">
-              <h1 className="dp-product-title">{product.name}</h1>
+              <h1 className="dp-product-title">{productTitle}</h1>
               <div className="dp-product-meta">
                 <span className="dp-badge-business">{product.productGroupName || product.groupName || 'Sản phẩm'}</span>
                 <div className="dp-meta-item">
@@ -552,7 +573,7 @@ const ProductDetailView: React.FC = () => {
                       onClick={() => toggleCriteriaRow(rowKey)}
                       aria-expanded={isOpen}
                     >
-                      <span className="dp-label">{detail.tieuChi}</span>
+                      <span className="dp-label">{stripHtmlText(detail.tieuChi) || detail.tieuChi}</span>
                       <svg
                         className="dp-row-chevron"
                         width="20"
@@ -568,7 +589,14 @@ const ProductDetailView: React.FC = () => {
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
                     </button>
-                    <div className="dp-value" dangerouslySetInnerHTML={{ __html: formatDetailHtml(detail.noiDung) }} />
+                    <div className="dp-value">
+                      <div className="ql-snow">
+                        <div
+                          className="ql-editor"
+                          dangerouslySetInnerHTML={{ __html: formatDetailHtml(detail.noiDung) }}
+                        />
+                      </div>
+                    </div>
                   </div>
                 );
               })
@@ -586,7 +614,7 @@ const ProductDetailView: React.FC = () => {
             <div className="dp-sidebar-content">
               <div className="dp-info-row">
                 <div className="dp-info-label">Tên sản phẩm</div>
-                <div className="dp-info-value">{product.name || '---'}</div>
+                <div className="dp-info-value">{productTitle || '---'}</div>
               </div>
               <div className="dp-info-row">
                 <div className="dp-info-label">Nhóm sản phẩm</div>

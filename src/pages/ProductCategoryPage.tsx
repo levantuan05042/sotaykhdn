@@ -21,6 +21,7 @@ import {
   showSuccessToast,
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
+import { matchesSearch } from '../utils/searchText';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -113,11 +114,7 @@ const ProductCategoryPage: React.FC = () => {
   const fetchData = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
-      const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
-        params: {
-          keyword: searchTerm.trim() || undefined,
-        },
-      });
+      const response = await axios.get(API_ENDPOINTS.PRODUCT_CATEGORY.LIST);
       
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
@@ -160,11 +157,10 @@ const ProductCategoryPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const handler = setTimeout(() => fetchData(), 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
+    fetchData();
+  }, []);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
+  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling và lắng nghe focus/visibilitychange
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData(true);
@@ -184,7 +180,7 @@ const ProductCategoryPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [searchTerm]);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -234,6 +230,13 @@ const ProductCategoryPage: React.FC = () => {
 
   const getFilteredData = () => {
     return data.filter(item => {
+      if (
+        searchTerm.trim() &&
+        !matchesSearch(item.name, searchTerm) &&
+        !matchesSearch(item.id, searchTerm)
+      ) {
+        return false;
+      }
       if (selectedStatuses.length > 0 && !selectedStatuses.some(s => s.toUpperCase() === item.status?.toUpperCase())) {
         return false;
       }
