@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './HomePage.css';
-import { BASE_URL } from '../../config/view/apiConfig';
+import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
 import { addRecentSearch, getRecentSearches, getRecentlyViewed } from '../../utils/userHistoryStorage';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
+import { usePointerListDrag } from '../../hooks/useDragAutoScroll';
+import { showErrorToast, showSuccessToast } from '../../utils/appToast';
 
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
 import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
@@ -20,6 +22,7 @@ import iconBaoHiem from '../../assets/icons/sp-bao-hiem.svg';
 import iconChuongTrinhUuDai from '../../assets/icons/uu-dai-khdn.svg';
 import iconTimKiem from '../../assets/icon/timkiem.svg';
 import iconTaoMoi from '../../assets/icon/tao_moi.svg';
+import iconMoveCategory from '../../assets/icons/move-category.svg';
 
 const removeAccents = (str: string) => {
   return str
@@ -86,6 +89,9 @@ const HomePage: React.FC = () => {
   const [newlyCreatedProducts, setNewlyCreatedProducts] = useState<ProductInfo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
+  const [canReorderCategories, setCanReorderCategories] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
   const [groupProductCounts, setGroupProductCounts] = useState<Record<string, number>>({});
   const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,6 +117,22 @@ const HomePage: React.FC = () => {
   useEffect(() => {
     setRecentSearches(getRecentSearches());
   }, [location]);
+
+  useEffect(() => {
+    const syncRole = () => {
+      const current = localStorage.getItem('currentUserRole') || '';
+      const canReorder = current === 'ESA08' || current === 'ETN08';
+      setCanReorderCategories(canReorder);
+      if (!canReorder) setReorderMode(false);
+    };
+    syncRole();
+    window.addEventListener('userRoleChanged', syncRole);
+    window.addEventListener('storage', syncRole);
+    return () => {
+      window.removeEventListener('userRoleChanged', syncRole);
+      window.removeEventListener('storage', syncRole);
+    };
+  }, []);
 
   const loadViewData = useCallback(async () => {
     try {
@@ -187,11 +209,65 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
+  const persistCategoryOrder = useCallback(async (ordered: Category[]) => {
+    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
+    setSavingOrder(true);
+    try {
+      const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.REORDER, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ orderedIds: ordered.map((c) => String(c.id)) }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || 'Không thể lưu thứ tự nhóm sản phẩm');
+      }
+      showSuccessToast('Đã cập nhật thứ tự nhóm sản phẩm');
+    } catch (error: any) {
+      showErrorToast(error?.message || 'Không thể lưu thứ tự nhóm sản phẩm');
+      void loadViewData();
+    } finally {
+      setSavingOrder(false);
+    }
+  }, [loadViewData]);
+
+  const categoriesRef = useRef(categories);
+  categoriesRef.current = categories;
+
+  const moveCategory = useCallback((fromId: string, toId: string) => {
+    const prev = categoriesRef.current;
+    const fromIdx = prev.findIndex((c) => String(c.id) === fromId);
+    const toIdx = prev.findIndex((c) => String(c.id) === toId);
+    if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+    const next = [...prev];
+    const [moved] = next.splice(fromIdx, 1);
+    next.splice(toIdx, 0, moved);
+    categoriesRef.current = next;
+    setCategories(next);
+    void persistCategoryOrder(next);
+  }, [persistCategoryOrder]);
+
+  const { draggedId, dragOverId, startDrag } = usePointerListDrag(
+    {
+      cardSelector: '.category-reorder-card',
+      idAttr: 'data-category-id',
+      ghostId: 'category-pointer-ghost',
+    },
+    moveCategory,
+    reorderMode && !savingOrder
+  );
+
   useEffect(() => {
     void loadViewData();
   }, [location, loadViewData]);
 
-  useViewAutoRefresh(loadViewData);
+  useViewAutoRefresh(() => {
+    if (reorderMode || savingOrder || draggedId) return;
+    return loadViewData();
+  }, [reorderMode, savingOrder, draggedId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -286,9 +362,17 @@ const HomePage: React.FC = () => {
     });
   };
   
-  const displayedCategories = showAllCategories ? categories : categories.slice(0, 10);
+  const displayedCategories = (showAllCategories || reorderMode) ? categories : categories.slice(0, 10);
   const defaultSearches = ['SP vay vốn', 'thanh toán', 'xuất khẩu'];
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
+
+  const toggleReorderMode = () => {
+    setReorderMode((prev) => {
+      const next = !prev;
+      if (next) setShowAllCategories(true);
+      return next;
+    });
+  };
 
   return (
     <div className="homepage font-sans">
@@ -477,29 +561,46 @@ const HomePage: React.FC = () => {
       <div className="content-area">
         {categories.length > 0 && (
           <div className="mb-16">
-            <div className="flex items-center space-x-3 mb-6">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                width="24" 
-                height="24" 
-                viewBox="0 0 17 17" 
-                fill="none"
-              >
-                <path 
-                  d="M0.75 5.75H15.75M0.75 10.75H15.75M4.75 0.75H11.75C13.1501 0.75 13.8502 0.75 14.385 1.02248C14.8554 1.26217 15.2378 1.64462 15.4775 2.11502C15.75 2.6498 15.75 3.34987 15.75 4.75V11.75C15.75 13.1501 15.75 13.8502 15.4775 14.385C15.2378 14.8554 14.8554 15.2378 14.385 15.4775C13.8502 15.75 13.1501 15.75 11.75 15.75H4.75C3.34987 15.75 2.6498 15.75 2.11502 15.4775C1.64462 15.2378 1.26217 14.8554 1.02248 14.385C0.75 13.8502 0.75 13.1501 1.02248 2.11502C1.26217 1.64462 1.64462 1.26217 2.11502 1.02248C2.6498 0.75 3.34987 0.75 4.75 0.75Z" 
-                  stroke="#3C393F" 
-                  strokeWidth="1.5" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                />
-              </svg>
-              <h2 className="text-2xl font-bold text-[#1A191B]">Danh mục nhóm sản phẩm</h2>
+            <div className="flex items-center justify-between gap-3 mb-6">
+              <div className="flex items-center space-x-3">
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  width="24" 
+                  height="24" 
+                  viewBox="0 0 17 17" 
+                  fill="none"
+                >
+                  <path 
+                    d="M0.75 5.75H15.75M0.75 10.75H15.75M4.75 0.75H11.75C13.1501 0.75 13.8502 0.75 14.385 1.02248C14.8554 1.26217 15.2378 1.64462 15.4775 2.11502C15.75 2.6498 15.75 3.34987 15.75 4.75V11.75C15.75 13.1501 15.75 13.8502 15.4775 14.385C15.2378 14.8554 14.8554 15.2378 14.385 15.4775C13.8502 15.75 13.1501 15.75 11.75 15.75H4.75C3.34987 15.75 2.6498 15.75 2.11502 15.4775C1.64462 15.2378 1.26217 14.8554 1.02248 14.385C0.75 13.8502 0.75 13.1501 0.75 11.75V4.75C0.75 3.34987 0.75 2.6498 1.02248 2.11502C1.26217 1.64462 1.64462 1.26217 2.11502 1.02248C2.6498 0.75 3.34987 0.75 4.75 0.75Z" 
+                    stroke="#3C393F" 
+                    strokeWidth="1.5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                <h2 className="text-2xl font-bold text-[#1A191B]">Danh mục nhóm sản phẩm</h2>
+              </div>
+              {canReorderCategories && (
+                <button
+                  type="button"
+                  onClick={toggleReorderMode}
+                  className={`category-reorder-toggle${reorderMode ? ' is-active' : ''}`}
+                  title={reorderMode ? 'Tắt chế độ sắp xếp' : 'Sắp xếp danh mục'}
+                  aria-label={reorderMode ? 'Tắt chế độ sắp xếp' : 'Sắp xếp danh mục'}
+                  aria-pressed={reorderMode}
+                >
+                  <img src={iconMoveCategory} alt="" width={20} height={20} />
+                </button>
+              )}
             </div>
             
-            <div className="categories-grid">
+            <div className={`categories-grid${reorderMode ? ' is-reordering' : ''}`}>
               {displayedCategories.map((cat) => {
                 const config = getCategoryConfig(cat.name); 
                 const count = groupProductCounts[cat.id] || 0;
+                const catId = String(cat.id);
+                const isDragging = draggedId === catId;
+                const isDragOver = dragOverId === catId;
                 
                 const iconUrl = typeof config.icon === 'string' 
                   ? config.icon 
@@ -507,9 +608,22 @@ const HomePage: React.FC = () => {
 
                 return (
                   <div 
-                    key={cat.id} 
-                    onClick={() => handleCategoryClick(cat.id)} 
-                    className="bg-white rounded-[12px] p-5 border border-gray-200 hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6] transition-all cursor-pointer flex flex-col justify-between min-h-[158px] w-full"
+                    key={cat.id}
+                    data-category-id={catId}
+                    onClick={() => {
+                      if (reorderMode) return;
+                      handleCategoryClick(cat.id);
+                    }}
+                    onPointerDown={(e) => {
+                      if (!reorderMode) return;
+                      startDrag(catId, e, cat.name);
+                    }}
+                    className={[
+                      'category-reorder-card bg-white rounded-[12px] p-5 border border-gray-200 transition-all flex flex-col justify-between min-h-[158px] w-full',
+                      reorderMode ? 'cursor-grab' : 'cursor-pointer hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6]',
+                      isDragging ? 'is-dragging' : '',
+                      isDragOver ? 'is-drag-over' : '',
+                    ].filter(Boolean).join(' ')}
                   >
                     <div 
                       className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
@@ -551,7 +665,7 @@ const HomePage: React.FC = () => {
               })}
             </div>
             
-            {categories.length > 10 && (
+            {categories.length > 10 && !reorderMode && (
               <div className="flex justify-center mt-8">
                 <button 
                   onClick={() => setShowAllCategories(!showAllCategories)} 

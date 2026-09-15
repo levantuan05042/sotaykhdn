@@ -1,0 +1,8 @@
+<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Ghost square (dotted, top-left) -->
+  <rect x="2.5" y="2.5" width="9" height="9" rx="1" stroke="#3C393F" stroke-width="1.35" stroke-dasharray="1.5 1.7" fill="none"/>
+  <!-- Solid square (bottom-right) -->
+  <rect x="7.5" y="7.5" width="9" height="9" rx="1" stroke="#3C393F" stroke-width="1.45" fill="none"/>
+  <!-- Cursor -->
+  <path d="M11.1 10.2L14.85 16.55L12.55 15.7L11.2 18.15L9.95 13.55L11.1 10.2Z" fill="#3C393F"/>
+</svg>

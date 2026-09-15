@@ -11,6 +11,9 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import { stripHtmlText } from '../utils/fieldValidation';
+import iconChat from '../assets/icon/iconchat.svg';
+import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverBatchDetailPage.css';
 
 interface ProductItem {
