@@ -2,8 +2,6 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import 'react-easy-crop/react-easy-crop.css';
 import { API_ENDPOINTS } from '../config/apiConfig';
@@ -13,15 +11,13 @@ import './BatchRequestDetailPage.css';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { getApiErrorMessage } from '../utils/apiError';
-import { formatDetailHtml } from './DetailProductPage';
 import {
-  getCriteriaCountLength,
   getCriteriaMaxLength,
   getCriteriaValueError,
   getFirstCriteriaValueError,
   isProductNameCriteria,
 } from '../utils/fieldValidation';
-import CharCountHint from '../components/ui/CharCountHint';
+import CriteriaQuillEditor from '../components/ui/CriteriaQuillEditor';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
@@ -469,92 +465,6 @@ const CriteriaModal: React.FC<CriteriaModalProps> = ({ isOpen, onClose, criteria
           </button>
         </div>
       </div>
-    </div>
-  );
-};
-
-interface QuillEditorProps {
-  value: string;
-  onChange: (content: string) => void;
-  placeholder?: string;
-  hasError?: boolean;
-  readOnly?: boolean; 
-  isRejected?: boolean;
-}
-
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly = false, isRejected = false }) => {
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const editorRef = useRef<HTMLDivElement>(null);
-  const quillRef = useRef<Quill | null>(null);
-
-  useEffect(() => {
-    if (!editorRef.current || !toolbarRef.current || quillRef.current) return;
-    const quill = new Quill(editorRef.current, {
-      theme: 'snow',
-      placeholder: placeholder || 'Nhập nội dung chi tiết...',
-      modules: { toolbar: toolbarRef.current },
-      readOnly: readOnly,
-    });
-    quillRef.current = quill;
-    if (value) quill.clipboard.dangerouslyPasteHTML(formatDetailHtml(value));
-    quill.on('text-change', () => {
-      const h = quill.root.innerHTML;
-      onChange(h === '<p><br></p>' ? '' : h);
-    });
-    return () => {
-      quillRef.current = null;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!quillRef.current) return;
-    const cur = quillRef.current.root.innerHTML;
-    const formatted = formatDetailHtml(value);
-    if (formatted !== cur && !(formatted === '' && cur === '<p><br></p>'))
-      quillRef.current.clipboard.dangerouslyPasteHTML(formatted || '');
-  }, [value]);
-
-  useEffect(() => {
-    if (quillRef.current) {
-      quillRef.current.enable(!readOnly);
-    }
-  }, [readOnly]);
-
-  const isDark = isRejected || readOnly;
-
-  return (
-    <div
-      style={{
-        backgroundColor: isDark ? '#F9FAFB' : '#fff', borderRadius: '6px',
-        border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB',
-        boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none',
-        transition: 'all 0.2s ease',
-        position: 'relative',
-      }}
-    >
-      <div 
-        ref={toolbarRef} 
-        className="ql-toolbar ql-snow" 
-        style={{ 
-          borderTop: 'none', borderLeft: 'none', borderRight: 'none', 
-          padding: '6px 10px', 
-          backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB',
-          display: readOnly ? 'none' : 'block',
-          borderTopLeftRadius: '6px',
-          borderTopRightRadius: '6px',
-        }}
-      >
-        <span className="ql-formats">
-          <button className="ql-bold" title="In đậm (Bold)" />
-          <button className="ql-italic" title="In nghiêng (Italic)" />
-          <button className="ql-underline" title="Gạch chân (Underline)" />
-        </span>
-        <span className="ql-formats">
-          <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
-          <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
-        </span>
-      </div>
-      <div ref={editorRef} style={{ minHeight: '140px', fontSize: '13px', border: 'none', color: isDark ? '#4B5563' : 'inherit', cursor: isDark ? 'not-allowed' : 'text', borderBottomLeftRadius: '6px', borderBottomRightRadius: '6px' }} />
     </div>
   );
 };
@@ -1242,7 +1152,7 @@ const BatchRequestDetailPage: React.FC = () => {
           </button>
         )}
       </div>
-      <QuillEditor
+      <CriteriaQuillEditor
         value={criterion.noiDung}
         hasError={
           (!isQuickViewRejected && criterion.required && isHtmlEmpty(criterion.noiDung))
@@ -1251,14 +1161,14 @@ const BatchRequestDetailPage: React.FC = () => {
         onChange={(value) => handleDetailsChange(criterion.id, value)}
         readOnly={!canEditQuickView}
         isRejected={isQuickViewRejected}
+        showCharCount={canEditQuickView}
+        charCountMax={getCriteriaMaxLength(criterion.tieuChi, criterion.code)}
+        charCountError={getCriteriaValueError(criterion.noiDung, criterion.tieuChi, isProductNameCriteria(criterion.tieuChi, criterion.code))}
+        toolbarVariant="compact"
+        minHeight={140}
+        fontSize={13}
+        borderRadius={6}
       />
-      {canEditQuickView && (
-        <CharCountHint
-          current={getCriteriaCountLength(criterion.noiDung, criterion.tieuChi, criterion.code)}
-          max={getCriteriaMaxLength(criterion.tieuChi, criterion.code)}
-          error={getCriteriaValueError(criterion.noiDung, criterion.tieuChi, isProductNameCriteria(criterion.tieuChi, criterion.code))}
-        />
-      )}
     </div>
   );
 

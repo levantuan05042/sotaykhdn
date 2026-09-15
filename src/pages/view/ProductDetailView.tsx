@@ -8,6 +8,7 @@ import CellWithTooltip from '../../components/ui/CellWithTooltip';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
 import { showSuccessToast } from '../../utils/appToast';
 import { stripHtmlText } from '../../utils/fieldValidation';
+import { formatDetailHtml as formatCriteriaHtml } from '../../components/ui/CriteriaQuillEditor';
 import 'quill/dist/quill.snow.css';
 import './ProductDetailView.css';
 
@@ -99,7 +100,7 @@ const isActiveStatus = (status: unknown) => String(status || '').toUpperCase() =
 
 const unescapeStoredHtml = (val: string) => {
   const trimmed = val.trim();
-  const hasRealTag = /<[a-z/][\s\S]*>/i.test(trimmed);
+  const hasRealTag = /<[a-z/]/i.test(trimmed);
   const hasEscapedTag = /&lt;\/?[a-z]/i.test(trimmed);
   if (!hasRealTag && hasEscapedTag) {
     return trimmed
@@ -114,40 +115,7 @@ const unescapeStoredHtml = (val: string) => {
 
 const formatDetailHtml = (val?: string): string => {
   if (!val || !val.trim()) return '';
-  const decoded = unescapeStoredHtml(val);
-  if (/<[a-z][\s\S]*>/i.test(decoded)) {
-    return decoded;
-  }
-  const normalized = decoded.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines = normalized.split('\n');
-  let start = 0;
-  while (start < lines.length && !lines[start].trim()) start++;
-  let end = lines.length - 1;
-  while (end >= start && !lines[end].trim()) end--;
-  if (start > end) return '';
-
-  return lines.slice(start, end + 1).map(line => {
-    if (!line.trim()) return '<p><br></p>';
-    let spaces = 0;
-    let tabs = 0;
-    let idx = 0;
-    while (idx < line.length) {
-      const c = line.charAt(idx);
-      if (c === '\t') { tabs++; idx++; }
-      else if (c === ' ' || c === '\u00A0') { spaces++; idx++; }
-      else break;
-    }
-    const indent = Math.min(8, tabs + Math.floor(spaces / 2));
-    const content = line.substring(idx).trimEnd()
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/  /g, ' &nbsp;');
-    if (indent > 0) {
-      return `<p class="ql-indent-${indent}" style="padding-left: ${indent * 2}em;">${content}</p>`;
-    }
-    return `<p>${content}</p>`;
-  }).join('');
+  return formatCriteriaHtml(unescapeStoredHtml(val));
 };
 
 const ProductDetailView: React.FC = () => {
