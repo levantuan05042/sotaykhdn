@@ -159,6 +159,7 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
       version={detail.version}
       comments={detail.comments}
       isPending={detail.status === 'PENDING_APPROVAL'}
+      isActive={!!detail.active}
       loading={loading}
       onBack={handleBack}
       onSaveReview={handleSaveReview}
@@ -202,7 +203,7 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', marginTop: '12px', cursor: 'not-allowed' }}>
+      <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '8px', cursor: 'not-allowed' }}>
         <input 
           type="checkbox" 
           id="isRequired"

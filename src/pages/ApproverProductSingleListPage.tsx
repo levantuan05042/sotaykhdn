@@ -15,6 +15,7 @@ interface ProductItem {
   id: string;
   stt: number;
   name: string;
+  productGroupName: string;
   createdBy: string;
   approvedBy: string;
   status: string;
@@ -94,6 +95,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
             id: item.id,
             stt: index + 1,
             name: item.name || '---',
+            productGroupName: item.productGroupName || '---',
             createdBy: item.createdByFullName || item.createdBy || '---',
             approvedBy: item.approvedByFullName || item.approvedBy || '---',
             status: item.status || 'DRAFT',
@@ -182,8 +184,13 @@ export const ApproverProductSingleListPage: React.FC = () => {
     {
       key: 'name',
       header: 'Tên nội dung',
-      width: '30%',
+      width: '28%',
       render: (row) => <span className="product-item-title-text">{row.name}</span>,
+    },
+    {
+      key: 'productGroupName',
+      header: 'Nhóm sản phẩm',
+      render: (row) => row.productGroupName || '---',
     },
     {
       key: 'createdBy',
