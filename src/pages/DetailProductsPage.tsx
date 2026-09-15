@@ -3,8 +3,6 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import './DetailGroupPage.css';
 import './DetailProductsPage.module.css';
 import toast from 'react-hot-toast';
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
@@ -18,8 +16,9 @@ import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
-import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
-import CharCountHint from '../components/ui/CharCountHint';
+import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
+import CriteriaQuillEditor from '../components/ui/CriteriaQuillEditor';
+import iconChat from '../assets/icon/iconchat.svg';
 
 interface Criterion {
   id: string;
@@ -373,92 +372,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
 };
 
 // ─────────────────────────────────────────────
-// QuillEditor Component
-// ─────────────────────────────────────────────
-interface QuillEditorProps {
-  value: string;
-  onChange: (content: string) => void;
-  placeholder?: string;
-  hasError?: boolean;
-  readOnly?: boolean;
-}
-
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly }) => {
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const editorRef  = useRef<HTMLDivElement>(null);
-  const quillRef   = useRef<Quill | null>(null);
-
-  useEffect(() => {
-    // Toolbar chỉ được render khi ở chế độ chỉnh sửa (xem JSX bên dưới: {!readOnly && <div ref={toolbarRef}.../>}).
-    // Ở chế độ readOnly, toolbarRef.current sẽ mãi mãi là null, nên KHÔNG được bắt buộc nó phải tồn tại
-    // ở đây — nếu không Quill sẽ không bao giờ được khởi tạo và value sẽ không bao giờ hiển thị (lỗi cũ).
-    if (!editorRef.current || quillRef.current) return;
-    if (!readOnly && !toolbarRef.current) return;
-    const quill = new Quill(editorRef.current, {
-      theme: 'snow',
-      readOnly: !!readOnly,
-      placeholder: placeholder || 'Nhập nội dung chi tiết...',
-      modules: { toolbar: readOnly ? false : toolbarRef.current },
-    });
-    quillRef.current = quill;
-    if (value) quill.clipboard.dangerouslyPasteHTML(value);
-    
-    if (!readOnly) {
-      quill.on('text-change', () => {
-        const h = quill.root.innerHTML;
-        onChange(h === '<p><br></p>' ? '' : h);
-      });
-    }
-    return () => { quillRef.current = null; };
-  }, [readOnly]);
-
-  useEffect(() => {
-    if (!quillRef.current) return;
-    quillRef.current.enable(!readOnly);
-    const cur = quillRef.current.root.innerHTML;
-    if (value !== cur && !(value === '' && cur === '<p><br></p>'))
-      quillRef.current.clipboard.dangerouslyPasteHTML(value || '');
-  }, [value, readOnly]);
-
-  return (
-    <div style={{ backgroundColor: readOnly ? '#F9FAFB' : '#fff', borderRadius: 8, border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease', position: 'relative' }}>
-      {!readOnly && (
-        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB', borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
-          <span className="ql-formats">
-            <button className="ql-bold" title="In đậm (Bold)" />
-            <button className="ql-italic" title="In nghiêng (Italic)" />
-            <button className="ql-underline" title="Gạch chân (Underline)" />
-            <button className="ql-strike" title="Gạch ngang chữ (Strikethrough)" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
-            <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-script" value="sub" title="Chỉ số dưới (Subscript)" />
-            <button className="ql-script" value="super" title="Chỉ số trên (Superscript - m²)" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-indent" value="-1" title="Giảm thụt lề (Outdent)" />
-            <button className="ql-indent" value="+1" title="Tăng thụt lề (Indent)" />
-          </span>
-          <span className="ql-formats">
-            <select className="ql-color" title="Màu chữ" />
-            <select className="ql-background" title="Màu nền highlight" />
-          </span>
-          <span className="ql-formats">
-            <select className="ql-align" title="Căn lề văn bản" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-clean" title="Xóa toàn bộ định dạng" />
-          </span>
-        </div>
-      )}
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: readOnly ? '#F9FAFB' : 'transparent', color: readOnly ? '#374151' : undefined, cursor: readOnly ? 'not-allowed' : 'text', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
-    </div>
-  );
-};
-
 // ─────────────────────────────────────────────
 // CriteriaModal Component
 // ─────────────────────────────────────────────
@@ -1284,17 +1197,16 @@ const DetailProductPage: React.FC = () => {
                         </div>
 
                         <div>
-                          <QuillEditor
+                          <CriteriaQuillEditor
                             value={criterion.value}
                             placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
                             hasError={hasErr}
                             readOnly={isReadOnly}
                             onChange={(v) => handleCriterionValueChange(criterion.id, v)}
-                          />
-                          <CharCountHint
-                            current={getCriteriaCountLength(criterion.value, criterion.name, criterion.code)}
-                            max={getCriteriaMaxLength(criterion.name, criterion.code)}
-                            error={lengthErr}
+                            showCharCount={!isReadOnly}
+                            charCountMax={getCriteriaMaxLength(criterion.name, criterion.code)}
+                            charCountError={lengthErr}
+                            formatIncoming={(v) => v}
                           />
                         </div>
                       </div>
@@ -1563,9 +1475,7 @@ const DetailProductPage: React.FC = () => {
                 </div>
               )}
               <div className="commentHeader">
-                <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <img src={iconChat} alt="" width={20} height={20} />
                 <span className="commentTitle">Bình luận</span>
               </div>
               <div className="commentList">

@@ -3,8 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import './DetailProductPage.css';
 import toast from 'react-hot-toast';
-import Quill from 'quill';
-import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
@@ -28,9 +26,12 @@ import { draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
-import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc, stripHtmlText } from '../utils/fieldValidation';
-import CharCountHint from '../components/ui/CharCountHint';
+import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc, stripHtmlText } from '../utils/fieldValidation';
+import CriteriaQuillEditor, { formatDetailHtml } from '../components/ui/CriteriaQuillEditor';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import iconChat from '../assets/icon/iconchat.svg';
+
+export { formatDetailHtml };
 
 interface Criterion {
   id: string;
@@ -90,43 +91,6 @@ const checkIsRequired = (item: any) => {
   const t1 = String(item.tieuChi || item.name  || '');
   const t2 = String(item.noiDung || item.value || '');
   return t1.includes('(*)') || t2.includes('(*)');
-};
-
-export const formatDetailHtml = (val?: string): string => {
-  if (!val || !val.trim()) return '';
-  if (/<[a-z][\s\S]*>/i.test(val)) {
-    return val;
-  }
-  const normalized = val.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-  const lines = normalized.split('\n');
-  let start = 0;
-  while (start < lines.length && !lines[start].trim()) start++;
-  let end = lines.length - 1;
-  while (end >= start && !lines[end].trim()) end--;
-  if (start > end) return '';
-
-  return lines.slice(start, end + 1).map(line => {
-    if (!line.trim()) return '<p><br></p>';
-    let spaces = 0;
-    let tabs = 0;
-    let idx = 0;
-    while (idx < line.length) {
-      const c = line.charAt(idx);
-      if (c === '\t') { tabs++; idx++; }
-      else if (c === ' ' || c === '\u00A0') { spaces++; idx++; }
-      else break;
-    }
-    const indent = Math.min(8, tabs + Math.floor(spaces / 2));
-    const content = line.substring(idx).trimEnd()
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/  /g, ' &nbsp;');
-    if (indent > 0) {
-      return `<p class="ql-indent-${indent}" style="padding-left: ${indent * 2}em;">${content}</p>`;
-    }
-    return `<p>${content}</p>`;
-  }).join('');
 };
 
 const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Criterion[] => {
@@ -425,92 +389,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
         style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ''; }}
       />
-    </div>
-  );
-};
-
-interface QuillEditorProps {
-  value: string;
-  onChange: (content: string) => void;
-  placeholder?: string;
-  hasError?: boolean;
-  readOnly?: boolean;
-  isRejected?: boolean;
-}
-
-const QuillEditor: React.FC<QuillEditorProps> = ({ value, onChange, placeholder, hasError, readOnly, isRejected }) => {
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const editorRef  = useRef<HTMLDivElement>(null);
-  const quillRef   = useRef<Quill | null>(null);
-
-  useEffect(() => {
-    if (!editorRef.current || quillRef.current) return;
-    if (!readOnly && !toolbarRef.current) return;
-    const quill = new Quill(editorRef.current, {
-      theme: 'snow',
-      placeholder: placeholder || 'Nhập nội dung chi tiết...',
-      modules: { toolbar: readOnly ? false : toolbarRef.current },
-      readOnly: readOnly,
-    });
-    quillRef.current = quill;
-    if (value) quill.clipboard.dangerouslyPasteHTML(formatDetailHtml(value));
-    
-    if (!readOnly) {
-      quill.on('text-change', (_delta: any, _oldDelta: any, source: string) => {
-        if (source !== 'user') return;
-        const h = quill.root.innerHTML;
-        onChange(h === '<p><br></p>' ? '' : h);
-      });
-    }
-    return () => { quillRef.current = null; };
-  }, [readOnly]);
-
-  useEffect(() => {
-    if (!quillRef.current) return;
-    quillRef.current.enable(!readOnly);
-    const cur = quillRef.current.root.innerHTML;
-    const formatted = formatDetailHtml(value);
-    if (formatted !== cur && !(formatted === '' && cur === '<p><br></p>'))
-      quillRef.current.clipboard.dangerouslyPasteHTML(formatted || '');
-  }, [value, readOnly]);
-
-  const isDark = isRejected || readOnly;
-
-  return (
-    <div style={{ backgroundColor: isDark ? '#F9FAFB' : '#fff', borderRadius: 8, border: hasError ? '1px solid #EF4444' : '1px solid #D1D5DB', boxShadow: hasError ? '0 0 0 1px rgba(239,68,68,0.15)' : 'none', transition: 'all 0.2s ease', position: 'relative' }}>
-      {!readOnly && (
-        <div ref={toolbarRef} className="ql-toolbar ql-snow" style={{ borderTop: 'none', borderLeft: 'none', borderRight: 'none', padding: '8px 12px', backgroundColor: hasError ? '#FEF2F2' : '#F9FAFB', borderTopLeftRadius: 8, borderTopRightRadius: 8 }}>
-          <span className="ql-formats">
-            <button className="ql-bold" title="In đậm (Bold)" />
-            <button className="ql-italic" title="In nghiêng (Italic)" />
-            <button className="ql-underline" title="Gạch chân (Underline)" />
-            <button className="ql-strike" title="Gạch ngang chữ (Strikethrough)" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-list" value="ordered" title="Danh sách số (Numbered list)" />
-            <button className="ql-list" value="bullet" title="Danh sách dấu chấm (Bullet list)" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-script" value="sub" title="Chỉ số dưới (Subscript)" />
-            <button className="ql-script" value="super" title="Chỉ số trên (Superscript - m²)" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-indent" value="-1" title="Giảm thụt lề (Outdent)" />
-            <button className="ql-indent" value="+1" title="Tăng thụt lề (Indent)" />
-          </span>
-          <span className="ql-formats">
-            <select className="ql-color" title="Màu chữ" />
-            <select className="ql-background" title="Màu nền highlight" />
-          </span>
-          <span className="ql-formats">
-            <select className="ql-align" title="Căn lề văn bản" />
-          </span>
-          <span className="ql-formats">
-            <button className="ql-clean" title="Xóa toàn bộ định dạng" />
-          </span>
-        </div>
-      )}
-      <div ref={editorRef} style={{ minHeight: 120, fontSize: 15, border: 'none', backgroundColor: isDark ? '#F9FAFB' : '#FFF', color: isDark ? '#374151' : '#1F2937', cursor: isDark ? 'not-allowed' : 'text', borderBottomLeftRadius: 8, borderBottomRightRadius: 8 }}/>
     </div>
   );
 };
@@ -1678,18 +1556,16 @@ const DetailProductPage: React.FC = () => {
                     </div>
 
                     <div>
-                      <QuillEditor
+                      <CriteriaQuillEditor
                         value={criterion.value}
                         placeholder={criterion.isRequired ? 'Tiêu chí này bắt buộc phải nhập...' : 'Nhập nội dung chi tiết...'}
                         hasError={hasErr}
                         readOnly={isReadOnly}
                         isRejected={isRejected}
                         onChange={(v) => handleCriterionValueChange(criterion.id, v)}
-                      />
-                      <CharCountHint
-                        current={getCriteriaCountLength(criterion.value, criterion.name, criterion.code)}
-                        max={getCriteriaMaxLength(criterion.name, criterion.code)}
-                        error={lengthErr}
+                        showCharCount={!isReadOnly}
+                        charCountMax={getCriteriaMaxLength(criterion.name, criterion.code)}
+                        charCountError={lengthErr}
                       />
                     </div>
                   </div>
@@ -1886,9 +1762,7 @@ const DetailProductPage: React.FC = () => {
 
               <div className="commentCard emptyComment">
                 <div className="commentHeader">
-                  <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <img src={iconChat} alt="" width={20} height={20} />
                   <span className="commentTitle">Bình luận phản hồi</span>
                 </div>
                 <div className="commentList">

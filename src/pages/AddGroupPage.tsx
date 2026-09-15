@@ -11,6 +11,7 @@ import CharCountHint from '../components/ui/CharCountHint';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import iconChat from '../assets/icon/iconchat.svg';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -284,9 +285,7 @@ const AddProductPage: React.FC = () => {
 
              <div className="commentCard emptyComment">
                 <div className="commentHeader">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                    <path d="M21 11.5C21 16.1944 17.1944 20 12.5 20C11.1327 20 9.84307 19.6765 8.7033 19.1022L3 21L4.8978 15.2967C4.32354 14.1569 4 12.8673 4 11.5C4 6.80558 7.80558 3 12.5 3C17.1944 3 21 6.80558 21 11.5Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
+                  <img src={iconChat} alt="" width={20} height={20} />
                   <span className="commentTitle">Bình luận</span>
                 </div>
                 <div className="emptyStateText">

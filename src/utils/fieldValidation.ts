@@ -19,10 +19,6 @@ export const stripHtmlText = (html?: string | null) => {
   return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
 };
 
-/** Đếm ký tự text thường (bỏ thẻ HTML). Ví dụ "tuấn" = 4. */
-export const getCriteriaCountLength = (html: string, _name?: string, _code?: string) =>
-  stripHtmlText(html).length;
-
 /** Tên nhóm/danh mục/... vẫn giới hạn 255. Tên sản phẩm (CLOB) không dùng hàm này. */
 export const getNameError = (value: string, label = 'Trường này') => {
   if (value.trim().length > FIELD_LIMITS.name) {

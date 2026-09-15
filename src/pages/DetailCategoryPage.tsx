@@ -15,6 +15,7 @@ import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
+import iconChat from '../assets/icon/iconchat.svg';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
@@ -678,9 +679,7 @@ const DetailCategoryPage: React.FC = () => {
 
             <div className="commentCard">
               <div className="commentHeader">
-                <svg width="20" height="20" viewBox="0 0 22 22" fill="none">
-                  <path fillRule="evenodd" clipRule="evenodd" d="M18.071 18.0698C15.0159 21.1264 10.4896 21.7867 6.78631 20.074C6.23961 19.8539 2.70113 20.8339 1.93334 20.067C1.16555 19.2991 2.14639 15.7601 1.92631 15.2134C0.212846 11.5106 0.874111 6.9826 3.9302 3.9271C7.83147 0.0243001 14.1698 0.0243001 18.071 3.9271C21.9803 7.83593 21.9723 14.1681 18.071 18.0698Z" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
+                <img src={iconChat} alt="" width={20} height={20} />
                 <span className="commentTitle">Bình luận phản hồi</span>
               </div>
               <div className="commentList">

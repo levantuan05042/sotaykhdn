@@ -1,5 +1,5 @@
 import React from 'react';
-import type { ProductsViewMode } from '../../hooks/useProductsViewMode';
+import type { ProductsViewMode } from '../../../hooks/useProductsViewMode';
 import './ProductsViewToggle.css';
 
 type ProductsViewToggleProps = {
