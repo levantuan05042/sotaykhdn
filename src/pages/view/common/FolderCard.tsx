@@ -1,4 +1,3 @@
-import React from 'react';
 import './FolderCard.css';
 
 export type FolderKind = 'group' | 'category' | 'business';

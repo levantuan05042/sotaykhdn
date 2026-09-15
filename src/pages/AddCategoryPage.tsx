@@ -133,7 +133,7 @@ const AddCategoryPage: React.FC = () => {
       setTimeout(() => navigate('/product-category'), 400);
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Tên danh mục sản phẩm đã tồn tại';
+      const errorMessage = error.response?.data?.message || 'Tên danh mục sản phẩm đã tồn tại một bản trùng';
       toast.error(errorMessage, { position: 'top-center' });
       endSubmit();
     }

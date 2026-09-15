@@ -212,7 +212,7 @@ const AddCriteriaPage: React.FC = () => {
 
     } catch (error: any) {
       console.error("Lỗi API:", error);
-      const errorMessage = error.response?.data?.message || 'Mã hoặc tên tiêu chí đã tồn tại trên hệ thống';
+      const errorMessage = error.response?.data?.message || 'Mã hoặc tên tiêu chí đã tồn tại một bản trùng';
       toast.error(errorMessage, { position: 'top-center' });
       endSubmit();
     }

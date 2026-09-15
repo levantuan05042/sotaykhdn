@@ -11,11 +11,11 @@ import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdow
 import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { formatApprovedBy, getCascadeRowClassName } from '../utils/formatUtils';
-import hotToast from 'react-hot-toast';
 import {
   displaySuccessMessage,
   notifyIfCannotShowChild,
   showDisplayStatusFromApi,
+  showErrorToast,
   showSuccessToast,
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
@@ -340,7 +340,7 @@ const ProductPage: React.FC = () => {
       setData(prevData =>
         prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
       );
-      hotToast.error('Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!', { position: 'top-center' });
+      showErrorToast('Không thể cập nhật trạng thái hiệu lực. Vui lòng thử lại!');
     }
   };
 

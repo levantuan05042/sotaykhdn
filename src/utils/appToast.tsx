@@ -9,13 +9,14 @@ import './appToast.css';
 type ToastType = 'success' | 'error';
 type ToastItem = { id: number; type: ToastType; title: string; description?: string; leaving?: boolean };
 
-const TOAST_DURATION_MS = 1500;
+const TOAST_DURATION_MS = 2200;
 const TOAST_LEAVE_MS = 180;
 
 let toasts: ToastItem[] = [];
 let seq = 1;
 const subscribers = new Set<() => void>();
-const hideTimers = new Map<number, number>();
+const autoHideTimers = new Map<number, number>();
+const leaveTimers = new Map<number, number>();
 let hostRoot: Root | null = null;
 
 const notifySubscribers = () => {
@@ -36,24 +37,29 @@ const ensureHost = () => {
   }
 };
 
-const clearHideTimer = (id: number) => {
-  const timer = hideTimers.get(id);
+const clearTimer = (map: Map<number, number>, id: number) => {
+  const timer = map.get(id);
   if (timer) {
     window.clearTimeout(timer);
-    hideTimers.delete(id);
+    map.delete(id);
   }
 };
 
 const dismissToast = (id: number) => {
   const current = toasts.find((t) => t.id === id);
   if (!current || current.leaving) return;
-  clearHideTimer(id);
+  clearTimer(autoHideTimers, id);
+  clearTimer(leaveTimers, id);
   toasts = toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t));
   notifySubscribers();
-  window.setTimeout(() => {
-    toasts = toasts.filter((t) => t.id !== id);
-    notifySubscribers();
-  }, TOAST_LEAVE_MS);
+  leaveTimers.set(
+    id,
+    window.setTimeout(() => {
+      leaveTimers.delete(id);
+      toasts = toasts.filter((t) => t.id !== id);
+      notifySubscribers();
+    }, TOAST_LEAVE_MS)
+  );
 };
 
 const pushToast = (type: ToastType, title: string, description?: string) => {
@@ -62,7 +68,7 @@ const pushToast = (type: ToastType, title: string, description?: string) => {
   const id = seq++;
   toasts = [...toasts, { id, type, title, description }];
   notifySubscribers();
-  hideTimers.set(
+  autoHideTimers.set(
     id,
     window.setTimeout(() => dismissToast(id), TOAST_DURATION_MS)
   );
@@ -106,14 +112,15 @@ const ToastHost = () => {
   }, []);
 
   return (
-    <div className="app-toast-host">
+    <div className="app-toast-host" aria-live="polite" aria-relevant="additions">
       {items.map((item) => (
         <div
           key={item.id}
           className={`app-toast app-toast--${item.type}${item.leaving ? ' is-leaving' : ''}`}
+          role={item.type === 'error' ? 'alert' : 'status'}
         >
           <div className="app-toast-body">
-            <div className="app-toast-icon">
+            <div className="app-toast-icon" aria-hidden>
               {item.type === 'success' ? <SuccessIcon /> : <ErrorIcon />}
             </div>
             <div className="app-toast-copy">
@@ -154,6 +161,11 @@ export const showApiErrorToast = (error: any, fallback = 'Có lỗi xảy ra') =
 
 const toastMessageToText = (message: unknown): string => {
   if (typeof message === 'string') return message;
+  if (message == null) return '';
+  if (typeof message === 'object' && 'message' in (message as object)) {
+    const nested = (message as { message?: unknown }).message;
+    if (typeof nested === 'string') return nested;
+  }
   return '';
 };
 
@@ -249,16 +261,20 @@ const fetchEntity = async (url: string) => {
 
 const isInactive = (entity: any) => entity && entity.active === false;
 
+const blockShowChild = (typeLabel: string, name: string | null | undefined): true => {
+  const copy = getShowBlockedByParentCopy(typeLabel, name);
+  showErrorToast(copy.title, copy.description);
+  return true;
+};
+
 /** Trả về true nếu đã chặn và hiện toast — không được hiện CON. */
 export const notifyIfCannotShowChild = async (
   typeLabel: string,
   name: string | null | undefined,
   item?: any
 ): Promise<boolean> => {
-  const copy = getShowBlockedByParentCopy(typeLabel, name);
   if (isParentHidden(item) || isCriteriaFullyLocked(item)) {
-    showErrorToast(copy.title, copy.description);
-    return true;
+    return blockShowChild(typeLabel, name);
   }
 
   try {
@@ -268,31 +284,21 @@ export const notifyIfCannotShowChild = async (
 
     if (businessId) {
       const business = await fetchEntity(`${BASE_URL}/business/${businessId}`);
-      if (isInactive(business)) {
-        showErrorToast(copy.title, copy.description);
-        return true;
-      }
+      if (isInactive(business)) return blockShowChild(typeLabel, name);
     }
     if (categoryId) {
       const category = await fetchEntity(`${BASE_URL}/product-category/${categoryId}`);
       if (category && (category.active === false || category.groupActive === false)) {
-        showErrorToast(copy.title, copy.description);
-        return true;
+        return blockShowChild(typeLabel, name);
       }
       if (category?.groupId) {
         const group = await fetchEntity(`${BASE_URL}/product-groups/${category.groupId}`);
-        if (isInactive(group)) {
-          showErrorToast(copy.title, copy.description);
-          return true;
-        }
+        if (isInactive(group)) return blockShowChild(typeLabel, name);
       }
     }
     if (groupId) {
       const group = await fetchEntity(`${BASE_URL}/product-groups/${groupId}`);
-      if (isInactive(group)) {
-        showErrorToast(copy.title, copy.description);
-        return true;
-      }
+      if (isInactive(group)) return blockShowChild(typeLabel, name);
     }
   } catch {
     // ignore network errors here; caller still hits update API
