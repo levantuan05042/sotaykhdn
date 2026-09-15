@@ -19,28 +19,9 @@ export const stripHtmlText = (html?: string | null) => {
   return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
 };
 
-const utf8Encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
-
-export const getUtf8ByteLength = (value?: string | null) => {
-  const text = value ?? '';
-  if (utf8Encoder) return utf8Encoder.encode(text).length;
-  let bytes = 0;
-  for (const ch of text) {
-    const code = ch.codePointAt(0) ?? 0;
-    if (code <= 0x7f) bytes += 1;
-    else if (code <= 0x7ff) bytes += 2;
-    else if (code <= 0xffff) bytes += 3;
-    else bytes += 4;
-  }
-  return bytes;
-};
-
-/** Độ dài thực tế lưu cột VALUE: HTML Quill đo theo byte UTF-8, gồm cả thẻ. */
-export const getStoredCriteriaLength = (html?: string | null) => getUtf8ByteLength(html);
-
-/** Mọi tiêu chí (kể cả tên sản phẩm) đếm cùng chuẩn: byte UTF-8 của HTML lưu. */
+/** Đếm ký tự text thường (bỏ thẻ HTML). Ví dụ "tuấn" = 4. */
 export const getCriteriaCountLength = (html: string, _name?: string, _code?: string) =>
-  getStoredCriteriaLength(html);
+  stripHtmlText(html).length;
 
 /** Tên nhóm/danh mục/... vẫn giới hạn 255. Tên sản phẩm (CLOB) không dùng hàm này. */
 export const getNameError = (value: string, label = 'Trường này') => {
