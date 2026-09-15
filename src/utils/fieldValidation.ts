@@ -1,5 +1,5 @@
 export const FIELD_LIMITS = {
-  /** Giữ giới hạn cho tên nhóm/danh mục/nghiệp vụ/tiêu chí master (VARCHAR). */
+  /** Giữ giới hạn cho tên nhóm/danh mục sản phẩm 1–2/tiêu chí master (VARCHAR). */
   name: 255,
   code: 50,
   /** VALUE / tên sản phẩm đã chuyển CLOB — không giới hạn UI. */

@@ -186,7 +186,7 @@ export const installVisibleToasts = () => {
 };
 
 export const PARENT_HIDDEN_DESCRIPTION =
-  'Nghiệp vụ cha đang ẩn. Vui lòng hiện nghiệp vụ cha trước';
+  'Cấp cha đang ẩn. Vui lòng hiện cấp cha trước';
 
 export const plainDisplayName = (name?: string | null): string => {
   if (!name) return '';
@@ -209,17 +209,17 @@ export const getHideBlockedByPendingCopy = (
   if (kind === 'group') {
     return {
       title: `Không thể ẩn nhóm sản phẩm "${itemName}"`,
-      description: 'Đang có sản phẩm hoặc danh mục hoặc nghiệp vụ con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
+      description: 'Đang có sản phẩm hoặc danh mục sản phẩm 1 hoặc danh mục sản phẩm 2 con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
     };
   }
   if (kind === 'category') {
     return {
-      title: `Không thể ẩn danh mục "${itemName}"`,
-      description: 'Đang có sản phẩm hoặc nghiệp vụ con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
+      title: `Không thể ẩn danh mục sản phẩm 1 "${itemName}"`,
+      description: 'Đang có sản phẩm hoặc danh mục sản phẩm 2 con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
     };
   }
   return {
-    title: `Không thể ẩn nghiệp vụ "${itemName}"`,
+    title: `Không thể ẩn danh mục sản phẩm 2 "${itemName}"`,
     description: 'Đang có sản phẩm đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
   };
 };

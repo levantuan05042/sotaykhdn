@@ -12,6 +12,7 @@ import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh } from '../hooks/useAdminAutoRefresh';
 
 const STATUS_OPTIONS = [
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
@@ -204,27 +205,7 @@ const RequestListPage: React.FC = () => {
     return () => clearTimeout(handler);
   }, [startDate, endDate]);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 15000);
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData(true);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [searchTerm, startDate, endDate]);
+  useAdminAutoRefresh(() => fetchData(true), [searchTerm, startDate, endDate]);
 
   useLayoutEffect(() => {
     if (openDropdown !== 'time') {

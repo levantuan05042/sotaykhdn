@@ -23,6 +23,7 @@ import {
 } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const extractUsername = (rawName: string | null | undefined): string => {
   if (!rawName) return '';
@@ -705,25 +706,20 @@ const BatchRequestDetailPage: React.FC = () => {
       }
     };
     fetchBatchDetails();
+  }, [requestId, externalName]);
 
-    const interval = setInterval(() => {
-      fetchBatchDetails(true);
-    }, 15000);
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchBatchDetails(true);
+  useAdminAutoRefresh(async () => {
+    if (!requestId) return;
+    try {
+      const response = await axios.get(`${API_ENDPOINTS.PRODUCT.LIST2}/${encodeURIComponent(requestId)}/products`);
+      const data = response.data || [];
+      setProducts(data);
+      if (!externalName && data.length > 0 && data[0].requestName) {
+        setBatchName(data[0].requestName);
       }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
+    } catch {
+      /* background refresh – ignore */
+    }
   }, [requestId, externalName]);
 
   useEffect(() => {
@@ -777,7 +773,7 @@ const BatchRequestDetailPage: React.FC = () => {
         const options: OptionItem[] = (res.data || []).map((b: any) => ({ id: String(b.id), name: b.name }));
         setOperationOptions(options);
       } catch (error) {
-        console.error('Lỗi tải nghiệp vụ:', error);
+        console.error('Lỗi tải danh mục sản phẩm 2:', error);
       } finally { 
         if (!cancelled) setLoadingOperations(false); 
       }
@@ -1074,6 +1070,7 @@ const BatchRequestDetailPage: React.FC = () => {
 
       setHasFormChanges(false);
       toast.success("Đã lưu thành công vào CSDL!", { position: 'top-center' });
+      notifyAdminDataChanged();
     } catch (error: any) {
       console.error("Lỗi khi lưu DB:", error);
       toast.error(getApiErrorMessage(error, "Có lỗi xảy ra khi lưu vào hệ thống."), { position: 'top-center' });
@@ -1118,6 +1115,7 @@ const BatchRequestDetailPage: React.FC = () => {
       setHasFormChanges(false);
       setConfirmAction(null);
       toast.success("Đã lưu nháp thành công!", { position: 'top-center' });
+      notifyAdminDataChanged();
       allowLeave();
       setTimeout(() => window.location.reload(), 1600);
     } catch (error: any) {
@@ -1172,6 +1170,7 @@ const BatchRequestDetailPage: React.FC = () => {
       setHasFormChanges(false);
       setConfirmAction(null);
       toast.success("Gửi phê duyệt thành công", { position: 'top-center' });
+      notifyAdminDataChanged();
       setTimeout(() => window.location.reload(), 1600); 
     } catch (error: any) {
       console.error(error);
@@ -1327,8 +1326,8 @@ const BatchRequestDetailPage: React.FC = () => {
                 <tr className="batch-table-header-tr">
                   <th className="batch-table-th" style={{ width: '20%' }}>Sản phẩm</th>
                   <th className="batch-table-th" style={{ width: '20%' }}>Nhóm sản phẩm</th>
-                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm</th>
-                  <th className="batch-table-th" style={{ width: '20%' }}>Nghiệp vụ</th>
+                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm 1</th>
+                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm 2</th>
                   <th className="batch-table-th" style={{ width: '20%' }}>Ghi chú</th>
                   <th className="batch-table-th" style={{ width: '1%', whiteSpace: 'nowrap' }}></th> 
                 </tr>
@@ -1521,7 +1520,7 @@ const BatchRequestDetailPage: React.FC = () => {
                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'flex-end' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <CustomSelect
-                      label="Danh mục sản phẩm"
+                      label="Danh mục sản phẩm 1"
                       value={formData.productCategoryId}
                       options={categoryOptions}
                       placeholder="Chưa chọn"
@@ -1534,7 +1533,7 @@ const BatchRequestDetailPage: React.FC = () => {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <CustomSelect
-                      label="Nghiệp vụ"
+                      label="Danh mục sản phẩm 2"
                       value={formData.businessId}
                       options={operationOptions}
                       placeholder="Chưa chọn"

@@ -4,8 +4,10 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
+import ProductsViewToggle from './common/ProductsViewToggle';
 import './Search.css';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
+import { useProductsViewMode } from '../../hooks/useProductsViewMode';
 
 interface SearchProductItem {
   id: string;
@@ -34,6 +36,7 @@ export const SearchResultsPage = () => {
 
   const [results, setResults] = useState<SearchData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { viewMode, setViewMode } = useProductsViewMode();
 
   const fetchSearchResults = useCallback(async (isBackground = false) => {
     if (!query.trim()) return;
@@ -85,17 +88,23 @@ export const SearchResultsPage = () => {
           <span className="search-subtitle">Kết quả cho</span>
           <h1 className="search-keyword">"{query}"</h1>
         </div>
-        <div className="search-total-count">
-          {results.total} sản phẩm
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="search-total-count">
+            {results.total} sản phẩm
+          </div>
+          {results.products.length > 0 && (
+            <ProductsViewToggle value={viewMode} onChange={setViewMode} />
+          )}
         </div>
       </div>
 
       {results.products && results.products.length > 0 ? (
-        <div className="products-grid">
+        <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
           {results.products.map((product) => (
             <ProductCard 
               key={product.id} 
               product={product}
+              layout={viewMode}
               onClick={() => navigate(`/view/product-detail/${product.id}`)}
             />
           ))}

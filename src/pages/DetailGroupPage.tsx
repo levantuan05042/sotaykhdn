@@ -26,6 +26,7 @@ import {
   showErrorToast,
   showSuccessToast,
 } from '../utils/appToast';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -167,39 +168,21 @@ const DetailGroupPage: React.FC = () => {
   const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(canEdit && isModified));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
-  useEffect(() => {
-    if (!id) return;
-    const refetchStatus = async () => {
-      if (isModified || isSubmitting || confirmAction) return;
-      try {
-        const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id));
-        if (response.ok) {
-          const data = await response.json();
-          setProductData(data);
-          setFormData({
-            name: data.name || '',
-            superGroup: data.superGroup || ''
-          });
-          setIsActive(data.active ?? true);
-        }
-      } catch (e) {}
-    };
-
-    const interval = setInterval(refetchStatus, 15000);
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        refetchStatus();
+  useAdminAutoRefresh(async () => {
+    if (!id || isModified || isSubmitting || confirmAction) return;
+    try {
+      const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.DETAIL(id));
+      if (response.ok) {
+        const data = await response.json();
+        setProductData(data);
+        setFormData({
+          name: data.name || '',
+          superGroup: data.superGroup || ''
+        });
+        setIsActive(data.active ?? true);
       }
-    };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [id, isModified, isSubmitting, confirmAction]);
+    } catch (e) {}
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isInputDisabled) return;
@@ -418,6 +401,7 @@ const DetailGroupPage: React.FC = () => {
         setIsActive(newActive);
         setShowCascadeModal(false);
         showSuccessToast(displaySuccessMessage(newActive, 'Nhóm sản phẩm', productData?.name));
+        notifyAdminDataChanged();
       } else {
         showDisplayStatusFromApi(data);
       }
@@ -430,6 +414,7 @@ const DetailGroupPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 

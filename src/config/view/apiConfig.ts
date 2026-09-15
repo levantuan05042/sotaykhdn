@@ -27,7 +27,7 @@ export const API_ENDPOINTS = {
     LIST: `${BASE_URL}/api/v1/criteria`,
   },
 
-  PRODUCT_BUSINESS: { // Lưu ý: mình map nghiệp vụ vào đây
+  PRODUCT_BUSINESS: { // Lưu ý: map danh mục sản phẩm 2 vào đây
     DETAIL: (id: string | number) => `${BASE_URL}/api/v1/business/${id}`,
     UPDATE: (id: string | number) => `${BASE_URL}/api/v1/business/update/${id}`,
     DELETE: (id: string | number) => `${BASE_URL}/api/v1/business/delete/${id}`,

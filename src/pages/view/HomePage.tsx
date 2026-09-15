@@ -7,7 +7,9 @@ import type { ProductInfo } from './common/ProductCard';
 import { addRecentSearch, getRecentSearches, getRecentlyViewed } from '../../utils/userHistoryStorage';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 import { usePointerListDrag } from '../../hooks/useDragAutoScroll';
+import { useProductsViewMode } from '../../hooks/useProductsViewMode';
 import { showErrorToast, showSuccessToast } from '../../utils/appToast';
+import ProductsViewToggle from './common/ProductsViewToggle';
 
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
 import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
@@ -84,6 +86,7 @@ interface SearchResponse {
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { viewMode, setViewMode } = useProductsViewMode();
 
   const [recentProducts, setRecentProducts] = useState<ProductInfo[]>([]);
   const [newlyCreatedProducts, setNewlyCreatedProducts] = useState<ProductInfo[]>([]);
@@ -226,14 +229,17 @@ const HomePage: React.FC = () => {
         throw new Error(data?.message || 'Không thể lưu thứ tự nhóm sản phẩm');
       }
       showSuccessToast('Đã cập nhật thứ tự nhóm sản phẩm');
+      return true;
     } catch (error: any) {
       showErrorToast(error?.message || 'Không thể lưu thứ tự nhóm sản phẩm');
       void loadViewData();
+      return false;
     } finally {
       setSavingOrder(false);
     }
   }, [loadViewData]);
 
+  const orderSnapshotRef = useRef<string[] | null>(null);
   const categoriesRef = useRef(categories);
   categoriesRef.current = categories;
 
@@ -247,8 +253,7 @@ const HomePage: React.FC = () => {
     next.splice(toIdx, 0, moved);
     categoriesRef.current = next;
     setCategories(next);
-    void persistCategoryOrder(next);
-  }, [persistCategoryOrder]);
+  }, []);
 
   const { draggedId, dragOverId, startDrag } = usePointerListDrag(
     {
@@ -366,12 +371,27 @@ const HomePage: React.FC = () => {
   const defaultSearches = ['SP vay vốn', 'thanh toán', 'xuất khẩu'];
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
-  const toggleReorderMode = () => {
-    setReorderMode((prev) => {
-      const next = !prev;
-      if (next) setShowAllCategories(true);
-      return next;
-    });
+  const enterReorderMode = () => {
+    orderSnapshotRef.current = categories.map((c) => String(c.id));
+    setShowAllCategories(true);
+    setReorderMode(true);
+  };
+
+  const finishReorder = async () => {
+    if (savingOrder || draggedId) return;
+    const snapshot = orderSnapshotRef.current;
+    const currentIds = categoriesRef.current.map((c) => String(c.id));
+    const changed = !snapshot
+      || snapshot.length !== currentIds.length
+      || snapshot.some((id, index) => id !== currentIds[index]);
+
+    if (changed) {
+      const ok = await persistCategoryOrder(categoriesRef.current);
+      if (!ok) return;
+    }
+
+    orderSnapshotRef.current = null;
+    setReorderMode(false);
   };
 
   return (
@@ -468,7 +488,7 @@ const HomePage: React.FC = () => {
                             <span className="text-sm text-gray-800 truncate">
                               {highlightText(item.name, searchQuery)}
                             </span>
-                            <span className="text-xs text-gray-400 mt-0.5">Danh mục</span>
+                            <span className="text-xs text-gray-400 mt-0.5">Danh mục sản phẩm 1</span>
                           </div>
                         </div>
                       ))
@@ -493,7 +513,7 @@ const HomePage: React.FC = () => {
                             <span className="text-sm text-gray-800 truncate">
                               {highlightText(item.name, searchQuery)}
                             </span>
-                            <span className="text-xs text-gray-400 mt-0.5">Nghiệp vụ</span>
+                            <span className="text-xs text-gray-400 mt-0.5">Danh mục sản phẩm 2</span>
                           </div>
                         </div>
                       ))
@@ -583,13 +603,21 @@ const HomePage: React.FC = () => {
               {canReorderCategories && (
                 <button
                   type="button"
-                  onClick={toggleReorderMode}
-                  className={`category-reorder-toggle${reorderMode ? ' is-active' : ''}`}
-                  title={reorderMode ? 'Tắt chế độ sắp xếp' : 'Sắp xếp danh mục'}
-                  aria-label={reorderMode ? 'Tắt chế độ sắp xếp' : 'Sắp xếp danh mục'}
+                  onClick={() => {
+                    if (reorderMode) void finishReorder();
+                    else enterReorderMode();
+                  }}
+                  className={`category-reorder-toggle${reorderMode ? ' is-active is-done' : ''}`}
+                  title={reorderMode ? 'Xong' : 'Sắp xếp danh mục'}
+                  aria-label={reorderMode ? 'Xong' : 'Sắp xếp danh mục'}
                   aria-pressed={reorderMode}
+                  disabled={savingOrder || Boolean(draggedId)}
                 >
-                  <img src={iconMoveCategory} alt="" width={20} height={20} />
+                  {reorderMode ? (
+                    <span className="category-reorder-done-label">{savingOrder ? 'Đang lưu...' : 'Xong'}</span>
+                  ) : (
+                    <img src={iconMoveCategory} alt="" width={20} height={20} />
+                  )}
                 </button>
               )}
             </div>
@@ -614,41 +642,57 @@ const HomePage: React.FC = () => {
                       if (reorderMode) return;
                       handleCategoryClick(cat.id);
                     }}
-                    onPointerDown={(e) => {
-                      if (!reorderMode) return;
-                      startDrag(catId, e, cat.name);
-                    }}
                     className={[
                       'category-reorder-card bg-white rounded-[12px] p-5 border border-gray-200 transition-all flex flex-col justify-between min-h-[158px] w-full',
-                      reorderMode ? 'cursor-grab' : 'cursor-pointer hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6]',
+                      reorderMode ? 'is-reorder-mode' : 'cursor-pointer hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6]',
                       isDragging ? 'is-dragging' : '',
                       isDragOver ? 'is-drag-over' : '',
                     ].filter(Boolean).join(' ')}
                   >
-                    <div 
-                      className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: config.bgColor }}
-                    >
-                      {iconUrl ? (
-                        <div 
-                          className="w-6 h-6"
-                          style={{
-                            backgroundColor: config.iconColor,
-                            maskImage: `url("${iconUrl}")`,
-                            maskRepeat: 'no-repeat',
-                            maskPosition: 'center',
-                            maskSize: 'contain',
-                            WebkitMaskImage: `url("${iconUrl}")`,
-                            WebkitMaskRepeat: 'no-repeat',
-                            WebkitMaskPosition: 'center',
-                            WebkitMaskSize: 'contain'
-                          }}
-                        />
-                      ) : (
-                        <svg width="24" height="24" fill="none" stroke={config.iconColor} strokeWidth="2.2" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M12 8v8M8 12h8" />
-                        </svg>
+                    <div className="flex items-start justify-between gap-2 w-full">
+                      <div 
+                        className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: config.bgColor }}
+                      >
+                        {iconUrl ? (
+                          <div 
+                            className="w-6 h-6"
+                            style={{
+                              backgroundColor: config.iconColor,
+                              maskImage: `url("${iconUrl}")`,
+                              maskRepeat: 'no-repeat',
+                              maskPosition: 'center',
+                              maskSize: 'contain',
+                              WebkitMaskImage: `url("${iconUrl}")`,
+                              WebkitMaskRepeat: 'no-repeat',
+                              WebkitMaskPosition: 'center',
+                              WebkitMaskSize: 'contain'
+                            }}
+                          />
+                        ) : (
+                          <svg width="24" height="24" fill="none" stroke={config.iconColor} strokeWidth="2.2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M12 8v8M8 12h8" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {reorderMode && (
+                        <div
+                          className="category-drag-handle"
+                          onPointerDown={(e) => startDrag(catId, e, cat.name)}
+                          title="Nhấn giữ để kéo di chuyển"
+                          aria-label="Nhấn giữ để kéo di chuyển"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                            <circle cx="9" cy="5" r="2" />
+                            <circle cx="9" cy="12" r="2" />
+                            <circle cx="9" cy="19" r="2" />
+                            <circle cx="15" cy="5" r="2" />
+                            <circle cx="15" cy="12" r="2" />
+                            <circle cx="15" cy="19" r="2" />
+                          </svg>
+                        </div>
                       )}
                     </div>
                     
@@ -683,21 +727,25 @@ const HomePage: React.FC = () => {
 
         {recentProducts.length > 0 && (
           <div className="mb-12">
-            <div className="flex items-center space-x-3 mb-6">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 2v6h-6"/>
-                <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
-                <path d="M3 22v-6h6"/>
-                <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
-              </svg>
-              <h2 className="text-2xl font-bold text-gray-800">Đã xem gần đây</h2>
+            <div className="products-section-heading">
+              <div className="products-section-heading-left">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4B5563" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 2v6h-6"/>
+                  <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                  <path d="M3 22v-6h6"/>
+                  <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                </svg>
+                <h2 className="text-2xl font-bold text-gray-800">Đã xem gần đây</h2>
+              </div>
+              <ProductsViewToggle value={viewMode} onChange={setViewMode} />
             </div>
             
-            <div className="products-grid">
+            <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
               {recentProducts.map((product) => (
                 <ProductCard 
                   key={product.id} 
-                  product={product} 
+                  product={product}
+                  layout={viewMode}
                   onClick={() => navigate(`/view/product-detail/${product.id}`)} 
                 />
               ))}
@@ -707,16 +755,22 @@ const HomePage: React.FC = () => {
 
         {newlyCreatedProducts.length > 0 && (
           <div className="mb-12">
-            <div className="flex items-center space-x-3 mb-6">
-              <img src={iconTaoMoi} alt="" width={24} height={24} />
-              <h2 className="text-2xl font-bold text-gray-800">Sản phẩm mới tạo</h2>
+            <div className="products-section-heading">
+              <div className="products-section-heading-left">
+                <img src={iconTaoMoi} alt="" width={24} height={24} />
+                <h2 className="text-2xl font-bold text-gray-800">Sản phẩm mới tạo</h2>
+              </div>
+              {recentProducts.length === 0 && (
+                <ProductsViewToggle value={viewMode} onChange={setViewMode} />
+              )}
             </div>
             
-            <div className="products-grid">
+            <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
               {newlyCreatedProducts.map((product) => (
                 <ProductCard 
                   key={product.id} 
-                  product={product} 
+                  product={product}
+                  layout={viewMode}
                   onClick={() => navigate(`/view/product-detail/${product.id}`)} 
                 />
               ))}

@@ -28,6 +28,7 @@ import {
   showSuccessToast,
 } from '../utils/appToast';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -182,7 +183,7 @@ const DetailBusinessPage: React.FC = () => {
           fetch(`${API_ENDPOINTS.PRODUCT_CATEGORY.LIST}?status=ACTIVE&active=true`)
         ]);
 
-        if (!detailRes.ok) throw new Error("Không thể tải thông tin nghiệp vụ");
+        if (!detailRes.ok) throw new Error("Không thể tải thông tin danh mục sản phẩm 2");
         
         const detailData = await detailRes.json();
         setBusinessData(detailData);
@@ -201,11 +202,11 @@ const DetailBusinessPage: React.FC = () => {
           setCategoryOptions(options);
         } else {
           setCategoryOptions([
-            { label: detailData.categoryName || 'Danh mục hiện tại', value: detailData.categoryId },
+            { label: detailData.categoryName || 'Danh mục sản phẩm 1 hiện tại', value: detailData.categoryId },
           ]);
         }
       } catch (error) {
-        toast.error("Không tìm thấy nghiệp vụ hoặc nghiệp vụ đã bị ẩn");
+        toast.error("Không tìm thấy danh mục sản phẩm 2 hoặc danh mục sản phẩm 2 đã bị ẩn");
       } finally {
         setLoading(false);
       }
@@ -214,39 +215,21 @@ const DetailBusinessPage: React.FC = () => {
   }, [id]);
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
-  useEffect(() => {
-    if (!id) return;
-    const refetchStatus = async () => {
-      if (hasChanges || isSubmitting) return;
-      try {
-        const detailRes = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DETAIL(id));
-        if (detailRes.ok) {
-          const detailData = await detailRes.json();
-          setBusinessData(detailData);
-          setFormData({
-            name: detailData.name || '',
-            categoryId: detailData.categoryId || ''
-          });
-          setIsActive(detailData.active ?? true);
-        }
-      } catch (e) {}
-    };
-
-    const interval = setInterval(refetchStatus, 15000);
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        refetchStatus();
+  useAdminAutoRefresh(async () => {
+    if (!id || hasChanges || isSubmitting) return;
+    try {
+      const detailRes = await fetch(API_ENDPOINTS.PRODUCT_BUSINESS.DETAIL(id));
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setBusinessData(detailData);
+        setFormData({
+          name: detailData.name || '',
+          categoryId: detailData.categoryId || ''
+        });
+        setIsActive(detailData.active ?? true);
       }
-    };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [id, hasChanges, isSubmitting]);
+    } catch (e) {}
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isFormDisabled) return;
@@ -258,7 +241,7 @@ const DetailBusinessPage: React.FC = () => {
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
     if (newActiveStatus) {
-      if (await notifyIfCannotShowChild('nghiệp vụ', businessData?.name, businessData)) {
+      if (await notifyIfCannotShowChild('danh mục sản phẩm 2', businessData?.name, businessData)) {
         setIsStatusOpen(false);
         return;
       }
@@ -287,7 +270,7 @@ const DetailBusinessPage: React.FC = () => {
           return;
         }
       } catch (err) {
-        console.warn("Lỗi kiểm tra con nghiệp vụ:", err);
+        console.warn("Lỗi kiểm tra con danh mục sản phẩm 2:", err);
       }
       await executeToggleActive(false, false);
     } else {
@@ -309,7 +292,8 @@ const DetailBusinessPage: React.FC = () => {
         setIsActive(newActive);
         setBusinessData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
-        showSuccessToast(displaySuccessMessage(newActive, 'nghiệp vụ', businessData?.name));
+        showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm 2', businessData?.name));
+        notifyAdminDataChanged();
       } else {
         showDisplayStatusFromApi(errorData);
       }
@@ -352,16 +336,16 @@ const DetailBusinessPage: React.FC = () => {
     const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
     const categoryVal = formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId;
     if (!nameVal) {
-      toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
+      toast.error("Vui lòng nhập tên danh mục sản phẩm 2", { position: 'top-center' });
       return;
     }
-    const nameErr = getNameError(formData.name || nameVal, 'Tên nghiệp vụ sản phẩm');
+    const nameErr = getNameError(formData.name || nameVal, 'Tên danh mục sản phẩm 2');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
     if (!categoryVal) {
-      toast.error("Vui lòng chọn danh mục sản phẩm thuộc về", { position: 'top-center' });
+      toast.error("Vui lòng chọn danh mục sản phẩm 1 thuộc về", { position: 'top-center' });
       setIsOpen(true);
       return;
     }
@@ -378,7 +362,7 @@ const DetailBusinessPage: React.FC = () => {
   const handleUpdateBusiness = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isFormDisabled || !id) return;
 
-    const nameErr = getNameError(formData.name || businessData?.name || '', 'Tên nghiệp vụ sản phẩm');
+    const nameErr = getNameError(formData.name || businessData?.name || '', 'Tên danh mục sản phẩm 2');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
@@ -388,11 +372,11 @@ const DetailBusinessPage: React.FC = () => {
       const nameVal = formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim();
       const categoryVal = formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId;
       if (!nameVal) {
-        toast.error("Vui lòng nhập tên nghiệp vụ", { position: 'top-center' });
+        toast.error("Vui lòng nhập tên danh mục sản phẩm 2", { position: 'top-center' });
         return;
       }
       if (!categoryVal) {
-        toast.error("Vui lòng chọn danh mục sản phẩm thuộc về", { position: 'top-center' });
+        toast.error("Vui lòng chọn danh mục sản phẩm 1 thuộc về", { position: 'top-center' });
         setIsOpen(true);
         return;
       }
@@ -482,11 +466,12 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 
-  if (loading) return <div className="loading">Đang tải dữ liệu nghiệp vụ...</div>;
-  if (!businessData) return <div className="error">Không tìm thấy dữ liệu nghiệp vụ phù hợp.</div>;
+  if (loading) return <div className="loading">Đang tải dữ liệu danh mục sản phẩm 2...</div>;
+  if (!businessData) return <div className="error">Không tìm thấy dữ liệu danh mục sản phẩm 2 phù hợp.</div>;
 
   return (
     <div className="pageWrapper">
@@ -508,7 +493,7 @@ const DetailBusinessPage: React.FC = () => {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M12.6667 6.83333H1M6.83333 1L1 6.83333L6.83333 12.6667" stroke="#3C393F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="breadcrumbText">Danh sách nghiệp vụ</span>
+              <span className="breadcrumbText">Danh sách danh mục sản phẩm 2</span>
             </button>
 
             <div className="breadcrumb">
@@ -572,7 +557,7 @@ const DetailBusinessPage: React.FC = () => {
           <div className="leftCol">
             <div className="formCard">
               <div className="formGroup">
-                <label className="label"> Danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <label className="label"> Danh mục sản phẩm 1 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" ref={categoryRef}>
                   <div 
                     className={`select-custom ${isOpen ? 'open' : ''} ${isFormDisabled ? 'is-disabled' : ''}`} 
@@ -584,7 +569,7 @@ const DetailBusinessPage: React.FC = () => {
                     }}
                     style={{ cursor: isFormDisabled ? 'not-allowed' : 'pointer' }}
                   >
-                    <span>{categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm"}</span>
+                    <span>{categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm 1"}</span>
                     {!isFormDisabled && (
                       <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
                         <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -597,7 +582,7 @@ const DetailBusinessPage: React.FC = () => {
                       <div className="dropdown-search-box" style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
                         <input
                           type="text"
-                          placeholder="Tìm kiếm danh mục..."
+                          placeholder="Tìm kiếm danh mục sản phẩm 1..."
                           value={categorySearchTerm}
                           onChange={(e) => setCategorySearchTerm(e.target.value)}
                           style={{
@@ -636,11 +621,11 @@ const DetailBusinessPage: React.FC = () => {
               </div>
 
               <div className="formGroup">
-                <label className="label">Tên nghiệp vụ sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <label className="label">Tên danh mục sản phẩm 2 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${isFormDisabled ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên nghiệp vụ sản phẩm') ? 'input-invalid' : ''}`}
+                  className={`input ${isFormDisabled ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên danh mục sản phẩm 2') ? 'input-invalid' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isFormDisabled}
@@ -650,7 +635,7 @@ const DetailBusinessPage: React.FC = () => {
                 <CharCountHint
                   current={(formData.name || '').length}
                   max={FIELD_LIMITS.name}
-                  error={getNameError(formData.name, 'Tên nghiệp vụ sản phẩm')}
+                  error={getNameError(formData.name, 'Tên danh mục sản phẩm 2')}
                 />
               </div>
             </div>
@@ -729,7 +714,7 @@ const DetailBusinessPage: React.FC = () => {
                       </React.Fragment>
                     ))
                   ) : (
-                    <div className="no-comments">Chưa có bình luận hay phản hồi nào cho nghiệp vụ này.</div>
+                    <div className="no-comments">Chưa có bình luận hay phản hồi nào cho danh mục sản phẩm 2 này.</div>
                   )}
                 </div>
              </div>
@@ -745,7 +730,7 @@ const DetailBusinessPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={getActionConfirmDesc(businessData, id, confirmAction, 'mảng nghiệp vụ')}
+        desc={getActionConfirmDesc(businessData, id, confirmAction, 'danh mục sản phẩm 2')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
         loading={isSubmitting}
@@ -753,7 +738,7 @@ const DetailBusinessPage: React.FC = () => {
 
       <DuplicateVersionModal
         isOpen={showDuplicateModal}
-        itemName={businessData?.name || 'mảng nghiệp vụ này'}
+        itemName={businessData?.name || 'danh mục sản phẩm 2 này'}
         priorVersion={priorConflict}
         canReplace={isSameActor(currentUsername, priorConflict?.createdBy)}
         isProcessing={isDeletingPrior}
@@ -812,7 +797,7 @@ const DetailBusinessPage: React.FC = () => {
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
-        desc="Bạn có chắc chắn muốn xóa nghiệp vụ này không? Hành động này không thể hoàn tác."
+        desc="Bạn có chắc chắn muốn xóa danh mục sản phẩm 2 này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
         loading={isSubmitting}
       />
@@ -821,7 +806,7 @@ const DetailBusinessPage: React.FC = () => {
         isOpen={showCascadeModal}
         onClose={() => setShowCascadeModal(false)}
         onConfirm={() => executeToggleActive(false, true)}
-        itemTypeLabel="nghiệp vụ"
+        itemTypeLabel="danh mục sản phẩm 2"
         itemName={formData.name || businessData?.name || ''}
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}

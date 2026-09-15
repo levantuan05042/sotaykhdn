@@ -191,11 +191,11 @@ export const VersionDetailModal: React.FC<VersionDetailModalProps> = ({
               </div>
             </div>
 
-            {/* Danh mục sản phẩm & Nghiệp vụ */}
+            {/* Danh mục sản phẩm 1 & Danh mục sản phẩm 2 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  Danh mục sản phẩm
+                  Danh mục sản phẩm 1
                 </label>
                 <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px 14px', fontSize: '14px', color: '#1F2937' }}>
                   {data.productCategoryName || data.productCategory?.name || '---'}
@@ -203,7 +203,7 @@ export const VersionDetailModal: React.FC<VersionDetailModalProps> = ({
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                  Nghiệp vụ
+                  Danh mục sản phẩm 2
                 </label>
                 <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px 14px', fontSize: '14px', color: '#1F2937' }}>
                   {data.businessName || data.business?.name || '---'}
@@ -335,7 +335,7 @@ export const VersionDetailModal: React.FC<VersionDetailModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#F4F5F7', padding: '16px', borderRadius: '10px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                Tên danh mục
+                Tên danh mục sản phẩm 1
               </label>
               <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px 14px', fontSize: '14px', color: '#1F2937', fontWeight: 600 }}>
                 {data.name || '---'}
@@ -374,7 +374,7 @@ export const VersionDetailModal: React.FC<VersionDetailModalProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', backgroundColor: '#F4F5F7', padding: '16px', borderRadius: '10px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                Tên nghiệp vụ
+                Tên danh mục sản phẩm 2
               </label>
               <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px 14px', fontSize: '14px', color: '#1F2937', fontWeight: 600 }}>
                 {data.name || '---'}
@@ -382,7 +382,7 @@ export const VersionDetailModal: React.FC<VersionDetailModalProps> = ({
             </div>
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#374151', marginBottom: '6px' }}>
-                Danh mục sản phẩm trực thuộc
+                Danh mục sản phẩm 1 trực thuộc
               </label>
               <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E5E7EB', borderRadius: '6px', padding: '10px 14px', fontSize: '14px', color: '#1F2937' }}>
                 {data.categoryName || data.productCategoryName || data.productCategory?.name || '---'}

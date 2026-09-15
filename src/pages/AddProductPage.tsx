@@ -16,6 +16,7 @@ import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 interface Criterion {
   id: string;
@@ -524,6 +525,7 @@ const AddProductPage: React.FC = () => {
     try {
       await axios.post(API_ENDPOINTS.PRODUCT.LIST, payload);
       toast.success(status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công", { position: 'top-center' });
+      notifyAdminDataChanged();
       setConfirmAction(null);
       allowLeave();
       setTimeout(() => navigate('/products/processing'), 500);
@@ -641,7 +643,7 @@ const AddProductPage: React.FC = () => {
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ color: formData.productGroupId ? '#404040' : '#9CA3AF' }}>
-                    Danh mục sản phẩm
+                    Danh mục sản phẩm 1
                   </label>
                   <div className="custom-select-container" ref={categoryRef} style={{ position: 'relative' }}>
                     <div 
@@ -649,7 +651,7 @@ const AddProductPage: React.FC = () => {
                       onClick={() => formData.productGroupId && setIsCategoryOpen(!isCategoryOpen)} 
                       style={{ backgroundColor: formData.productGroupId ? 'white' : '#F9FAFB', color: formData.productGroupId ? undefined : '#374151', cursor: formData.productGroupId ? 'pointer' : 'not-allowed' }}
                     >
-                      <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục")}</span>
+                      <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm 1")}</span>
                     </div>
                     {isCategoryOpen && formData.productGroupId && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
@@ -682,7 +684,7 @@ const AddProductPage: React.FC = () => {
 
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ color: formData.productCategoryId ? '#404040' : '#9CA3AF' }}>
-                    Nghiệp vụ
+                    Danh mục sản phẩm 2
                   </label>
                   <div className="custom-select-container" ref={operationRef} style={{ position: 'relative' }}>
                     <div 
@@ -690,12 +692,12 @@ const AddProductPage: React.FC = () => {
                       onClick={() => formData.productCategoryId && setIsOperationOpen(!isOperationOpen)} 
                       style={{ backgroundColor: formData.productCategoryId ? 'white' : '#F9FAFB', color: formData.productCategoryId ? undefined : '#374151', cursor: formData.productCategoryId ? 'pointer' : 'not-allowed' }}
                     >
-                      <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn nghiệp vụ")}</span>
+                      <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn danh mục sản phẩm 2")}</span>
                     </div>
                     {isOperationOpen && formData.productCategoryId && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
-                          <input type="text" placeholder="Tìm kiếm nghiệp vụ..." value={operationSearchTerm} onChange={(e) => setOperationSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
+                          <input type="text" placeholder="Tìm kiếm danh mục sản phẩm 2..." value={operationSearchTerm} onChange={(e) => setOperationSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
                         </div>
                         <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
                           <div className="custom-option" onClick={() => { setFormData({...formData, businessId: ''}); setIsOperationOpen(false); setOperationSearchTerm(''); }}><i>-- Bỏ chọn --</i></div>

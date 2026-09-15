@@ -51,11 +51,13 @@ const ProductCard = ({
   onClick,
   onUnsave,
   initiallySaved = false,
+  layout = 'grid',
 }: {
   product: ProductInfo;
   onClick: () => void;
   onUnsave?: (id: string) => void;
   initiallySaved?: boolean;
+  layout?: 'grid' | 'list';
 }) => {
   const [imgError, setImgError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -180,7 +182,7 @@ const ProductCard = ({
   return (
     <div
       ref={cardRef}
-      className="product-card"
+      className={`product-card${layout === 'list' ? ' is-list' : ''}`}
       data-product-id={product.id}
       onClick={onClick}
       onMouseEnter={() => {

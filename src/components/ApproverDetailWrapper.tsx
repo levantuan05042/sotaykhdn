@@ -50,8 +50,8 @@ const mapModuleBreadcrumb = (name: string) => {
   const clean = name.toLowerCase().trim();
   if (clean === 'tiêu chí') return 'Tiêu chí sản phẩm';
   if (clean === 'nhóm sản phẩm') return 'Nhóm sản phẩm';
-  if (clean === 'danh mục sản phẩm') return 'Danh mục sản phẩm';
-  if (clean === 'nghiệp vụ') return 'Nghiệp vụ sản phẩm';
+  if (clean === 'danh mục sản phẩm 1') return 'Danh mục sản phẩm 1';
+  if (clean === 'danh mục sản phẩm 2') return 'Danh mục sản phẩm 2';
   if (clean === 'sản phẩm') return 'Sản phẩm';
   return name;
 };

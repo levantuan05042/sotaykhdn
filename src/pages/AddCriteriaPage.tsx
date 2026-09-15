@@ -11,6 +11,7 @@ import CharCountHint from '../components/ui/CharCountHint';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import SuperGroupNestedSelect, { formatSelectedGroupsLabel, SUPER_GROUP_OPTIONS } from '../components/ui/SuperGroupNestedSelect';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const AddCriteriaPage: React.FC = () => {
   const navigate = useNavigate();
@@ -219,6 +220,7 @@ const AddCriteriaPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 

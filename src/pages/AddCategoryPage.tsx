@@ -10,6 +10,7 @@ import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -84,7 +85,7 @@ const AddCategoryPage: React.FC = () => {
   const handleGoBack = () => navigate('/product-category');
 
   const onSaveDraftClick = () => {
-    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm 1');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
@@ -94,10 +95,10 @@ const AddCategoryPage: React.FC = () => {
 
   const onSubmitClick = () => {
     if (!formData.name.trim()) {
-      toast.error("Vui lòng nhập tên danh mục sản phẩm", { position: 'top-center' });
+      toast.error("Vui lòng nhập tên danh mục sản phẩm 1", { position: 'top-center' });
       return;
     }
-    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm 1');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
@@ -112,7 +113,7 @@ const AddCategoryPage: React.FC = () => {
 
   const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     if (!beginSubmit(status === 'DRAFT' ? 'draft' : 'submit')) return;
-    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm 1');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       endSubmit();
@@ -133,13 +134,14 @@ const AddCategoryPage: React.FC = () => {
       setTimeout(() => navigate('/product-category'), 400);
 
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Tên danh mục sản phẩm đã tồn tại một bản trùng';
+      const errorMessage = error.response?.data?.message || 'Tên danh mục sản phẩm 1 đã tồn tại một bản trùng';
       toast.error(errorMessage, { position: 'top-center' });
       endSubmit();
     }
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 
@@ -171,7 +173,7 @@ const AddCategoryPage: React.FC = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="14.379" height="14.375" viewBox="0 0 16 16" fill="none">
                 <path d="M11.3789 4.5H11.3714M1.18641 9.3075L6.56391 14.685C6.70322 14.8245 6.86865 14.9351 7.05075 15.0106C7.23284 15.0861 7.42803 15.1249 7.62516 15.1249C7.82228 15.1249 8.01747 15.0861 8.19957 15.0106C8.38166 14.9351 8.5471 14.8245 8.68641 14.685L15.1289 8.25V0.75H7.62891L1.18641 7.1925C0.90703 7.47354 0.750217 7.85372 0.750217 8.25C0.750217 8.64628 0.90703 9.02646 1.18641 9.3075Z" stroke="#171717" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="breadcrumbText">Danh mục sản phẩm</span>
+              <span className="breadcrumbText">Quản lý danh mục sản phẩm 1</span>
             </button>
 
             <div className="breadcrumb">
@@ -180,7 +182,7 @@ const AddCategoryPage: React.FC = () => {
                   <path d="M0.5 8.5L4.5 4.5L0.5 0.5" stroke="#171717" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <span className="breadcrumbActive">Tạo mới danh mục sản phẩm</span>
+              <span className="breadcrumbActive">Tạo mới danh mục sản phẩm 1</span>
             </div>
           </div>
 
@@ -295,19 +297,19 @@ const AddCategoryPage: React.FC = () => {
 
               {/* INPUT TÊN DANH MỤC */}
               <div className="formGroup">
-                <label className="label"> Tên danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <label className="label"> Tên danh mục sản phẩm 1 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${getNameError(formData.name, 'Tên danh mục sản phẩm') ? 'input-invalid' : ''}`}
-                  placeholder="Nhập tên danh mục sản phẩm..."
+                  className={`input ${getNameError(formData.name, 'Tên danh mục sản phẩm 1') ? 'input-invalid' : ''}`}
+                  placeholder="Nhập tên danh mục sản phẩm 1..."
                   value={formData.name} 
                   onChange={handleInputChange} 
                 />
                 <CharCountHint
                   current={formData.name.length}
                   max={FIELD_LIMITS.name}
-                  error={getNameError(formData.name, 'Tên danh mục sản phẩm')}
+                  error={getNameError(formData.name, 'Tên danh mục sản phẩm 1')}
                 />
               </div>
 
@@ -404,7 +406,7 @@ const AddCategoryPage: React.FC = () => {
                   <span className="commentTitle">Bình luận</span>
                 </div>
                 <div className="emptyStateText">
-                  Bình luận sẽ hiển thị sau khi danh mục sản phẩm được khởi tạo.
+                  Bình luận sẽ hiển thị sau khi danh mục sản phẩm 1 được khởi tạo.
                 </div>
              </div>
           </div>
@@ -417,7 +419,7 @@ const AddCategoryPage: React.FC = () => {
         onConfirm={() => confirmAction ? handleCreateCategory(confirmAction) : undefined}
         variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm không?'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm 1 không?' : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm 1 không?'}
         confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         loading={isSubmitting}
       />

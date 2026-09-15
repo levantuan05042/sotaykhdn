@@ -30,6 +30,7 @@ import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc, stripHtmlText } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 interface Criterion {
   id: string;
@@ -898,34 +899,16 @@ const DetailProductPage: React.FC = () => {
   const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!isReadOnly && isDirty));
 
   // Tự động cập nhật dữ liệu sản phẩm khi DB thay đổi nếu không đang chỉnh sửa dở dang
-  useEffect(() => {
-    if (!id) return;
-    const refetchStatus = async () => {
-      if (isDirty || isSubmitting) return;
-      try {
-        const pRes = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(id));
-        if (pRes.data) {
-          setProductData(pRes.data);
-          setIsActive(pRes.data.active ?? true);
-        }
-      } catch (e) {}
-    };
-
-    const interval = setInterval(refetchStatus, 15000);
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        refetchStatus();
+  useAdminAutoRefresh(async () => {
+    if (!id || isDirty || isSubmitting) return;
+    try {
+      const pRes = await axios.get(API_ENDPOINTS.PRODUCT.DETAIL(id));
+      if (pRes.data) {
+        setProductData(pRes.data);
+        setIsActive(pRes.data.active ?? true);
       }
-    };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [id, isDirty, isSubmitting]);
+    } catch (e) {}
+  });
 
   useEffect(() => {
     if (!formData.productGroupId) { 
@@ -1113,6 +1096,7 @@ const DetailProductPage: React.FC = () => {
       
       if (res.ok) {
         showSuccessToast(displaySuccessMessage(newActiveStatus, 'Sản phẩm', productData?.name));
+        notifyAdminDataChanged();
       } else {
         const err = await res.json();
         showDisplayStatusFromApi(err, 'Lỗi khi thay đổi trạng thái hiển thị');
@@ -1151,6 +1135,7 @@ const DetailProductPage: React.FC = () => {
 
       if (response.status === 200 || response.status === 204) {
         toast.success(`Gửi phê duyệt lô ${targetRequestName} thành công!`, { position: 'top-center' });
+        notifyAdminDataChanged();
         setShowBatchModal(false);
         allowLeave();
         setTimeout(() => navigate('/products/processing'), 500);
@@ -1201,6 +1186,7 @@ const DetailProductPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 
@@ -1468,7 +1454,7 @@ const DetailProductPage: React.FC = () => {
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Danh mục sản phẩm</label>
+                  <label className="label">Danh mục sản phẩm 1</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${(isReadOnly || !formData.productGroupId) ? 'is-disabled' : ''}`} 
@@ -1480,14 +1466,14 @@ const DetailProductPage: React.FC = () => {
                       }}
                       style={(isReadOnly || !formData.productGroupId) ? { cursor: 'not-allowed' } : undefined}
                     >
-                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục')}</span>
+                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục sản phẩm 1')}</span>
                     </div>
                     {!isReadOnly && isCategoryOpen && (
                       <div className="custom-options-list" style={{ padding: 0 }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
                           <input
                             type="text"
-                            placeholder="Tìm danh mục sản phẩm..."
+                            placeholder="Tìm danh mục sản phẩm 1..."
                             value={categorySearch}
                             onChange={e => setCategorySearch(e.target.value)}
                             onClick={e => e.stopPropagation()}
@@ -1511,7 +1497,7 @@ const DetailProductPage: React.FC = () => {
                 </div>
 
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Nghiệp vụ</label>
+                  <label className="label">Danh mục sản phẩm 2</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${(isReadOnly || !formData.productCategoryId) ? 'is-disabled' : ''}`} 
@@ -1523,14 +1509,14 @@ const DetailProductPage: React.FC = () => {
                       }}
                       style={(isReadOnly || !formData.productCategoryId) ? { cursor: 'not-allowed' } : undefined}
                     >
-                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn nghiệp vụ')}</span>
+                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn danh mục sản phẩm 2')}</span>
                     </div>
                     {!isReadOnly && isOperationOpen && (
                       <div className="custom-options-list" style={{ padding: 0 }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
                           <input
                             type="text"
-                            placeholder="Tìm nghiệp vụ..."
+                            placeholder="Tìm danh mục sản phẩm 2..."
                             value={operationSearch}
                             onChange={e => setOperationSearch(e.target.value)}
                             onClick={e => e.stopPropagation()}

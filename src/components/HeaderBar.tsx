@@ -50,7 +50,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     valueContent: 'Cán bộ quản lý Nguyễn Văn A đã tạo mới sản phẩm Tiết kiệm linh hoạt 6 tháng và gửi yêu cầu Phê duyệt.',
     actionLabel: 'Tạo mới',
     actionType: 'CREATE',
-    objectTypeLabel: 'Danh mục',
+    objectTypeLabel: 'Sản phẩm',
     isRead: false,
     url: '/approver/products/single/p-1',
   },
@@ -61,7 +61,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     valueContent: 'Cán bộ quản lý Nguyễn Văn A đã tạo mới sản phẩm Tiết kiệm linh hoạt 6 tháng và gửi yêu cầu Phê duyệt.',
     actionLabel: 'Tạo mới',
     actionType: 'CREATE',
-    objectTypeLabel: 'Danh mục',
+    objectTypeLabel: 'Sản phẩm',
     isRead: false,
     url: '/approver/products/single/p-2',
   },
@@ -72,7 +72,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     valueContent: 'Cán bộ quản lý Nguyễn Văn A đã tạo mới sản phẩm Tiết kiệm linh hoạt 6 tháng và gửi yêu cầu Phê duyệt.',
     actionLabel: 'Tạo mới',
     actionType: 'CREATE',
-    objectTypeLabel: 'Danh mục',
+    objectTypeLabel: 'Sản phẩm',
     isRead: false,
     url: '/approver/products/single/p-3',
   },
@@ -83,7 +83,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     valueContent: 'Cán bộ quản lý Nguyễn Văn A đã tạo mới sản phẩm Tiết kiệm linh hoạt 6 tháng và gửi yêu cầu Phê duyệt.',
     actionLabel: 'Tạo mới',
     actionType: 'CREATE',
-    objectTypeLabel: 'Danh mục',
+    objectTypeLabel: 'Danh mục sản phẩm 1',
     isRead: false,
     url: '/approver/products/single/p-4',
   },
@@ -395,7 +395,7 @@ const HeaderBar: React.FC = () => {
                         <span className={`tag-action ${getActionTagClass(item.actionType)}`}>
                           {item.actionLabel || 'Tạo mới'}
                         </span>
-                        <span className="tag-object">{item.objectTypeLabel || 'Danh mục'}</span>
+                        <span className="tag-object">{item.objectTypeLabel || 'Danh mục sản phẩm 1'}</span>
                       </div>
                     </button>
                   ))
