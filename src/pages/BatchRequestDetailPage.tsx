@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import Cropper from 'react-easy-crop';
@@ -11,6 +11,8 @@ import StatusBadge2 from '../components/ui/StatusBadgeListRequest';
 import '../components/ui/DataTable.css';
 import './BatchRequestDetailPage.css';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
+import { getApiErrorMessage } from '../utils/apiError';
 import { formatDetailHtml } from './DetailProductPage';
 import {
   getCriteriaCountLength,
@@ -20,6 +22,7 @@ import {
   isProductNameCriteria,
 } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
+import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 
 const extractUsername = (rawName: string | null | undefined): string => {
   if (!rawName) return '';
@@ -28,7 +31,47 @@ const extractUsername = (rawName: string | null | undefined): string => {
 
 const stripHtml = (htmlString: string) => {
   if (!htmlString) return '';
-  return htmlString.replace(/<\/?[^>]+(>|$)/g, '');
+  const temp = document.createElement('div');
+  temp.innerHTML = htmlString;
+  return (temp.textContent || temp.innerText || '').trim();
+};
+
+const toNameKey = (raw?: string) =>
+  stripHtml(raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/gi, 'd')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const PLACEHOLDER_NAME_KEYS = new Set([
+  'ban nhap san pham',
+  'nhom san pham nhap',
+  'danh muc nhap',
+  'nghiep vu nhap',
+  'tieu chi nhap',
+]);
+
+const findBatchNameErrors = (items: Array<{ name?: string }>) => {
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  let missingName = false;
+  for (const item of items) {
+    const key = toNameKey(item.name);
+    if (!key || PLACEHOLDER_NAME_KEYS.has(key)) {
+      missingName = true;
+      continue;
+    }
+    if (seen.has(key)) {
+      errors.push(`Tên sản phẩm "${stripHtml(item.name || '')}" trùng trong lô.`);
+    }
+    seen.add(key);
+  }
+  if (missingName) {
+    errors.unshift('Có sản phẩm chưa có tên. Vui lòng nhập tên trước khi gửi phê duyệt.');
+  }
+  return errors;
 };
 
 const isHtmlEmpty = (html: string) => {
@@ -587,6 +630,7 @@ const BatchRequestDetailPage: React.FC = () => {
 
   const [showImageModal, setShowImageModal] = useState(false);
   const [showCriteriaModal, setShowCriteriaModal] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
   const [previewImage, setPreviewImage] = useState('');   
   const [avatarFile, setAvatarFile] = useState<File | null>(null); 
   const [imageRemoved, setImageRemoved] = useState(false); 
@@ -598,7 +642,7 @@ const BatchRequestDetailPage: React.FC = () => {
   const [, setLoadingCategories] = useState(false);
   const [, setLoadingOperations] = useState(false);
 
-  const [isUpdating, setIsUpdating] = useState(false);
+  const { isSubmitting, submitKind, beginSubmit, endSubmit } = useSubmitLock();
   const [hasFormChanges, setHasFormChanges] = useState(false);
   const [pendingUpdates, setPendingUpdates] = useState<Record<string, any>>({});
 
@@ -968,7 +1012,7 @@ const BatchRequestDetailPage: React.FC = () => {
   };
 
   const handleLocalSave = async () => {
-    if (!quickViewProduct || isUpdating) return;
+    if (!quickViewProduct || !beginSubmit('draft')) return;
     
     const criteriaLengthError = () =>
       getFirstCriteriaValueError(
@@ -982,17 +1026,17 @@ const BatchRequestDetailPage: React.FC = () => {
     const missingRequired = details.find(d => d.required && isHtmlEmpty(d.noiDung));
     if (!formData.name.trim() || missingRequired) {
       toast.error("Vui lòng điền đầy đủ các trường bắt buộc (*).", { position: 'top-center' });
+      endSubmit();
       return;
     }
 
     const criteriaErr = criteriaLengthError();
     if (criteriaErr) {
       toast.error(criteriaErr, { position: 'top-center' });
+      endSubmit();
       return;
     }
 
-    setIsUpdating(true); 
-    
     try {
       const payload = await getPayloadFromCurrentForm();
       await axios.post(API_ENDPOINTS.PRODUCT.UPDATE(quickViewProduct.id), payload);
@@ -1032,14 +1076,14 @@ const BatchRequestDetailPage: React.FC = () => {
       toast.success("Đã lưu thành công vào CSDL!", { position: 'top-center' });
     } catch (error: any) {
       console.error("Lỗi khi lưu DB:", error);
-      toast.error(error.message || "Có lỗi xảy ra khi lưu vào hệ thống.", { position: 'top-center' });
+      toast.error(getApiErrorMessage(error, "Có lỗi xảy ra khi lưu vào hệ thống."), { position: 'top-center' });
     } finally {
-      setIsUpdating(false);
+      endSubmit();
     }
   };
 
   const handleSaveDraftToDB = async () => {
-    if (isUpdating) return;
+    if (!beginSubmit('draft')) return;
     const lengthErr = getFirstCriteriaValueError(
       details.map((d) => ({
         name: d.tieuChi,
@@ -1049,9 +1093,10 @@ const BatchRequestDetailPage: React.FC = () => {
     );
     if (lengthErr) {
       toast.error(lengthErr, { position: 'top-center' });
+      endSubmit();
+      setConfirmAction(null);
       return;
     }
-    setIsUpdating(true);
     try {
       const updatesToPush = { ...pendingUpdates };
       if (quickViewProduct && hasFormChanges) {
@@ -1059,30 +1104,32 @@ const BatchRequestDetailPage: React.FC = () => {
       }
 
       if (Object.keys(updatesToPush).length === 0) {
-        setIsUpdating(false);
+        toast.error('Không có thay đổi để lưu.');
+        endSubmit();
+        setConfirmAction(null);
         return;
       }
 
-      const promises = Object.keys(updatesToPush).map(id => 
-        axios.post(API_ENDPOINTS.PRODUCT.UPDATE(id), updatesToPush[id])
-      );
-      await Promise.all(promises);
+      for (const id of Object.keys(updatesToPush)) {
+        await axios.post(API_ENDPOINTS.PRODUCT.UPDATE(id), updatesToPush[id]);
+      }
 
       setPendingUpdates({});
       setHasFormChanges(false);
+      setConfirmAction(null);
       toast.success("Đã lưu nháp thành công!", { position: 'top-center' });
       allowLeave();
-      setTimeout(() => window.location.reload(), 1000);
+      setTimeout(() => window.location.reload(), 1600);
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Có lỗi xảy ra khi lưu CSDL.", { position: 'top-center' });
-    } finally {
-      setIsUpdating(false);
+      toast.error(getApiErrorMessage(error, "Có lỗi xảy ra khi lưu CSDL."), { position: 'top-center' });
+      endSubmit();
+      setConfirmAction(null);
     }
   };
 
   const handleSend = async () => {
-    if (!requestId || isUpdating) return;
+    if (!requestId || !beginSubmit('submit')) return;
     const lengthErr = getFirstCriteriaValueError(
       details.map((d) => ({
         name: d.tieuChi,
@@ -1092,32 +1139,45 @@ const BatchRequestDetailPage: React.FC = () => {
     );
     if (lengthErr) {
       toast.error(lengthErr, { position: 'top-center' });
+      endSubmit();
+      setConfirmAction(null);
       return;
     }
-    setIsUpdating(true);
     try {
       const updatesToPush = { ...pendingUpdates };
       if (quickViewProduct && hasFormChanges) {
         updatesToPush[quickViewProduct.id] = await getPayloadFromCurrentForm();
       }
-      if (Object.keys(updatesToPush).length > 0) {
-        const promises = Object.keys(updatesToPush).map(id => 
-          axios.post(API_ENDPOINTS.PRODUCT.UPDATE(id), updatesToPush[id])
-        );
-        await Promise.all(promises);
+
+      const nameErrors = findBatchNameErrors(
+        products.map((p) => ({
+          name: updatesToPush[p.id]?.name
+            || (quickViewProduct?.id === p.id ? formData.name : p.name),
+        }))
+      );
+      if (nameErrors.length > 0) {
+        toast.error(nameErrors.join('\n'), { position: 'top-center' });
+        endSubmit();
+        setConfirmAction(null);
+        return;
+      }
+
+      for (const id of Object.keys(updatesToPush)) {
+        await axios.post(API_ENDPOINTS.PRODUCT.UPDATE(id), updatesToPush[id]);
       }
 
       await axios.post(API_ENDPOINTS.PRODUCT_REQUESTS.UPDATE_STATUS2(requestId), { status: 'PENDING_APPROVAL' });
       
       setPendingUpdates({});
       setHasFormChanges(false);
-      toast.success("Đã gửi kiểm duyệt thành công!", { position: 'top-center' });
-      setTimeout(() => window.location.reload(), 1000); 
+      setConfirmAction(null);
+      toast.success("Gửi phê duyệt thành công", { position: 'top-center' });
+      setTimeout(() => window.location.reload(), 1600); 
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Có lỗi xảy ra khi gửi.", { position: 'top-center' });
-    } finally {
-      setIsUpdating(false);
+      toast.error(getApiErrorMessage(error, "Có lỗi xảy ra khi gửi phê duyệt."), { position: 'top-center' });
+      endSubmit();
+      setConfirmAction(null);
     }
   };
 
@@ -1205,13 +1265,6 @@ const BatchRequestDetailPage: React.FC = () => {
 
   return (
     <div className="batch-detail-container">
-      <Toaster 
-        position="top-right" 
-        reverseOrder={false}
-        containerStyle={{ zIndex: 2147483647 }}
-        toastOptions={{ style: { zIndex: 2147483647 } }}
-      />
-      
       <div className="batch-header">
         <div className="batch-header-left">
           <button onClick={() => navigate('/request-list')} className="batch-back-btn">
@@ -1239,19 +1292,27 @@ const BatchRequestDetailPage: React.FC = () => {
           ) : (
             <div className="batch-actions-group">
               <button 
-                disabled={!hasGlobalChanges || isUpdating} 
-                onClick={handleSaveDraftToDB}
-                className="btn-secondary-action"
+                disabled={!hasGlobalChanges || isSubmitting} 
+                onClick={() => setConfirmAction('DRAFT')}
+                className={`btnDraft ${hasGlobalChanges && !isSubmitting ? 'active' : 'disabled'}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                Lưu nháp
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M21 8V21H3V8M1 3H23V8H1V3ZM10 12H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {draftActionLabel(isSubmitting, submitKind)}
               </button>
 
               <button 
-                disabled={isUpdating} 
-                onClick={handleSend}
-                className="btn-primary-action"
+                disabled={isSubmitting} 
+                onClick={() => setConfirmAction('PENDING_APPROVAL')}
+                className={`btnSubmit ${!isSubmitting ? 'active' : 'disabled'}`}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                Gửi
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                {submitActionLabel(isSubmitting, submitKind)}
               </button>
             </div>
           )}
@@ -1617,7 +1678,7 @@ const BatchRequestDetailPage: React.FC = () => {
                   <div className="batch-card-box" style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px', marginBottom: 0 }}>
                     <button 
                       onClick={handleLocalSave}
-                      disabled={!hasFormChanges || isUpdating || isQuickViewRejected}
+                      disabled={!hasFormChanges || isSubmitting || isQuickViewRejected}
                       className="btn-primary-action"
                       style={isQuickViewRejected ? { 
                         opacity: 0.5, 
@@ -1625,7 +1686,7 @@ const BatchRequestDetailPage: React.FC = () => {
                         backgroundColor: '#9CA3AF' 
                       } : undefined}
                     >
-                      Lưu
+                      {isSubmitting && submitKind === 'draft' ? 'Đang lưu...' : 'Lưu'}
                     </button>
                   </div>
                 )}
@@ -1648,6 +1709,26 @@ const BatchRequestDetailPage: React.FC = () => {
         criteria={criteriaForModal}
         onToggle={handleToggleOptionalCriterion}
       />
+
+      <ActionConfirmModal
+        isOpen={confirmAction !== null}
+        onClose={() => { if (!isSubmitting) setConfirmAction(null); }}
+        onConfirm={() => {
+          if (confirmAction === 'DRAFT') return handleSaveDraftToDB();
+          if (confirmAction === 'PENDING_APPROVAL') return handleSend();
+        }}
+        variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
+        title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
+        desc={
+          confirmAction === 'DRAFT'
+            ? `Bạn có chắc chắn muốn lưu bản nháp lô "${stripHtml(batchName) || stripHtml(externalName || '') || 'Tên lô'}" không?`
+            : `Bạn muốn phê duyệt "${stripHtml(batchName) || stripHtml(externalName || '') || 'Tên lô'}"?`
+        }
+        confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
+        cancelText="Hủy"
+        loading={isSubmitting}
+      />
+
       {dialog}
     </div>
   );

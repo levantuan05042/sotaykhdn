@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import toast from 'react-hot-toast';
 import { BASE_URL } from '../config/apiConfig';
+import { collectApiErrorMessages } from './apiError';
 import { isCriteriaFullyLocked, isParentHidden } from './formatUtils';
+import './appToast.css';
 
 type ToastType = 'success' | 'error';
-type ToastItem = { id: number; type: ToastType; title: string; description?: string };
+type ToastItem = { id: number; type: ToastType; title: string; description?: string; leaving?: boolean };
+
+const TOAST_DURATION_MS = 1500;
+const TOAST_LEAVE_MS = 180;
 
 let toasts: ToastItem[] = [];
 let seq = 1;
 const subscribers = new Set<() => void>();
+const hideTimers = new Map<number, number>();
 let hostRoot: Root | null = null;
 
 const notifySubscribers = () => {
@@ -29,15 +36,36 @@ const ensureHost = () => {
   }
 };
 
-const pushToast = (type: ToastType, title: string, description?: string) => {
-  ensureHost();
-  const id = seq++;
-  toasts = [...toasts, { id, type, title, description }];
+const clearHideTimer = (id: number) => {
+  const timer = hideTimers.get(id);
+  if (timer) {
+    window.clearTimeout(timer);
+    hideTimers.delete(id);
+  }
+};
+
+const dismissToast = (id: number) => {
+  const current = toasts.find((t) => t.id === id);
+  if (!current || current.leaving) return;
+  clearHideTimer(id);
+  toasts = toasts.map((t) => (t.id === id ? { ...t, leaving: true } : t));
   notifySubscribers();
   window.setTimeout(() => {
     toasts = toasts.filter((t) => t.id !== id);
     notifySubscribers();
-  }, 5000);
+  }, TOAST_LEAVE_MS);
+};
+
+const pushToast = (type: ToastType, title: string, description?: string) => {
+  ensureHost();
+  toasts.filter((t) => !t.leaving).forEach((t) => dismissToast(t.id));
+  const id = seq++;
+  toasts = [...toasts, { id, type, title, description }];
+  notifySubscribers();
+  hideTimers.set(
+    id,
+    window.setTimeout(() => dismissToast(id), TOAST_DURATION_MS)
+  );
 };
 
 const CloseIcon = () => (
@@ -78,78 +106,26 @@ const ToastHost = () => {
   }, []);
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 24,
-        left: 0,
-        right: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: 8,
-        zIndex: 2147483647,
-        pointerEvents: 'none',
-      }}
-    >
+    <div className="app-toast-host">
       {items.map((item) => (
         <div
           key={item.id}
-          style={{
-            pointerEvents: 'auto',
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            gap: 12,
-            background: '#ffffff',
-            padding: '12px 16px',
-            borderRadius: 10,
-            boxShadow: '0 10px 30px rgba(0, 0, 0, 0.18)',
-            border: '1px solid #E5E7EB',
-            minWidth: 360,
-            maxWidth: 520,
-            fontFamily: 'Inter, sans-serif',
-          }}
+          className={`app-toast app-toast--${item.type}${item.leaving ? ' is-leaving' : ''}`}
         >
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, minWidth: 0, flex: 1 }}>
-            <div style={{ flexShrink: 0, width: 36, height: 36 }}>
+          <div className="app-toast-body">
+            <div className="app-toast-icon">
               {item.type === 'success' ? <SuccessIcon /> : <ErrorIcon />}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, paddingTop: 2 }}>
-              <div
-                style={{
-                  fontSize: 14,
-                  fontWeight: item.type === 'success' ? 600 : 700,
-                  lineHeight: '20px',
-                  color: item.type === 'success' ? '#027A48' : '#1A191B',
-                }}
-              >
-                {item.title}
-              </div>
-              {item.description ? (
-                <div style={{ fontSize: 13, fontWeight: 400, lineHeight: '18px', color: '#6B7280', whiteSpace: 'pre-line', wordBreak: 'break-word' }}>
-                  {item.description}
-                </div>
-              ) : null}
+            <div className="app-toast-copy">
+              <div className="app-toast-title">{item.title}</div>
+              {item.description ? <div className="app-toast-desc">{item.description}</div> : null}
             </div>
           </div>
           <button
             type="button"
+            className="app-toast-close"
             aria-label="Đóng"
-            onClick={() => {
-              toasts = toasts.filter((t) => t.id !== item.id);
-              notifySubscribers();
-            }}
-            style={{
-              flexShrink: 0,
-              background: 'none',
-              border: 'none',
-              color: '#9CA3AF',
-              cursor: 'pointer',
-              display: 'flex',
-              padding: 2,
-              marginTop: 2,
-            }}
+            onClick={() => dismissToast(item.id)}
           >
             <CloseIcon />
           </button>
@@ -160,11 +136,41 @@ const ToastHost = () => {
 };
 
 export const showSuccessToast = (title: string) => {
-  pushToast('success', title);
+  if (title?.trim()) pushToast('success', title.trim());
 };
 
 export const showErrorToast = (title: string, description?: string) => {
-  pushToast('error', title, description);
+  if (title?.trim()) pushToast('error', title.trim(), description?.trim() || undefined);
+};
+
+export const showApiErrorToast = (error: any, fallback = 'Có lỗi xảy ra') => {
+  const messages = collectApiErrorMessages(error);
+  if (messages.length === 0) {
+    showErrorToast(fallback);
+    return;
+  }
+  showErrorToast(messages[0], messages.slice(1).join('\n') || undefined);
+};
+
+const toastMessageToText = (message: unknown): string => {
+  if (typeof message === 'string') return message;
+  return '';
+};
+
+let visibleToastsInstalled = false;
+
+/** Đưa toast.success / toast.error ra portal trên body, không bị layout cắt mất. */
+export const installVisibleToasts = () => {
+  if (visibleToastsInstalled) return;
+  visibleToastsInstalled = true;
+  toast.success = ((message: unknown) => {
+    showSuccessToast(toastMessageToText(message) || 'Thành công');
+    return 'app-toast';
+  }) as typeof toast.success;
+  toast.error = ((message: unknown) => {
+    showErrorToast(toastMessageToText(message) || 'Có lỗi xảy ra');
+    return 'app-toast';
+  }) as typeof toast.error;
 };
 
 export const PARENT_HIDDEN_DESCRIPTION =

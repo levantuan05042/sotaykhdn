@@ -26,9 +26,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
 }) => {
   const openedAtRef = React.useRef(0);
   const confirmingRef = React.useRef(false);
-  const loadingRef = React.useRef(loading);
   const [confirming, setConfirming] = React.useState(false);
-  loadingRef.current = loading;
 
   React.useEffect(() => {
     if (isOpen) {
@@ -38,11 +36,13 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
     }
   }, [isOpen]);
 
+  const prevLoadingRef = React.useRef(loading);
   React.useEffect(() => {
-    if (!loading) {
+    if (prevLoadingRef.current && !loading) {
       confirmingRef.current = false;
       setConfirming(false);
     }
+    prevLoadingRef.current = loading;
   }, [loading]);
 
   React.useEffect(() => {
@@ -69,7 +69,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
   const handleConfirm = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (loading || confirmingRef.current) return;
+    if (loading || confirmingRef.current || ignoreGhostClick()) return;
     confirmingRef.current = true;
     setConfirming(true);
     try {
@@ -77,13 +77,6 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
     } catch {
       confirmingRef.current = false;
       setConfirming(false);
-    } finally {
-      window.setTimeout(() => {
-        if (!loadingRef.current) {
-          confirmingRef.current = false;
-          setConfirming(false);
-        }
-      }, 0);
     }
   };
 
@@ -231,7 +224,7 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
               transition: 'all 0.15s ease',
             }}
           >
-            {isBusy ? 'Đang xử lý...' : displayConfirmText}
+            {isBusy ? (variant === 'draft' ? 'Đang lưu...' : variant === 'delete' ? 'Đang xóa...' : 'Đang gửi...') : displayConfirmText}
           </button>
         </div>
       </div>

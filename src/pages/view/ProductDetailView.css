@@ -484,12 +484,32 @@
   font-size: 14px;
   font-weight: 400;
   line-height: 1.6;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: block;
   overflow-wrap: break-word;
   word-break: break-word;
   background: transparent;
+}
+
+.dp-value .ql-snow,
+.dp-value .ql-container,
+.dp-value .ql-editor {
+  border: none;
+  background: transparent !important;
+}
+
+.dp-value .ql-editor {
+  padding: 0;
+  overflow: visible;
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 0;
+  color: inherit;
+}
+
+.dp-value table,
+.dp-value th,
+.dp-value td {
+  background-color: transparent !important;
 }
 
 /* Định dạng nội dung HTML bên trong dp-value */

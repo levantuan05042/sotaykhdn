@@ -145,12 +145,10 @@ const BusinessView: React.FC = () => {
       <h2 className="group-page-title">{businessName || 'Chi tiết nghiệp vụ'}</h2>
 
       {products.length > 0 ? (
-        <div className="section-block">
-          <div className="products-grid">
-            {products.map((prod) => (
-              <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
-            ))}
-          </div>
+        <div className="products-grid explorer-grid">
+          {products.map((prod) => (
+            <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
+          ))}
         </div>
       ) : (
          /* THAY ĐỔI MỚI: Giao diện Empty State khi không có dữ liệu */

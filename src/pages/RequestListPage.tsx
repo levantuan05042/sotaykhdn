@@ -11,6 +11,7 @@ import TableColumnFilterDropdown from '../components/ui/TableColumnFilterDropdow
 import FilterScrollContainer from '../components/ui/FilterScrollContainer';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
+import { matchesSearch } from '../utils/searchText';
 
 const STATUS_OPTIONS = [
   { label: 'Chờ duyệt', value: 'PENDING_APPROVAL' },
@@ -154,7 +155,6 @@ const RequestListPage: React.FC = () => {
     try {
       const response = await axios.get(API_ENDPOINTS.PRODUCT_REQUESTS.LIST, {
         params: {
-          keyword: searchTerm.trim() || undefined,
           startDate: startDate || undefined,
           endDate: endDate || undefined,
         }
@@ -202,7 +202,7 @@ const RequestListPage: React.FC = () => {
   useEffect(() => {
     const handler = setTimeout(() => fetchData(), 500);
     return () => clearTimeout(handler);
-  }, [searchTerm, startDate, endDate]);
+  }, [startDate, endDate]);
 
   // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
   useEffect(() => {
@@ -295,6 +295,17 @@ const RequestListPage: React.FC = () => {
 
   const getFilteredData = () => {
     return data.filter(item => {
+      if (
+        searchTerm.trim() &&
+        !matchesSearch(item.requestName || item.name, searchTerm) &&
+        !matchesSearch(item.requestId || item.id, searchTerm) &&
+        !matchesSearch(item.createdBy, searchTerm) &&
+        !matchesSearch(item.createdByFullName, searchTerm) &&
+        !matchesSearch(item.approvedBy, searchTerm) &&
+        !matchesSearch(item.approvedByFullName, searchTerm)
+      ) {
+        return false;
+      }
       if (selectedStatuses.length > 0) {
         const status = String(item.status || '');
         if (!selectedStatuses.includes(status)) return false;

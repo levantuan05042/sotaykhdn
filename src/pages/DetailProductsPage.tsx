@@ -18,7 +18,7 @@ import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
-import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, getNameError, isProductNameCriteria } from '../utils/fieldValidation';
+import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, getNameError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
@@ -28,6 +28,7 @@ interface Criterion {
   isRequired: boolean;
   isSelected: boolean;
   value: string;
+  createdAt?: unknown;
 }
 
 interface PixelCrop {
@@ -659,14 +660,15 @@ const DetailProductPage: React.FC = () => {
 
         const rawDetails = pData.details || [];
         if (rawDetails.length > 0) {
-          const mapped: Criterion[] = rawDetails.map((item: any, i: number) => ({
+          const mapped: Criterion[] = sortCriteriaByCreatedAtAsc(rawDetails.map((item: any, i: number) => ({
             id:         String(item.id || item.criteriaId || item.stt || i),
             name:       (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, ''),
             code:       item.code || item.maTieuChi || '',
             isRequired: checkIsRequired(item),
             isSelected: true,
             value:      item.noiDung || item.value || '',
-          }));
+            createdAt:  item.createdAt ?? item.created_at,
+          })));
           setOriginalCriteria(JSON.parse(JSON.stringify(mapped)));
           setCriteria(mapped);
         }
@@ -716,6 +718,7 @@ const DetailProductPage: React.FC = () => {
             isRequired: checkIsRequired(item),
             isSelected: false,
             value: '',
+            createdAt: item.createdAt ?? item.created_at,
           };
         });
 
@@ -736,6 +739,7 @@ const DetailProductPage: React.FC = () => {
             isRequired: fromCatalog?.isRequired ?? s.isRequired,
             isSelected: true,
             value: s.value,
+            createdAt: fromCatalog?.createdAt ?? s.createdAt,
           });
           usedIds.add(id);
           usedNames.add(name.trim().toLowerCase());
@@ -752,7 +756,7 @@ const DetailProductPage: React.FC = () => {
           usedNames.add(c.name.trim().toLowerCase());
         }
 
-        setCriteria(merged);
+        setCriteria(sortCriteriaByCreatedAtAsc(merged));
       } catch (e) { console.error(e); }
     })();
   }, [formData.productGroupId, originalCriteria]);
@@ -804,21 +808,7 @@ const DetailProductPage: React.FC = () => {
   const isDirty         = !isReadOnly && (isFormDirty || isCriteriaDirty || avatarFile !== null || imageRemoved || isActive !== (productData?.active ?? true));
 
   const renderCustomToast = (message: string) => {
-    toast.custom(t => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   const handleToggleActive = async (newActiveStatus: boolean) => {

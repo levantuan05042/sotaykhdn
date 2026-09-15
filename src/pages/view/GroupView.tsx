@@ -5,10 +5,10 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import './GroupView.css';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
+import FolderCard from './common/FolderCard';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
-// TODO: Điều chỉnh đường dẫn import này cho đúng với cấu trúc thư mục của dự án
-import EmptyIcon from '../../assets/icon/khong_san_pham.svg'; 
+import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
 
 const GROUP_OPTIONS = [
   { label: 'Nhóm sản phẩm dịch vụ', value: 'SERVICE' },
@@ -17,7 +17,6 @@ const GROUP_OPTIONS = [
 ];
 
 export interface CategoryItem { id: string; name: string; [key: string]: any; }
-export interface BusinessItem { id: string; name: string; [key: string]: any; }
 export interface GroupDetailData {
   groupId: string;
   groupName: string;
@@ -25,138 +24,29 @@ export interface GroupDetailData {
   categories: CategoryItem[];
   products?: ProductInfo[];
 }
-export interface CategoryDetailData {
-  categoryId: string;
-  categoryName: string;
-  businesses: BusinessItem[];
-  products?: ProductInfo[];
-}
 
-// --- HELPER FUNCTIONS KIỂM TRA DỮ LIỆU ĐA CẤP ---
 const checkHasBusiness = (prod: any): boolean => {
   return !!(
-    prod.businessId || 
-    prod.productBusinessId || 
-    prod.business || 
-    prod.productBusiness || 
-    prod.businessName || 
+    prod.businessId ||
+    prod.productBusinessId ||
+    prod.business ||
+    prod.productBusiness ||
+    prod.businessName ||
     prod.productBusinessName
   );
 };
 
 const checkHasCategory = (prod: any): boolean => {
   return !!(
-    prod.categoryId || 
-    prod.productCategoryId || 
-    prod.category || 
-    prod.productCategory || 
-    prod.categoryName || 
+    prod.categoryId ||
+    prod.productCategoryId ||
+    prod.category ||
+    prod.productCategory ||
+    prod.categoryName ||
     prod.productCategoryName
   );
 };
 
-// --------------------------------------------------------
-// 1. COMPONENT CẤP NGHIỆP VỤ (BUSINESS - CẤP 3)
-// --------------------------------------------------------
-const BusinessSection = ({ business, onNavigate }: { business: BusinessItem; onNavigate: (id: string) => void }) => {
-  const [products, setProducts] = useState<ProductInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchProducts = useCallback(async (isBackground = false) => {
-    try {
-      const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(business.id), {
-        params: { _t: Date.now() },
-      });
-      setProducts(res.data || []);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (!isBackground) setLoading(false);
-    }
-  }, [business.id]);
-
-  useEffect(() => {
-    void fetchProducts();
-  }, [fetchProducts]);
-
-  useViewAutoRefresh(() => fetchProducts(true), [business.id]);
-
-  if (loading || products.length === 0) return null;
-
-  return (
-    <div className="sub-section-block">
-      <h4 className="sub-section-title">{business.name}</h4>
-      <div className="products-grid">
-        {products.map(prod => (
-          <ProductCard key={prod.id} product={prod} onClick={() => onNavigate(prod.id)} />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// --------------------------------------------------------
-// 2. COMPONENT CẤP DANH MỤC (CATEGORY - CẤP 2)
-// --------------------------------------------------------
-const CategorySection = ({ category, onNavigate }: { category: CategoryItem; onNavigate: (id: string) => void }) => {
-  const [catData, setCatData] = useState<CategoryDetailData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchCatData = useCallback(async (isBackground = false) => {
-    try {
-      const res = await axios.get<CategoryDetailData>(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(category.id), {
-        params: { _t: Date.now() },
-      });
-      setCatData(res.data);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      if (!isBackground) setLoading(false);
-    }
-  }, [category.id]);
-
-  useEffect(() => {
-    void fetchCatData();
-  }, [fetchCatData]);
-
-  useViewAutoRefresh(() => fetchCatData(true), [category.id]);
-
-  if (loading || !catData) return null;
-
-  // Lọc: Chỉ giữ lại SP thuộc Danh mục này nhưng KHÔNG thuộc Nghiệp vụ nào
-  const categoryDirectProducts = (catData.products || []).filter(
-    (prod: any) => !checkHasBusiness(prod)
-  );
-
-  const hasDirectProducts = categoryDirectProducts.length > 0;
-  const hasBusinesses = catData.businesses && catData.businesses.length > 0;
-
-  if (!hasDirectProducts && !hasBusinesses) return null;
-
-  return (
-    <div className="section-block">
-      <h3 className="section-title">{catData.categoryName}</h3>
-      
-      {/* Hiển thị SP trực thuộc Danh mục */}
-      {hasDirectProducts && (
-        <div className="products-grid">
-          {categoryDirectProducts.map(prod => (
-            <ProductCard key={prod.id} product={prod} onClick={() => onNavigate(prod.id)} />
-          ))}
-        </div>
-      )}
-
-      {/* Render các Nghiệp vụ con */}
-      {hasBusinesses && catData.businesses.map(bus => (
-        <BusinessSection key={bus.id} business={bus} onNavigate={onNavigate} />
-      ))}
-    </div>
-  );
-};
-
-// --------------------------------------------------------
-// 3. COMPONENT CẤP NHÓM (GROUP - CẤP 1 - VIEW CHÍNH)
-// --------------------------------------------------------
 const GroupView: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
@@ -197,19 +87,18 @@ const GroupView: React.FC = () => {
 
   useViewAutoRefresh(() => fetchGroupDetail(true), [groupId]);
 
-  const handleNavigate = (id: string) => navigate(`/view/product-detail/${id}`);
-
   if (loading && !groupData) return <div className="group-view"><div className="state-message">Đang tải dữ liệu...</div></div>;
   if (!groupData) return <div className="group-view"><div className="state-message">Không tìm thấy nhóm sản phẩm này.</div></div>;
 
   const currentGroupName = groupData.groupName || 'Chi tiết nhóm';
   const categories = groupData.categories || [];
-  const superGroupLabel = GROUP_OPTIONS.find((opt) => opt.value === groupData.superGroup)?.label || 'Nhóm sản phẩm dịch vụ'; 
+  const superGroupLabel = GROUP_OPTIONS.find((opt) => opt.value === groupData.superGroup)?.label || 'Nhóm sản phẩm dịch vụ';
 
-  // Lọc: Chỉ giữ lại SP trực thuộc Nhóm (KHÔNG có Danh mục và KHÔNG có Nghiệp vụ)
   const groupDirectProducts = (groupData.products || []).filter(
     (prod: any) => !checkHasCategory(prod) && !checkHasBusiness(prod)
   );
+
+  const isEmpty = groupDirectProducts.length === 0 && categories.length === 0;
 
   return (
     <div className="group-view">
@@ -229,27 +118,28 @@ const GroupView: React.FC = () => {
 
       <h2 className="group-page-title">{currentGroupName}</h2>
 
-      {/* Hiển thị SP trực thuộc Nhóm */}
-      {groupDirectProducts.length > 0 && (
-        <div className="section-block">
-          <div className="products-grid">
-            {groupDirectProducts.map((prod) => (
-              <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Render các Danh mục con */}
-      {categories.map((cat) => (
-        <CategorySection key={cat.id} category={cat} onNavigate={handleNavigate} />
-      ))}
-
-      {/* THAY ĐỔI MỚI: Giao diện Empty State khi không có dữ liệu */}
-      {groupDirectProducts.length === 0 && categories.length === 0 && (
+      {isEmpty ? (
         <div className="empty-data-message">
           <img src={EmptyIcon} alt="Không có dữ liệu" className="empty-state-icon" />
           <span className="empty-state-text">Không có sản phẩm dịch vụ nào</span>
+        </div>
+      ) : (
+        <div className="products-grid explorer-grid">
+          {categories.map((cat) => (
+            <FolderCard
+              key={cat.id}
+              name={cat.name}
+              kind="category"
+              onClick={() => navigate(`/view/category/${cat.id}`)}
+            />
+          ))}
+          {groupDirectProducts.map((prod) => (
+            <ProductCard
+              key={prod.id}
+              product={prod}
+              onClick={() => navigate(`/view/product-detail/${prod.id}`)}
+            />
+          ))}
         </div>
       )}
     </div>

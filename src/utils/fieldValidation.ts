@@ -117,3 +117,55 @@ export const getFirstCriteriaValueError = (
   }
   return null;
 };
+
+export const parseCriteriaCreatedAt = (value: unknown): number => {
+  if (value == null || value === '') return NaN;
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  if (value instanceof Date) {
+    const t = value.getTime();
+    return Number.isNaN(t) ? NaN : t;
+  }
+  if (Array.isArray(value) && value.length >= 3) {
+    const [y, m, d, h = 0, min = 0, s = 0] = value.map(Number);
+    const t = new Date(y, m - 1, d, h || 0, min || 0, Math.floor(s || 0)).getTime();
+    return Number.isNaN(t) ? NaN : t;
+  }
+  if (typeof value === 'object') {
+    const o = value as Record<string, any>;
+    if (o.year != null && (o.monthValue != null || o.month != null)) {
+      const t = new Date(
+        Number(o.year),
+        Number(o.monthValue ?? o.month) - 1,
+        Number(o.dayOfMonth ?? o.day ?? 1),
+        Number(o.hour ?? 0),
+        Number(o.minute ?? 0),
+        Number(o.second ?? 0)
+      ).getTime();
+      return Number.isNaN(t) ? NaN : t;
+    }
+  }
+  if (typeof value === 'string') {
+    const t = Date.parse(value);
+    return Number.isFinite(t) ? t : NaN;
+  }
+  return NaN;
+};
+
+/** Oldest created first. API list is newest-first, so undated items keep reverse of original order. */
+export const sortCriteriaByCreatedAtAsc = <T extends { createdAt?: unknown }>(items: T[]): T[] => {
+  const indexed = items.map((item, index) => ({ item, index }));
+  const anyDated = indexed.some(({ item }) => Number.isFinite(parseCriteriaCreatedAt(item.createdAt)));
+  indexed.sort((a, b) => {
+    const ta = parseCriteriaCreatedAt(a.item.createdAt);
+    const tb = parseCriteriaCreatedAt(b.item.createdAt);
+    const aOk = Number.isFinite(ta);
+    const bOk = Number.isFinite(tb);
+    if (aOk && bOk && ta !== tb) return ta - tb;
+    if (aOk && !bOk) return -1;
+    if (!aOk && bOk) return 1;
+    return anyDated ? a.index - b.index : b.index - a.index;
+  });
+  return indexed.map(({ item }) => item);
+};

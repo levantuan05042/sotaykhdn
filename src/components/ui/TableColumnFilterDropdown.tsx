@@ -1,5 +1,6 @@
 import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { matchesSearch } from '../../utils/searchText';
 
 export interface FilterOption {
   label: string;
@@ -47,7 +48,7 @@ export const TableColumnFilterDropdown: React.FC<TableColumnFilterDropdownProps>
   const isMultiSelect = Boolean(onSelectValues || selectedValues !== undefined);
 
   const filteredOptions = hasSearch && searchTerm.trim()
-    ? safeOptions.filter((opt) => opt?.label?.toLowerCase().includes(searchTerm.toLowerCase().trim()))
+    ? safeOptions.filter((opt) => matchesSearch(opt?.label, searchTerm))
     : safeOptions;
 
   const handleToggleOption = (val: string) => {

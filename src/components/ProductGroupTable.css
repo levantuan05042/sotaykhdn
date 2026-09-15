@@ -11,7 +11,7 @@
 
 .product-table {
   width: 100%;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse;
   min-width: 1300px;
 }
@@ -34,8 +34,9 @@
   font-weight: 700;
   text-align: left;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
+  min-width: max-content;
 }
 
 .product-table th.text-center,

@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LoadingPaginationFooter, TableSkeletonRows } from './TableSkeletonRows';
+import TableSortHeader from './TableSortHeader';
+import { isColumnSortable, nextSortDir, sortTableRows, type SortDir } from './tableSort';
 import './DataTable.css';
 
 export interface Column<T> {
@@ -7,6 +9,7 @@ export interface Column<T> {
   header: string;
   width?: string;
   align?: 'left' | 'center' | 'right';
+  sortable?: boolean;
   render?: (row: T, index: number) => React.ReactNode;
 }
 
@@ -37,6 +40,8 @@ export function DataTable<T extends Record<string, any>>({
 }: DataTableProps<T>) {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortKey, setSortKey] = useState('createdAt');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
 
   const isControlled = page !== undefined;
   const activePage = isControlled ? page : currentPage;
@@ -55,7 +60,12 @@ export function DataTable<T extends Record<string, any>>({
     }
   }, [data, isControlled]);
 
-  const totalRecords = data.length;
+  const sortedData = useMemo(
+    () => sortTableRows(data, sortKey, sortDir),
+    [data, sortKey, sortDir],
+  );
+
+  const totalRecords = sortedData.length;
   const totalPages = Math.ceil(totalRecords / pageSize) || 1;
 
   // Safeguard current page
@@ -64,7 +74,13 @@ export function DataTable<T extends Record<string, any>>({
   const startIndex = totalRecords === 0 ? 0 : (safeCurrentPage - 1) * pageSize;
   const endIndex = Math.min(startIndex + pageSize, totalRecords);
 
-  const paginatedData = data.slice(startIndex, endIndex);
+  const paginatedData = sortedData.slice(startIndex, endIndex);
+
+  const handleSort = (key: string) => {
+    setSortDir(nextSortDir(sortKey, sortDir, key));
+    setSortKey(key);
+    changePage(1);
+  };
 
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
@@ -102,17 +118,30 @@ export function DataTable<T extends Record<string, any>>({
           {!loading && (
             <thead>
               <tr>
-                {columns.map((col) => (
-                  <th
-                    key={col.key}
-                    style={{
-                      width: col.width,
-                      textAlign: col.align || 'left',
-                    }}
-                  >
-                    {col.header}
-                  </th>
-                ))}
+                {columns.map((col) => {
+                  const sortable = isColumnSortable(col.key, col.header, col.sortable);
+                  return (
+                    <th
+                      key={col.key}
+                      style={{
+                        width: col.width,
+                        textAlign: col.align || 'left',
+                      }}
+                    >
+                      {sortable ? (
+                        <TableSortHeader
+                          label={col.header}
+                          active={sortKey === col.key}
+                          direction={sortDir}
+                          align={col.align}
+                          onClick={() => handleSort(col.key)}
+                        />
+                      ) : (
+                        col.header
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
           )}

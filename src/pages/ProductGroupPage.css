@@ -254,7 +254,7 @@
 .table-placeholder table {
   width: 100%;
   min-width: 1300px !important;
-  table-layout: fixed !important;
+  table-layout: auto !important;
   border-collapse: collapse;
 }
 
@@ -273,9 +273,10 @@
 
 .table-placeholder th {
   display: table-cell !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
+  min-width: max-content;
 }
 
 .table-placeholder td {

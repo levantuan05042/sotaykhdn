@@ -21,6 +21,51 @@ const MainLayout: React.FC = () => {
       document.documentElement.classList.remove('view-app');
     };
   }, []);
+
+  useEffect(() => {
+    const isEditableTarget = (target: EventTarget | null) => {
+      const el = target as HTMLElement | null;
+      if (!el?.closest) return false;
+      return Boolean(el.closest('input, textarea, [contenteditable="true"]'));
+    };
+
+    const blockClipboard = (e: ClipboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+      e.preventDefault();
+    };
+
+    const blockContextMenu = (e: MouseEvent) => {
+      if (isEditableTarget(e.target)) return;
+      e.preventDefault();
+    };
+
+    const blockHotkeys = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+      const key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ['c', 'x', 'a'].includes(key)) {
+        e.preventDefault();
+      }
+    };
+
+    const blockDrag = (e: DragEvent) => {
+      if (isEditableTarget(e.target)) return;
+      e.preventDefault();
+    };
+
+    document.addEventListener('copy', blockClipboard, true);
+    document.addEventListener('cut', blockClipboard, true);
+    document.addEventListener('contextmenu', blockContextMenu, true);
+    document.addEventListener('keydown', blockHotkeys, true);
+    document.addEventListener('dragstart', blockDrag, true);
+
+    return () => {
+      document.removeEventListener('copy', blockClipboard, true);
+      document.removeEventListener('cut', blockClipboard, true);
+      document.removeEventListener('contextmenu', blockContextMenu, true);
+      document.removeEventListener('keydown', blockHotkeys, true);
+      document.removeEventListener('dragstart', blockDrag, true);
+    };
+  }, []);
   useEffect(() => {
     setIsSidebarOpen(false);
   }, [location.pathname]);

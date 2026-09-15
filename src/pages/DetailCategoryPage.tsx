@@ -10,6 +10,7 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
@@ -26,6 +27,7 @@ import {
   showErrorToast,
   showSuccessToast,
 } from '../utils/appToast';
+import { matchesSearch } from '../utils/searchText';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -469,32 +471,15 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu danh mục...</div>;
   if (!categoryData) return <div className="error">Không tìm thấy dữ liệu danh mục sản phẩm phù hợp.</div>;
   
-  const canSubmit = !hideEditActions && isDirty && formData.name.trim() !== '';
+  const canSubmit = !hideEditActions && isDirty && formData.name.trim() !== '' && !isSubmitting;
 
-  const filteredGroups = groupOptions.filter(opt => opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase()));
+  const filteredGroups = groupOptions.filter(opt => matchesSearch(opt.label, groupSearchTerm));
 
   return (
     <div className="pageWrapper">
@@ -548,25 +533,25 @@ const DetailCategoryPage: React.FC = () => {
                       </svg>
                       Xóa
                     </button>
-                    <button className="btnDraft active" disabled={isNotCreator} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className="btnDraft active" disabled={isNotCreator || isSubmitting} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
-                    <button className={`btnSubmit ${!isNotCreator && (formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim()) && (formData.groupId !== undefined ? formData.groupId : categoryData?.groupId) ? 'active' : 'disabled'}`} disabled={isNotCreator || !(formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim()) || !(formData.groupId !== undefined ? formData.groupId : categoryData?.groupId)} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnSubmit ${!isNotCreator && !isSubmitting && (formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim()) && (formData.groupId !== undefined ? formData.groupId : categoryData?.groupId) ? 'active' : 'disabled'}`} disabled={isSubmitting || isNotCreator || !(formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim()) || !(formData.groupId !== undefined ? formData.groupId : categoryData?.groupId)} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}
                 {(categoryData.status === 'ACTIVE' || categoryData.status === 'NEEDS_REVISION') && (
                   <>
-                    <button className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} disabled={!isDirty} onClick={() => onSaveDraftClick(categoryData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button className={`btnDraft ${isDirty && !isSubmitting ? 'active' : 'disabled'}`} disabled={!isDirty || isSubmitting} onClick={() => onSaveDraftClick(categoryData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
                     <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}

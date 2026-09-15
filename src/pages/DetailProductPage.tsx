@@ -16,17 +16,19 @@ import {
   notifyIfCannotShowChild,
   showDisplayStatusFromApi,
   showSuccessToast,
-} from '../utils/appToast'; 
+} from '../utils/appToast';
+import { matchesSearch } from '../utils/searchText'; 
 import ProductInfoCard from '../components/ui/ProductInfoCard';
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
-import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria } from '../utils/fieldValidation';
+import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc, stripHtmlText } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
@@ -36,6 +38,7 @@ interface Criterion {
   isRequired: boolean;
   isSelected: boolean;
   value: string;
+  createdAt?: unknown;
 }
 
 interface PixelCrop {
@@ -135,15 +138,16 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Cri
       isRequired: checkIsRequired(item),
       isSelected: false,
       value: '',
+      createdAt: item.createdAt ?? item.created_at,
     };
   });
 
   if (!savedDetails || savedDetails.length === 0) {
-    return catalog.map(c => ({
+    return sortCriteriaByCreatedAtAsc(catalog.map(c => ({
       ...c,
       isSelected: c.isRequired,
       value: '',
-    }));
+    })));
   }
 
   const merged: Criterion[] = [];
@@ -166,6 +170,7 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Cri
       isRequired: fromCatalog?.isRequired ?? checkIsRequired(s),
       isSelected: true,
       value: sVal,
+      createdAt: fromCatalog?.createdAt ?? s.createdAt ?? s.created_at,
     });
     if (fromCatalog) {
       usedCatalogIds.add(fromCatalog.id);
@@ -182,7 +187,7 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Cri
     });
   }
 
-  return merged;
+  return sortCriteriaByCreatedAtAsc(merged);
 };
 
 const toDisplayUrl = (raw: string) => {
@@ -423,66 +428,6 @@ const ImageModal: React.FC<ImageModalProps> = ({ isOpen, onClose, onConfirm }) =
   );
 };
 
-interface BatchApprovalModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmitBatch: (requestId: string, status: string) => void;
-  requestId: string;
-  requestName: string;
-}
-
-const BatchApprovalModal: React.FC<BatchApprovalModalProps> = ({ isOpen, onClose, onSubmitBatch, requestId, requestName }) => {
-  const [loading, setLoading] = useState(false);
-
-  if (!isOpen) return null;
-
-  const handleConfirm = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      await onSubmitBatch(requestId, 'PENDING_APPROVAL');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.4)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100, backdropFilter: 'blur(2px)' }}>
-      <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '440px', maxWidth: '95vw', padding: '32px 24px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', boxSizing: 'border-box' }}>
-        
-        <div style={{ width: '56px', height: '56px', borderRadius: '50%', backgroundColor: '#FEFCE8', border: '8px solid #FEFDE8', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px', boxShadow: '0 0 0 4px #FEF9C3' }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CA8A04" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-            <line x1="12" y1="9" x2="12" y2="13"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-        </div>
-        <p style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: 500, color: '#111827', textAlign: 'center', lineHeight: '1.5' }}>
-          Bạn muốn gửi Phê duyệt <span style={{ color: '#AE1C3F', fontWeight: 600 }}>{requestName || 'Tên yêu cầu'}</span>
-        </p>
-        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={loading}
-            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: '1px solid #D1D5DB', backgroundColor: '#F3F4F6', color: '#374151', fontWeight: 600, cursor: 'pointer', fontSize: '15px' }}
-          >
-            Hủy
-          </button>
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={loading}
-            style={{ flex: 1, padding: '10px 20px', borderRadius: '8px', border: 'none', backgroundColor: '#AE1C3F', color: 'white', fontWeight: 600, fontSize: '15px', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? 'Đang xử lý...' : 'Phê duyệt'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 interface QuillEditorProps {
   value: string;
   onChange: (content: string) => void;
@@ -582,7 +527,7 @@ const CriteriaModal: React.FC<{
   if (!isOpen) return null;
 
   const filteredCriteria = criteria.filter(c => 
-    (!c.isSelected || !c.isRequired) && c.name.toLowerCase().includes(search.toLowerCase())
+    (!c.isSelected || !c.isRequired) && matchesSearch(c.name, search)
   );
 
   return (
@@ -1180,20 +1125,22 @@ const DetailProductPage: React.FC = () => {
     }
   };
 
-  const handleBatchStatusSubmit = async (requestId: string, status: string) => {
+  const handleBatchStatusSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
-      const targetRequestId = requestId || productData?.requestId || productData?.batchRequestId;
+      const targetRequestId = productData?.requestId || productData?.batchRequestId;
       
       if (!targetRequestId) {
           toast.error('Không tìm thấy thông tin lô!', { position: 'top-center' });
           return;
       }
-      const targetRequestName = productData?.requestName || 'Tên yêu cầu'; 
+      const targetRequestName = stripHtmlText(productData?.requestName) || 'Tên lô'; 
 
       const response = await axios.post(
         `${BASE_URL}/product-requests/status/${targetRequestId}`,
-        { status },
+        { status: 'PENDING_APPROVAL' },
         {
           headers: {
             'Content-Type': 'application/json',
@@ -1211,6 +1158,8 @@ const DetailProductPage: React.FC = () => {
     } catch (error: any) {
       console.error('Lỗi gửi phê duyệt theo lô:', error);
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi gửi phê duyệt theo lô', { position: 'top-center' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -1252,21 +1201,7 @@ const DetailProductPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
-    toast.custom(t => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   const getCleanProductName = (html: string) =>
@@ -1277,8 +1212,7 @@ const DetailProductPage: React.FC = () => {
   if (!productData) return <div className="error">Không tìm thấy dữ liệu sản phẩm phù hợp.</div>;
 
   const productNameBreadcrumb = getCleanProductName(productData.name);
-  const activeRequestId = productData?.requestId || productData?.batchRequestId || 'Lô ABC';
-  const requestName = productData?.requestName || 'Tên yêu cầu';
+  const requestName = productData?.requestName || 'Tên lô';
   const isStatusDisabled = !isLoggedIn || !hasEditPermission || isPendingApproval || isRejected || !isProductActive;
 
   return (
@@ -1401,51 +1335,51 @@ const DetailProductPage: React.FC = () => {
             {!isReadOnly && (
               <>
                 {productData.status === 'DRAFT' && (<>
-                  <button className="btnDraft" onClick={handleDeleteProduct} style={{ display: 'flex', padding: '8px 14px', alignItems: 'center', gap: 6, borderRadius: 8, background: '#E3DFE6', border: 'none', cursor: 'pointer', color: '#AE1C3F', fontSize: 14, fontWeight: 600 }}>
+                  <button className="btnDraft" disabled={isSubmitting} onClick={handleDeleteProduct} style={{ display: 'flex', padding: '8px 14px', alignItems: 'center', gap: 6, borderRadius: 8, background: '#E3DFE6', border: 'none', cursor: isSubmitting ? 'not-allowed' : 'pointer', color: '#AE1C3F', fontSize: 14, fontWeight: 600 }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="17" viewBox="0 0 17 19" fill="none">
                       <path d="M0.835938 4.16829H2.5026M2.5026 4.16829H15.8359M2.5026 4.16829V15.835C2.5026 16.277 2.6782 16.7009 2.99076 17.0135C3.30332 17.326 3.72724 17.5016 4.16927 17.5016H12.5026C12.9446 17.5016 13.3686 17.326 13.6811 17.0135C13.9937 16.7009 14.1693 16.277 14.1693 15.835V4.16829H2.5026ZM5.0026 4.16829V2.50163C5.0026 2.0596 5.1782 1.63568 5.49076 1.32312C5.80332 1.01056 6.22724 0.834961 6.66927 0.834961H10.0026C10.4446 0.834961 10.8686 1.01056 11.1811 1.32312C11.4937 1.63568 11.6693 2.0596 11.6693 2.50163V4.16829M6.66927 8.33496V13.335M10.0026 8.33496V13.335" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     Xóa
                   </button>
-                  <button className="btnDraft active" onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button className={`btnDraft ${isSubmitting ? 'disabled' : 'active'}`} disabled={isSubmitting} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                    Lưu nháp
+                    {draftActionLabel(isSubmitting, confirmAction)}
                   </button>
-                  <button className="btnSubmit active" onClick={handleApproveClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button className={`btnSubmit ${isSubmitting ? 'disabled' : 'active'}`} disabled={isSubmitting} onClick={handleApproveClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Gửi phê duyệt
+                    {submitActionLabel(isSubmitting, confirmAction)}
                   </button>
                 </>)}
                 {isProductActive && (
                   <>
                     <button 
-                      className={`btnDraft ${isDirty ? 'active' : 'disabled'}`} 
-                      disabled={!isDirty} 
+                      className={`btnDraft ${isDirty && !isSubmitting ? 'active' : 'disabled'}`} 
+                      disabled={!isDirty || isSubmitting} 
                       onClick={() => onSaveDraftClick('DRAFT')}
                       style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
                     <button 
-                      className={`btnSubmit ${isDirty ? 'active' : 'disabled'}`} 
-                      disabled={!isDirty} 
+                      className={`btnSubmit ${isDirty && !isSubmitting ? 'active' : 'disabled'}`} 
+                      disabled={!isDirty || isSubmitting} 
                       onClick={handleApproveClick}
                       style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}
                 {productData.status === 'NEEDS_REVISION' && (<>
-                  <button className="btnDraft active" onClick={() => onSaveDraftClick('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button className={`btnDraft ${isSubmitting ? 'disabled' : 'active'}`} disabled={isSubmitting} onClick={() => onSaveDraftClick('NEEDS_REVISION')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                    Lưu nháp
+                    {draftActionLabel(isSubmitting, confirmAction)}
                   </button>
-                  <button className="btnSubmit active" onClick={handleApproveClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button className={`btnSubmit ${isSubmitting ? 'disabled' : 'active'}`} disabled={isSubmitting} onClick={handleApproveClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Gửi phê duyệt
+                    {submitActionLabel(isSubmitting, confirmAction)}
                   </button>
                 </>)}
                 {productData.status === 'ARCHIVED' && (
@@ -1517,13 +1451,13 @@ const DetailProductPage: React.FC = () => {
                         />
                       </div>
                       <div style={{ minHeight: '250px'}}>
-                        {groupOptions.filter(o => o.label.toLowerCase().includes(groupSearch.toLowerCase())).map(o => (
+                        {groupOptions.filter(o => matchesSearch(o.label, groupSearch)).map(o => (
                           <div key={o.value} className={`custom-option ${formData.productGroupId === o.value ? 'selected' : ''}`}
                             onClick={() => { setFormData({ productGroupId: o.value, productCategoryId: '', businessId: '' }); setIsGroupOpen(false); setGroupSearch(''); }}>
                             {o.label}
                           </div>
                         ))}
-                        {groupOptions.filter(o => o.label.toLowerCase().includes(groupSearch.toLowerCase())).length === 0 && (
+                        {groupOptions.filter(o => matchesSearch(o.label, groupSearch)).length === 0 && (
                           <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
                         )}
                       </div>
@@ -1563,11 +1497,11 @@ const DetailProductPage: React.FC = () => {
                         </div>
                         <div style={{ minHeight: '250px'}}>
                           <div className="custom-option" onClick={() => { setFormData({ ...formData, productCategoryId: '', businessId: '' }); setIsCategoryOpen(false); setCategorySearch(''); }}><i>-- Bỏ chọn --</i></div>
-                          {categoryOptions.filter(o => o.label.toLowerCase().includes(categorySearch.toLowerCase())).map(o => (
+                          {categoryOptions.filter(o => matchesSearch(o.label, categorySearch)).map(o => (
                             <div key={o.value} className={`custom-option ${formData.productCategoryId === o.value ? 'selected' : ''}`}
                               onClick={() => { setFormData({ ...formData, productCategoryId: o.value, businessId: '' }); setIsCategoryOpen(false); setCategorySearch(''); }}>{o.label}</div>
                           ))}
-                          {categoryOptions.filter(o => o.label.toLowerCase().includes(categorySearch.toLowerCase())).length === 0 && (
+                          {categoryOptions.filter(o => matchesSearch(o.label, categorySearch)).length === 0 && (
                             <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
                           )}
                         </div>
@@ -1606,11 +1540,11 @@ const DetailProductPage: React.FC = () => {
                         </div>
                         <div style={{ minHeight: '250px'}}>
                           <div className="custom-option" onClick={() => { setFormData({ ...formData, businessId: '' }); setIsOperationOpen(false); setOperationSearch(''); }}><i>-- Bỏ chọn --</i></div>
-                          {operationOptions.filter(o => o.label.toLowerCase().includes(operationSearch.toLowerCase())).map(o => (
+                          {operationOptions.filter(o => matchesSearch(o.label, operationSearch)).map(o => (
                             <div key={o.value} className={`custom-option ${formData.businessId === o.value ? 'selected' : ''}`}
                               onClick={() => { setFormData({ ...formData, businessId: o.value }); setIsOperationOpen(false); setOperationSearch(''); }}>{o.label}</div>
                           ))}
-                          {operationOptions.filter(o => o.label.toLowerCase().includes(operationSearch.toLowerCase())).length === 0 && (
+                          {operationOptions.filter(o => matchesSearch(o.label, operationSearch)).length === 0 && (
                             <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
                           )}
                         </div>
@@ -2013,12 +1947,16 @@ const DetailProductPage: React.FC = () => {
         onConfirm={handleImageConfirm}
       />
 
-      <BatchApprovalModal
+      <ActionConfirmModal
         isOpen={showBatchModal}
-        onClose={() => setShowBatchModal(false)}
-        onSubmitBatch={handleBatchStatusSubmit}
-        requestId={activeRequestId}
-        requestName={requestName}
+        onClose={() => { if (!isSubmitting) setShowBatchModal(false); }}
+        onConfirm={handleBatchStatusSubmit}
+        variant="submit"
+        title="Xác nhận gửi phê duyệt"
+        desc={`Bạn muốn phê duyệt "${stripHtmlText(requestName) || 'Tên lô'}"?`}
+        confirmText="Gửi phê duyệt"
+        cancelText="Hủy"
+        loading={isSubmitting}
       />
 
       <ActionConfirmModal

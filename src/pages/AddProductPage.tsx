@@ -8,11 +8,13 @@ import Cropper from 'react-easy-crop';
 import axios from 'axios';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { matchesSearch } from '../utils/searchText';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
-import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria } from '../utils/fieldValidation';
+import { getCriteriaCountLength, getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 
 interface Criterion {
@@ -21,7 +23,8 @@ interface Criterion {
   code?: string;
   isRequired: boolean;
   isSelected: boolean; 
-  value: string; 
+  value: string;
+  createdAt?: unknown;
 }
 
 interface QuillEditorProps {
@@ -304,14 +307,20 @@ const AddProductPage: React.FC = () => {
           params: { types: formData.productGroupId, status: 'ACTIVE' , active: true }
         });
         
-        const formattedCriteria: Criterion[] = response.data.map((item: any) => ({
-          id: item.id || item.criteriaId,
-          name: item.name,
-          code: item.code,
-          isRequired: item.isRequired,
-          isSelected: item.isRequired ? true : false,
-          value: ''
-        })).sort((a: any, b: any) => Number(b.isRequired) - Number(a.isRequired));
+        const rawList = Array.isArray(response.data)
+          ? response.data
+          : (response.data?.content || response.data?.data || []);
+        const formattedCriteria: Criterion[] = sortCriteriaByCreatedAtAsc(
+          rawList.map((item: any) => ({
+            id: item.id || item.criteriaId,
+            name: item.name,
+            code: item.code,
+            isRequired: item.isRequired,
+            isSelected: Boolean(item.isRequired),
+            value: '',
+            createdAt: item.createdAt ?? item.created_at,
+          }))
+        );
         setCriteria(formattedCriteria);
          
       } catch (error) {
@@ -430,7 +439,7 @@ const AddProductPage: React.FC = () => {
   const handleGoBack = () => navigate('/products/processing');
 
   const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submitKind, beginSubmit, endSubmit } = useSubmitLock();
   const isFormDirty =
     formData.productGroupId !== '' ||
     formData.productCategoryId !== '' ||
@@ -470,14 +479,16 @@ const AddProductPage: React.FC = () => {
   };
 
   const handleCreateProduct = async (status: 'DRAFT' | 'ACTIVE' | 'PENDING_APPROVAL') => {
-    if (isSubmitting) return;
+    if (!beginSubmit(status === 'DRAFT' ? 'draft' : 'submit')) return;
     const criteriaErr = getFirstCriteriaValueError(criteria);
     if (criteriaErr) {
       toast.error(criteriaErr, { position: 'top-center' });
+      endSubmit();
       return;
     }
     if (!formData.productGroupId && status !== 'DRAFT') {
       toast.error("Vui lòng chọn Nhóm sản phẩm", { position: 'top-center' });
+      endSubmit();
       return;
     }
     
@@ -487,6 +498,7 @@ const AddProductPage: React.FC = () => {
         toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${missingRequiredCriterion.name}`, { 
           position: 'top-center' 
         });
+        endSubmit();
         return; 
       }
     }
@@ -510,7 +522,6 @@ const AddProductPage: React.FC = () => {
     if (formData.businessId) payload.businessId = formData.businessId;
 
     try {
-      setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT.LIST, payload);
       toast.success(status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công", { position: 'top-center' });
       setConfirmAction(null);
@@ -520,8 +531,7 @@ const AddProductPage: React.FC = () => {
       console.error("Lỗi gửi request:", error);
       const errMsg = error.response?.data?.message || "Không thể kết nối đến server.";
       toast.error(errMsg, { position: 'top-center' });
-    } finally {
-      setIsSubmitting(false);
+      endSubmit();
     }
   };
 
@@ -529,21 +539,10 @@ const AddProductPage: React.FC = () => {
   const canSubmit = formData.productGroupId !== '' && !isSubmitting;
 
   // --- LỌC DANH SÁCH TÌM KIẾM ---
-  const filteredGroupOptions = groupOptions.filter(opt => 
-    opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
-  );
-  
-  const filteredCategoryOptions = categoryOptions.filter(opt => 
-    opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())
-  );
-  
-  const filteredOperationOptions = operationOptions.filter(opt => 
-    opt.label.toLowerCase().includes(operationSearchTerm.toLowerCase())
-  );
-  
-  const filteredCriteria = criteria.filter(c => 
-    !c.isRequired && c.name.toLowerCase().includes(criteriaSearchTerm.toLowerCase())
-  );
+  const filteredGroupOptions = groupOptions.filter(opt => matchesSearch(opt.label, groupSearchTerm));
+  const filteredCategoryOptions = categoryOptions.filter(opt => matchesSearch(opt.label, categorySearchTerm));
+  const filteredOperationOptions = operationOptions.filter(opt => matchesSearch(opt.label, operationSearchTerm));
+  const filteredCriteria = criteria.filter(c => !c.isRequired && matchesSearch(c.name, criteriaSearchTerm));
 
   return (
     <div className="pageWrapper">
@@ -580,7 +579,7 @@ const AddProductPage: React.FC = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 8V21H3V8M1 3H23V8H1V3ZM10 12H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Lưu nháp
+              {draftActionLabel(isSubmitting, submitKind)}
             </button>
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
@@ -591,7 +590,7 @@ const AddProductPage: React.FC = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Gửi phê duyệt
+              {submitActionLabel(isSubmitting, submitKind)}
             </button>
           </div>
         </div>
@@ -1198,7 +1197,7 @@ const AddProductPage: React.FC = () => {
       <ActionConfirmModal
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => confirmAction && handleCreateProduct(confirmAction)}
+        onConfirm={() => confirmAction ? handleCreateProduct(confirmAction) : undefined}
         variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt sản phẩm không?'}

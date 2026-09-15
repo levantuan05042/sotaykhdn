@@ -11,6 +11,7 @@ import StatusBadge2 from '../components/ui/StatusBadge2';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
+import { draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
@@ -26,6 +27,7 @@ import {
   showErrorToast,
   showSuccessToast,
 } from '../utils/appToast';
+import { matchesSearch } from '../utils/searchText';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -129,8 +131,8 @@ const DetailBusinessPage: React.FC = () => {
     formData.categoryId !== businessData.categoryId
   ) : false;
 
-  const canSaveDraft = !isReadOnly && (businessData?.status === 'DRAFT' || hasChanges) && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '';
-  const canSubmit = !isReadOnly && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '' && (formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId) !== '' && (businessData?.status === 'DRAFT' || hasChanges);
+  const canSaveDraft = !isReadOnly && !isSubmitting && (businessData?.status === 'DRAFT' || hasChanges) && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '';
+  const canSubmit = !isReadOnly && !isSubmitting && (formData.name !== undefined ? formData.name.trim() : (businessData?.name || '').trim()) !== '' && (formData.categoryId !== undefined ? formData.categoryId : businessData?.categoryId) !== '' && (businessData?.status === 'DRAFT' || hasChanges);
   const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!isReadOnly && hasChanges));
 
   const getCreatorDisplayName = () => {
@@ -480,19 +482,7 @@ const DetailBusinessPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   if (loading) return <div className="loading">Đang tải dữ liệu nghiệp vụ...</div>;
@@ -545,11 +535,11 @@ const DetailBusinessPage: React.FC = () => {
                     </button>
                     <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick('DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
                     <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}
@@ -558,11 +548,11 @@ const DetailBusinessPage: React.FC = () => {
                   <>
                     <button className={`btnDraft ${canSaveDraft ? 'active' : 'disabled'}`} disabled={!canSaveDraft} onClick={() => onSaveDraftClick(businessData.status === 'NEEDS_REVISION' ? 'NEEDS_REVISION' : 'DRAFT')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                      Lưu nháp
+                      {draftActionLabel(isSubmitting, confirmAction)}
                     </button>
                     <button className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} disabled={!canSubmit} onClick={onSubmitClick} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      Gửi phê duyệt
+                      {submitActionLabel(isSubmitting, confirmAction)}
                     </button>
                   </>
                 )}
@@ -625,7 +615,7 @@ const DetailBusinessPage: React.FC = () => {
                       </div>
                       <div style={{ padding: '4px 0' }}>
                         {categoryOptions
-                          .filter(opt => opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase()))
+                          .filter(opt => matchesSearch(opt.label, categorySearchTerm))
                           .map((opt) => (
                             <div key={opt.value} className={`custom-option ${formData.categoryId === opt.value ? 'selected' : ''}`}
                               onClick={() => { 
@@ -636,7 +626,7 @@ const DetailBusinessPage: React.FC = () => {
                               <span>{opt.label}</span>
                             </div>
                           ))}
-                        {categoryOptions.filter(opt => opt.label.toLowerCase().includes(categorySearchTerm.toLowerCase())).length === 0 && (
+                        {categoryOptions.filter(opt => matchesSearch(opt.label, categorySearchTerm)).length === 0 && (
                            <div style={{ padding: '8px 12px', color: '#6B7280', fontSize: '14px', textAlign: 'center' }}>Không tìm thấy kết quả</div>
                         )}
                       </div>

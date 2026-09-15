@@ -8,6 +8,7 @@ import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
+import { matchesSearch } from '../utils/searchText';
 import './ApproverBusinessListPage.css';
 
 interface BusinessItem {
@@ -130,11 +131,11 @@ export const ApproverBusinessListPage: React.FC = () => {
 
   // Apply filters client-side for immediate responsiveness
   const filteredBusinesses = businesses.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearchText = matchesSearch(item.name, searchTerm);
     const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(item.status);
     const matchesGroup = selectedGroupIds.length === 0 || selectedGroupIds.includes(item.groupId);
     const isNotDraft = item.status !== 'DRAFT';
-    return matchesSearch && matchesStatus && matchesGroup && isNotDraft;
+    return matchesSearchText && matchesStatus && matchesGroup && isNotDraft;
   }).map((item, index) => ({
     ...item,
     stt: index + 1

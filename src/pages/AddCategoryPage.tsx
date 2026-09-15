@@ -4,10 +4,12 @@ import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { matchesSearch } from '../utils/searchText';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
+import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
 
 const AddCategoryPage: React.FC = () => {
   const navigate = useNavigate();
@@ -72,7 +74,7 @@ const AddCategoryPage: React.FC = () => {
   }, []);
 
   const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSubmitting, submitKind, beginSubmit, endSubmit } = useSubmitLock();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -109,14 +111,14 @@ const AddCategoryPage: React.FC = () => {
   };
 
   const handleCreateCategory = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
-    if (isSubmitting) return;
+    if (!beginSubmit(status === 'DRAFT' ? 'draft' : 'submit')) return;
     const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
+      endSubmit();
       return;
     }
     try {
-      setIsSubmitting(true);
       await axios.post(API_ENDPOINTS.PRODUCT_CATEGORY.LIST, {
         name: formData.name.trim() || undefined,
         groupId: formData.groupId || undefined,
@@ -133,30 +135,12 @@ const AddCategoryPage: React.FC = () => {
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Tên danh mục sản phẩm đã tồn tại';
       toast.error(errorMessage, { position: 'top-center' });
-    } finally {
-      setIsSubmitting(false);
+      endSubmit();
     }
   };
 
   const renderCustomToast = (message: string) => {
-    toast.custom((t) => (
-      <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} toast-pill-container`}>
-        <div className="toast-pill-content">
-          <div className="toast-pill-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-          </div>
-          <span className="toast-pill-text">{message}</span>
-        </div>
-        <button onClick={() => toast.dismiss(t.id)} className="toast-pill-close">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-    ), { position: 'top-center' });
+    toast.success(message);
   };
 
   const isFormDirty = 
@@ -170,7 +154,7 @@ const AddCategoryPage: React.FC = () => {
 
   // MỚI: Lọc danh sách nhóm sản phẩm dựa trên từ khóa tìm kiếm
   const filteredGroupOptions = groupOptions.filter(opt => 
-    opt.label.toLowerCase().includes(groupSearchTerm.toLowerCase())
+    matchesSearch(opt.label, groupSearchTerm)
   );
 
   return (
@@ -210,7 +194,7 @@ const AddCategoryPage: React.FC = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M21 8V21H3V8M1 3H23V8H1V3ZM10 12H14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Lưu nháp
+              {draftActionLabel(isSubmitting, submitKind)}
             </button>
             <button 
               className={`btnSubmit ${canSubmit ? 'active' : 'disabled'}`} 
@@ -221,7 +205,7 @@ const AddCategoryPage: React.FC = () => {
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M22 2L11 13M22 2L15 22L11 13M11 13L2 9L22 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              Gửi phê duyệt
+              {submitActionLabel(isSubmitting, submitKind)}
             </button>
           </div>
         </div>
@@ -430,7 +414,7 @@ const AddCategoryPage: React.FC = () => {
       <ActionConfirmModal
         isOpen={confirmAction !== null}
         onClose={() => setConfirmAction(null)}
-        onConfirm={() => confirmAction && handleCreateCategory(confirmAction)}
+        onConfirm={() => confirmAction ? handleCreateCategory(confirmAction) : undefined}
         variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
         desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm không?' : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm không?'}

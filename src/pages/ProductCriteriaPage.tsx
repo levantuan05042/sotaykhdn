@@ -12,12 +12,19 @@ import { formatApprovedBy, getCascadeRowClassName, isCriteriaFullyLocked } from 
 import toast from 'react-hot-toast';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import {
+  formatSelectedGroupsLabel,
+  formatSelectedGroupsLabelText,
+  getSelectedGroupsParts,
+  type NestedGroupOption,
+} from '../components/ui/SuperGroupNestedSelect';
+import {
   displaySuccessMessage,
   notifyIfCannotShowChild,
   showDisplayStatusFromApi,
   showSuccessToast,
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
+import { matchesSearch } from '../utils/searchText';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -36,7 +43,37 @@ const ACTIVE_OPTIONS = [
 interface GroupOption {
   value: string;
   label: string;
+  superGroup?: string;
+  hidden?: boolean;
 }
+
+const toGroupList = (raw: any): any[] => {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === 'object') return Object.values(raw);
+  return [];
+};
+
+const mergeGroupOptions = (catalog: NestedGroupOption[], rawGroups: any[]): NestedGroupOption[] => {
+  const options = catalog.map(opt => ({ ...opt, value: String(opt.value) }));
+  toGroupList(rawGroups).forEach((g: any) => {
+    const id = String(g?.id || '');
+    if (!id) return;
+    const existing = options.find(opt => opt.value === id);
+    if (existing) {
+      if (!existing.superGroup && g.superGroup) existing.superGroup = g.superGroup;
+      if (g.active === false) existing.hidden = true;
+    } else {
+      options.push({
+        value: id,
+        label: g.name || id,
+        superGroup: g.superGroup || '',
+        hidden: g.active === false,
+        fromCatalog: false,
+      });
+    }
+  });
+  return options;
+};
 
 const FilterTag: React.FC<{ label: string; onRemove: () => void }> = ({ label, onRemove }) => (
   <div className="filter-tag">
@@ -99,8 +136,11 @@ const ProductCriteriaPage: React.FC = () => {
         const mappedGroups = (response.data || [])
           .filter((item: any) => item.status === 'ACTIVE')
           .map((item: any) => ({
-            value: item.id,
-            label: item.name
+            value: String(item.id),
+            label: item.name,
+            superGroup: item.superGroup || '',
+            hidden: item.active === false,
+            fromCatalog: true,
           }));
         setGroupOptions(mappedGroups);
       } catch (error) {
@@ -113,11 +153,7 @@ const ProductCriteriaPage: React.FC = () => {
   const fetchData = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
-      const response = await axios.get(API_ENDPOINTS.PRODUCT_CRITERIA.LIST, {
-        params: {
-          keyword: searchTerm.trim() || undefined,
-        },
-      });
+      const response = await axios.get(API_ENDPOINTS.PRODUCT_CRITERIA.LIST);
       
       const resultData = response.data?.content || response.data;
       const rawList = Array.isArray(resultData) ? resultData : [];
@@ -160,11 +196,10 @@ const ProductCriteriaPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const handler = setTimeout(() => fetchData(), 500);
-    return () => clearTimeout(handler);
-  }, [searchTerm]);
+    fetchData();
+  }, []);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling 5s và lắng nghe focus/visibilitychange
+  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling và lắng nghe focus/visibilitychange
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData(true);
@@ -184,7 +219,7 @@ const ProductCriteriaPage: React.FC = () => {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleFocus);
     };
-  }, [searchTerm]);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -202,19 +237,34 @@ const ProductCriteriaPage: React.FC = () => {
   };
 
   const groupFilterOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    groupOptions.forEach(opt => map.set(opt.value, opt.label));
+    const map = new Map<string, GroupOption>();
+    groupOptions.forEach(opt => map.set(opt.value, { ...opt, value: String(opt.value) }));
     data.forEach(item => {
-      if (item.productGroups && Array.isArray(item.productGroups)) {
-        item.productGroups.forEach((g: any) => {
-          if (g.id && g.name) {
-            map.set(g.id, g.name);
-          }
-        });
-      }
+      toGroupList(item.productGroups).forEach((g: any) => {
+        if (!g?.id || !g?.name) return;
+        const id = String(g.id);
+        const existing = map.get(id);
+        if (existing) {
+          if (!existing.superGroup && g.superGroup) existing.superGroup = g.superGroup;
+          if (g.active === false) existing.hidden = true;
+        } else {
+          map.set(id, {
+            value: id,
+            label: g.name,
+            superGroup: g.superGroup || '',
+            hidden: g.active === false,
+            fromCatalog: false,
+          });
+        }
+      });
     });
-    return Array.from(map.entries()).map(([value, label]) => ({ value, label }));
+    return Array.from(map.values());
   }, [groupOptions, data]);
+
+  const selectedGroupParts = useMemo(
+    () => getSelectedGroupsParts(groupFilterOptions, selectedGroups),
+    [groupFilterOptions, selectedGroups],
+  );
 
   const creatorFilterOptions = useMemo(() => {
     const set = new Set<string>();
@@ -236,9 +286,17 @@ const ProductCriteriaPage: React.FC = () => {
 
   const getFilteredData = () => {
     return data.filter(item => {
+      if (
+        searchTerm.trim() &&
+        !matchesSearch(item.name, searchTerm) &&
+        !matchesSearch(item.code, searchTerm) &&
+        !matchesSearch(item.id, searchTerm)
+      ) {
+        return false;
+      }
       if (selectedGroups.length > 0) {
-        const groups = item.productGroups || [];
-        const hasGroup = groups.some((g: any) => selectedGroups.includes(g.id) || selectedGroups.includes(g.name));
+        const groups = toGroupList(item.productGroups);
+        const hasGroup = groups.some((g: any) => selectedGroups.includes(g.id) || selectedGroups.includes(String(g.id)) || selectedGroups.includes(g.name));
         if (!hasGroup) return false;
       }
       if (selectedStatuses.length > 0 && !selectedStatuses.some(s => s.toUpperCase() === item.status?.toUpperCase())) {
@@ -374,28 +432,16 @@ const ProductCriteriaPage: React.FC = () => {
       key: 'productGroups',
       header: 'Nhóm sản phẩm',
       render: (row) => {
-        const rawGroups = Array.isArray(row.productGroups)
-          ? row.productGroups
-          : (row.productGroups && typeof row.productGroups === 'object' ? Object.values(row.productGroups) : []);
-        const groups = rawGroups.filter((g: any) => !g?.status || String(g.status).toUpperCase() === 'ACTIVE');
+        const groups = toGroupList(row.productGroups)
+          .filter((g: any) => !g?.status || String(g.status).toUpperCase() === 'ACTIVE');
         if (groups.length === 0) return <CellWithTooltip text="---" />;
-        const tooltip = groups.map((g: any) => g.name).join(', ');
+        const selectedIds = groups.map((g: any) => String(g.id));
+        const options = mergeGroupOptions(groupFilterOptions, groups);
+        const tooltip = formatSelectedGroupsLabelText(options, selectedIds, '---');
         return (
           <CellWithTooltip text={tooltip}>
             <span>
-              {groups.map((g: any, index: number) => (
-                <span
-                  key={g.id || `${g.name}-${index}`}
-                  title={g.active === false ? 'Nhóm đang bị ẩn' : undefined}
-                  style={{
-                    opacity: g.active === false ? 0.42 : 1,
-                    color: g.active === false ? '#6B7280' : undefined,
-                    filter: g.active === false ? 'grayscale(0.4)' : undefined,
-                  }}
-                >
-                  {g.name}{index < groups.length - 1 ? ',' : ''}
-                </span>
-              ))}
+              {formatSelectedGroupsLabel(options, selectedIds, '---')}
             </span>
           </CellWithTooltip>
         );
@@ -529,11 +575,11 @@ const ProductCriteriaPage: React.FC = () => {
           </FilterScrollContainer>
 
           <div className="selected-filters-row">
-            {selectedGroups.map((val) => (
+            {selectedGroupParts.map((part) => (
               <FilterTag 
-                key={val}
-                label={`Nhóm: ${groupFilterOptions.find((o) => o.value === val)?.label || val}`} 
-                onRemove={() => setSelectedGroups((prev) => prev.filter((v) => v !== val))} 
+                key={part.key}
+                label={`Nhóm: ${part.text}`} 
+                onRemove={() => setSelectedGroups((prev) => prev.filter((v) => !part.removeIds.includes(String(v))))} 
               />
             ))}
             {selectedStatuses.map((val) => (

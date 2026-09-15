@@ -1,6 +1,7 @@
 import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route, Navigate } from 'react-router-dom';
-// IMPORT TOASTER VÀO ĐÂY
-import { Toaster } from 'react-hot-toast';
+import { installVisibleToasts } from './utils/appToast';
+
+installVisibleToasts();
 
 // ==========================================
 // 1. IMPORTS CHO LUỒNG ADMIN / QUẢN TRỊ
@@ -125,28 +126,7 @@ const router = createBrowserRouter(
 );
 
 function App() {
-  return (
-    <>
-      <Toaster 
-        position="top-center" 
-        reverseOrder={false}
-        containerStyle={{
-          zIndex: 2147483647,
-          top: 24,
-          pointerEvents: 'none',
-        }}
-        toastOptions={{
-          duration: 3500,
-          style: {
-            zIndex: 2147483647,
-            pointerEvents: 'auto',
-            fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-          }
-        }}
-      />
-      <RouterProvider router={router} />
-    </>
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;
