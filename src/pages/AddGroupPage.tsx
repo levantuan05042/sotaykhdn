@@ -10,6 +10,7 @@ import { FIELD_LIMITS, getNameError } from '../utils/fieldValidation';
 import CharCountHint from '../components/ui/CharCountHint';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -97,6 +98,7 @@ const AddProductPage: React.FC = () => {
   };
   
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
   

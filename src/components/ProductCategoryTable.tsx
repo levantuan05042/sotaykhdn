@@ -87,8 +87,8 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
       setWarningData({
         show: true,
-        title: `Không thể ẩn danh mục: "${item.name}"`,
-        message: "Danh mục sản phẩm này đang chứa các sản phẩm nghiệp vụ bên trong."
+        title: `Không thể ẩn danh mục sản phẩm 1: "${item.name}"`,
+        message: "Danh mục sản phẩm 1 này đang chứa các danh mục sản phẩm 2 bên trong."
       });
     }
   };
@@ -141,7 +141,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
           <thead>
             <tr>
               <th className="px-40 rounded-l-12 w-24">STT</th>
-              <th>Tên danh mục sản phẩm</th>
+              <th>Tên danh mục sản phẩm 1</th>
               <th>Nhóm sản phẩm</th>
               <th>Trạng thái</th>
               <th>Hiệu lực</th>

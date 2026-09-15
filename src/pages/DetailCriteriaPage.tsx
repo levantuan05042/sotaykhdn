@@ -30,6 +30,7 @@ import {
   showDisplayStatusFromApi,
   showSuccessToast,
 } from '../utils/appToast';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -262,75 +263,57 @@ const DetailCriteriaPage: React.FC = () => {
   const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!isReadOnly && isFormModified));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
-  useEffect(() => {
-    if (!id) return;
-    const refetchStatus = async () => {
-      if (isFormModified || isSubmitting) return;
-      try {
-        const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DETAIL(id));
-        if (detailRes.ok) {
-          const detailData = await detailRes.json();
-          setCriteriaData(detailData);
-          const initialGroupIds = detailData.productGroups
-            ? detailData.productGroups.map((g: any) => String(g.id))
-            : [];
-          setFormData({
-            code: detailData.code || '',
-            name: detailData.name || '',
-            groupIds: initialGroupIds,
-            isRequired: detailData.isRequired ?? false 
+  useAdminAutoRefresh(async () => {
+    if (!id || isFormModified || isSubmitting) return;
+    try {
+      const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DETAIL(id));
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setCriteriaData(detailData);
+        const initialGroupIds = detailData.productGroups
+          ? detailData.productGroups.map((g: any) => String(g.id))
+          : [];
+        setFormData({
+          code: detailData.code || '',
+          name: detailData.name || '',
+          groupIds: initialGroupIds,
+          isRequired: detailData.isRequired ?? false 
+        });
+        setIsActive(detailData.active ?? true);
+        const attachedGroups: any[] = detailData.productGroups || [];
+        const hiddenIds = new Set(
+          attachedGroups.filter((g: any) => g.active === false).map((g: any) => String(g.id))
+        );
+        setGroupOptions((prev) => {
+          const next = prev.map((opt) => ({
+            ...opt,
+            hidden: hiddenIds.has(opt.value),
+          }));
+          attachedGroups.forEach((g: any) => {
+            const gid = String(g.id);
+            const existing = next.find((opt) => opt.value === gid);
+            if (existing) {
+              if (!existing.superGroup && g.superGroup) existing.superGroup = g.superGroup;
+              existing.hidden = g.active === false;
+            } else {
+              next.push({
+                label: g.name,
+                value: gid,
+                hidden: g.active === false,
+                superGroup: g.superGroup || '',
+                fromCatalog: false,
+              });
+            }
           });
-          setIsActive(detailData.active ?? true);
-          const attachedGroups: any[] = detailData.productGroups || [];
-          const hiddenIds = new Set(
-            attachedGroups.filter((g: any) => g.active === false).map((g: any) => String(g.id))
-          );
-          setGroupOptions((prev) => {
-            const next = prev.map((opt) => ({
-              ...opt,
-              hidden: hiddenIds.has(opt.value),
-            }));
-            attachedGroups.forEach((g: any) => {
-              const id = String(g.id);
-              const existing = next.find((opt) => opt.value === id);
-              if (existing) {
-                if (!existing.superGroup && g.superGroup) existing.superGroup = g.superGroup;
-                existing.hidden = g.active === false;
-              } else {
-                next.push({
-                  label: g.name,
-                  value: id,
-                  hidden: g.active === false,
-                  superGroup: g.superGroup || '',
-                  fromCatalog: false,
-                });
-              }
-            });
-            return next;
-          });
-          setSelectedSuperGroup((prev) => {
-            if (prev) return prev;
-            return attachedGroups.find((g: any) => g.superGroup)?.superGroup || '';
-          });
-        }
-      } catch (e) {}
-    };
-
-    const interval = setInterval(refetchStatus, 15000);
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        refetchStatus();
+          return next;
+        });
+        setSelectedSuperGroup((prev) => {
+          if (prev) return prev;
+          return attachedGroups.find((g: any) => g.superGroup)?.superGroup || '';
+        });
       }
-    };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [id, isFormModified, isSubmitting]);
+    } catch (e) {}
+  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (isReadOnly) return;
@@ -575,6 +558,7 @@ const DetailCriteriaPage: React.FC = () => {
         setCriteriaData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
         showSuccessToast(displaySuccessMessage(newActive, 'tiêu chí', criteriaData?.name));
+        notifyAdminDataChanged();
       } else {
         showDisplayStatusFromApi(errorData);
       }
@@ -626,6 +610,7 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 

@@ -56,7 +56,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error loading business details:', error);
-      toast.error('Lỗi khi tải chi tiết nghiệp vụ sản phẩm');
+      toast.error('Lỗi khi tải chi tiết danh mục sản phẩm 2');
     } finally {
       setLoading(false);
     }
@@ -90,10 +90,10 @@ export const ApproverBusinessDetailPage: React.FC = () => {
         approvedBy: approvedByStr,
       });
 
-      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt nghiệp vụ thành công!' : 'Đã phản hồi ý kiến đánh giá!');
+      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt danh mục sản phẩm 2 thành công!' : 'Đã phản hồi ý kiến đánh giá!');
       fetchDetail();
     } catch (error: any) {
-      console.error('Lỗi khi lưu phê duyệt nghiệp vụ:', error);
+      console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm 2:', error);
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi cập nhật phê duyệt');
     } finally {
       setLoading(false);
@@ -107,14 +107,14 @@ export const ApproverBusinessDetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="error-text">Không tìm thấy thông tin nghiệp vụ</p>
+        <p className="error-text">Không tìm thấy thông tin danh mục sản phẩm 2</p>
       </div>
     );
   }
 
   return (
     <ApproverDetailWrapper
-      moduleName="nghiệp vụ"
+      moduleName="danh mục sản phẩm 2"
       itemName={detail.name}
       objectCode={detail.id}
       status={detail.status}
@@ -140,7 +140,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Danh mục sản phẩm <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Danh mục sản phẩm 1 <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 
@@ -150,7 +150,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Tên nghiệp vụ sản phẩm <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Tên danh mục sản phẩm 2 <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 

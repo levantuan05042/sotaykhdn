@@ -28,6 +28,7 @@ import {
   showSuccessToast,
 } from '../utils/appToast';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -157,7 +158,7 @@ const DetailCategoryPage: React.FC = () => {
           fetch(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL(id)),
           fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.LIST}?status=ACTIVE&active=true`)
         ]);
-        if (!detailRes.ok) throw new Error("Không thể tải thông tin danh mục");
+        if (!detailRes.ok) throw new Error("Không thể tải thông tin danh mục sản phẩm 1");
         const detailData = await detailRes.json();
         setCategoryData(detailData);
         setFormData({
@@ -178,7 +179,7 @@ const DetailCategoryPage: React.FC = () => {
           ]);
         }
       } catch (error) {
-        toast.error("Không tìm thấy danh mục hoặc danh mục đã bị ẩn");
+        toast.error("Không tìm thấy danh mục sản phẩm 1 hoặc danh mục sản phẩm 1 đã bị ẩn");
       } finally {
         setLoading(false);
       }
@@ -198,39 +199,21 @@ const DetailCategoryPage: React.FC = () => {
   const { allowLeave, dialog } = useUnsavedChangesGuard(Boolean(!hideEditActions && isDirty));
 
   // Tự động cập nhật dữ liệu khi DB thay đổi nếu không có chỉnh sửa dở dang
-  useEffect(() => {
-    if (!id) return;
-    const refetchStatus = async () => {
-      if (isDirty || isSubmitting) return;
-      try {
-        const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL(id));
-        if (detailRes.ok) {
-          const detailData = await detailRes.json();
-          setCategoryData(detailData);
-          setFormData({
-            name: detailData.name || '',
-            groupId: detailData.groupId ? String(detailData.groupId) : ''
-          });
-          setIsActive(detailData.active ?? true);
-        }
-      } catch (e) {}
-    };
-
-    const interval = setInterval(refetchStatus, 15000);
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        refetchStatus();
+  useAdminAutoRefresh(async () => {
+    if (!id || isDirty || isSubmitting) return;
+    try {
+      const detailRes = await fetch(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL(id));
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setCategoryData(detailData);
+        setFormData({
+          name: detailData.name || '',
+          groupId: detailData.groupId ? String(detailData.groupId) : ''
+        });
+        setIsActive(detailData.active ?? true);
       }
-    };
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [id, isDirty, isSubmitting]);
+    } catch (e) {}
+  });
 
   const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION' | null>(null);
 
@@ -273,10 +256,10 @@ const DetailCategoryPage: React.FC = () => {
     const nameVal = formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim();
     const groupVal = formData.groupId !== undefined ? formData.groupId : categoryData?.groupId;
     if (!nameVal) {
-      toast.error("Vui lòng nhập tên danh mục sản phẩm", { position: 'top-center' });
+      toast.error("Vui lòng nhập tên danh mục sản phẩm 1", { position: 'top-center' });
       return;
     }
-    const nameErr = getNameError(formData.name || nameVal, 'Tên danh mục sản phẩm');
+    const nameErr = getNameError(formData.name || nameVal, 'Tên danh mục sản phẩm 1');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
@@ -299,7 +282,7 @@ const DetailCategoryPage: React.FC = () => {
   const handleUpdateCategory = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isNotCreator || !id) return;
 
-    const nameErr = getNameError(formData.name || categoryData?.name || '', 'Tên danh mục sản phẩm');
+    const nameErr = getNameError(formData.name || categoryData?.name || '', 'Tên danh mục sản phẩm 1');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
@@ -309,7 +292,7 @@ const DetailCategoryPage: React.FC = () => {
       const nameVal = formData.name !== undefined ? formData.name.trim() : (categoryData?.name || '').trim();
       const groupVal = formData.groupId !== undefined ? formData.groupId : categoryData?.groupId;
       if (!nameVal) {
-        toast.error("Vui lòng nhập tên danh mục sản phẩm", { position: 'top-center' });
+        toast.error("Vui lòng nhập tên danh mục sản phẩm 1", { position: 'top-center' });
         return;
       }
       if (!groupVal) {
@@ -368,7 +351,7 @@ const DetailCategoryPage: React.FC = () => {
 
   const handleUpdateDisplayStatus = async (newActiveStatus: boolean) => {
     if (newActiveStatus) {
-      if (await notifyIfCannotShowChild('danh mục', categoryData?.name, categoryData)) {
+      if (await notifyIfCannotShowChild('danh mục sản phẩm 1', categoryData?.name, categoryData)) {
         setIsStatusOpen(false);
         return;
       }
@@ -422,7 +405,8 @@ const DetailCategoryPage: React.FC = () => {
         setIsActive(newActive);
         setCategoryData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
-        showSuccessToast(displaySuccessMessage(newActive, 'danh mục', categoryData?.name));
+        showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm 1', categoryData?.name));
+        notifyAdminDataChanged();
       } else {
         showDisplayStatusFromApi(data);
       }
@@ -471,11 +455,12 @@ const DetailCategoryPage: React.FC = () => {
   };
 
   const renderCustomToast = (message: string) => {
+    notifyAdminDataChanged();
     toast.success(message);
   };
 
-  if (loading) return <div className="loading">Đang tải dữ liệu danh mục...</div>;
-  if (!categoryData) return <div className="error">Không tìm thấy dữ liệu danh mục sản phẩm phù hợp.</div>;
+  if (loading) return <div className="loading">Đang tải dữ liệu danh mục sản phẩm 1...</div>;
+  if (!categoryData) return <div className="error">Không tìm thấy dữ liệu danh mục sản phẩm 1 phù hợp.</div>;
   
   const canSubmit = !hideEditActions && isDirty && formData.name.trim() !== '' && !isSubmitting;
 
@@ -500,7 +485,7 @@ const DetailCategoryPage: React.FC = () => {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M12.6667 6.83333H1M6.83333 1L1 6.83333L6.83333 12.6667" stroke="#3C393F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="breadcrumbText">Danh mục sản phẩm</span>
+              <span className="breadcrumbText">Danh mục sản phẩm 1</span>
             </button>
 
             <div className="breadcrumb">
@@ -617,11 +602,11 @@ const DetailCategoryPage: React.FC = () => {
                 </div>
               </div>
               <div className="formGroup">
-                <label className="label"> Tên danh mục sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <label className="label"> Tên danh mục sản phẩm 1 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${isFormReadOnly ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên danh mục sản phẩm') ? 'input-invalid' : ''}`}
+                  className={`input ${isFormReadOnly ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên danh mục sản phẩm 1') ? 'input-invalid' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isFormReadOnly}
@@ -631,7 +616,7 @@ const DetailCategoryPage: React.FC = () => {
                 <CharCountHint
                   current={(formData.name || '').length}
                   max={FIELD_LIMITS.name}
-                  error={getNameError(formData.name, 'Tên danh mục sản phẩm')}
+                  error={getNameError(formData.name, 'Tên danh mục sản phẩm 1')}
                 />
               </div>
             </div>
@@ -718,7 +703,7 @@ const DetailCategoryPage: React.FC = () => {
                     </React.Fragment>
                   ))
                 ) : (
-                  <div className="no-comments">Chưa có bình luận hay phản hồi nào cho danh mục này.</div>
+                  <div className="no-comments">Chưa có bình luận hay phản hồi nào cho danh mục sản phẩm 1 này.</div>
                 )}
               </div>
             </div>
@@ -736,7 +721,7 @@ const DetailCategoryPage: React.FC = () => {
         }}
         variant={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={getActionConfirmDesc(categoryData, id, confirmAction, 'danh mục sản phẩm')}
+        desc={getActionConfirmDesc(categoryData, id, confirmAction, 'danh mục sản phẩm 1')}
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
         loading={isSubmitting}
@@ -744,7 +729,7 @@ const DetailCategoryPage: React.FC = () => {
 
       <DuplicateVersionModal
         isOpen={showDuplicateModal}
-        itemName={categoryData?.name || 'danh mục này'}
+        itemName={categoryData?.name || 'danh mục sản phẩm 1 này'}
         priorVersion={priorConflict}
         canReplace={isSameActor(currentUsername, priorConflict?.createdBy)}
         isProcessing={isDeletingPrior}
@@ -803,7 +788,7 @@ const DetailCategoryPage: React.FC = () => {
         onConfirm={executeDelete}
         variant="delete"
         title="Xác nhận xóa"
-        desc="Bạn có chắc chắn muốn xóa danh mục này không? Hành động này không thể hoàn tác."
+        desc="Bạn có chắc chắn muốn xóa danh mục sản phẩm 1 này không? Hành động này không thể hoàn tác."
         confirmText="Xóa"
         loading={isSubmitting}
       />
@@ -812,7 +797,7 @@ const DetailCategoryPage: React.FC = () => {
         isOpen={showCascadeModal}
         onClose={() => setShowCascadeModal(false)}
         onConfirm={() => executeToggleActive(false, true)}
-        itemTypeLabel="danh mục sản phẩm"
+        itemTypeLabel="danh mục sản phẩm 1"
         itemName={formData.name || categoryData?.name || ''}
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}

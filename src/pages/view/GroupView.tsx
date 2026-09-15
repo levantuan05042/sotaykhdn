@@ -5,9 +5,9 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import './GroupView.css';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
-import FolderCard from './common/FolderCard';
+import ProductsViewToggle from './common/ProductsViewToggle';
+import { useProductsViewMode } from '../../hooks/useProductsViewMode';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
-
 import EmptyIcon from '../../assets/icon/khong_san_pham.svg';
 
 const GROUP_OPTIONS = [
@@ -17,11 +17,18 @@ const GROUP_OPTIONS = [
 ];
 
 export interface CategoryItem { id: string; name: string; [key: string]: any; }
+export interface BusinessItem { id: string; name: string; [key: string]: any; }
 export interface GroupDetailData {
   groupId: string;
   groupName: string;
   superGroup?: string;
   categories: CategoryItem[];
+  products?: ProductInfo[];
+}
+export interface CategoryDetailData {
+  categoryId: string;
+  categoryName: string;
+  businesses: BusinessItem[];
   products?: ProductInfo[];
 }
 
@@ -47,11 +54,118 @@ const checkHasCategory = (prod: any): boolean => {
   );
 };
 
+const BusinessSection = ({
+  business,
+  onNavigate,
+  viewMode,
+}: {
+  business: BusinessItem;
+  onNavigate: (id: string) => void;
+  viewMode: 'grid' | 'list';
+}) => {
+  const [products, setProducts] = useState<ProductInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchProducts = useCallback(async (isBackground = false) => {
+    try {
+      const res = await axios.get<ProductInfo[]>(API_ENDPOINTS.PRODUCT_BUSINESS.PRODUCTS(business.id), {
+        params: { _t: Date.now() },
+      });
+      setProducts(res.data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  }, [business.id]);
+
+  useEffect(() => {
+    void fetchProducts();
+  }, [fetchProducts]);
+
+  useViewAutoRefresh(() => fetchProducts(true), [business.id]);
+
+  if (loading || products.length === 0) return null;
+
+  return (
+    <div className="sub-section-block">
+      <h4 className="sub-section-title">{business.name}</h4>
+      <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
+        {products.map((prod) => (
+          <ProductCard key={prod.id} product={prod} layout={viewMode} onClick={() => onNavigate(prod.id)} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const CategorySection = ({
+  category,
+  onNavigate,
+  viewMode,
+}: {
+  category: CategoryItem;
+  onNavigate: (id: string) => void;
+  viewMode: 'grid' | 'list';
+}) => {
+  const [catData, setCatData] = useState<CategoryDetailData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchCatData = useCallback(async (isBackground = false) => {
+    try {
+      const res = await axios.get<CategoryDetailData>(API_ENDPOINTS.PRODUCT_CATEGORY.DETAIL_FULL(category.id), {
+        params: { _t: Date.now() },
+      });
+      setCatData(res.data);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  }, [category.id]);
+
+  useEffect(() => {
+    void fetchCatData();
+  }, [fetchCatData]);
+
+  useViewAutoRefresh(() => fetchCatData(true), [category.id]);
+
+  if (loading || !catData) return null;
+
+  const categoryDirectProducts = (catData.products || []).filter(
+    (prod: any) => !checkHasBusiness(prod)
+  );
+
+  const hasDirectProducts = categoryDirectProducts.length > 0;
+  const hasBusinesses = catData.businesses && catData.businesses.length > 0;
+
+  if (!hasDirectProducts && !hasBusinesses) return null;
+
+  return (
+    <div className="section-block">
+      <h3 className="section-title">{catData.categoryName}</h3>
+
+      {hasDirectProducts && (
+        <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
+          {categoryDirectProducts.map((prod) => (
+            <ProductCard key={prod.id} product={prod} layout={viewMode} onClick={() => onNavigate(prod.id)} />
+          ))}
+        </div>
+      )}
+
+      {hasBusinesses && catData.businesses.map((bus) => (
+        <BusinessSection key={bus.id} business={bus} onNavigate={onNavigate} viewMode={viewMode} />
+      ))}
+    </div>
+  );
+};
+
 const GroupView: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(true);
   const [groupData, setGroupData] = useState<GroupDetailData | null>(null);
+  const { viewMode, setViewMode } = useProductsViewMode();
 
   const fetchGroupDetail = useCallback(async (isBackground = false) => {
     if (!groupId) return;
@@ -87,6 +201,8 @@ const GroupView: React.FC = () => {
 
   useViewAutoRefresh(() => fetchGroupDetail(true), [groupId]);
 
+  const handleNavigate = (id: string) => navigate(`/view/product-detail/${id}`);
+
   if (loading && !groupData) return <div className="group-view"><div className="state-message">Đang tải dữ liệu...</div></div>;
   if (!groupData) return <div className="group-view"><div className="state-message">Không tìm thấy nhóm sản phẩm này.</div></div>;
 
@@ -116,30 +232,31 @@ const GroupView: React.FC = () => {
         <span className="breadcrumb-current">{currentGroupName}</span>
       </div>
 
-      <h2 className="group-page-title">{currentGroupName}</h2>
+      <div className="products-section-heading" style={{ marginBottom: 24 }}>
+        <h2 className="group-page-title" style={{ margin: 0 }}>{currentGroupName}</h2>
+        {!isEmpty && (
+          <ProductsViewToggle value={viewMode} onChange={setViewMode} />
+        )}
+      </div>
 
-      {isEmpty ? (
+      {groupDirectProducts.length > 0 && (
+        <div className="section-block">
+          <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
+            {groupDirectProducts.map((prod) => (
+              <ProductCard key={prod.id} product={prod} layout={viewMode} onClick={() => handleNavigate(prod.id)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {categories.map((cat) => (
+        <CategorySection key={cat.id} category={cat} onNavigate={handleNavigate} viewMode={viewMode} />
+      ))}
+
+      {isEmpty && (
         <div className="empty-data-message">
           <img src={EmptyIcon} alt="Không có dữ liệu" className="empty-state-icon" />
           <span className="empty-state-text">Không có sản phẩm dịch vụ nào</span>
-        </div>
-      ) : (
-        <div className="products-grid explorer-grid">
-          {categories.map((cat) => (
-            <FolderCard
-              key={cat.id}
-              name={cat.name}
-              kind="category"
-              onClick={() => navigate(`/view/category/${cat.id}`)}
-            />
-          ))}
-          {groupDirectProducts.map((prod) => (
-            <ProductCard
-              key={prod.id}
-              product={prod}
-              onClick={() => navigate(`/view/product-detail/${prod.id}`)}
-            />
-          ))}
         </div>
       )}
     </div>

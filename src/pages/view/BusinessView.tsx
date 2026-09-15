@@ -5,6 +5,8 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import './GroupView.css'; 
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
+import ProductsViewToggle from './common/ProductsViewToggle';
+import { useProductsViewMode } from '../../hooks/useProductsViewMode';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
 // TODO: Đảm bảo đường dẫn import này đúng với thư mục assets của bạn
@@ -19,6 +21,7 @@ const GROUP_OPTIONS = [
 const BusinessView: React.FC = () => {
   const { businessId } = useParams<{ businessId: string }>();
   const navigate = useNavigate();
+  const { viewMode, setViewMode } = useProductsViewMode();
   
   const [loading, setLoading] = useState<boolean>(true);
   const [products, setProducts] = useState<ProductInfo[]>([]);
@@ -43,7 +46,7 @@ const BusinessView: React.FC = () => {
 
       if (prods.length > 0) {
         const firstProd = prods[0];
-        setBusinessName(firstProd.businessName || 'Chi tiết nghiệp vụ');
+        setBusinessName(firstProd.businessName || 'Chi tiết danh mục sản phẩm 2');
         setCategoryId(firstProd.productCategoryId || '');
         setCategoryName(firstProd.productCategoryName || '');
         setGroupId(firstProd.productGroupId || '');
@@ -86,7 +89,7 @@ const BusinessView: React.FC = () => {
             } catch (e) {}
           }
         } catch (err) {
-          console.error('Lỗi quét tìm cấp cha của nghiệp vụ:', err);
+          console.error('Lỗi quét tìm cấp cha của danh mục sản phẩm 2:', err);
         }
       } else if (!breadcrumbRef.current.superGroup) {
         try {
@@ -100,7 +103,7 @@ const BusinessView: React.FC = () => {
         } catch (e) {}
       }
     } catch (error) {
-      console.error('Lỗi tải dữ liệu nghiệp vụ:', error);
+      console.error('Lỗi tải dữ liệu danh mục sản phẩm 2:', error);
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -136,18 +139,23 @@ const BusinessView: React.FC = () => {
          </span>
          <span className="breadcrumb-separator">❯</span>
          <span className="breadcrumb-link" onClick={() => categoryId && navigate(`/view/category/${categoryId}`)}>
-           {categoryName || 'Danh mục'}
+           {categoryName || 'Danh mục sản phẩm 1'}
          </span>
          <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-current">{businessName || 'Chi tiết nghiệp vụ'}</span>
+         <span className="breadcrumb-current">{businessName || 'Chi tiết danh mục sản phẩm 2'}</span>
       </div>
 
-      <h2 className="group-page-title">{businessName || 'Chi tiết nghiệp vụ'}</h2>
+      <div className="products-section-heading" style={{ marginBottom: 24 }}>
+        <h2 className="group-page-title" style={{ margin: 0 }}>{businessName || 'Chi tiết danh mục sản phẩm 2'}</h2>
+        {products.length > 0 && (
+          <ProductsViewToggle value={viewMode} onChange={setViewMode} />
+        )}
+      </div>
 
       {products.length > 0 ? (
-        <div className="products-grid explorer-grid">
+        <div className={viewMode === 'list' ? 'products-list' : 'products-grid explorer-grid'}>
           {products.map((prod) => (
-            <ProductCard key={prod.id} product={prod} onClick={() => handleNavigate(prod.id)} />
+            <ProductCard key={prod.id} product={prod} layout={viewMode} onClick={() => handleNavigate(prod.id)} />
           ))}
         </div>
       ) : (

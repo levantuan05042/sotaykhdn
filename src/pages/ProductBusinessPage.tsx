@@ -21,6 +21,7 @@ import {
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -170,7 +171,7 @@ const ProductBusinessPage: React.FC = () => {
 
     } catch (error) {
       if (!isBackground) {
-        console.error('Lỗi khi gọi API danh sách sản phẩm nghiệp vụ:', error);
+        console.error('Lỗi khi gọi API danh sách danh mục sản phẩm 2:', error);
         setData([]);
       }
     } finally {
@@ -184,27 +185,7 @@ const ProductBusinessPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling và lắng nghe focus/visibilitychange
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 15000);
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData(true);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, []);
+  useAdminAutoRefresh(() => fetchData(true));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -301,7 +282,7 @@ const ProductBusinessPage: React.FC = () => {
 
   const handleToggleActive = async (item: ProductBusinessItem, currentActive: boolean) => {
     if (!currentActive) {
-      if (await notifyIfCannotShowChild('nghiệp vụ', item.name, item)) return;
+      if (await notifyIfCannotShowChild('danh mục sản phẩm 2', item.name, item)) return;
       await executeToggleActive(item, true, false);
       return;
     }
@@ -320,7 +301,7 @@ const ProductBusinessPage: React.FC = () => {
         return;
       }
     } catch (err) {
-      console.warn("Lỗi kiểm tra con nghiệp vụ:", err);
+      console.warn("Lỗi kiểm tra con danh mục sản phẩm 2:", err);
     }
 
     await executeToggleActive(item, false, false);
@@ -345,11 +326,8 @@ const ProductBusinessPage: React.FC = () => {
       );
       setShowCascadeModal(false);
       setCascadeTarget(null);
-      showSuccessToast(displaySuccessMessage(newActive, 'nghiệp vụ', item.name));
-
-      if (cascade) {
-        fetchData();
-      }
+      showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm 2', item.name));
+      notifyAdminDataChanged();
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực sản phẩm:", error);
       showErrorToast(error.message || 'Không thể cập nhật hiệu lực');
@@ -391,7 +369,7 @@ const ProductBusinessPage: React.FC = () => {
     },
     {
       key: 'name',
-      header: 'Tên nghiệp vụ',
+      header: 'Tên danh mục sản phẩm 2',
       render: (row) => (
         <CellWithTooltip text={row.name} className="product-group-item-title" style={{ fontWeight: 500 }} />
       ),
@@ -405,7 +383,7 @@ const ProductBusinessPage: React.FC = () => {
     },
     {
       key: 'categoryName',
-      header: 'Danh mục sản phẩm',
+      header: 'Danh mục sản phẩm 1',
       render: (row) => (
         <CellWithTooltip text={row.categoryName} />
       ),
@@ -468,7 +446,7 @@ const ProductBusinessPage: React.FC = () => {
   return (
     <div className="product-group-container">
       <div className="content-wrapper">
-        <h2 className="page-title">Quản lý sản phẩm nghiệp vụ</h2>
+        <h2 className="page-title">Quản lý danh mục sản phẩm 2</h2>
         <button className="btn-add-new" onClick={() => navigate('/business-management/add')}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M6.66927 0.834961V12.5016M0.835938 6.66829H12.5026" stroke="#FDFCFD" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
@@ -494,14 +472,14 @@ const ProductBusinessPage: React.FC = () => {
 
             {/* Danh mục sản phẩm */}
             <TableColumnFilterDropdown
-              label="Danh mục sản phẩm"
+              label="Danh mục sản phẩm 1"
               options={categoryFilterOptions}
               selectedValues={selectedCategories}
               onSelectValues={setSelectedCategories}
               isOpen={openDropdown === 'category'}
               onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
               hasSearch={categoryFilterOptions.length > 5}
-              searchPlaceholder="Tìm danh mục..."
+              searchPlaceholder="Tìm danh mục sản phẩm 1..."
             />
 
             {/* Trạng thái */}
@@ -560,7 +538,7 @@ const ProductBusinessPage: React.FC = () => {
             {selectedCategories.map((val) => (
               <FilterTag 
                 key={val}
-                label={`Danh mục: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`} 
+                label={`Danh mục sản phẩm 1: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`} 
                 onRemove={() => setSelectedCategories((prev) => prev.filter((v) => v !== val))} 
               />
             ))}
@@ -647,7 +625,7 @@ const ProductBusinessPage: React.FC = () => {
           loading={loading}
           page={currentPage}
           onPageChange={setCurrentPage}
-          emptyText="Không tìm thấy sản phẩm nghiệp vụ nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm 2 nào phù hợp."
           getRowClassName={getCascadeRowClassName}
         />
       </div>
@@ -663,7 +641,7 @@ const ProductBusinessPage: React.FC = () => {
             executeToggleActive(cascadeTarget, false, true);
           }
         }}
-        itemTypeLabel="nghiệp vụ"
+        itemTypeLabel="danh mục sản phẩm 2"
         itemName={cascadeTarget?.name || ''}
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}

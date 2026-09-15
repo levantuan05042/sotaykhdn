@@ -21,6 +21,7 @@ import {
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -159,27 +160,7 @@ const ProductCategoryPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling và lắng nghe focus/visibilitychange
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 15000);
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData(true);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, []);
+  useAdminAutoRefresh(() => fetchData(true));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -261,7 +242,7 @@ const ProductCategoryPage: React.FC = () => {
 
   const handleToggleActive = async (item: any, currentActive: boolean) => {
     if (!currentActive) {
-      if (await notifyIfCannotShowChild('danh mục', item.name, item)) return;
+      if (await notifyIfCannotShowChild('danh mục sản phẩm 1', item.name, item)) return;
       await executeToggleActive(item, true, false);
       return;
     }
@@ -303,11 +284,8 @@ const ProductCategoryPage: React.FC = () => {
       setData(prevData => prevData.map(d => d.id === item.id ? { ...d, active: newActive } : d));
       setShowCascadeModal(false);
       setCascadeTarget(null);
-      showSuccessToast(displaySuccessMessage(newActive, 'danh mục', item.name));
-
-      if (cascade) {
-        fetchData();
-      }
+      showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm 1', item.name));
+      notifyAdminDataChanged();
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực danh mục:", error);
       showErrorToast(error.message || 'Không thể cập nhật hiệu lực');
@@ -341,7 +319,7 @@ const ProductCategoryPage: React.FC = () => {
 
   const columns: Column<any>[] = [
     { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
-    { key: 'name', header: 'Tên danh mục sản phẩm', render: (row) => <CellWithTooltip text={row.name} style={{ fontWeight: 500 }} /> },
+    { key: 'name', header: 'Tên danh mục sản phẩm 1', render: (row) => <CellWithTooltip text={row.name} style={{ fontWeight: 500 }} /> },
     { key: 'groupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.groupName} /> },
     { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
     { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
@@ -373,7 +351,7 @@ const ProductCategoryPage: React.FC = () => {
   return (
     <div className="product-group-container">
       <div className="content-wrapper">
-        <h2 className="page-title">Quản lý danh mục sản phẩm</h2>
+        <h2 className="page-title">Quản lý danh mục sản phẩm 1</h2>
         <button className="btn-add-new" onClick={() => navigate('/product-category/add')}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M6.66927 0.834961V12.5016M0.835938 6.66829H12.5026" stroke="#FDFCFD" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
@@ -532,7 +510,7 @@ const ProductCategoryPage: React.FC = () => {
           loading={loading}
           page={currentPage}
           onPageChange={setCurrentPage}
-          emptyText="Không tìm thấy danh mục sản phẩm nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm 1 nào phù hợp."
           getRowClassName={getCascadeRowClassName}
         />
       </div>
@@ -548,7 +526,7 @@ const ProductCategoryPage: React.FC = () => {
             executeToggleActive(cascadeTarget, false, true);
           }
         }}
-        itemTypeLabel="danh mục sản phẩm"
+        itemTypeLabel="danh mục sản phẩm 1"
         itemName={cascadeTarget?.name || ''}
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}

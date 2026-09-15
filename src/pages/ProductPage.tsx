@@ -20,6 +20,7 @@ import {
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 
 const STATUS_OPTIONS = [
@@ -205,27 +206,7 @@ const ProductPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling và lắng nghe focus/visibilitychange
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 15000);
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData(true);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, [pageKey]);
+  useAdminAutoRefresh(() => fetchData(true), [pageKey]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -336,6 +317,7 @@ const ProductPage: React.FC = () => {
         return;
       }
       showSuccessToast(displaySuccessMessage(newActiveStatus, 'Sản phẩm', item.name));
+      notifyAdminDataChanged();
     } catch (error) {
       setData(prevData =>
         prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
@@ -491,8 +473,8 @@ const ProductPage: React.FC = () => {
         { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
         { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
         { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
-        { key: 'productCategoryName', header: 'Danh mục sản phẩm', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
-        { key: 'businessName', header: 'Nghiệp vụ', render: (row) => <CellWithTooltip text={row.businessName} /> },
+        { key: 'productCategoryName', header: 'Danh mục sản phẩm 1', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
+        { key: 'businessName', header: 'Danh mục sản phẩm 2', render: (row) => <CellWithTooltip text={row.businessName} /> },
         { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
         { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
         { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
@@ -506,8 +488,8 @@ const ProductPage: React.FC = () => {
       { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
       { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
       { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
-      { key: 'productCategoryName', header: 'Danh mục sản phẩm', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
-      { key: 'businessName', header: 'Nghiệp vụ', render: (row) => <CellWithTooltip text={row.businessName} /> },
+      { key: 'productCategoryName', header: 'Danh mục sản phẩm 1', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
+      { key: 'businessName', header: 'Danh mục sản phẩm 2', render: (row) => <CellWithTooltip text={row.businessName} /> },
       { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
       { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
       { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
@@ -614,26 +596,26 @@ const ProductPage: React.FC = () => {
               <>
                 {/* Danh mục sản phẩm */}
                 <TableColumnFilterDropdown
-                  label="Danh mục sản phẩm"
+                  label="Danh mục sản phẩm 1"
                   options={categoryFilterOptions}
                   selectedValues={selectedCategories}
                   onSelectValues={setSelectedCategories}
                   isOpen={openDropdown === 'category'}
                   onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                   hasSearch={categoryFilterOptions.length > 5}
-                  searchPlaceholder="Tìm danh mục..."
+                  searchPlaceholder="Tìm danh mục sản phẩm 1..."
                 />
 
-                {/* Nghiệp vụ */}
+                {/* Danh mục sản phẩm 2 */}
                 <TableColumnFilterDropdown
-                  label="Nghiệp vụ"
+                  label="Danh mục sản phẩm 2"
                   options={businessFilterOptions}
                   selectedValues={selectedBusinesses}
                   onSelectValues={setSelectedBusinesses}
                   isOpen={openDropdown === 'business'}
                   onToggle={() => setOpenDropdown(openDropdown === 'business' ? null : 'business')}
                   hasSearch={businessFilterOptions.length > 5}
-                  searchPlaceholder="Tìm nghiệp vụ..."
+                  searchPlaceholder="Tìm danh mục sản phẩm 2..."
                 />
               </>
             )}
@@ -710,14 +692,14 @@ const ProductPage: React.FC = () => {
             {selectedCategories.map((val) => (
               <FilterTag
                 key={val}
-                label={`Danh mục: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`}
+                label={`Danh mục sản phẩm 1: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`}
                 onRemove={() => setSelectedCategories((prev) => prev.filter((v) => v !== val))}
               />
             ))}
             {selectedBusinesses.map((val) => (
               <FilterTag
                 key={val}
-                label={`Nghiệp vụ: ${businessFilterOptions.find((o) => o.value === val)?.label || val}`}
+                label={`Danh mục sản phẩm 2: ${businessFilterOptions.find((o) => o.value === val)?.label || val}`}
                 onRemove={() => setSelectedBusinesses((prev) => prev.filter((v) => v !== val))}
               />
             ))}

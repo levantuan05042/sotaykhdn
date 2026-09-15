@@ -1105,14 +1105,14 @@ const DetailProductPage: React.FC = () => {
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Danh mục sản phẩm</label>
+                  <label className="label">Danh mục sản phẩm 1</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                       onClick={() => { if (!isReadOnly) setIsCategoryOpen(v => !v); }} 
                       style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
-                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục')}</span>
+                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục sản phẩm 1')}</span>
                     </div>
                     {isCategoryOpen && !isReadOnly && (
                       <div className="custom-options-list">
@@ -1126,14 +1126,14 @@ const DetailProductPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Nghiệp vụ</label>
+                  <label className="label">Danh mục sản phẩm 2</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                       onClick={() => { if (!isReadOnly) setIsOperationOpen(v => !v); }} 
                       style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
-                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn nghiệp vụ')}</span>
+                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn danh mục sản phẩm 2')}</span>
                     </div>
                     {isOperationOpen && !isReadOnly && (
                       <div className="custom-options-list">

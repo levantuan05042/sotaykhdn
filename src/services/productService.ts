@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_ENDPOINTS } from '../config/view/apiConfig';;
+import { API_ENDPOINTS } from '../config/view/apiConfig';
 
 export interface MenuItem {
   id: string | number;
@@ -7,7 +7,7 @@ export interface MenuItem {
   path?: string;
   children?: MenuItem[];
   count?: number;
-  label?: 'Danh mục' | 'Nghiệp vụ' | 'Sản phẩm';
+  label?: 'Danh mục sản phẩm 1' | 'Danh mục sản phẩm 2' | 'Sản phẩm';
   type: 'static' | 'group' | 'category' | 'criteria' | 'product';
 }
 
@@ -37,7 +37,7 @@ export const getSidebarData = async (): Promise<MenuItem[]> => {
           name: group.name,
           type: 'group',
           children: subCategories.map((cat: any) => {
-            // 2. Tìm các Nghiệp vụ (Criteria) thuộc Danh mục này
+            // 2. Tìm các Danh mục sản phẩm 2 (Criteria) thuộc Danh mục này
             const subCriterias = criterias.filter((cri: any) => cri.categoryId === cat.id || cri.productCategoryId === cat.id);
             
             // Tính toán số lượng sản phẩm nằm trong danh mục này
@@ -48,10 +48,10 @@ export const getSidebarData = async (): Promise<MenuItem[]> => {
               name: cat.name,
               path: `/categories/${cat.id}`,
               type: 'category',
-              label: 'Danh mục',
+              label: 'Danh mục sản phẩm 1',
               count: cat.productCount || catProductCount || 0,
               children: subCriterias.length > 0 ? subCriterias.map((cri: any) => {
-                // Tính số sản phẩm thuộc nghiệp vụ này
+                // Tính số sản phẩm thuộc danh mục sản phẩm 2 này
                 const criProductCount = products.filter((p: any) => p.criteriaId === cri.id || p.businessId === cri.id).length;
 
                 return {
@@ -59,7 +59,7 @@ export const getSidebarData = async (): Promise<MenuItem[]> => {
                   name: cri.name,
                   path: `/criteria/${cri.id}`,
                   type: 'criteria',
-                  label: 'Nghiệp vụ',
+                  label: 'Danh mục sản phẩm 2',
                   count: cri.productCount || criProductCount || 0
                 };
               }) : undefined

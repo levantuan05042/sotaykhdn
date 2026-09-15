@@ -259,14 +259,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  min-width: 36px;
   height: 36px;
+  padding: 0 10px;
   border-radius: 8px;
   border: 1px solid transparent;
   background: transparent;
   color: #3C393F;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -276,9 +277,50 @@
   border-color: #FCDFE6;
 }
 
-.categories-grid.is-reordering .category-reorder-card {
+.category-reorder-toggle.is-done {
+  color: #AE1C3F;
+  font-weight: 600;
+}
+
+.category-reorder-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.category-reorder-done-label {
+  font-size: 14px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.categories-grid.is-reordering .category-reorder-card.is-reorder-mode {
+  cursor: default;
+}
+
+.category-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -4px 0 0;
+  border-radius: 6px;
+  color: #6B7280;
+  cursor: grab;
   user-select: none;
   touch-action: none;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.category-drag-handle:hover {
+  background: #F3F4F6;
+  color: #111827;
+}
+
+.category-drag-handle:active,
+.categories-grid.is-reordering .category-reorder-card.is-dragging .category-drag-handle {
+  cursor: grabbing;
 }
 
 .category-reorder-card.is-dragging {
@@ -293,12 +335,6 @@
   box-shadow: 0 0 0 1px rgba(174, 28, 63, 0.2);
 }
 
-.products-grid {
-  display: grid;
-  gap: 24px;
-  align-items: stretch;
-}
-
 /* SM: Mobile (375px - 767px) */
 @media (max-width: 767px) {
   .content-area {
@@ -306,10 +342,6 @@
   }
   .categories-grid {
     grid-template-columns: repeat(2, 1fr);
-  }
-  .products-grid {
-    grid-template-columns: repeat(1, 1fr);
-    gap: 16px;
   }
 
   .hero-section {
@@ -367,10 +399,6 @@
   .categories-grid {
     grid-template-columns: repeat(3, 1fr);
   }
-  .products-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-  }
 }
 
 /* XL: Desktop / laptop (>=1280px). Dưới 1600px layout này được zoom 80% giống Ctrl -. */
@@ -380,10 +408,6 @@
   }
   .categories-grid {
     grid-template-columns: repeat(5, 1fr);
-  }
-  .products-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 24px;
   }
 }
 

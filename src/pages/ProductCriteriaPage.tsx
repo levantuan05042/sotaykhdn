@@ -25,6 +25,7 @@ import {
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -194,27 +195,7 @@ const ProductCriteriaPage: React.FC = () => {
     fetchData();
   }, []);
 
-  // Tự động load lại dữ liệu mới khi DB thay đổi: Polling và lắng nghe focus/visibilitychange
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true);
-    }, 15000);
-
-    const handleFocus = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData(true);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    document.addEventListener('visibilitychange', handleFocus);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('visibilitychange', handleFocus);
-    };
-  }, []);
+  useAdminAutoRefresh(() => fetchData(true));
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -356,10 +337,7 @@ const ProductCriteriaPage: React.FC = () => {
       setShowCascadeModal(false);
       setCascadeTarget(null);
       showSuccessToast(displaySuccessMessage(newActive, 'tiêu chí', item.name));
-
-      if (cascade) {
-        fetchData();
-      }
+      notifyAdminDataChanged();
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực tiêu chí:", error);
       showErrorToast(error.message || 'Không thể cập nhật hiệu lực');
