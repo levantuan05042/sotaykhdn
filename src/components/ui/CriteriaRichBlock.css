@@ -1,0 +1,54 @@
+.criteria-rich-content {
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.42;
+  min-height: 88px;
+  word-break: break-word;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.criteria-rich-content p {
+  margin: 0;
+  padding: 0;
+}
+
+.criteria-rich-content .ql-align-center {
+  text-align: center !important;
+}
+
+.criteria-rich-content .ql-align-right {
+  text-align: right !important;
+}
+
+.criteria-rich-content .ql-align-justify {
+  text-align: justify !important;
+}
+
+.criteria-rich-content .ql-align-left {
+  text-align: left !important;
+}
+
+/* Match Quill snow table rendering used on content-manager screens */
+.criteria-rich-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 8px 0;
+}
+
+.criteria-rich-content td,
+.criteria-rich-content th {
+  border: 1px solid #000;
+  padding: 2px 5px;
+  outline: none;
+  vertical-align: middle;
+  word-break: break-word;
+}
+
+.criteria-rich-content ul,
+.criteria-rich-content ol {
+  margin: 0;
+  padding-left: 1.5em;
+}
