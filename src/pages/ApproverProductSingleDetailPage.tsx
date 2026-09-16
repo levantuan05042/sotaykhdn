@@ -400,7 +400,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm" defaultOpen={false}>
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm" defaultOpen={true}>
             <div className="meta-info-white-box">
               {/* Row 1: Người tạo & Người Phê duyệt */}
               <div className="meta-grid">
