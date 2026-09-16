@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
 interface CommentItem {
   id: string;
@@ -91,6 +92,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       });
 
       toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt danh mục sản phẩm 2 thành công!' : 'Đã phản hồi ý kiến đánh giá!');
+      notifyAdminDataChanged();
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm 2:', error);

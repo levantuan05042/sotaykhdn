@@ -9,6 +9,7 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import './ApproverBusinessListPage.css';
 
 interface BusinessItem {
@@ -66,38 +67,42 @@ export const ApproverBusinessListPage: React.FC = () => {
     fetchGroups();
   }, []);
 
-  // Fetch list of businesses
-  useEffect(() => {
-    const fetchBusinesses = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.LIST, {
-          params: {
-            forApproval: true
-          }
-        });
-        const mapped: BusinessItem[] = response.data.map((item: any) => ({
-          id: item.id,
-          name: item.name || '---',
-          groupName: item.groupName || '---',
-          groupId: item.groupId || '',
-          categoryName: item.categoryName || '---',
-          status: item.status || 'DRAFT',
-          active: !!item.active,
-          createdBy: item.createdByFullName || item.createdBy || '---',
-          approvedBy: item.approvedByFullName || item.approvedBy || '---',
-          version: item.version || 1,
-        }));
-        setBusinesses(mapped);
-      } catch (error) {
+  const fetchBusinesses = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_BUSINESS.LIST, {
+        params: {
+          forApproval: true
+        }
+      });
+      const mapped: BusinessItem[] = response.data.map((item: any) => ({
+        id: item.id,
+        name: item.name || '---',
+        groupName: item.groupName || '---',
+        groupId: item.groupId || '',
+        categoryName: item.categoryName || '---',
+        status: item.status || 'DRAFT',
+        active: !!item.active,
+        createdBy: item.createdByFullName || item.createdBy || '---',
+        approvedBy: item.approvedByFullName || item.approvedBy || '---',
+        version: item.version || 1,
+      }));
+      setBusinesses(mapped);
+      setSelectedKeys((prev) => prev.filter((k) => mapped.some((item) => item.id === k)));
+    } catch (error) {
+      if (!isBackground) {
         console.error('Error fetching businesses from backend:', error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBusinesses();
   }, []);
+
+  useAdminAutoRefresh(() => fetchBusinesses(true));
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -119,6 +124,7 @@ export const ApproverBusinessListPage: React.FC = () => {
           selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
         )
       );
+      notifyAdminDataChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });

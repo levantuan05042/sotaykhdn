@@ -11,6 +11,7 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import './ApproverRequestListPage.css';
 
 export interface RequestItem {
@@ -61,8 +62,8 @@ const ApproverRequestListPage: React.FC = () => {
     window.dispatchEvent(event);
   }, [requests]);
 
-  const fetchRequests = useCallback(async () => {
-    setLoading(true);
+  const fetchRequests = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     try {
       const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_REQUESTS.LIST, {
         params: {
@@ -109,16 +110,21 @@ const ApproverRequestListPage: React.FC = () => {
       }
 
       setRequests(mapped);
+      setSelectedKeys((prev) => prev.filter((k) => mapped.some((item) => item.id === k)));
     } catch (error) {
-      console.error('Error fetching requests from backend:', error);
+      if (!isBackground) {
+        console.error('Error fetching requests from backend:', error);
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   }, [searchTerm, selectedStatuses, startDate, endDate]);
 
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  useAdminAutoRefresh(() => fetchRequests(true), [searchTerm, selectedStatuses, startDate, endDate]);
 
   const handleBatchConfirm = async (reason?: string) => {
     const actionType = modalState.type;
@@ -151,7 +157,8 @@ const ApproverRequestListPage: React.FC = () => {
       );
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
-      await fetchRequests();
+      notifyAdminDataChanged();
+      await fetchRequests(true);
     } catch (error: any) {
       console.error('Batch action error:', error);
       const apiMessage = error?.response?.data?.message || error?.response?.data || error?.message;

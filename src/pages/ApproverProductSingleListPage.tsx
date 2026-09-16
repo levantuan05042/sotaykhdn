@@ -9,6 +9,7 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import './ApproverProductSingleListPage.css';
 
 interface ProductItem {
@@ -68,61 +69,65 @@ export const ApproverProductSingleListPage: React.FC = () => {
     fetchGroups();
   }, []);
 
-  // Load single products for approval
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.SINGLE_FOR_APPROVAL, {
-          params: {
-            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
-            types: selectedGroupIds.length ? selectedGroupIds : undefined,
-          },
-          paramsSerializer: { indexes: null },
-        });
+  const fetchProducts = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.SINGLE_FOR_APPROVAL, {
+        params: {
+          status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+          types: selectedGroupIds.length ? selectedGroupIds : undefined,
+        },
+        paramsSerializer: { indexes: null },
+      });
 
-        let mapped: ProductItem[] = response.data.map((item: any, index: number) => {
-          let formattedDate = '---';
-          if (item.createdAt) {
-            const d = new Date(item.createdAt);
-            const day = String(d.getDate()).padStart(2, '0');
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const year = d.getFullYear();
-            formattedDate = `${day}/${month}/${year}`;
-          }
-
-          return {
-            id: item.id,
-            stt: index + 1,
-            name: item.name || '---',
-            productGroupName: item.productGroupName || '---',
-            createdBy: item.createdByFullName || item.createdBy || '---',
-            approvedBy: item.approvedByFullName || item.approvedBy || '---',
-            status: item.status || 'DRAFT',
-            createdAt: formattedDate,
-          };
-        });
-
-        if (selectedStatuses.length > 1) {
-          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
+      let mapped: ProductItem[] = response.data.map((item: any, index: number) => {
+        let formattedDate = '---';
+        if (item.createdAt) {
+          const d = new Date(item.createdAt);
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          formattedDate = `${day}/${month}/${year}`;
         }
 
-        if (searchTerm.trim()) {
-          mapped = mapped.filter(
-            (item) => matchesSearch(item.name, searchTerm) || matchesSearch(item.id, searchTerm)
-          );
-        }
+        return {
+          id: item.id,
+          stt: index + 1,
+          name: item.name || '---',
+          productGroupName: item.productGroupName || '---',
+          createdBy: item.createdByFullName || item.createdBy || '---',
+          approvedBy: item.approvedByFullName || item.approvedBy || '---',
+          status: item.status || 'DRAFT',
+          createdAt: formattedDate,
+        };
+      });
 
-        setProducts(mapped);
-      } catch (error) {
-        console.error('Error fetching single products:', error);
-      } finally {
-        setLoading(false);
+      if (selectedStatuses.length > 1) {
+        mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
       }
-    };
 
+      if (searchTerm.trim()) {
+        mapped = mapped.filter(
+          (item) => matchesSearch(item.name, searchTerm) || matchesSearch(item.id, searchTerm)
+        );
+      }
+
+      setProducts(mapped);
+      setSelectedKeys((prev) => prev.filter((k) => mapped.some((item) => item.id === k)));
+    } catch (error) {
+      if (!isBackground) {
+        console.error('Error fetching single products:', error);
+      }
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, [searchTerm, selectedStatuses, selectedGroupIds]);
+
+  useAdminAutoRefresh(() => fetchProducts(true), [searchTerm, selectedStatuses, selectedGroupIds]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -150,6 +155,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
           selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
         )
       );
+      notifyAdminDataChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
