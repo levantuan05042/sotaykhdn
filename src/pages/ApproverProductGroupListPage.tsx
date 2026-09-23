@@ -9,6 +9,7 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import './ApproverProductGroupListPage.css';
 
 interface ProductGroupItem {
@@ -52,52 +53,57 @@ export const ApproverProductGroupListPage: React.FC = () => {
   }>({ isOpen: false, type: null });
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    const fetchProductGroups = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST, {
-          params: {
-            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
-            types: selectedGroupTypes.length ? selectedGroupTypes : undefined,
-            forApproval: true,
-          },
-          paramsSerializer: { indexes: null },
-        });
+  const fetchProductGroups = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_GROUPS.LIST, {
+        params: {
+          status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+          types: selectedGroupTypes.length ? selectedGroupTypes : undefined,
+          forApproval: true,
+        },
+        paramsSerializer: { indexes: null },
+      });
 
-        let mapped: ProductGroupItem[] = response.data.map((item: any, index: number) => {
-          return {
-            id: item.id,
-            stt: index + 1,
-            name: item.name || '---',
-            status: item.status || 'DRAFT',
-            createdBy: item.createdByFullName || item.createdBy || '---',
-            approvedBy: item.approvedByFullName || item.approvedBy || '---',
-            active: item.active !== false,
-            version: item.version,
-          };
-        });
+      let mapped: ProductGroupItem[] = response.data.map((item: any, index: number) => {
+        return {
+          id: item.id,
+          stt: index + 1,
+          name: item.name || '---',
+          status: item.status || 'DRAFT',
+          createdBy: item.createdByFullName || item.createdBy || '---',
+          approvedBy: item.approvedByFullName || item.approvedBy || '---',
+          active: item.active !== false,
+          version: item.version,
+        };
+      });
 
-        if (selectedStatuses.length > 1) {
-          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
-        }
-
-        if (searchTerm.trim()) {
-          mapped = mapped.filter(
-            (item) => matchesSearch(item.name, searchTerm) || matchesSearch(item.id, searchTerm)
-          );
-        }
-
-        setProductGroups(mapped);
-      } catch (error) {
-        console.error('Error fetching product groups from backend:', error);
-      } finally {
-        setLoading(false);
+      if (selectedStatuses.length > 1) {
+        mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
       }
-    };
 
+      if (searchTerm.trim()) {
+        mapped = mapped.filter(
+          (item) => matchesSearch(item.name, searchTerm) || matchesSearch(item.id, searchTerm)
+        );
+      }
+
+      setProductGroups(mapped);
+      setSelectedKeys((prev) => prev.filter((k) => mapped.some((item) => item.id === k)));
+    } catch (error) {
+      if (!isBackground) {
+        console.error('Error fetching product groups from backend:', error);
+      }
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProductGroups();
   }, [searchTerm, selectedStatuses, selectedGroupTypes]);
+
+  useAdminAutoRefresh(() => fetchProductGroups(true), [searchTerm, selectedStatuses, selectedGroupTypes]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -119,6 +125,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
           selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
         )
       );
+      notifyAdminDataChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });

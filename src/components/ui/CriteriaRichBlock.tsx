@@ -1,4 +1,5 @@
 import React from 'react';
+import './CriteriaRichBlock.css';
 
 interface CriteriaRichBlockProps {
   label: string;
@@ -208,16 +209,9 @@ export const CriteriaRichBlock: React.FC<CriteriaRichBlockProps> = ({
           </div>
         </div>
 
-        {/* Content Body Area */}
+        {/* Content Body Area — class styles match Quill table rendering */}
         <div
-          style={{
-            padding: '12px 14px',
-            fontSize: '14px',
-            color: '#8A858F',
-            lineHeight: '20px',
-            minHeight: '88px',
-            wordBreak: 'break-word',
-          }}
+          className="criteria-rich-content"
           dangerouslySetInnerHTML={{ __html: formatContent(value) }}
         />
       </div>

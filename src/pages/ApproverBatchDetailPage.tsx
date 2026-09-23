@@ -11,6 +11,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import { stripHtmlText } from '../utils/fieldValidation';
 import iconChat from '../assets/icon/iconchat.svg';
 import iconPen from '../assets/icon/iconpen.svg';
@@ -220,6 +221,7 @@ const ApproverBatchDetailPage: React.FC = () => {
         'REVIEWED': 'Đã xem'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[targetNotes] || targetNotes}) cho sản phẩm thành công!`);
+      notifyAdminDataChanged();
       return true;
     } catch (error) {
       console.error("Error saving product review:", error);

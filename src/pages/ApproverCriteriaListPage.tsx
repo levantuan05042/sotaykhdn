@@ -9,6 +9,7 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import './ApproverCriteriaListPage.css';
 
 interface ProductGroupItem {
@@ -150,45 +151,49 @@ export const ApproverCriteriaListPage: React.FC = () => {
     fetchGroups();
   }, []);
 
-  // Fetch list of criteria
-  useEffect(() => {
-    const fetchCriteria = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CRITERIA.LIST, {
-          params: {
-            forApproval: true
-          }
-        });
-        const mapped: CriteriaItem[] = response.data.map((item: any) => {
-          const productGroups = normalizeProductGroups(item);
-          return {
-            id: item.id,
-            code: item.code || '---',
-            name: item.name || '---',
-            groupName: productGroups.length > 0
-              ? productGroups.map((g) => g.name).join(', ')
-              : (item.groupName || '---'),
-            productGroups,
-            categoryName: item.categoryName || '---',
-            businessName: item.businessName || '---',
-            status: item.status || 'DRAFT',
-            active: !!item.active,
-            createdBy: item.createdByFullName || item.createdBy || '---',
-            approvedBy: item.approvedByFullName || item.approvedBy || '---',
-            version: item.version || 1,
-          };
-        });
-        setCriteriaList(mapped);
-      } catch (error) {
+  const fetchCriteria = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CRITERIA.LIST, {
+        params: {
+          forApproval: true
+        }
+      });
+      const mapped: CriteriaItem[] = response.data.map((item: any) => {
+        const productGroups = normalizeProductGroups(item);
+        return {
+          id: item.id,
+          code: item.code || '---',
+          name: item.name || '---',
+          groupName: productGroups.length > 0
+            ? productGroups.map((g) => g.name).join(', ')
+            : (item.groupName || '---'),
+          productGroups,
+          categoryName: item.categoryName || '---',
+          businessName: item.businessName || '---',
+          status: item.status || 'DRAFT',
+          active: !!item.active,
+          createdBy: item.createdByFullName || item.createdBy || '---',
+          approvedBy: item.approvedByFullName || item.approvedBy || '---',
+          version: item.version || 1,
+        };
+      });
+      setCriteriaList(mapped);
+      setSelectedKeys((prev) => prev.filter((k) => mapped.some((item) => item.id === k)));
+    } catch (error) {
+      if (!isBackground) {
         console.error('Error fetching criteria from backend:', error);
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchCriteria();
   }, []);
+
+  useAdminAutoRefresh(() => fetchCriteria(true));
 
   useEffect(() => {
     if (!groupModal) return;
@@ -224,6 +229,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
           selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
         )
       );
+      notifyAdminDataChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });

@@ -9,6 +9,7 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import './ApproverProductCategoryListPage.css';
 
 interface ProductCategoryItem {
@@ -64,56 +65,61 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     fetchGroups();
   }, []);
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      setLoading(true);
-      try {
-        const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST, {
-          params: {
-            status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
-            types: selectedGroupIds.length ? selectedGroupIds : undefined,
-            forApproval: true,
-          },
-          paramsSerializer: { indexes: null },
-        });
+  const fetchCategories = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
+    try {
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT_CATEGORY.LIST, {
+        params: {
+          status: selectedStatuses.length === 1 ? selectedStatuses[0] : undefined,
+          types: selectedGroupIds.length ? selectedGroupIds : undefined,
+          forApproval: true,
+        },
+        paramsSerializer: { indexes: null },
+      });
 
-        let mapped: ProductCategoryItem[] = response.data.map((item: any, index: number) => {
-          return {
-            id: item.id,
-            stt: index + 1,
-            name: item.name || '---',
-            groupName: item.groupName || '---',
-            status: item.status || 'DRAFT',
-            createdBy: item.createdByFullName || item.createdBy || '---',
-            approvedBy: item.approvedByFullName || item.approvedBy || '---',
-            active: item.active === true,
-            version: item.version,
-          };
-        });
+      let mapped: ProductCategoryItem[] = response.data.map((item: any, index: number) => {
+        return {
+          id: item.id,
+          stt: index + 1,
+          name: item.name || '---',
+          groupName: item.groupName || '---',
+          status: item.status || 'DRAFT',
+          createdBy: item.createdByFullName || item.createdBy || '---',
+          approvedBy: item.approvedByFullName || item.approvedBy || '---',
+          active: item.active === true,
+          version: item.version,
+        };
+      });
 
-        if (selectedStatuses.length > 1) {
-          mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
-        }
-
-        if (searchTerm.trim()) {
-          mapped = mapped.filter(
-            (item) =>
-              matchesSearch(item.name, searchTerm) ||
-              matchesSearch(item.groupName, searchTerm) ||
-              matchesSearch(item.id, searchTerm)
-          );
-        }
-
-        setCategories(mapped);
-      } catch (error) {
-        console.error('Error fetching categories from backend:', error);
-      } finally {
-        setLoading(false);
+      if (selectedStatuses.length > 1) {
+        mapped = mapped.filter((item) => selectedStatuses.includes(item.status));
       }
-    };
 
+      if (searchTerm.trim()) {
+        mapped = mapped.filter(
+          (item) =>
+            matchesSearch(item.name, searchTerm) ||
+            matchesSearch(item.groupName, searchTerm) ||
+            matchesSearch(item.id, searchTerm)
+        );
+      }
+
+      setCategories(mapped);
+      setSelectedKeys((prev) => prev.filter((k) => mapped.some((item) => item.id === k)));
+    } catch (error) {
+      if (!isBackground) {
+        console.error('Error fetching categories from backend:', error);
+      }
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchCategories();
   }, [searchTerm, selectedStatuses, selectedGroupIds]);
+
+  useAdminAutoRefresh(() => fetchCategories(true), [searchTerm, selectedStatuses, selectedGroupIds]);
 
   const handleBatchConfirm = async (reason?: string) => {
     if (!modalState.type || selectedKeys.length === 0) return;
@@ -135,6 +141,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
           selectedKeys.includes(item.id) ? { ...item, status: newStatus } : item
         )
       );
+      notifyAdminDataChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });

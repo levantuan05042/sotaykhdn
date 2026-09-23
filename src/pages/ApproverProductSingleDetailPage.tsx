@@ -11,6 +11,7 @@ import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
 import AuditLogTimeline from '../components/AuditLogTimeline';
 import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import iconChat from '../assets/icon/iconchat.svg';
 import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverProductDetailPage.css';
@@ -167,6 +168,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
       toast.success(`Đã lưu đánh giá (${labelMap[notesVal] || notesVal}) thành công!`);
       setNewComment('');
       setAuditRefreshKey((prev) => prev + 1);
+      notifyAdminDataChanged();
       fetchDetail();
     } catch (error: any) {
       console.error("Error submitting review:", error);
@@ -401,7 +403,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
             </div>
           </div>
 
-          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm" defaultOpen={false}>
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="right-card shadow-sm" defaultOpen={true}>
             <div className="meta-info-white-box">
               {/* Row 1: Người tạo & Người Phê duyệt */}
               <div className="meta-grid">

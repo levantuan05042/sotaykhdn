@@ -239,7 +239,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
             )}
           </div>
 
-          <CollapsibleRightCard title="Thông tin sản phẩm" className="meta-info-card shadow-sm" defaultOpen={false}>
+          <CollapsibleRightCard title="Thông tin sản phẩm" className="meta-info-card shadow-sm" defaultOpen={true}>
             <div className="meta-info-white-box">
               <div className="meta-grid">
                 <div className="meta-item-vertical">
