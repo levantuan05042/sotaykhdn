@@ -46,7 +46,7 @@ const BusinessView: React.FC = () => {
 
       if (prods.length > 0) {
         const firstProd = prods[0];
-        setBusinessName(firstProd.businessName || 'Chi tiết danh mục sản phẩm 2');
+        setBusinessName(firstProd.businessName || 'Chi tiết danh mục sản phẩm cấp 2');
         setCategoryId(firstProd.productCategoryId || '');
         setCategoryName(firstProd.productCategoryName || '');
         setGroupId(firstProd.productGroupId || '');
@@ -139,14 +139,14 @@ const BusinessView: React.FC = () => {
          </span>
          <span className="breadcrumb-separator">❯</span>
          <span className="breadcrumb-link" onClick={() => categoryId && navigate(`/view/category/${categoryId}`)}>
-           {categoryName || 'Danh mục sản phẩm 1'}
+           {categoryName || 'Danh mục sản phẩm cấp 1'}
          </span>
          <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-current">{businessName || 'Chi tiết danh mục sản phẩm 2'}</span>
+         <span className="breadcrumb-current">{businessName || 'Chi tiết danh mục sản phẩm cấp 2'}</span>
       </div>
 
       <div className="products-section-heading" style={{ marginBottom: 24 }}>
-        <h2 className="group-page-title" style={{ margin: 0 }}>{businessName || 'Chi tiết danh mục sản phẩm 2'}</h2>
+        <h2 className="group-page-title" style={{ margin: 0 }}>{businessName || 'Chi tiết danh mục sản phẩm cấp 2'}</h2>
         {products.length > 0 && (
           <ProductsViewToggle value={viewMode} onChange={setViewMode} />
         )}

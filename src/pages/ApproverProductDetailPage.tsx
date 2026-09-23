@@ -318,7 +318,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
 
             <div className="form-group-row">
               <div className="form-group">
-                <label className="form-label">Danh mục sản phẩm 1</label>
+                <label className="form-label">Danh mục sản phẩm cấp 1</label>
                 <select
                   className="form-select"
                   value={detail.productCategoryId || ''}
@@ -335,14 +335,14 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                     }));
                   }}
                 >
-                  <option value="">Chọn danh mục sản phẩm 1</option>
+                  <option value="">Chọn danh mục sản phẩm cấp 1</option>
                   {categories.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Danh mục sản phẩm 2</label>
+                <label className="form-label">Danh mục sản phẩm cấp 2</label>
                 <select
                   className="form-select"
                   value={detail.businessId || ''}
@@ -357,7 +357,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
                     }));
                   }}
                 >
-                  <option value="">Chọn danh mục sản phẩm 2</option>
+                  <option value="">Chọn danh mục sản phẩm cấp 2</option>
                   {businesses.map((b: any) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}

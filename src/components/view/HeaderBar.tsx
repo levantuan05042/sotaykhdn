@@ -352,13 +352,13 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                         }
 
                         {searchResult?.categories && searchResult.categories.length > 0 &&
-                          renderItems(searchResult.categories, 'category', 'Danh mục sản phẩm 1', (
+                          renderItems(searchResult.categories, 'category', 'Danh mục sản phẩm cấp 1', (
                             <><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></>
                           ))
                         }
 
                         {searchResult?.businesses && searchResult.businesses.length > 0 &&
-                          renderItems(searchResult.businesses, 'business', 'Danh mục sản phẩm 2', (
+                          renderItems(searchResult.businesses, 'business', 'Danh mục sản phẩm cấp 2', (
                             <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></>
                           ))
                         }
@@ -401,7 +401,6 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                 <div
                   className={styles['avatar-container']}
                   style={{ padding: 0, overflow: 'hidden', width: '40px', height: '40px', cursor: 'pointer', borderRadius: '50%' }}
-                  title="Nhấp để mở menu quyền"
                 >
                   <img src={userAvatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
@@ -458,6 +457,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                   onClick={() => {
                     setIsDropdownOpen(false);
                     localStorage.clear();
+                    sessionStorage.clear();
                     const redirectUri = window.location.origin + '/';
                     window.location.href = `${AUTH_SERVICE_LOGOUT_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
                   }}

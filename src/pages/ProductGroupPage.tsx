@@ -288,9 +288,9 @@ const ProductGroupPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: ProductGroupItem) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
-    const isActive = item.active || false;
+    const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
@@ -316,7 +316,7 @@ const ProductGroupPage: React.FC = () => {
       header: 'STT',
       width: '70px',
       align: 'center',
-      render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} />,
+      render: (_, index) => index + 1,
     },
     {
       key: 'name',
@@ -357,9 +357,10 @@ const ProductGroupPage: React.FC = () => {
       key: 'version',
       header: 'Phiên bản',
       render: (row) => (
-        <span style={{ fontWeight: 600, color: '#053E2B' }}>
-          {row.version ? `Phiên bản ${row.version}` : '---'}
-        </span>
+        <CellWithTooltip
+          text={row.version ? `Phiên bản ${row.version}` : '---'}
+          style={{ fontWeight: 600, color: '#053E2B' }}
+        />
       ),
     },
     {

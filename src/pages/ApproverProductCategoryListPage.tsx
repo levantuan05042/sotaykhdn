@@ -175,7 +175,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     },
     {
       key: 'name',
-      header: 'Danh mục sản phẩm 1',
+      header: 'Danh mục sản phẩm cấp 1',
       render: (row) => <span className="category-item-title">{row.name}</span>,
     },
     {
@@ -243,7 +243,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
 
   return (
     <div className="product-category-list-page">
-      <h1 className="category-page-title">Phê duyệt danh mục sản phẩm 1</h1>
+      <h1 className="category-page-title">Phê duyệt danh mục sản phẩm cấp 1</h1>
 
       {/* Khối tìm kiếm & Bộ lọc */}
       <div className="filter-card shadow-sm">
@@ -321,7 +321,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/product-category/${row.id}`)}
           loading={loading}
-          emptyText="Không tìm thấy danh mục sản phẩm 1 nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm cấp 1 nào phù hợp."
           selectable={true}
           selectedKeys={selectedKeys}
           onSelectionChange={(keys) => setSelectedKeys(keys)}

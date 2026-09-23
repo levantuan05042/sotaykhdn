@@ -170,7 +170,7 @@ export const ApproverBusinessListPage: React.FC = () => {
     },
     {
       key: 'name',
-      header: 'Danh mục sản phẩm 2',
+      header: 'Danh mục sản phẩm cấp 2',
       render: (row) => <span className="business-item-title">{row.name}</span>,
     },
     {
@@ -180,7 +180,7 @@ export const ApproverBusinessListPage: React.FC = () => {
     },
     {
       key: 'categoryName',
-      header: 'Danh mục sản phẩm 1',
+      header: 'Danh mục sản phẩm cấp 1',
       render: (row) => row.categoryName,
     },
     {
@@ -243,7 +243,7 @@ export const ApproverBusinessListPage: React.FC = () => {
 
   return (
     <div className="product-business-list-page">
-      <h1 className="business-page-title">Phê duyệt danh mục sản phẩm 2</h1>
+      <h1 className="business-page-title">Phê duyệt danh mục sản phẩm cấp 2</h1>
 
       {/* Search & Filters */}
       <div className="filter-card shadow-sm">
@@ -321,7 +321,7 @@ export const ApproverBusinessListPage: React.FC = () => {
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/approver/business/${row.id}`)}
           loading={loading}
-          emptyText="Không tìm thấy danh mục sản phẩm 2 nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm cấp 2 nào phù hợp."
           selectable={true}
           selectedKeys={selectedKeys}
           onSelectionChange={(keys) => setSelectedKeys(keys)}

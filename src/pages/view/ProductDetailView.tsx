@@ -4,11 +4,11 @@ import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
 import { addRecentlyViewed, removeRecentlyViewed } from '../../utils/userHistoryStorage';
 import { copyTextToClipboard } from '../../utils/clipboard';
-import CellWithTooltip from '../../components/ui/CellWithTooltip';
 import LoadingOverlay from '../../components/ui/LoadingOverlay';
 import { showSuccessToast } from '../../utils/appToast';
 import { stripHtmlText } from '../../utils/fieldValidation';
 import { formatDetailHtml as formatCriteriaHtml } from '../../components/ui/CriteriaQuillEditor';
+import { notifyAdminDataChanged } from '../../hooks/useAdminAutoRefresh';
 import 'quill/dist/quill.snow.css';
 import './ProductDetailView.css';
 
@@ -145,6 +145,8 @@ const ProductDetailView: React.FC = () => {
   const productRef = useRef<ProductData | null>(null);
   const appliedIdRef = useRef<string | null>(null);
   const updatingRef = useRef(false);
+  /** Khi chuyển sang phiên bản ACTIVE mới: không gọi /view lại (tránh tự +1 lượt xem). */
+  const skipViewOnNextIdRef = useRef(false);
 
   useEffect(() => {
     sessionStorage.setItem(`drawer-${id}`, isMoreDrawerOpen.toString());
@@ -274,6 +276,7 @@ const ProductDetailView: React.FC = () => {
 
         applyProductData(nextProduct);
         if (nextProduct.id && nextProduct.id !== id) {
+          skipViewOnNextIdRef.current = true;
           navigate(`/view/product-detail/${nextProduct.id}`, { replace: true });
         }
 
@@ -297,10 +300,23 @@ const ProductDetailView: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
+    // Đổi URL do phát hiện phiên bản mới → giữ nguyên số xem đã kế thừa, không +1
+    if (skipViewOnNextIdRef.current) {
+      skipViewOnNextIdRef.current = false;
+      return;
+    }
     const timer = setTimeout(async () => {
       try {
-        const response = await fetch(`${BASE_URL}/api/v1/products/${id}/view`, { method: 'POST', credentials: 'include' });
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const response = await fetch(`${BASE_URL}/api/v1/products/${id}/view`, {
+          method: 'POST',
+          credentials: 'include',
+          headers,
+        });
         if (response.ok) {
+          notifyAdminDataChanged();
           setProduct((prev) => {
             if (!prev) return null;
             const currentViews = prev.views ?? prev.viewCount ?? 0;
@@ -316,7 +332,14 @@ const ProductDetailView: React.FC = () => {
     const checkSavedStatus = async () => {
       if (!id || !checkIsLoggedIn()) return;
       try {
-        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${id}`, { method: 'GET', credentials: 'include' });
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+        const headers: HeadersInit = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const response = await fetch(`${BASE_URL}/api/saved-products/check?productId=${id}`, {
+          method: 'GET',
+          credentials: 'include',
+          headers,
+        });
         if (response.ok) setIsSaved(await response.json());
       } catch (error) {}
     };
@@ -336,12 +359,18 @@ const ProductDetailView: React.FC = () => {
       return;
     }
     try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const headers: HeadersInit = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
       const response = await fetch(`${BASE_URL}/api/saved-products/toggle?productId=${product.id}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         credentials: 'include',
       });
-      if (response.ok) setIsSaved(await response.json());
+      if (response.ok) {
+        setIsSaved(await response.json());
+        notifyAdminDataChanged();
+      }
     } catch (error) {}
   };
 
@@ -403,7 +432,6 @@ const ProductDetailView: React.FC = () => {
               return (
                 <React.Fragment key={`${item.type}-${item.id || index}`}>
                   {isEllipsis ? <span className="dp-breadcrumb-ellipsis">...</span> : (
-                    <CellWithTooltip tooltip={item.name} style={{ width: 'auto' }}>
                     <button
                       className={`dp-breadcrumb-link ${isLast ? 'dp-active' : ''}`}
                       onClick={() => {
@@ -411,7 +439,7 @@ const ProductDetailView: React.FC = () => {
                         if (item.type === 'home') navigate('/view');
                         else if (item.id) navigate(`/view/${item.type}/${item.id}`);
                       }}
-                      disabled={isLast} 
+                      disabled={isLast}
                     >
                       {item.type === 'home' && (
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: '2px' }}>
@@ -421,7 +449,6 @@ const ProductDetailView: React.FC = () => {
                       )}
                       <span className="dp-breadcrumb-text">{item.name}</span>
                     </button>
-                    </CellWithTooltip>
                   )}
                   {!isLast && <span className="dp-breadcrumb-sep">&gt;</span>}
                 </React.Fragment>
@@ -430,37 +457,33 @@ const ProductDetailView: React.FC = () => {
           </div>
 
           <div className="dp-actions">
-              <CellWithTooltip tooltip={isSaved ? 'Bỏ lưu' : 'Lưu sản phẩm'} style={{ width: 'auto' }}>
-                <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <span className="dp-action-label">Lưu sản phẩm</span>
-                </button>
-              </CellWithTooltip>
+              <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <span className="dp-action-label">Lưu sản phẩm</span>
+              </button>
 
-              <CellWithTooltip tooltip={shareCopied ? 'Đã sao chép liên kết' : 'Chia sẻ'} style={{ width: 'auto' }}>
-                <button className="dp-action-btn" onClick={handleShare}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="18" cy="5" r="3"></circle>
-                    <circle cx="6" cy="12" r="3"></circle>
-                    <circle cx="18" cy="19" r="3"></circle>
-                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                  </svg>
-                  <span className="dp-action-label">Chia sẻ</span>
-                </button>
-              </CellWithTooltip>
+              <button className="dp-action-btn" onClick={handleShare}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <span className="dp-action-label">{shareCopied ? 'Đã sao chép' : 'Chia sẻ'}</span>
+              </button>
 
-              <CellWithTooltip tooltip="Thông tin sản phẩm" style={{ width: 'auto' }}>
-              <button 
+              <button
                 ref={toggleBtnRef}
-                className={`dp-icon-btn ${isMoreDrawerOpen ? 'active' : ''}`} 
+                className={`dp-icon-btn ${isMoreDrawerOpen ? 'active' : ''}`}
                 onClick={() => setIsMoreDrawerOpen(!isMoreDrawerOpen)}
+                aria-label="Thông tin sản phẩm"
               >
-                <svg 
-                  xmlns="http://www.w3.org/2000/svg" 
-                  viewBox="0 0 4 15" 
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 4 15"
                   fill="none"
                   style={{ width: '16px', height: '16px' }}
                 >
@@ -469,7 +492,6 @@ const ProductDetailView: React.FC = () => {
                   <path d="M1.66927 14.1683C2.12951 14.1683 2.5026 13.7952 2.5026 13.335C2.5026 12.8747 2.12951 12.5016 1.66927 12.5016C1.20903 12.5016 0.835938 12.8747 0.835938 13.335C0.835938 13.7952 1.20903 14.1683 1.66927 14.1683Z" stroke="currentColor" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
-              </CellWithTooltip>
             </div>
           </div>
 

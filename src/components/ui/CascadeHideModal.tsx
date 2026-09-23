@@ -22,8 +22,8 @@ export interface CascadeHideModalProps {
 
 const buildHideSummary = (counts: ChildCounts): string => {
   const parts: string[] = [];
-  if (counts.categories) parts.push(`${counts.categories} danh mục sản phẩm 1`);
-  if (counts.businesses) parts.push(`${counts.businesses} danh mục sản phẩm 2`);
+  if (counts.categories) parts.push(`${counts.categories} danh mục sản phẩm cấp 1`);
+  if (counts.businesses) parts.push(`${counts.businesses} danh mục sản phẩm cấp 2`);
   if (counts.products) parts.push(`${counts.products} sản phẩm`);
   if (parts.length === 0) return 'Các thành phần bên trong sẽ được ẩn cùng lúc.';
   return `${parts.join(', ')} bên trong sẽ được ẩn cùng lúc`;

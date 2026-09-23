@@ -242,7 +242,7 @@ const ProductCategoryPage: React.FC = () => {
 
   const handleToggleActive = async (item: any, currentActive: boolean) => {
     if (!currentActive) {
-      if (await notifyIfCannotShowChild('danh mục sản phẩm 1', item.name, item)) return;
+      if (await notifyIfCannotShowChild('danh mục sản phẩm cấp 1', item.name, item)) return;
       await executeToggleActive(item, true, false);
       return;
     }
@@ -284,7 +284,7 @@ const ProductCategoryPage: React.FC = () => {
       setData(prevData => prevData.map(d => d.id === item.id ? { ...d, active: newActive } : d));
       setShowCascadeModal(false);
       setCascadeTarget(null);
-      showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm 1', item.name));
+      showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm cấp 1', item.name));
       notifyAdminDataChanged();
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực danh mục:", error);
@@ -318,14 +318,14 @@ const ProductCategoryPage: React.FC = () => {
   };
 
   const columns: Column<any>[] = [
-    { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
-    { key: 'name', header: 'Tên danh mục sản phẩm 1', render: (row) => <CellWithTooltip text={row.name} style={{ fontWeight: 500 }} /> },
+    { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
+    { key: 'name', header: 'Tên danh mục sản phẩm cấp 1', render: (row) => <CellWithTooltip text={row.name} style={{ fontWeight: 500 }} /> },
     { key: 'groupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.groupName} /> },
     { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
     { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
     { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
     { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
-    { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
+    { key: 'version', header: 'Phiên bản', render: (row) => <CellWithTooltip text={row.version && Number(row.version) > 0 ? `Phiên bản ${row.version}` : '---'} style={{ fontWeight: 600, color: '#053E2B' }} /> },
     {
       key: 'action',
       header: '',
@@ -351,7 +351,7 @@ const ProductCategoryPage: React.FC = () => {
   return (
     <div className="product-group-container">
       <div className="content-wrapper">
-        <h2 className="page-title">Quản lý danh mục sản phẩm 1</h2>
+        <h2 className="page-title">Quản lý danh mục sản phẩm cấp 1</h2>
         <button className="btn-add-new" onClick={() => navigate('/product-category/add')}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M6.66927 0.834961V12.5016M0.835938 6.66829H12.5026" stroke="#FDFCFD" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
@@ -510,7 +510,7 @@ const ProductCategoryPage: React.FC = () => {
           loading={loading}
           page={currentPage}
           onPageChange={setCurrentPage}
-          emptyText="Không tìm thấy danh mục sản phẩm 1 nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm cấp 1 nào phù hợp."
           getRowClassName={getCascadeRowClassName}
         />
       </div>
@@ -526,7 +526,7 @@ const ProductCategoryPage: React.FC = () => {
             executeToggleActive(cascadeTarget, false, true);
           }
         }}
-        itemTypeLabel="danh mục sản phẩm 1"
+        itemTypeLabel="danh mục sản phẩm cấp 1"
         itemName={cascadeTarget?.name || ''}
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}

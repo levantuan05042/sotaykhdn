@@ -40,9 +40,10 @@ export const normalizeRole = (rawRole?: string): UserRole => {
 
 // 1. Menu Quyền Biên tập (ETN08)
 export const EDIT_MENU_ITEMS: MenuItem[] = [
+  { name: 'Dashboard', path: '/reports/access-data' },
   { name: 'Quản lý nhóm sản phẩm', path: '/product-groups' },
-  { name: 'Quản lý danh mục sản phẩm 1', path: '/product-category' },
-  { name: 'Quản lý danh mục sản phẩm 2', path: '/business-management' },
+  { name: 'Quản lý danh mục sản phẩm cấp 1', path: '/product-category' },
+  { name: 'Quản lý danh mục sản phẩm cấp 2', path: '/business-management' },
   {
     name: 'Quản lý sản phẩm',
     children: [
@@ -61,9 +62,10 @@ export const EDIT_MENU_ITEMS: MenuItem[] = [
 ];
 // 2. Menu Quyền Kiểm duyệt (ETK08)
 export const APPROVE_MENU_ITEMS: MenuItem[] = [
+  { name: 'Dashboard', path: '/reports/access-data' },
   { name: 'Phê duyệt nhóm sản phẩm', path: '/approver/product-groups' },
-  { name: 'Phê duyệt danh mục sản phẩm 1', path: '/approver/product-category' },
-  { name: 'Phê duyệt danh mục sản phẩm 2', path: '/approver/business' },
+  { name: 'Phê duyệt danh mục sản phẩm cấp 1', path: '/approver/product-category' },
+  { name: 'Phê duyệt danh mục sản phẩm cấp 2', path: '/approver/business' },
   {
     name: 'Phê duyệt sản phẩm',
     children: [
@@ -76,8 +78,8 @@ export const APPROVE_MENU_ITEMS: MenuItem[] = [
 // 3. Menu Quyền Tra cứu (VIEWER)
 export const VIEWER_MENU_ITEMS: MenuItem[] = [
   { name: 'Quản lý nhóm sản phẩm', path: '/product-groups' },
-  { name: 'Quản lý danh mục sản phẩm 1', path: '/product-category' },
-  { name: 'Quản lý danh mục sản phẩm 2', path: '/business-management' },
+  { name: 'Quản lý danh mục sản phẩm cấp 1', path: '/product-category' },
+  { name: 'Quản lý danh mục sản phẩm cấp 2', path: '/business-management' },
   {
     name: 'Tra cứu sản phẩm',
     children: [

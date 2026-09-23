@@ -174,11 +174,11 @@ export const getActionConfirmDesc = (
   const isSubmitAction = confirmAction === 'PENDING_APPROVAL';
 
   if (isNewVersion && isSubmitAction) {
-    return `Bạn đang thực hiện chỉnh sửa Phiên bản ${baseVersion} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${targetVersion} và gửi đến Kiểm soát để phê duyệt.`;
+    return `Bạn đang thực hiện chỉnh sửa Phiên bản ${baseVersion} của ${entityTypeName}.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được tạo thành Phiên bản ${targetVersion} và gửi đến Kiểm soát để phê duyệt.`;
   }
 
   if (isNewVersion && isDraftAction) {
-    return `Bạn đang thực hiện chỉnh sửa Phiên bản ${baseVersion} của sản phẩm.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được lưu thành bản nháp của Phiên bản ${targetVersion}.`;
+    return `Bạn đang thực hiện chỉnh sửa Phiên bản ${baseVersion} của ${entityTypeName}.\nSau khi xác nhận, nội dung chỉnh sửa sẽ được lưu thành bản nháp của Phiên bản ${targetVersion}.`;
   }
 
   if (isDraftAction) {

@@ -55,7 +55,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error loading product category details:', error);
-      toast.error('Lỗi khi tải chi tiết danh mục sản phẩm 1');
+      toast.error('Lỗi khi tải chi tiết danh mục sản phẩm cấp 1');
     } finally {
       setLoading(false);
     }
@@ -88,9 +88,6 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
         comment: commentVal,
         approvedBy: approvedByStr,
       });
-
-      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt danh mục sản phẩm 1 thành công!' : 'Đã phản hồi ý kiến đánh giá!');
-      notifyAdminDataChanged();
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm:', error);
@@ -107,14 +104,14 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="error-text">Không tìm thấy thông tin danh mục sản phẩm 1</p>
+        <p className="error-text">Không tìm thấy thông tin danh mục sản phẩm cấp 1</p>
       </div>
     );
   }
 
   return (
     <ApproverDetailWrapper
-      moduleName="danh mục sản phẩm 1"
+      moduleName="danh mục sản phẩm cấp 1"
       itemName={detail.name}
       objectCode={detail.id}
       status={detail.status}
@@ -140,7 +137,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Danh mục sản phẩm 1 <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Danh mục sản phẩm cấp 1 <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 

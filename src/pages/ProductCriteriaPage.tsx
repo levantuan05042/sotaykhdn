@@ -26,6 +26,11 @@ import {
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import {
+  SPECIAL_CRITERIA_LIST,
+  isSpecialCriteria,
+  getSpecialCriteriaConfig,
+} from '../utils/specialCriteria';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -125,6 +130,75 @@ const ProductCriteriaPage: React.FC = () => {
     });
   }, [searchTerm, selectedGroups, selectedStatuses, selectedActives, selectedCreators, selectedApprovers, currentPage]);
 
+  const groupOptionsRef = useRef<GroupOption[]>([]);
+
+  const getGroupsForSuper = (sgValue: string, allGroups: GroupOption[]) => {
+    return allGroups
+      .filter((g) => g.superGroup === sgValue)
+      .map((g) => ({
+        id: g.value,
+        name: g.label,
+        superGroup: g.superGroup,
+        status: 'ACTIVE',
+        active: !g.hidden,
+      }));
+  };
+
+  const applySpecialCriteria = (list: any[], currentGroupOptions: GroupOption[]) => {
+    const result = [...list];
+
+    SPECIAL_CRITERIA_LIST.forEach((sc) => {
+      const matchingGroups = getGroupsForSuper(sc.superGroup, currentGroupOptions);
+      const existingIdx = result.findIndex((item) => {
+        const cfg = getSpecialCriteriaConfig(item);
+        return cfg?.code === sc.code;
+      });
+
+      if (existingIdx >= 0) {
+        result[existingIdx] = {
+          ...result[existingIdx],
+          code: sc.code,
+          name: sc.name,
+          isRequired: true,
+          active: true,
+          status: 'ACTIVE',
+          productGroups: matchingGroups.length > 0 ? matchingGroups : (result[existingIdx].productGroups || []),
+        };
+      } else {
+        result.push({
+          id: `fixed-${sc.code.toLowerCase()}`,
+          code: sc.code,
+          name: sc.name,
+          isRequired: true,
+          status: 'ACTIVE',
+          active: true,
+          createdByFullName: 'Hệ thống',
+          approvedByFullName: 'Hệ thống',
+          version: 1,
+          productGroups: matchingGroups,
+        });
+      }
+    });
+
+    const order = ['TCUD_001', 'TCBH_0001', 'TCSP_0003'];
+    result.sort((a, b) => {
+      const aSpecial = isSpecialCriteria(a);
+      const bSpecial = isSpecialCriteria(b);
+      if (aSpecial && !bSpecial) return -1;
+      if (!aSpecial && bSpecial) return 1;
+      if (aSpecial && bSpecial) {
+        const aCode = (a.code || '').toUpperCase();
+        const bCode = (b.code || '').toUpperCase();
+        const aIdx = order.indexOf(aCode);
+        const bIdx = order.indexOf(bCode);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      }
+      return 0;
+    });
+
+    return result;
+  };
+
   useEffect(() => {
     const fetchGroupOptions = async () => {
       try {
@@ -139,6 +213,8 @@ const ProductCriteriaPage: React.FC = () => {
             fromCatalog: true,
           }));
         setGroupOptions(mappedGroups);
+        groupOptionsRef.current = mappedGroups;
+        setData(prev => applySpecialCriteria(prev, mappedGroups));
       } catch (error) {
         console.error(error);
       }
@@ -175,14 +251,15 @@ const ProductCriteriaPage: React.FC = () => {
         };
       });
 
-      setData(enrichedData);
+      const finalData = applySpecialCriteria(enrichedData, groupOptionsRef.current);
+      setData(finalData);
       if (!isBackground) {
         restorePageScroll('criteria-management');
       }
     } catch (error) {
       if (!isBackground) {
         console.error(error);
-        setData([]);
+        setData(applySpecialCriteria([], groupOptionsRef.current));
       }
     } finally {
       if (!isBackground) {
@@ -296,6 +373,10 @@ const ProductCriteriaPage: React.FC = () => {
   };
 
   const handleToggleActive = async (item: any, currentActive: boolean) => {
+    if (isSpecialCriteria(item)) {
+      showErrorToast("Không thể ẩn", "Tiêu chí bắt buộc của hệ thống luôn luôn hiển thị, không thể ẩn.");
+      return;
+    }
     if (!currentActive) {
       if (await notifyIfCannotShowChild('tiêu chí', item.name, item)) return;
       await executeToggleActive(item, true, false);
@@ -347,10 +428,30 @@ const ProductCriteriaPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: any) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    if (isSpecialCriteria(item)) {
+      return (
+        <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
+          <label className="toggle-switch" style={{ cursor: 'not-allowed', opacity: 0.7 }}>
+            <input 
+              type="checkbox" 
+              checked={true} 
+              disabled={true}
+              readOnly
+            />
+            <span className="toggle-slider"></span>
+          </label>
+          <span className="toggle-label disabled-text" title="Tiêu chí mặc định luôn hiển thị">
+            Hiện
+          </span>
+        </div>
+      );
+    }
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isCascadeLocked = isCriteriaFullyLocked(item);
     const isDisabled = disabledStatuses.includes(item.status);
-    const isActive = isCascadeLocked ? false : (item.active || false);
+    const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' || isCascadeLocked
+      ? false
+      : (item.active || false);
 
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
@@ -376,7 +477,7 @@ const ProductCriteriaPage: React.FC = () => {
       header: 'STT',
       width: '70px',
       align: 'center',
-      render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} />,
+      render: (_, index) => index + 1,
     },
     {
       key: 'code',
@@ -445,9 +546,10 @@ const ProductCriteriaPage: React.FC = () => {
       key: 'version',
       header: 'Phiên bản',
       render: (row) => (
-        <span style={{ fontWeight: 600, color: '#053E2B' }}>
-          {row.version ? `Phiên bản ${row.version}` : '---'}
-        </span>
+        <CellWithTooltip
+          text={row.version ? `Phiên bản ${row.version}` : '---'}
+          style={{ fontWeight: 600, color: '#053E2B' }}
+        />
       ),
     },
     {

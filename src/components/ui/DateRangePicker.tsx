@@ -13,12 +13,16 @@ const DATE_PRESETS = [
   { label: 'Toàn bộ thời gian', value: 'allTime' },
 ];
 
+export type DateRangePreset = { label: string; value: string };
+
 interface DateRangePickerProps {
   startDate: string;
   endDate: string;
   onSave: (startDate: string, endDate: string) => void;
   label?: string;
   className?: string;
+  /** Nếu truyền: chỉ hiện các preset này (vd báo cáo chỉ 4 mục). */
+  presets?: DateRangePreset[];
 }
 
 export const DateRangePicker: React.FC<DateRangePickerProps> = ({
@@ -27,7 +31,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   onSave,
   label = 'Thời gian',
   className = '',
+  presets,
 }) => {
+  const presetList = presets ?? DATE_PRESETS;
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -294,6 +300,12 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         type="button"
       >
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+          <line x1="16" y1="2" x2="16" y2="6" />
+          <line x1="8" y1="2" x2="8" y2="6" />
+          <line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
         <span>{getButtonLabel()}</span>
         <svg
           className={`chevron-icon ${isOpen ? 'open' : ''}`}
@@ -315,7 +327,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           <div className="drp-main-content">
             {/* Presets Sidebar */}
             <div className="drp-presets-sidebar">
-              {DATE_PRESETS.map(preset => (
+              {presetList.map(preset => (
                 <button
                   type="button"
                   key={preset.value}

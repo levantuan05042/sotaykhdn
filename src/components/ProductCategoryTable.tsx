@@ -87,16 +87,16 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
 
       setWarningData({
         show: true,
-        title: `Không thể ẩn danh mục sản phẩm 1: "${item.name}"`,
-        message: "Danh mục sản phẩm 1 này đang chứa các danh mục sản phẩm 2 bên trong."
+        title: `Không thể ẩn danh mục sản phẩm cấp 1: "${item.name}"`,
+        message: "Danh mục sản phẩm cấp 1 này đang chứa các danh mục sản phẩm cấp 2 bên trong."
       });
     }
   };
 
   const renderActiveToggle = (item: ProductCategory) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
-    const isActive = item.active || false;
+    const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
@@ -141,7 +141,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
           <thead>
             <tr>
               <th className="px-40 rounded-l-12 w-24">STT</th>
-              <th>Tên danh mục sản phẩm 1</th>
+              <th>Tên danh mục sản phẩm cấp 1</th>
               <th>Nhóm sản phẩm</th>
               <th>Trạng thái</th>
               <th>Hiệu lực</th>

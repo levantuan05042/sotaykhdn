@@ -15,7 +15,6 @@ const ProductsViewToggle: React.FC<ProductsViewToggleProps> = ({ value, onChange
         type="button"
         className={`products-view-toggle-btn${value === 'grid' ? ' is-active' : ''}`}
         onClick={() => onChange('grid')}
-        title="Dạng lưới"
         aria-label="Dạng lưới"
         aria-pressed={value === 'grid'}
       >
@@ -30,7 +29,6 @@ const ProductsViewToggle: React.FC<ProductsViewToggleProps> = ({ value, onChange
         type="button"
         className={`products-view-toggle-btn${value === 'list' ? ' is-active' : ''}`}
         onClick={() => onChange('list')}
-        title="Dạng danh sách"
         aria-label="Dạng danh sách"
         aria-pressed={value === 'list'}
       >

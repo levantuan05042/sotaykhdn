@@ -327,9 +327,11 @@ const ProductPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: any) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status?.toUpperCase());
-    const isActive = item.active || false;
+    const isActive = item.status?.toUpperCase() === 'ARCHIVED' || item.status?.toUpperCase() === 'INACTIVE'
+      ? false
+      : (item.active || false);
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
         <label className="toggle-switch">
@@ -443,7 +445,7 @@ const ProductPage: React.FC = () => {
 
     if (isProcessingPage) {
       return [
-        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
+        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
         { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
         { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
         { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
@@ -463,38 +465,38 @@ const ProductPage: React.FC = () => {
         { key: 'createdAt', header: 'Ngày tạo', render: (row) => <CellWithTooltip text={formatDate(row.createdAt)} /> },
         { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
         { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
-        { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
+        { key: 'version', header: 'Phiên bản', render: (row) => <CellWithTooltip text={row.version ? `Phiên bản ${row.version}` : '---'} style={{ fontWeight: 600, color: '#053E2B' }} /> },
         baseAction
       ];
     }
 
     if (isRejectedPage) {
       return [
-        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
+        { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
         { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
         { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
-        { key: 'productCategoryName', header: 'Danh mục sản phẩm 1', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
-        { key: 'businessName', header: 'Danh mục sản phẩm 2', render: (row) => <CellWithTooltip text={row.businessName} /> },
+        { key: 'productCategoryName', header: 'Danh mục sản phẩm cấp 1', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
+        { key: 'businessName', header: 'Danh mục sản phẩm cấp 2', render: (row) => <CellWithTooltip text={row.businessName} /> },
         { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
         { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
         { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
         { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
-        { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
+        { key: 'version', header: 'Phiên bản', render: (row) => <CellWithTooltip text={row.version ? `Phiên bản ${row.version}` : '---'} style={{ fontWeight: 600, color: '#053E2B' }} /> },
         baseAction
       ];
     }
 
     return [
-      { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} /> },
+      { key: 'stt', header: 'STT', width: '70px', align: 'center', render: (_, index) => index + 1 },
       { key: 'name', header: 'Sản phẩm', render: (row) => <CellWithTooltip text={stripHtml(row.name)} style={{ fontWeight: 500 }} /> },
       { key: 'productGroupName', header: 'Nhóm sản phẩm', render: (row) => <CellWithTooltip text={row.productGroupName} /> },
-      { key: 'productCategoryName', header: 'Danh mục sản phẩm 1', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
-      { key: 'businessName', header: 'Danh mục sản phẩm 2', render: (row) => <CellWithTooltip text={row.businessName} /> },
+      { key: 'productCategoryName', header: 'Danh mục sản phẩm cấp 1', render: (row) => <CellWithTooltip text={row.productCategoryName} /> },
+      { key: 'businessName', header: 'Danh mục sản phẩm cấp 2', render: (row) => <CellWithTooltip text={row.businessName} /> },
       { key: 'status', header: 'Trạng thái', width: '210px', render: (row) => <StatusBadge2 status={row.status} /> },
       { key: 'active', header: 'Hiệu lực', render: (row) => renderActiveToggle(row) },
       { key: 'createdByFullName', header: 'Người tạo', render: (row) => <CellWithTooltip text={row.createdByFullName || row.CREATED_BY_FULL_NAME || '---'} /> },
       { key: 'approvedByFullName', header: 'Người kiểm duyệt', render: (row) => <CellWithTooltip text={row.approvedByFullName || row.APPROVED_BY_FULL_NAME || row.approvedBy || '---'} /> },
-      { key: 'version', header: 'Phiên bản', render: (row) => <span style={{ fontWeight: 600, color: '#053E2B' }}>{row.version ? `Phiên bản ${row.version}` : '---'}</span> },
+      { key: 'version', header: 'Phiên bản', render: (row) => <CellWithTooltip text={row.version ? `Phiên bản ${row.version}` : '---'} style={{ fontWeight: 600, color: '#053E2B' }} /> },
       baseAction
     ];
   };
@@ -596,26 +598,26 @@ const ProductPage: React.FC = () => {
               <>
                 {/* Danh mục sản phẩm */}
                 <TableColumnFilterDropdown
-                  label="Danh mục sản phẩm 1"
+                  label="Danh mục sản phẩm cấp 1"
                   options={categoryFilterOptions}
                   selectedValues={selectedCategories}
                   onSelectValues={setSelectedCategories}
                   isOpen={openDropdown === 'category'}
                   onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
                   hasSearch={categoryFilterOptions.length > 5}
-                  searchPlaceholder="Tìm danh mục sản phẩm 1..."
+                  searchPlaceholder="Tìm danh mục sản phẩm cấp 1..."
                 />
 
                 {/* Danh mục sản phẩm 2 */}
                 <TableColumnFilterDropdown
-                  label="Danh mục sản phẩm 2"
+                  label="Danh mục sản phẩm cấp 2"
                   options={businessFilterOptions}
                   selectedValues={selectedBusinesses}
                   onSelectValues={setSelectedBusinesses}
                   isOpen={openDropdown === 'business'}
                   onToggle={() => setOpenDropdown(openDropdown === 'business' ? null : 'business')}
                   hasSearch={businessFilterOptions.length > 5}
-                  searchPlaceholder="Tìm danh mục sản phẩm 2..."
+                  searchPlaceholder="Tìm danh mục sản phẩm cấp 2..."
                 />
               </>
             )}
@@ -692,14 +694,14 @@ const ProductPage: React.FC = () => {
             {selectedCategories.map((val) => (
               <FilterTag
                 key={val}
-                label={`Danh mục sản phẩm 1: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`}
+                label={`Danh mục sản phẩm cấp 1: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`}
                 onRemove={() => setSelectedCategories((prev) => prev.filter((v) => v !== val))}
               />
             ))}
             {selectedBusinesses.map((val) => (
               <FilterTag
                 key={val}
-                label={`Danh mục sản phẩm 2: ${businessFilterOptions.find((o) => o.value === val)?.label || val}`}
+                label={`Danh mục sản phẩm cấp 2: ${businessFilterOptions.find((o) => o.value === val)?.label || val}`}
                 onRemove={() => setSelectedBusinesses((prev) => prev.filter((v) => v !== val))}
               />
             ))}

@@ -7,7 +7,7 @@ export interface MenuItem {
   path?: string;
   children?: MenuItem[];
   count?: number;
-  label?: 'Danh mục sản phẩm 1' | 'Danh mục sản phẩm 2' | 'Sản phẩm';
+  label?: 'Danh mục sản phẩm cấp 1' | 'Danh mục sản phẩm cấp 2' | 'Sản phẩm';
   type: 'static' | 'group' | 'category' | 'criteria' | 'product';
 }
 
@@ -48,10 +48,10 @@ export const getSidebarData = async (): Promise<MenuItem[]> => {
               name: cat.name,
               path: `/categories/${cat.id}`,
               type: 'category',
-              label: 'Danh mục sản phẩm 1',
+              label: 'Danh mục sản phẩm cấp 1',
               count: cat.productCount || catProductCount || 0,
               children: subCriterias.length > 0 ? subCriterias.map((cri: any) => {
-                // Tính số sản phẩm thuộc danh mục sản phẩm 2 này
+                // Tính số sản phẩm thuộc danh mục sản phẩm cấp 2 này
                 const criProductCount = products.filter((p: any) => p.criteriaId === cri.id || p.businessId === cri.id).length;
 
                 return {
@@ -59,7 +59,7 @@ export const getSidebarData = async (): Promise<MenuItem[]> => {
                   name: cri.name,
                   path: `/criteria/${cri.id}`,
                   type: 'criteria',
-                  label: 'Danh mục sản phẩm 2',
+                  label: 'Danh mục sản phẩm cấp 2',
                   count: cri.productCount || criProductCount || 0
                 };
               }) : undefined

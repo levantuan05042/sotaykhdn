@@ -53,7 +53,7 @@ const AddBusinessPage: React.FC = () => {
         setCategoryOptions(options);
       } catch (error) {
         console.error("Lỗi fetch categories:", error);
-        toast.error("Không thể tải danh sách danh mục sản phẩm 1");
+        toast.error("Không thể tải danh sách danh mục sản phẩm cấp 1");
       } finally {
         setLoadingCategories(false);
       }
@@ -87,7 +87,7 @@ const AddBusinessPage: React.FC = () => {
   const handleGoBack = () => navigate('/business-management');
 
   const onSaveDraftClick = () => {
-    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm 2');
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm cấp 2');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
@@ -97,16 +97,16 @@ const AddBusinessPage: React.FC = () => {
 
   const onSubmitClick = () => {
     if (!formData.name.trim()) {
-      toast.error("Vui lòng nhập tên danh mục sản phẩm 2", { position: 'top-center' });
+      toast.error("Vui lòng nhập tên danh mục sản phẩm cấp 2", { position: 'top-center' });
       return;
     }
-    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm 2');
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm cấp 2');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
     if (!formData.productCategoryId) {
-      toast.error("Vui lòng chọn danh mục sản phẩm 1", { position: 'top-center' });
+      toast.error("Vui lòng chọn danh mục sản phẩm cấp 1", { position: 'top-center' });
       setIsOpen(true);
       return;
     }
@@ -115,19 +115,18 @@ const AddBusinessPage: React.FC = () => {
 
   const handleCreateBusiness = async (status: 'DRAFT' | 'PENDING_APPROVAL') => {
     if (!beginSubmit(status === 'DRAFT' ? 'draft' : 'submit')) return;
-    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm 2');
+    const nameErr = getNameError(formData.name, 'Tên danh mục sản phẩm cấp 2');
     if (nameErr) {
       toast.error(nameErr, { position: 'top-center' });
       endSubmit();
       return;
     }
-
     try {
       await axios.post(API_ENDPOINTS.PRODUCT_BUSINESS.LIST, {
         name: formData.name.trim() || undefined,
-        productCategoryId: formData.productCategoryId || undefined,
-        status,
-        active: isActive
+        categoryId: formData.productCategoryId || undefined,
+        active: isActive,
+        status
       });
 
       const message = status === 'DRAFT' ? "Lưu nháp thành công" : "Gửi phê duyệt thành công";
@@ -137,7 +136,7 @@ const AddBusinessPage: React.FC = () => {
       setTimeout(() => navigate('/business-management'), 400);
       
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi tạo danh mục sản phẩm 2';
+      const errorMessage = error.response?.data?.message || 'Có lỗi xảy ra khi tạo danh mục sản phẩm cấp 2';
       toast.error(errorMessage, { position: 'top-center' });
       endSubmit();
     }
@@ -174,7 +173,7 @@ const AddBusinessPage: React.FC = () => {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M12.6667 6.83333H1M6.83333 1L1 6.83333L6.83333 12.6667" stroke="#3C393F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <span className="breadcrumbText">Quản lý danh mục sản phẩm 2</span>
+              <span className="breadcrumbText">Quản lý danh mục sản phẩm cấp 2</span>
             </button>
 
             <div className="breadcrumb">
@@ -183,7 +182,7 @@ const AddBusinessPage: React.FC = () => {
                   <path d="M0.5 8.5L4.5 4.5L0.5 0.5" stroke="#171717" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <span className="breadcrumbActive">Tạo mới danh mục sản phẩm 2</span>
+              <span className="breadcrumbActive">Tạo mới danh mục sản phẩm cấp 2</span>
             </div>
           </div>
 
@@ -220,13 +219,13 @@ const AddBusinessPage: React.FC = () => {
               
               {/* DROPDOWN CHỌN DANH MỤC SẢN PHẨM */}
               <div className="formGroup" ref={categoryRef}>
-                <label className="label"> Danh mục sản phẩm 1 <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <label className="label"> Danh mục sản phẩm cấp 1 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
                     <span>
                       {loadingCategories 
-                        ? "Đang tải danh mục sản phẩm 1..." 
-                        : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm 1")}
+                        ? "Đang tải danh mục sản phẩm cấp 1..." 
+                        : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm cấp 1")}
                     </span>
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
                       <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -295,19 +294,19 @@ const AddBusinessPage: React.FC = () => {
 
               {/* INPUT TÊN DANH MỤC SẢN PHẨM 2 */}
               <div className="formGroup">
-                <label className="label"> Tên danh mục sản phẩm 2 <span style={{ color: '#EF4444' }}>(*)</span></label>
+                <label className="label"> Tên danh mục sản phẩm cấp 2 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${getNameError(formData.name, 'Tên danh mục sản phẩm 2') ? 'input-invalid' : ''}`}
-                  placeholder="Nhập tên danh mục sản phẩm 2..."
+                  className={`input ${getNameError(formData.name, 'Tên danh mục sản phẩm cấp 2') ? 'input-invalid' : ''}`}
+                  placeholder="Nhập tên danh mục sản phẩm cấp 2..."
                   value={formData.name} 
                   onChange={handleInputChange} 
                 />
                 <CharCountHint
                   current={formData.name.length}
                   max={FIELD_LIMITS.name}
-                  error={getNameError(formData.name, 'Tên danh mục sản phẩm 2')}
+                  error={getNameError(formData.name, 'Tên danh mục sản phẩm cấp 2')}
                 />
               </div>
 
@@ -402,7 +401,7 @@ const AddBusinessPage: React.FC = () => {
                   <span className="commentTitle">Bình luận</span>
                 </div>
                 <div className="emptyStateText">
-                  Bình luận sẽ hiển thị sau khi danh mục sản phẩm 2 được khởi tạo.
+                  Bình luận sẽ hiển thị sau khi danh mục sản phẩm cấp 2 được khởi tạo.
                 </div>
              </div>
           </div>
@@ -415,7 +414,7 @@ const AddBusinessPage: React.FC = () => {
         onConfirm={() => confirmAction ? handleCreateBusiness(confirmAction) : undefined}
         variant={confirmAction === 'DRAFT' ? 'draft' : 'submit'}
         title={confirmAction === 'DRAFT' ? 'Xác nhận lưu nháp' : 'Xác nhận gửi phê duyệt'}
-        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm 2 không?' : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm 2 không?'}
+        desc={confirmAction === 'DRAFT' ? 'Bạn có chắc chắn muốn lưu bản nháp danh mục sản phẩm cấp 2 không?' : 'Bạn có chắc chắn muốn gửi phê duyệt danh mục sản phẩm cấp 2 không?'}
         confirmText={confirmAction === 'DRAFT' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         loading={isSubmitting}
       />

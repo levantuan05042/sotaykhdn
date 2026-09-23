@@ -179,9 +179,9 @@ const CategoryView: React.FC = () => {
   const handleNavigate = (id: string) => navigate(`/view/product-detail/${id}`);
 
   if (loading && !categoryData) return <div className="group-view"><div className="state-message">Đang tải dữ liệu...</div></div>;
-  if (!categoryData) return <div className="group-view"><div className="state-message">Không tìm thấy danh mục sản phẩm 1 này.</div></div>;
+  if (!categoryData) return <div className="group-view"><div className="state-message">Không tìm thấy danh mục sản phẩm cấp 1 này.</div></div>;
 
-  const currentCategoryName = categoryData.categoryName || 'Chi tiết danh mục sản phẩm 1';
+  const currentCategoryName = categoryData.categoryName || 'Chi tiết danh mục sản phẩm cấp 1';
   const businesses = categoryData.businesses || [];
   const directProducts = (categoryData.products || []).filter((prod: any) => !checkHasBusiness(prod));
   const isEmpty = directProducts.length === 0 && businesses.length === 0;

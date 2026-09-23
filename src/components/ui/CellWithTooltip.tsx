@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
+import './CellWithTooltip.css';
 
 interface CellWithTooltipProps {
   children?: React.ReactNode;
@@ -58,8 +59,8 @@ export const CellWithTooltip: React.FC<CellWithTooltipProps> = ({
     const card = containerRef.current.closest('.product-card') as HTMLElement | null;
     const cardRect = card?.getBoundingClientRect();
 
-    const targetCenterX = rect.left + rect.width / 2;
-    let left = targetCenterX - tooltipWidth / 2;
+    // Can trai theo phan tu
+    let left = rect.left;
 
     if (left + tooltipWidth > window.innerWidth - 12) {
       left = window.innerWidth - tooltipWidth - 12;
