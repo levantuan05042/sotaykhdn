@@ -212,15 +212,15 @@ const ProductBusinessPage: React.FC = () => {
       setWarningData({
         show: true,
         title: `Không thể ẩn sản phẩm: "${item.name}"`,
-        message: "Danh mục sản phẩm 2 này đang bị ràng buộc dữ liệu hoặc xảy ra lỗi hệ thống."
+        message: "Danh mục sản phẩm cấp 2 này đang bị ràng buộc dữ liệu hoặc xảy ra lỗi hệ thống."
       });
     }
   };
 
   const renderActiveToggle = (item: ProductBusinessItem) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
-    const isActive = item.active || false;
+    const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
@@ -255,7 +255,7 @@ const ProductBusinessPage: React.FC = () => {
     },
     {
       key: 'name',
-      header: 'Tên danh mục sản phẩm 2',
+      header: 'Tên danh mục sản phẩm cấp 2',
       render: (row) => (
         <div className="custom-tooltip-container">
           <span className="truncate-text product-group-item-title">{row.name}</span>
@@ -275,7 +275,7 @@ const ProductBusinessPage: React.FC = () => {
     },
     {
       key: 'categoryName',
-      header: 'Danh mục sản phẩm 1',
+      header: 'Danh mục sản phẩm cấp 1',
       render: (row) => (
         <div className="custom-tooltip-container">
           <span className="truncate-text">{row.categoryName || '---'}</span>
@@ -346,7 +346,7 @@ const ProductBusinessPage: React.FC = () => {
   return (
     <div className="product-group-container">
       <div className="content-wrapper">
-        <h2 className="page-title">Quản lý danh mục sản phẩm 2</h2>
+        <h2 className="page-title">Quản lý danh mục sản phẩm cấp 2</h2>
         <button className="btn-add-new" onClick={() => navigate('/business-management/add')}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M6.66927 0.834961V12.5016M0.835938 6.66829H12.5026" stroke="#FDFCFD" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
@@ -380,7 +380,7 @@ const ProductBusinessPage: React.FC = () => {
 
             <div className="dropdown-wrapper" ref={categoryRef}>
               <button className="btn-dropdown" onClick={handleToggleCategoryDropdown}>
-                <span>Danh mục sản phẩm 1</span>
+                <span>Danh mục sản phẩm cấp 1</span>
                 <svg className={`chevron-icon ${openDropdown === 'category' ? 'rotate' : ''}`} width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path d="M5 7.5L10 12.5L15 7.5" stroke="#737373" strokeWidth="1.66667" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -391,7 +391,7 @@ const ProductBusinessPage: React.FC = () => {
                   <div className="dropdown-search-box">
                     <input
                       type="text"
-                      placeholder="Tìm danh mục sản phẩm 1..."
+                      placeholder="Tìm danh mục sản phẩm cấp 1..."
                       className="dropdown-search-input"
                       value={categorySearchTerm}
                       onChange={(e) => setCategorySearchTerm(e.target.value)}
@@ -459,7 +459,7 @@ const ProductBusinessPage: React.FC = () => {
           keyExtractor={(row) => row.id}
           onRowClick={(row) => navigate(`/business-management/${row.id}`)}
           loading={loading}
-          emptyText="Không tìm thấy danh mục sản phẩm 2 nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm cấp 2 nào phù hợp."
         />
       </div>
 

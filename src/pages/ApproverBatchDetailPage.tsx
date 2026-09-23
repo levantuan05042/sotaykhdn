@@ -369,8 +369,8 @@ const ApproverBatchDetailPage: React.FC = () => {
               <tr>
                 <th>Sản phẩm</th>
                 <th>Nhóm sản phẩm</th>
-                <th>Danh mục sản phẩm 1</th>
-                <th>Danh mục sản phẩm 2</th>
+                <th>Danh mục sản phẩm cấp 1</th>
+                <th>Danh mục sản phẩm cấp 2</th>
                 <th>Ghi chú</th>
                 <th style={{ width: '80px', textAlign: 'center' }}></th>
               </tr>

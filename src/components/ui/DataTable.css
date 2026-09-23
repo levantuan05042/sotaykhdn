@@ -403,6 +403,7 @@
 /* Custom Tooltip Container for All Table Data Cells */
 .data-table td {
   position: relative;
+  max-width: 360px;
 }
 
 .custom-tooltip-container {
@@ -410,34 +411,28 @@
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .custom-tooltip-container .truncate-text {
   flex: 1;
   min-width: 0;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  max-width: 100%;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  white-space: normal;
-  line-height: 20px;
-  max-height: 40px;
-  cursor: pointer;
+  cursor: default;
 }
 
 .custom-tooltip-container .truncate-text:has(button),
 .custom-tooltip-container .truncate-text:has(a),
 .custom-tooltip-container .truncate-text:has(svg) {
   display: flex;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: unset;
-  max-height: none;
   overflow: visible;
   align-items: center;
   justify-content: center;
+  white-space: normal;
 }
 
 .custom-tooltip-portal {
@@ -451,11 +446,12 @@
   font-family: 'Inter', sans-serif !important;
   font-size: 13px !important;
   font-weight: 500 !important;
+  text-align: left !important;
   line-height: 1.4 !important;
   white-space: normal !important;
   word-wrap: break-word !important;
   width: max-content !important;
-  max-width: 320px !important;
+  max-width: 340px !important;
   box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.2) !important;
   pointer-events: none !important;
   animation: fadeInTooltip 0.12s ease-out !important;
@@ -489,6 +485,7 @@
   font-family: 'Inter', sans-serif;
   font-size: 13px;
   font-weight: 500;
+  text-align: left;
   line-height: 1.4;
   white-space: normal;
   word-wrap: break-word;

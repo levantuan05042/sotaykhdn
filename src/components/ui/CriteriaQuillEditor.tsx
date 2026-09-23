@@ -6,8 +6,22 @@ import CharCountHint from './CharCountHint';
 const EMPTY_HTML = '<p><br></p>';
 const DEBOUNCE_MS = 280;
 
+export const isHtmlEmpty = (html?: string | null): boolean => {
+  if (!html) return true;
+  if (!html.trim()) return true;
+  if (/<(img|iframe|table|video|audio)/i.test(html)) {
+    return false;
+  }
+  const text = html
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/gi, ' ')
+    .replace(/[\s\r\n\u00A0\u200B]/g, '');
+  return text.length === 0;
+};
+
 export const formatDetailHtml = (val?: string): string => {
-  if (!val || !val.trim()) return '';
+  if (!val || !val.trim() || isHtmlEmpty(val)) return '';
   // Tránh regex [\s\S]* trên LOB lớn (chậm / backtracking)
   if (/<[a-z]/i.test(val)) {
     return val;
@@ -53,10 +67,18 @@ export const formatDetailHtml = (val?: string): string => {
     .join('');
 };
 
-/** Quill getText() luôn kết thúc bằng \\n — đếm ký tự hiển thị (vd. "tuấn" = 4). */
-export const getQuillPlainLength = (quill: Quill) => Math.max(0, quill.getText().length - 1);
+/** Quill getText() luôn kết thúc bằng \n — đếm ký tự hiển thị (vd. "tuấn" = 4). */
+export const getQuillPlainLength = (quill: Quill): number => {
+  const text = quill.getText();
+  if (!text || text === '\n') return 0;
+  const clean = text.replace(/[\s\r\n\u00A0\u200B]/g, '');
+  if (clean.length === 0 && !quill.root.querySelector('img, iframe, table, video, audio')) {
+    return 0;
+  }
+  return Math.max(0, text.length - 1);
+};
 
-const normalizeOutgoingHtml = (html: string) => (html === EMPTY_HTML ? '' : html);
+export const normalizeOutgoingHtml = (html: string): string => (isHtmlEmpty(html) ? '' : html);
 
 export type CriteriaQuillToolbarVariant = 'full' | 'compact';
 
@@ -139,9 +161,13 @@ const CriteriaQuillEditor: React.FC<CriteriaQuillEditorProps> = ({
     quillRef.current = quill;
 
     const initial = formatIncomingRef.current(value || '');
-    if (initial) {
-      quill.clipboard.dangerouslyPasteHTML(initial);
+    if (initial && !isHtmlEmpty(initial)) {
+      quill.setContents([]);
+      quill.clipboard.dangerouslyPasteHTML(0, initial, 'silent');
       lastEmittedRef.current = normalizeOutgoingHtml(quill.root.innerHTML);
+    } else {
+      quill.setText('');
+      lastEmittedRef.current = '';
     }
     setLiveCount(getQuillPlainLength(quill));
 
@@ -198,13 +224,23 @@ const CriteriaQuillEditor: React.FC<CriteriaQuillEditorProps> = ({
     if (outgoing === lastEmittedRef.current) return;
 
     const cur = quill.root.innerHTML;
-    if (formatted === cur || (outgoing === '' && cur === EMPTY_HTML)) {
+    if (outgoing === '' && isHtmlEmpty(cur)) {
+      lastEmittedRef.current = '';
+      return;
+    }
+    if (formatted === cur) {
       lastEmittedRef.current = outgoing;
       return;
     }
 
-    quill.clipboard.dangerouslyPasteHTML(formatted || '');
-    lastEmittedRef.current = normalizeOutgoingHtml(quill.root.innerHTML);
+    if (outgoing === '') {
+      quill.setText('');
+      lastEmittedRef.current = '';
+    } else {
+      quill.setContents([]);
+      quill.clipboard.dangerouslyPasteHTML(0, formatted, 'silent');
+      lastEmittedRef.current = normalizeOutgoingHtml(quill.root.innerHTML);
+    }
     setLiveCount(getQuillPlainLength(quill));
   }, [value, readOnly]);
 

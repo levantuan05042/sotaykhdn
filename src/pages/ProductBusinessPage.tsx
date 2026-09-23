@@ -282,12 +282,12 @@ const ProductBusinessPage: React.FC = () => {
 
   const handleToggleActive = async (item: ProductBusinessItem, currentActive: boolean) => {
     if (!currentActive) {
-      if (await notifyIfCannotShowChild('danh mục sản phẩm 2', item.name, item)) return;
+      if (await notifyIfCannotShowChild('danh mục sản phẩm cấp 2', item.name, item)) return;
       await executeToggleActive(item, true, false);
       return;
     }
     try {
-      const res = await axios.get(`${BASE_URL}/product-business/${item.id}/children-count`);
+      const res = await axios.get(`${BASE_URL}/business/${item.id}/children-count`);
       const counts: ChildCounts = res.data?.data || {};
       if (hasPendingOrRevisionChildren(counts)) {
         const copy = getHideBlockedByPendingCopy('business', item.name);
@@ -310,10 +310,14 @@ const ProductBusinessPage: React.FC = () => {
   const executeToggleActive = async (item: ProductBusinessItem, newActive: boolean, cascade: boolean) => {
     setIsCascadeProcessing(true);
     try {
-      const url = `${BASE_URL}/product-business/${item.id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
+      const token = localStorage.getItem('token') || '';
+      const url = `${BASE_URL}/business/${item.id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
@@ -326,7 +330,7 @@ const ProductBusinessPage: React.FC = () => {
       );
       setShowCascadeModal(false);
       setCascadeTarget(null);
-      showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm 2', item.name));
+      showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm cấp 2', item.name));
       notifyAdminDataChanged();
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực sản phẩm:", error);
@@ -337,9 +341,9 @@ const ProductBusinessPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: ProductBusinessItem) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
-    const isActive = item.active || false;
+    const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>
@@ -365,11 +369,11 @@ const ProductBusinessPage: React.FC = () => {
       header: 'STT',
       width: '70px',
       align: 'center',
-      render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} />,
+      render: (_, index) => index + 1,
     },
     {
       key: 'name',
-      header: 'Tên danh mục sản phẩm 2',
+      header: 'Tên danh mục sản phẩm cấp 2',
       render: (row) => (
         <CellWithTooltip text={row.name} className="product-group-item-title" style={{ fontWeight: 500 }} />
       ),
@@ -383,7 +387,7 @@ const ProductBusinessPage: React.FC = () => {
     },
     {
       key: 'categoryName',
-      header: 'Danh mục sản phẩm 1',
+      header: 'Danh mục sản phẩm cấp 1',
       render: (row) => (
         <CellWithTooltip text={row.categoryName} />
       ),
@@ -413,9 +417,10 @@ const ProductBusinessPage: React.FC = () => {
       key: 'version',
       header: 'Phiên bản',
       render: (row) => (
-        <span style={{ fontWeight: 600, color: '#053E2B' }}>
-          {row.version ? `Phiên bản ${row.version}` : '---'}
-        </span>
+        <CellWithTooltip
+          text={row.version ? `Phiên bản ${row.version}` : '---'}
+          style={{ fontWeight: 600, color: '#053E2B' }}
+        />
       ),
     },
     {
@@ -446,7 +451,7 @@ const ProductBusinessPage: React.FC = () => {
   return (
     <div className="product-group-container">
       <div className="content-wrapper">
-        <h2 className="page-title">Quản lý danh mục sản phẩm 2</h2>
+        <h2 className="page-title">Quản lý danh mục sản phẩm cấp 2</h2>
         <button className="btn-add-new" onClick={() => navigate('/business-management/add')}>
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M6.66927 0.834961V12.5016M0.835938 6.66829H12.5026" stroke="#FDFCFD" strokeWidth="1.67" strokeLinecap="round" strokeLinejoin="round" />
@@ -472,14 +477,14 @@ const ProductBusinessPage: React.FC = () => {
 
             {/* Danh mục sản phẩm */}
             <TableColumnFilterDropdown
-              label="Danh mục sản phẩm 1"
+              label="Danh mục sản phẩm cấp 1"
               options={categoryFilterOptions}
               selectedValues={selectedCategories}
               onSelectValues={setSelectedCategories}
               isOpen={openDropdown === 'category'}
               onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
               hasSearch={categoryFilterOptions.length > 5}
-              searchPlaceholder="Tìm danh mục sản phẩm 1..."
+              searchPlaceholder="Tìm danh mục sản phẩm cấp 1..."
             />
 
             {/* Trạng thái */}
@@ -538,7 +543,7 @@ const ProductBusinessPage: React.FC = () => {
             {selectedCategories.map((val) => (
               <FilterTag 
                 key={val}
-                label={`Danh mục sản phẩm 1: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`} 
+                label={`Danh mục sản phẩm cấp 1: ${categoryFilterOptions.find((o) => o.value === val)?.label || val}`} 
                 onRemove={() => setSelectedCategories((prev) => prev.filter((v) => v !== val))} 
               />
             ))}
@@ -625,7 +630,7 @@ const ProductBusinessPage: React.FC = () => {
           loading={loading}
           page={currentPage}
           onPageChange={setCurrentPage}
-          emptyText="Không tìm thấy danh mục sản phẩm 2 nào phù hợp."
+          emptyText="Không tìm thấy danh mục sản phẩm cấp 2 nào phù hợp."
           getRowClassName={getCascadeRowClassName}
         />
       </div>
@@ -641,7 +646,7 @@ const ProductBusinessPage: React.FC = () => {
             executeToggleActive(cascadeTarget, false, true);
           }
         }}
-        itemTypeLabel="danh mục sản phẩm 2"
+        itemTypeLabel="danh mục sản phẩm cấp 2"
         itemName={cascadeTarget?.name || ''}
         counts={cascadeCounts}
         isProcessing={isCascadeProcessing}

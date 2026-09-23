@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState, useEffect, useRef } from 'react';
 import { BASE_URL } from '../../../config/view/apiConfig';
 import { copyTextToClipboard, getViewProductShareUrl } from '../../../utils/clipboard';
+import { showSuccessToast } from '../../../utils/appToast';
 import './ProductCard.css';
 
 export interface ProductInfo {
@@ -60,64 +60,8 @@ const ProductCard = ({
   layout?: 'grid' | 'list';
 }) => {
   const [imgError, setImgError] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(initiallySaved);
-  const [isHovered, setIsHovered] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
-
-  const tooltipText = isCopied ? 'Đã copy' : (product.name || '');
-
-  const updatePosition = useCallback(() => {
-    const titleEl = titleRef.current || cardRef.current;
-    if (!titleEl) return;
-
-    const range = document.createRange();
-    range.selectNodeContents(titleEl);
-    const textRects = Array.from(range.getClientRects());
-    const lastLine = textRects[textRects.length - 1];
-    const firstLine = textRects[0];
-    const box = titleEl.getBoundingClientRect();
-    const anchor = lastLine || box;
-
-    const tooltipWidth = tooltipRef.current ? tooltipRef.current.offsetWidth : 100;
-    const tooltipHeight = tooltipRef.current ? tooltipRef.current.offsetHeight : 32;
-
-    const textLeft = firstLine ? firstLine.left : box.left;
-    const textRight = textRects.length
-      ? Math.max(...textRects.map((r) => r.right))
-      : box.right;
-    let left = (textLeft + textRight) / 2 - tooltipWidth / 2;
-    if (left + tooltipWidth > window.innerWidth - 12) left = window.innerWidth - tooltipWidth - 12;
-    if (left < 12) left = 12;
-
-    let top = anchor.bottom + 2;
-    if (top + tooltipHeight > window.innerHeight - 8) {
-      top = (firstLine || box).top - tooltipHeight - 2;
-    }
-
-    setCoords((prev) => {
-      if (prev && Math.abs(prev.top - top) < 0.5 && Math.abs(prev.left - left) < 0.5) return prev;
-      return { top, left };
-    });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (isHovered) updatePosition();
-  }, [isHovered, tooltipText, updatePosition]);
-
-  useEffect(() => {
-    if (!isHovered) return;
-    const onScrollOrResize = () => updatePosition();
-    window.addEventListener('scroll', onScrollOrResize, true);
-    window.addEventListener('resize', onScrollOrResize);
-    return () => {
-      window.removeEventListener('scroll', onScrollOrResize, true);
-      window.removeEventListener('resize', onScrollOrResize);
-    };
-  }, [isHovered, updatePosition]);
 
   useEffect(() => {
     let isMounted = true;
@@ -148,8 +92,7 @@ const ProductCard = ({
     e.stopPropagation();
     const copied = await copyTextToClipboard(getViewProductShareUrl(product.id));
     if (!copied) return;
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 2000);
+    showSuccessToast('Đã sao chép liên kết');
   };
 
   const handleToggleSave = async (e: React.MouseEvent) => {
@@ -185,11 +128,6 @@ const ProductCard = ({
       className={`product-card${layout === 'list' ? ' is-list' : ''}`}
       data-product-id={product.id}
       onClick={onClick}
-      onMouseEnter={() => {
-        updatePosition();
-        setIsHovered(true);
-      }}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div className="product-img-wrapper">
         {imageUrl && !imgError ? (
@@ -207,7 +145,7 @@ const ProductCard = ({
       </div>
       
       <div className="product-info">
-        <h4 ref={titleRef} className="product-title">{product.name}</h4>
+        <h4 className="product-title">{product.name}</h4>
         
         <div className="product-meta-row product-date">
           <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
@@ -241,17 +179,6 @@ const ProductCard = ({
           </div>
         </div>
       </div>
-
-      {isHovered && tooltipText && coords && typeof document !== 'undefined' && createPortal(
-        <div
-          ref={tooltipRef}
-          className="custom-tooltip-portal"
-          style={{ position: 'fixed', top: coords.top, left: coords.left, zIndex: 2147483647 }}
-        >
-          {tooltipText}
-        </div>,
-        document.body
-      )}
     </div>
   );
 };

@@ -100,8 +100,8 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
             <th>STT</th>
             <th>Sản phẩm</th>     
             <th className="col-group">Nhóm sản phẩm</th> 
-            <th className="col-category">Danh mục sản phẩm 1</th> 
-            <th className="col-business">Danh mục sản phẩm 2</th> 
+            <th className="col-category">Danh mục sản phẩm cấp 1</th> 
+            <th className="col-business">Danh mục sản phẩm cấp 2</th> 
             <th className="col-status">Trạng thái</th>
             <th>Hiệu lực</th>
             <th className="col-creator">Người tạo</th>
@@ -141,13 +141,14 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                     <label className="toggle-switch">
                       <input 
                         type="checkbox" 
-                        checked={item.active || false} 
+                        checked={item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false)}
+                        disabled={['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'].includes(item.status)}
                         onChange={(e) => handleToggleActive(e, item)}
                       />
                       <span className="toggle-slider"></span>
                     </label>
                     <span className="toggle-label">
-                      {item.active ? 'Hiện' : 'Ẩn'}
+                      {item.status === 'ARCHIVED' || item.status === 'INACTIVE' || !item.active ? 'Ẩn' : 'Hiện'}
                     </span>
                   </div>
                 </td>

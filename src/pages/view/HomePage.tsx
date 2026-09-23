@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './HomePage.css';
-import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
+import { BASE_URL } from '../../config/view/apiConfig';
 import ProductCard from './common/ProductCard';
 import type { ProductInfo } from './common/ProductCard';
-import { addRecentSearch, getRecentSearches, getRecentlyViewed } from '../../utils/userHistoryStorage';
+import { addRecentSearch, getRecentSearches, getRecentlyViewed, sortCategoriesForUser, setUserCategoryOrder } from '../../utils/userHistoryStorage';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 import { usePointerListDrag } from '../../hooks/useDragAutoScroll';
 import { useProductsViewMode } from '../../hooks/useProductsViewMode';
-import { showErrorToast, showSuccessToast } from '../../utils/appToast';
+import { showSuccessToast } from '../../utils/appToast';
 import ProductsViewToggle from './common/ProductsViewToggle';
 
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
@@ -24,7 +24,6 @@ import iconBaoHiem from '../../assets/icons/sp-bao-hiem.svg';
 import iconChuongTrinhUuDai from '../../assets/icons/uu-dai-khdn.svg';
 import iconTimKiem from '../../assets/icon/timkiem.svg';
 import iconTaoMoi from '../../assets/icon/tao_moi.svg';
-import iconMoveCategory from '../../assets/icons/move-category.svg';
 
 const removeAccents = (str: string) => {
   return str
@@ -91,10 +90,9 @@ const HomePage: React.FC = () => {
   const [recentProducts, setRecentProducts] = useState<ProductInfo[]>([]);
   const [newlyCreatedProducts, setNewlyCreatedProducts] = useState<ProductInfo[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const rawCategoriesRef = useRef<Category[]>([]);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
-  const [canReorderCategories, setCanReorderCategories] = useState(false);
-  const [savingOrder, setSavingOrder] = useState(false);
   const [groupProductCounts, setGroupProductCounts] = useState<Record<string, number>>({});
   const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,26 +120,26 @@ const HomePage: React.FC = () => {
   }, [location]);
 
   useEffect(() => {
-    const syncRole = () => {
-      const current = localStorage.getItem('currentUserRole') || '';
-      const canReorder = current === 'ESA08' || current === 'ETN08';
-      setCanReorderCategories(canReorder);
-      if (!canReorder) setReorderMode(false);
+    const syncUserOrder = () => {
+      if (rawCategoriesRef.current.length > 0 && !reorderMode) {
+        setCategories(sortCategoriesForUser(rawCategoriesRef.current));
+      }
     };
-    syncRole();
-    window.addEventListener('userRoleChanged', syncRole);
-    window.addEventListener('storage', syncRole);
+    window.addEventListener('userRoleChanged', syncUserOrder);
+    window.addEventListener('storage', syncUserOrder);
     return () => {
-      window.removeEventListener('userRoleChanged', syncRole);
-      window.removeEventListener('storage', syncRole);
+      window.removeEventListener('userRoleChanged', syncUserOrder);
+      window.removeEventListener('storage', syncUserOrder);
     };
-  }, []);
+  }, [reorderMode]);
 
   const loadViewData = useCallback(async () => {
     try {
       const response = await fetch(`${BASE_URL}/api/v1/product-groups?status=ACTIVE&active=true&_t=${Date.now()}`);
       if (response.ok) {
-        setCategories(await response.json());
+        const data: Category[] = await response.json();
+        rawCategoriesRef.current = data;
+        setCategories(sortCategoriesForUser(data));
       }
     } catch (error) {
       console.error(error);
@@ -212,34 +210,7 @@ const HomePage: React.FC = () => {
     }
   }, []);
 
-  const persistCategoryOrder = useCallback(async (ordered: Category[]) => {
-    const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || sessionStorage.getItem('token');
-    setSavingOrder(true);
-    try {
-      const response = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.REORDER, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ orderedIds: ordered.map((c) => String(c.id)) }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => null);
-        throw new Error(data?.message || 'Không thể lưu thứ tự nhóm sản phẩm');
-      }
-      showSuccessToast('Đã cập nhật thứ tự nhóm sản phẩm');
-      return true;
-    } catch (error: any) {
-      showErrorToast(error?.message || 'Không thể lưu thứ tự nhóm sản phẩm');
-      void loadViewData();
-      return false;
-    } finally {
-      setSavingOrder(false);
-    }
-  }, [loadViewData]);
-
-  const orderSnapshotRef = useRef<string[] | null>(null);
+  const orderSnapshotRef = useRef<Category[] | null>(null);
   const categoriesRef = useRef(categories);
   categoriesRef.current = categories;
 
@@ -262,7 +233,7 @@ const HomePage: React.FC = () => {
       ghostId: 'category-pointer-ghost',
     },
     moveCategory,
-    reorderMode && !savingOrder
+    reorderMode
   );
 
   useEffect(() => {
@@ -270,9 +241,9 @@ const HomePage: React.FC = () => {
   }, [location, loadViewData]);
 
   useViewAutoRefresh(() => {
-    if (reorderMode || savingOrder || draggedId) return;
+    if (reorderMode || draggedId) return;
     return loadViewData();
-  }, [reorderMode, savingOrder, draggedId]);
+  }, [reorderMode, draggedId]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -372,26 +343,28 @@ const HomePage: React.FC = () => {
   const searchTags = recentSearches.length > 0 ? recentSearches.slice(0, 3) : defaultSearches;
 
   const enterReorderMode = () => {
-    orderSnapshotRef.current = categories.map((c) => String(c.id));
+    orderSnapshotRef.current = [...categories];
     setShowAllCategories(true);
     setReorderMode(true);
   };
 
-  const finishReorder = async () => {
-    if (savingOrder || draggedId) return;
-    const snapshot = orderSnapshotRef.current;
-    const currentIds = categoriesRef.current.map((c) => String(c.id));
-    const changed = !snapshot
-      || snapshot.length !== currentIds.length
-      || snapshot.some((id, index) => id !== currentIds[index]);
-
-    if (changed) {
-      const ok = await persistCategoryOrder(categoriesRef.current);
-      if (!ok) return;
+  const cancelReorder = () => {
+    if (orderSnapshotRef.current) {
+      setCategories(orderSnapshotRef.current);
+      categoriesRef.current = orderSnapshotRef.current;
     }
-
     orderSnapshotRef.current = null;
+    setShowAllCategories(false);
     setReorderMode(false);
+  };
+
+  const saveReorder = () => {
+    const currentIds = categoriesRef.current.map((c) => String(c.id));
+    setUserCategoryOrder(currentIds);
+    orderSnapshotRef.current = null;
+    setShowAllCategories(false);
+    setReorderMode(false);
+    showSuccessToast('Đã lưu thứ tự nhóm sản phẩm');
   };
 
   return (
@@ -488,7 +461,7 @@ const HomePage: React.FC = () => {
                             <span className="text-sm text-gray-800 truncate">
                               {highlightText(item.name, searchQuery)}
                             </span>
-                            <span className="text-xs text-gray-400 mt-0.5">Danh mục sản phẩm 1</span>
+                            <span className="text-xs text-gray-400 mt-0.5">Danh mục sản phẩm cấp 1</span>
                           </div>
                         </div>
                       ))
@@ -513,7 +486,7 @@ const HomePage: React.FC = () => {
                             <span className="text-sm text-gray-800 truncate">
                               {highlightText(item.name, searchQuery)}
                             </span>
-                            <span className="text-xs text-gray-400 mt-0.5">Danh mục sản phẩm 2</span>
+                            <span className="text-xs text-gray-400 mt-0.5">Danh mục sản phẩm cấp 2</span>
                           </div>
                         </div>
                       ))
@@ -600,25 +573,34 @@ const HomePage: React.FC = () => {
                 </svg>
                 <h2 className="text-2xl font-bold text-[#1A191B]">Danh mục nhóm sản phẩm</h2>
               </div>
-              {canReorderCategories && (
+              {!reorderMode ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (reorderMode) void finishReorder();
-                    else enterReorderMode();
-                  }}
-                  className={`category-reorder-toggle${reorderMode ? ' is-active is-done' : ''}`}
-                  title={reorderMode ? 'Xong' : 'Sắp xếp danh mục'}
-                  aria-label={reorderMode ? 'Xong' : 'Sắp xếp danh mục'}
-                  aria-pressed={reorderMode}
-                  disabled={savingOrder || Boolean(draggedId)}
+                  onClick={enterReorderMode}
+                  className="flex items-center gap-1.5 text-[#3C393F] hover:text-[#AE1C3F] font-medium text-[13px] transition-colors cursor-pointer py-1 px-2.5 rounded-md hover:bg-gray-100"
                 >
-                  {reorderMode ? (
-                    <span className="category-reorder-done-label">{savingOrder ? 'Đang lưu...' : 'Xong'}</span>
-                  ) : (
-                    <img src={iconMoveCategory} alt="" width={20} height={20} />
-                  )}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#3C393F]">
+                    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                  <span>Sắp xếp</span>
                 </button>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={cancelReorder}
+                    className="text-[#6B7280] hover:text-[#1A191B] font-medium text-[13px] transition-colors cursor-pointer px-1 py-1"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveReorder}
+                    className="bg-white hover:bg-gray-50 text-[#1A191B] border border-gray-200 shadow-sm font-medium text-[13px] px-4 py-1.5 rounded-full transition-all cursor-pointer flex items-center justify-center"
+                  >
+                    Lưu thứ tự
+                  </button>
+                </div>
               )}
             </div>
             
@@ -643,12 +625,29 @@ const HomePage: React.FC = () => {
                       handleCategoryClick(cat.id);
                     }}
                     className={[
-                      'category-reorder-card bg-white rounded-[12px] p-5 border border-gray-200 transition-all flex flex-col justify-between min-h-[158px] w-full',
+                      'category-reorder-card relative bg-white rounded-[12px] p-5 border border-gray-200 transition-all flex flex-col justify-between min-h-[158px] w-full',
                       reorderMode ? 'is-reorder-mode' : 'cursor-pointer hover:bg-[rgba(254,238,242,0.5)] hover:border-[#FCDFE6]',
                       isDragging ? 'is-dragging' : '',
                       isDragOver ? 'is-drag-over' : '',
                     ].filter(Boolean).join(' ')}
                   >
+                    {reorderMode && (
+                      <div
+                        className="category-drag-handle-left absolute -top-2.5 -left-2.5 w-[26px] h-[26px] bg-white rounded-[6px] border border-gray-200 shadow-sm flex items-center justify-center z-10 cursor-grab active:cursor-grabbing hover:border-gray-300 transition-colors"
+                        onPointerDown={(e) => startDrag(catId, e, cat.name)}
+                        aria-label="Kéo để sắp xếp"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="#84828E" aria-hidden="true">
+                          <circle cx="5" cy="3" r="1.5" />
+                          <circle cx="11" cy="3" r="1.5" />
+                          <circle cx="5" cy="8" r="1.5" />
+                          <circle cx="11" cy="8" r="1.5" />
+                          <circle cx="5" cy="13" r="1.5" />
+                          <circle cx="11" cy="13" r="1.5" />
+                        </svg>
+                      </div>
+                    )}
+
                     <div className="flex items-start justify-between gap-2 w-full">
                       <div 
                         className="w-[44px] h-[44px] rounded-[10px] flex items-center justify-center flex-shrink-0"
@@ -676,28 +675,10 @@ const HomePage: React.FC = () => {
                           </svg>
                         )}
                       </div>
-
-                      {reorderMode && (
-                        <div
-                          className="category-drag-handle"
-                          onPointerDown={(e) => startDrag(catId, e, cat.name)}
-                          title="Nhấn giữ để kéo di chuyển"
-                          aria-label="Nhấn giữ để kéo di chuyển"
-                        >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                            <circle cx="9" cy="5" r="2" />
-                            <circle cx="9" cy="12" r="2" />
-                            <circle cx="9" cy="19" r="2" />
-                            <circle cx="15" cy="5" r="2" />
-                            <circle cx="15" cy="12" r="2" />
-                            <circle cx="15" cy="19" r="2" />
-                          </svg>
-                        </div>
-                      )}
                     </div>
                     
-                    <div className="flex flex-col gap-1 w-full mt-4">
-                      <h3 className="font-bold text-[15px] text-[#1A191B] leading-[20px] line-clamp-2 min-h-[40px] flex items-center">
+                    <div className="flex flex-col gap-1 w-full mt-4 min-w-0">
+                      <h3 className="font-bold text-[15px] text-[#1A191B] leading-[20px] truncate block w-full">
                         {cat.name}
                       </h3>
                       <p className="text-[13px] text-[#84828E] font-normal">
@@ -709,7 +690,7 @@ const HomePage: React.FC = () => {
               })}
             </div>
             
-            {categories.length > 10 && !reorderMode && (
+            {categories.length > 10 && (
               <div className="flex justify-center mt-8">
                 <button 
                   onClick={() => setShowAllCategories(!showAllCategories)} 

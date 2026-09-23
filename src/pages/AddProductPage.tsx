@@ -13,8 +13,9 @@ import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/use
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
-import CriteriaQuillEditor from '../components/ui/CriteriaQuillEditor';
+import CriteriaQuillEditor, { isHtmlEmpty } from '../components/ui/CriteriaQuillEditor';
 import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { SPECIAL_CRITERIA_LIST, isSpecialCriteria } from '../utils/specialCriteria';
 import iconChat from '../assets/icon/iconchat.svg';
 
 interface Criterion {
@@ -86,7 +87,7 @@ const AddProductPage: React.FC = () => {
   const statusRef = useRef<HTMLDivElement>(null); 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string }[]>([]);
+  const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; superGroup?: string }[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [operationOptions, setOperationOptions] = useState<{ label: string; value: string }[]>([]);
 
@@ -178,7 +179,12 @@ const AddProductPage: React.FC = () => {
         const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
           params: { status: 'ACTIVE', active: true }
         });
-        setGroupOptions(response.data.map((c: any) => ({ label: c.name, value: c.id })));
+        const raw = response.data || [];
+        setGroupOptions(raw.map((c: any) => ({
+          label: c.name,
+          value: String(c.id),
+          superGroup: c.superGroup || '',
+        })));
       } catch (error) {
         console.error("Lỗi fetch groups:", error);
       } finally {
@@ -217,16 +223,44 @@ const AddProductPage: React.FC = () => {
         const rawList = Array.isArray(response.data)
           ? response.data
           : (response.data?.content || response.data?.data || []);
+
+        const currentGroup = groupOptions.find(g => String(g.value) === String(formData.productGroupId));
+        const currentSuperGroup = currentGroup?.superGroup;
+        const specialConfig = SPECIAL_CRITERIA_LIST.find(sc => sc.superGroup === currentSuperGroup);
+
+        const listWithSpecial = [...rawList];
+        if (specialConfig) {
+          const hasSpecial = listWithSpecial.some(item =>
+            (item.code && item.code.trim().toUpperCase() === specialConfig.code) ||
+            isSpecialCriteria(item)
+          );
+          if (!hasSpecial) {
+            listWithSpecial.unshift({
+              id: `fixed-${specialConfig.code.toLowerCase()}`,
+              name: specialConfig.name,
+              code: specialConfig.code,
+              isRequired: true,
+              active: true,
+              status: 'ACTIVE',
+              createdAt: '1970-01-01T00:00:00Z',
+            });
+          }
+        }
+
         const formattedCriteria: Criterion[] = sortCriteriaByCreatedAtAsc(
-          rawList.map((item: any) => ({
-            id: item.id || item.criteriaId,
-            name: item.name,
-            code: item.code,
-            isRequired: item.isRequired,
-            isSelected: Boolean(item.isRequired),
-            value: '',
-            createdAt: item.createdAt ?? item.created_at,
-          }))
+          listWithSpecial.map((item: any) => {
+            const isSpecial = isSpecialCriteria(item);
+            const isReq = isSpecial ? true : Boolean(item.isRequired);
+            return {
+              id: String(item.id || item.criteriaId),
+              name: item.name,
+              code: item.code,
+              isRequired: isReq,
+              isSelected: isReq,
+              value: '',
+              createdAt: isSpecial ? '1970-01-01T00:00:00Z' : (item.createdAt ?? item.created_at),
+            };
+          })
         );
         setCriteria(formattedCriteria);
          
@@ -236,7 +270,7 @@ const AddProductPage: React.FC = () => {
     };
     fetchCategories();
     fetchCriteriaByGroup();
-  }, [formData.productGroupId]);
+  }, [formData.productGroupId, groupOptions]);
 
   useEffect(() => {
     if (!formData.productCategoryId) {
@@ -353,7 +387,7 @@ const AddProductPage: React.FC = () => {
     formData.businessId !== '' ||
     Boolean(imageUrl) ||
     isActive !== true ||
-    criteria.some(c => c.value.trim());
+    criteria.some(c => !isHtmlEmpty(c.value));
   const { allowLeave, dialog } = useUnsavedChangesGuard(isFormDirty);
 
   const onSaveDraftClick = () => {
@@ -370,7 +404,7 @@ const AddProductPage: React.FC = () => {
       toast.error("Vui lòng chọn Nhóm sản phẩm", { position: 'top-center' });
       return;
     }
-    const missingRequiredCriterion = criteria.find(c => c.isRequired && !c.value.trim());
+    const missingRequiredCriterion = criteria.find(c => c.isRequired && isHtmlEmpty(c.value));
     if (missingRequiredCriterion) {
       toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${missingRequiredCriterion.name}`, { 
         position: 'top-center' 
@@ -400,7 +434,7 @@ const AddProductPage: React.FC = () => {
     }
     
     if (status !== 'DRAFT') {
-      const missingRequiredCriterion = criteria.find(c => c.isRequired && !c.value.trim());
+      const missingRequiredCriterion = criteria.find(c => c.isRequired && isHtmlEmpty(c.value));
       if (missingRequiredCriterion) {
         toast.error(`Vui lòng nhập nội dung cho tiêu chí bắt buộc: ${missingRequiredCriterion.name}`, { 
           position: 'top-center' 
@@ -414,7 +448,7 @@ const AddProductPage: React.FC = () => {
       .filter(c => c.isSelected)
       .map(c => ({
         criteriaId: c.id,
-        value: c.value.trim()
+        value: isHtmlEmpty(c.value) ? '' : c.value.trim()
       }));
 
     const payload: any = { 
@@ -549,7 +583,7 @@ const AddProductPage: React.FC = () => {
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ color: formData.productGroupId ? '#404040' : '#9CA3AF' }}>
-                    Danh mục sản phẩm 1
+                    Danh mục sản phẩm cấp 1
                   </label>
                   <div className="custom-select-container" ref={categoryRef} style={{ position: 'relative' }}>
                     <div 
@@ -557,12 +591,12 @@ const AddProductPage: React.FC = () => {
                       onClick={() => formData.productGroupId && setIsCategoryOpen(!isCategoryOpen)} 
                       style={{ backgroundColor: formData.productGroupId ? 'white' : '#F9FAFB', color: formData.productGroupId ? undefined : '#374151', cursor: formData.productGroupId ? 'pointer' : 'not-allowed' }}
                     >
-                      <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm 1")}</span>
+                      <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm cấp 1")}</span>
                     </div>
                     {isCategoryOpen && formData.productGroupId && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
-                          <input type="text" placeholder="Tìm kiếm danh mục..." value={categorySearchTerm} onChange={(e) => setCategorySearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
+                          <input type="text" placeholder="Tìm kiếm danh mục cấp 1..." value={categorySearchTerm} onChange={(e) => setCategorySearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
                         </div>
                         <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
                           <div className="custom-option" onClick={() => { 
@@ -590,7 +624,7 @@ const AddProductPage: React.FC = () => {
 
                 <div className="formGroup" style={{ flex: 1 }}>
                   <label className="label" style={{ color: formData.productCategoryId ? '#404040' : '#9CA3AF' }}>
-                    Danh mục sản phẩm 2
+                    Danh mục sản phẩm cấp 2
                   </label>
                   <div className="custom-select-container" ref={operationRef} style={{ position: 'relative' }}>
                     <div 
@@ -598,12 +632,12 @@ const AddProductPage: React.FC = () => {
                       onClick={() => formData.productCategoryId && setIsOperationOpen(!isOperationOpen)} 
                       style={{ backgroundColor: formData.productCategoryId ? 'white' : '#F9FAFB', color: formData.productCategoryId ? undefined : '#374151', cursor: formData.productCategoryId ? 'pointer' : 'not-allowed' }}
                     >
-                      <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn danh mục sản phẩm 2")}</span>
+                      <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn danh mục sản phẩm cấp 2")}</span>
                     </div>
                     {isOperationOpen && formData.productCategoryId && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #F3F4F6' }}>
-                          <input type="text" placeholder="Tìm kiếm danh mục sản phẩm 2..." value={operationSearchTerm} onChange={(e) => setOperationSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
+                          <input type="text" placeholder="Tìm kiếm danh mục sản phẩm cấp 2..." value={operationSearchTerm} onChange={(e) => setOperationSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus style={{ width: '100%', padding: '8px 12px', border: '1px solid #D1D5DB', borderRadius: '6px', outline: 'none', boxSizing: 'border-box', fontSize: '14px' }} />
                         </div>
                         <div className="custom-options-list" style={{ maxHeight: '250px', overflowY: 'auto', position: 'static', border: 'none', boxShadow: 'none', marginTop: 0 }}>
                           <div className="custom-option" onClick={() => { setFormData({...formData, businessId: ''}); setIsOperationOpen(false); setOperationSearchTerm(''); }}><i>-- Bỏ chọn --</i></div>
@@ -724,13 +758,12 @@ const AddProductPage: React.FC = () => {
                       <CriteriaQuillEditor
                         value={criterion.value}
                         placeholder={criterion.isRequired ? "Tiêu chí này bắt buộc phải nhập..." : "Nhập nội dung chi tiết..."}
-                        hasError={(criterion.isRequired && !criterion.value.trim()) || Boolean(getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code)))}
+                        hasError={(criterion.isRequired && isHtmlEmpty(criterion.value)) || Boolean(getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code)))}
                         onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
                         showCharCount
                         charCountMax={getCriteriaMaxLength(criterion.name, criterion.code)}
                         charCountError={getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code))}
                         borderRadius={6}
-                        formatIncoming={(v) => v}
                       />
                     </div>
                   </div>

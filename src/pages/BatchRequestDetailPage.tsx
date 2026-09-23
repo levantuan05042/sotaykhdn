@@ -17,7 +17,7 @@ import {
   getFirstCriteriaValueError,
   isProductNameCriteria,
 } from '../utils/fieldValidation';
-import CriteriaQuillEditor from '../components/ui/CriteriaQuillEditor';
+import CriteriaQuillEditor, { isHtmlEmpty } from '../components/ui/CriteriaQuillEditor';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 
@@ -71,10 +71,6 @@ const findBatchNameErrors = (items: Array<{ name?: string }>) => {
   return errors;
 };
 
-const isHtmlEmpty = (html: string) => {
-  if (!html) return true;
-  return html.replace(/<[^>]*>?/gm, '').trim().length === 0 && !html.includes('<img');
-};
 
 interface OptionItem {
   id: string;
@@ -1236,8 +1232,8 @@ const BatchRequestDetailPage: React.FC = () => {
                 <tr className="batch-table-header-tr">
                   <th className="batch-table-th" style={{ width: '20%' }}>Sản phẩm</th>
                   <th className="batch-table-th" style={{ width: '20%' }}>Nhóm sản phẩm</th>
-                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm 1</th>
-                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm 2</th>
+                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm cấp 1</th>
+                  <th className="batch-table-th" style={{ width: '20%' }}>Danh mục sản phẩm cấp 2</th>
                   <th className="batch-table-th" style={{ width: '20%' }}>Ghi chú</th>
                   <th className="batch-table-th" style={{ width: '1%', whiteSpace: 'nowrap' }}></th> 
                 </tr>
@@ -1430,7 +1426,7 @@ const BatchRequestDetailPage: React.FC = () => {
                 <div style={{ display: 'flex', gap: '10px', marginTop: '16px', alignItems: 'flex-end' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <CustomSelect
-                      label="Danh mục sản phẩm 1"
+                      label="Danh mục sản phẩm cấp 1"
                       value={formData.productCategoryId}
                       options={categoryOptions}
                       placeholder="Chưa chọn"
@@ -1443,7 +1439,7 @@ const BatchRequestDetailPage: React.FC = () => {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <CustomSelect
-                      label="Danh mục sản phẩm 2"
+                      label="Danh mục sản phẩm cấp 2"
                       value={formData.businessId}
                       options={operationOptions}
                       placeholder="Chưa chọn"

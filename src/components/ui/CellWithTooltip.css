@@ -1,0 +1,62 @@
+/* CellWithTooltip Styles */
+.custom-tooltip-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.custom-tooltip-container .truncate-text {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.custom-tooltip-container .truncate-text:has(button),
+.custom-tooltip-container .truncate-text:has(a),
+.custom-tooltip-container .truncate-text:has(svg) {
+  display: flex;
+  overflow: visible;
+  align-items: center;
+  justify-content: center;
+  white-space: normal;
+}
+
+.custom-tooltip-portal {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  background-color: #FDEBEB !important;
+  color: #1A191B !important;
+  padding: 6px 12px !important;
+  border-radius: 6px !important;
+  border: 1px solid #FECDD3 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  line-height: 1.4 !important;
+  white-space: normal !important;
+  word-wrap: break-word !important;
+  width: max-content !important;
+  max-width: 360px !important;
+  box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.18) !important;
+  pointer-events: none !important;
+  animation: fadeInTooltip 0.12s ease-out !important;
+}
+
+@keyframes fadeInTooltip {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

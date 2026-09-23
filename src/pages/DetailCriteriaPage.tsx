@@ -12,16 +12,13 @@ import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import DuplicateVersionModal, { type PriorVersionInfo } from '../components/ui/DuplicateVersionModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
 import { draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
-import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
-import CharCountHint from '../components/ui/CharCountHint';
+import { getNameError, getCodeError } from '../utils/fieldValidation';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import iconChat from '../assets/icon/iconchat.svg';
 import CascadeHideModal, { type ChildCounts } from '../components/ui/CascadeHideModal';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import SuperGroupNestedSelect, {
-  formatSelectedGroupsLabel,
-  SUPER_GROUP_OPTIONS,
   type NestedGroupOption,
 } from '../components/ui/SuperGroupNestedSelect';
 import { CASCADE_LOCK_MESSAGE, isCriteriaFullyLocked, getActionConfirmDesc, isSameActor } from '../utils/formatUtils';
@@ -32,6 +29,12 @@ import {
   showSuccessToast,
 } from '../utils/appToast';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import {
+  SPECIAL_CRITERIA_LIST,
+  isSpecialCriteria,
+  getSpecialCriteriaConfig,
+  checkSpecialCriteriaConflict,
+} from '../utils/specialCriteria';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -90,9 +93,6 @@ const DetailCriteriaPage: React.FC = () => {
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
   
   const [groupOptions, setGroupOptions] = useState<NestedGroupOption[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSuperGroup, setSelectedSuperGroup] = useState('');
-  const [showSuperList, setShowSuperList] = useState(true);
 
   const [formData, setFormData] = useState<{ code: string; name: string; groupIds: string[]; isRequired: boolean }>({
     code: '',
@@ -125,24 +125,25 @@ const DetailCriteriaPage: React.FC = () => {
     baseCurrentUsername === baseCreatorUsername
   );
 
+  const isSpecial = Boolean(
+    isSpecialCriteria(criteriaData) ||
+    isSpecialCriteria(formData) ||
+    (id && SPECIAL_CRITERIA_LIST.some(sc => id.toLowerCase() === `fixed-${sc.code.toLowerCase()}` || id.toUpperCase() === sc.code))
+  );
+
   const isCascadeLocked = isCriteriaFullyLocked(criteriaData);
   const isStatusActive = criteriaData?.status === 'ACTIVE';
   // Khi trạng thái đã duyệt (ACTIVE) thì không còn phân biệt người tạo với người xem nữa để ai cũng có thể tạo phiên bản mới
-  const canEdit = isLoggedIn && (isOwner || isStatusActive);
+  const canEdit = !isSpecial && isLoggedIn && (isOwner || isStatusActive);
   const isOwnerLocked = !canEdit;
   const isPending = String(criteriaData?.status || '').toUpperCase() === 'PENDING_APPROVAL' || String(criteriaData?.status || '').toUpperCase() === 'PENDING';
-  const isReadOnly = isOwnerLocked || isCascadeLocked || isPending;
+  const isReadOnly = isSpecial || isOwnerLocked || isCascadeLocked || isPending;
 
   useCloseOnOutsideClick([
     { ref: dropdownRef, close: () => setIsOpen(false) },
     { ref: statusRef, close: () => setIsStatusOpen(false) },
   ]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSearchTerm('');
-    }
-  }, [isOpen]);
 
   const handleToggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -155,6 +156,60 @@ const DetailCriteriaPage: React.FC = () => {
       try {
         setLoading(true);
 
+        const specialMatch = SPECIAL_CRITERIA_LIST.find(
+          sc => id.toLowerCase() === `fixed-${sc.code.toLowerCase()}` || id.toUpperCase() === sc.code
+        );
+
+        if (specialMatch) {
+          const groupsRes = await fetch(API_ENDPOINTS.PRODUCT_GROUPS.LIST);
+          const groupsData = groupsRes.ok ? await groupsRes.json() : [];
+          const activeCatalogGroups = (groupsData || []).filter((g: any) => g.status === 'ACTIVE');
+          const matchingGroups = activeCatalogGroups
+            .filter((g: any) => g.superGroup === specialMatch.superGroup)
+            .map((g: any) => ({
+              id: String(g.id),
+              name: g.name,
+              superGroup: g.superGroup,
+              status: 'ACTIVE',
+              active: g.active !== false,
+            }));
+
+          const options = activeCatalogGroups.map((g: any) => ({
+            label: g.name,
+            value: String(g.id),
+            superGroup: g.superGroup || '',
+            hidden: g.active === false,
+            fromCatalog: true,
+          }));
+
+          if (!isMounted) return;
+          setGroupOptions(options);
+
+          const specialDetail = {
+            id,
+            code: specialMatch.code,
+            name: specialMatch.name,
+            isRequired: true,
+            active: true,
+            status: 'ACTIVE',
+            productGroups: matchingGroups,
+            createdByFullName: 'Hệ thống',
+            approvedByFullName: 'Hệ thống',
+            version: 1,
+            createdAt: new Date().toISOString(),
+          };
+
+          setCriteriaData(specialDetail);
+          setFormData({
+            code: specialMatch.code,
+            name: specialMatch.name,
+            groupIds: matchingGroups.map((g: any) => g.id),
+            isRequired: true,
+          });
+          setIsActive(true);
+          return;
+        }
+
         const [detailRes, groupsRes] = await Promise.all([
           fetch(API_ENDPOINTS.PRODUCT_CRITERIA.DETAIL(id)),
           fetch(`${API_ENDPOINTS.PRODUCT_GROUPS.LIST}?status=ACTIVE&active=true`)
@@ -162,9 +217,33 @@ const DetailCriteriaPage: React.FC = () => {
 
         if (!detailRes.ok) throw new Error("Không thể tải thông tin tiêu chí");
         
-        const detailData = await detailRes.json();
+        let detailData = await detailRes.json();
         
         if (!isMounted) return;
+
+        const groupsData = groupsRes.ok ? await groupsRes.json() : [];
+        if (isSpecialCriteria(detailData)) {
+          const cfg = getSpecialCriteriaConfig(detailData)!;
+          const matchingGroups = (groupsData || [])
+            .filter((g: any) => g.superGroup === cfg.superGroup && g.status === 'ACTIVE')
+            .map((g: any) => ({
+              id: String(g.id),
+              name: g.name,
+              superGroup: g.superGroup,
+              status: 'ACTIVE',
+              active: g.active !== false,
+            }));
+          detailData = {
+            ...detailData,
+            code: cfg.code,
+            name: cfg.name,
+            isRequired: true,
+            active: true,
+            status: 'ACTIVE',
+            productGroups: matchingGroups.length > 0 ? matchingGroups : (detailData.productGroups || []),
+          };
+        }
+
         setCriteriaData(detailData);
 
         const initialGroupIds = detailData.productGroups 
@@ -186,14 +265,15 @@ const DetailCriteriaPage: React.FC = () => {
         );
 
         if (groupsRes.ok) {
-          const groupsData = await groupsRes.json();
-          const options = (groupsData || []).map((g: any) => ({
-            label: g.name,
-            value: String(g.id),
-            hidden: hiddenIds.has(String(g.id)),
-            superGroup: g.superGroup || '',
-            fromCatalog: true,
-          }));
+          const options = (groupsData || [])
+            .filter((g: any) => !g.status || g.status === 'ACTIVE')
+            .map((g: any) => ({
+              label: g.name,
+              value: String(g.id),
+              hidden: hiddenIds.has(String(g.id)),
+              superGroup: g.superGroup || '',
+              fromCatalog: true,
+            }));
           attachedGroups.forEach((g: any) => {
             const id = String(g.id);
             const existing = options.find((opt: any) => opt.value === id);
@@ -211,13 +291,6 @@ const DetailCriteriaPage: React.FC = () => {
             }
           });
           setGroupOptions(options);
-          const superGroupsInSelection = Array.from(new Set(
-            attachedGroups
-              .map((g: any) => g.superGroup || options.find((opt: any) => opt.value === String(g.id))?.superGroup)
-              .filter((v: string) => Boolean(v))
-          ));
-          setSelectedSuperGroup(superGroupsInSelection[0] || '');
-          setShowSuperList(superGroupsInSelection.length !== 1);
         } else {
           setGroupOptions(
             attachedGroups.map((g: any) => ({
@@ -228,11 +301,6 @@ const DetailCriteriaPage: React.FC = () => {
               fromCatalog: false,
             }))
           );
-          const superGroupsInSelection = Array.from(new Set(
-            attachedGroups.map((g: any) => g.superGroup).filter((v: string) => Boolean(v))
-          ));
-          setSelectedSuperGroup(superGroupsInSelection[0] || '');
-          setShowSuperList(superGroupsInSelection.length !== 1);
         }
 
       } catch (error) {
@@ -308,10 +376,6 @@ const DetailCriteriaPage: React.FC = () => {
           });
           return next;
         });
-        setSelectedSuperGroup((prev) => {
-          if (prev) return prev;
-          return attachedGroups.find((g: any) => g.superGroup)?.superGroup || '';
-        });
       }
     } catch (e) {}
   });
@@ -339,31 +403,15 @@ const DetailCriteriaPage: React.FC = () => {
     });
   };
 
-  const handleToggleSelectAll = () => {
+  const handleToggleGroupBatch = (ids: string[], select: boolean) => {
     if (isReadOnly) return;
     setFormData(prev => {
-      const allIds = visibleGroupOptions.map(opt => String(opt.value));
-      const allSelected = allIds.length > 0 && allIds.every(id => prev.groupIds.includes(id));
-      if (allSelected) {
-        return { ...prev, groupIds: prev.groupIds.filter(id => !allIds.includes(id)) };
+      if (select) {
+        return { ...prev, groupIds: [...new Set([...prev.groupIds, ...ids])] };
+      } else {
+        return { ...prev, groupIds: prev.groupIds.filter(id => !ids.includes(id)) };
       }
-      return { ...prev, groupIds: [...new Set([...prev.groupIds, ...allIds])] };
     });
-  };
-
-  const handleSelectSuperGroup = (value: string) => {
-    if (isReadOnly) return;
-    setSelectedSuperGroup(value);
-    setShowSuperList(false);
-    setSearchTerm('');
-    setIsOpen(true);
-  };
-
-  const handleBackToSuperGroups = () => {
-    if (isReadOnly) return;
-    setShowSuperList(true);
-    setSearchTerm('');
-    setIsOpen(true);
   };
 
   const [confirmAction, setConfirmAction] = useState<'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION' | null>(null);
@@ -386,6 +434,15 @@ const DetailCriteriaPage: React.FC = () => {
 
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id || submittingRef.current || isSubmitting) return;
+    const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
+    if (specialConflict.codeConflict) {
+      toast.error(specialConflict.codeConflict, { position: 'top-center' });
+      return;
+    }
+    if (specialConflict.nameConflict) {
+      toast.error(specialConflict.nameConflict, { position: 'top-center' });
+      return;
+    }
     const conflict = findPriorConflictVersion();
     if (conflict) {
       setPriorConflict(conflict);
@@ -429,6 +486,15 @@ const DetailCriteriaPage: React.FC = () => {
       toast.error(nameErr, { position: 'top-center' });
       return false;
     }
+    const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
+    if (specialConflict.codeConflict) {
+      toast.error(specialConflict.codeConflict, { position: 'top-center' });
+      return false;
+    }
+    if (specialConflict.nameConflict) {
+      toast.error(specialConflict.nameConflict, { position: 'top-center' });
+      return false;
+    }
     if (formData.groupIds.length === 0) {
       toast.error("Vui lòng chọn ít nhất một nhóm sản phẩm", { position: 'top-center' });
       setIsOpen(true);
@@ -439,6 +505,16 @@ const DetailCriteriaPage: React.FC = () => {
 
   const handleUpdateCriteria = async (status: 'ARCHIVED' | 'PENDING_APPROVAL' | 'DRAFT' | 'ACTIVE' | 'NEEDS_REVISION') => {
     if (submittingRef.current || isReadOnly || !id) return;
+
+    const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
+    if (specialConflict.codeConflict) {
+      toast.error(specialConflict.codeConflict, { position: 'top-center' });
+      return;
+    }
+    if (specialConflict.nameConflict) {
+      toast.error(specialConflict.nameConflict, { position: 'top-center' });
+      return;
+    }
 
     const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
     if (codeErr) {
@@ -511,6 +587,7 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const handleToggleActive = async (newActiveState: boolean) => {
+    if (isSpecial) return;
     if (newActiveState) {
       if (await notifyIfCannotShowChild('tiêu chí', criteriaData?.name, criteriaData)) {
         setIsStatusOpen(false);
@@ -572,12 +649,12 @@ const DetailCriteriaPage: React.FC = () => {
   };
 
   const handleDeleteCriteria = () => {
-    if (isReadOnly || !id) return;
+    if (isSpecial || isReadOnly || !id) return;
     setShowDeleteModal(true);
   };
 
   const executeDelete = async () => {
-    if (submittingRef.current || isReadOnly || !id) return;
+    if (isSpecial || submittingRef.current || isReadOnly || !id) return;
     submittingRef.current = true;
     setIsSubmitting(true);
     let succeeded = false;
@@ -640,29 +717,13 @@ const DetailCriteriaPage: React.FC = () => {
     return '---';
   };
 
-  const getSelectedGroupsLabel = () => {
-    return formatSelectedGroupsLabel(
-      groupOptions,
-      formData.groupIds,
-      isReadOnly ? '---' : 'Chọn nhóm sản phẩm',
-    );
-  };
-
-  const selectedCountBySuperGroup = SUPER_GROUP_OPTIONS.reduce((acc, sg) => {
-    acc[sg.value] = groupOptions.filter(opt => opt.superGroup === sg.value && formData.groupIds.includes(opt.value)).length;
-    return acc;
-  }, {} as Record<string, number>);
-
   const isFormValid = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0;
   const canSubmit = !isReadOnly && isFormValid && !isSubmitting;
   const canSaveDraft = !isReadOnly && !isSubmitting;
 
-  const visibleGroupOptions = selectedSuperGroup
-    ? groupOptions.filter(opt => opt.superGroup === selectedSuperGroup)
-    : (isReadOnly ? groupOptions.filter(opt => formData.groupIds.includes(opt.value)) : []);
-
-  const canChangeActiveStatus = !isOwnerLocked && isStatusActive;
-  const shownActive = isCascadeLocked ? false : isActive;
+  const canChangeActiveStatus = !isSpecial && !isOwnerLocked && isStatusActive;
+  const shownActive = isSpecial ? true : (isCascadeLocked ? false : isActive);
+  const nameError = getNameError(formData.name, 'Tên tiêu chí');
 
   if (loading) return <div className="loading">Đang tải dữ liệu tiêu chí...</div>;
   if (!criteriaData) return <div className="error">Không tìm thấy dữ liệu tiêu chí sản phẩm phù hợp.</div>;
@@ -670,7 +731,14 @@ const DetailCriteriaPage: React.FC = () => {
   return (
     <div className="pageWrapper">
       <div className="mainContainer">
-        {isReadOnly && !isPending && (
+        {isSpecial ? (
+          <div className="permissionBanner" style={{ backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span className="permissionBannerText" style={{ color: '#1E40AF' }}>
+              Đây là tiêu chí bắt buộc mặc định của hệ thống. Tiêu chí này chỉ dùng để xem chi tiết, không được chỉnh sửa hoặc ẩn.
+            </span>
+          </div>
+        ) : isReadOnly && !isPending ? (
           <div className="permissionBanner">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span className="permissionBannerText">
@@ -679,7 +747,7 @@ const DetailCriteriaPage: React.FC = () => {
                 : 'Bạn đang xem ở chế độ chỉ đọc (Read-only) vì bạn không phải là người tạo sản phẩm này.'}
             </span>
           </div>
-        )}
+        ) : null}
         
         <div className="header">
           <div className="headerLeft">
@@ -763,18 +831,17 @@ const DetailCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="code" 
-                  className={`input ${isReadOnly ? 'is-disabled' : ''} ${getCodeError(formData.code, 'Mã tiêu chí') ? 'input-invalid' : ''}`}
+                  className="input is-disabled"
                   value={formData.code} 
-                  onChange={handleInputChange} 
-                  readOnly={isReadOnly}
-                  disabled={isReadOnly}
-                  style={{ cursor: isReadOnly ? 'not-allowed' : 'text' }}
-                  placeholder="Nhập mã tiêu chí"
-                />
-                <CharCountHint
-                  current={(formData.code || '').length}
-                  max={FIELD_LIMITS.code}
-                  error={getCodeError(formData.code, 'Mã tiêu chí')}
+                  readOnly
+                  disabled
+                  style={{
+                    backgroundColor: '#F3F4F6',
+                    cursor: 'not-allowed',
+                    color: '#374151',
+                    fontWeight: 500,
+                  }}
+                  placeholder="Mã tiêu chí"
                 />
               </div>
               <div className="formGroup">
@@ -782,7 +849,7 @@ const DetailCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${isReadOnly ? 'is-disabled' : ''} ${getNameError(formData.name, 'Tên tiêu chí') ? 'input-invalid' : ''}`}
+                  className={`input ${isReadOnly ? 'is-disabled' : ''} ${nameError ? 'input-invalid' : ''}`}
                   value={formData.name} 
                   onChange={handleInputChange} 
                   readOnly={isReadOnly}
@@ -790,11 +857,7 @@ const DetailCriteriaPage: React.FC = () => {
                   style={{ cursor: isReadOnly ? 'not-allowed' : 'text' }}
                   placeholder="Nhập tên tiêu chí"
                 />
-                <CharCountHint
-                  current={(formData.name || '').length}
-                  max={FIELD_LIMITS.name}
-                  error={getNameError(formData.name, 'Tên tiêu chí')}
-                />
+                {!isReadOnly && nameError && <p className="field-hint-error">{nameError}</p>}
               </div>
 
               <div className="formGroup" ref={dropdownRef}>
@@ -802,19 +865,10 @@ const DetailCriteriaPage: React.FC = () => {
                 <SuperGroupNestedSelect
                   isOpen={isOpen}
                   onToggleOpen={handleToggleDropdown}
-                  selectedSuperGroup={selectedSuperGroup}
-                  showSuperList={showSuperList}
-                  onSelectSuperGroup={handleSelectSuperGroup}
-                  onBackToSuperGroups={handleBackToSuperGroups}
-                  options={isReadOnly
-                    ? groupOptions.filter(opt => formData.groupIds.includes(opt.value))
-                    : visibleGroupOptions}
+                  options={groupOptions}
                   selectedIds={formData.groupIds}
                   onToggleGroup={handleToggleGroup}
-                  onToggleSelectAll={handleToggleSelectAll}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  closedLabel={getSelectedGroupsLabel()}
+                  onToggleGroupBatch={handleToggleGroupBatch}
                   listRef={dropdownListRef}
                   readOnly={isReadOnly}
                   triggerStyle={{
@@ -822,7 +876,7 @@ const DetailCriteriaPage: React.FC = () => {
                     color: '#374151',
                     cursor: 'pointer',
                   }}
-                  selectedCountBySuperGroup={selectedCountBySuperGroup}
+                  placeholder="Chọn nhóm sản phẩm"
                 />
               </div>
               <div className="formGroup" style={{ flexDirection: 'row', alignItems: 'center', gap: '10px', cursor: isReadOnly ? 'not-allowed' : 'pointer' }}>

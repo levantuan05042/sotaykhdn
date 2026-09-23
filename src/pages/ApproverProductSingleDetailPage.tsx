@@ -75,13 +75,14 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
     if (!productId) return;
     setLoading(true);
     try {
-      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.DETAIL(productId));
-      const data = Array.isArray(response.data) && response.data.length > 0 ? response.data[0] : response.data;
+      const response = await axios.get(API_ENDPOINTS.APPROVER.PRODUCT.SINGLE_DETAIL(productId));
+      const data = response.data;
       setDetail(data);
       setNewComment('');
     } catch (error) {
       console.error("Error fetching single product detail:", error);
       toast.error("Không thể tải chi tiết sản phẩm!");
+      setDetail(null);
     } finally {
       setLoading(false);
     }
@@ -280,26 +281,26 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
 
             <div className="form-group-row">
               <div className="form-group">
-                <label className="form-label">Danh mục sản phẩm 1</label>
+                <label className="form-label">Danh mục sản phẩm cấp 1</label>
                 <select
                   className="form-select"
                   value={detail.productCategoryId || ''}
                   disabled
                 >
-                  <option value="">Chọn danh mục sản phẩm 1</option>
+                  <option value="">Chọn danh mục sản phẩm cấp 1</option>
                   {categories.map((c: any) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Danh mục sản phẩm 2</label>
+                <label className="form-label">Danh mục sản phẩm cấp 2</label>
                 <select
                   className="form-select"
                   value={detail.businessId || ''}
                   disabled
                 >
-                  <option value="">Chọn danh mục sản phẩm 2</option>
+                  <option value="">Chọn danh mục sản phẩm cấp 2</option>
                   {businesses.map((b: any) => (
                     <option key={b.id} value={b.id}>{b.name}</option>
                   ))}

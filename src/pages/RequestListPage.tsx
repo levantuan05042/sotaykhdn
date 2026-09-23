@@ -590,7 +590,7 @@ const RequestListPage: React.FC = () => {
       header: 'STT',
       width: '70px',
       align: 'center',
-      render: (_, index) => <CellWithTooltip text={index + 1} style={{ justifyContent: 'center' }} />,
+      render: (_, index) => index + 1,
     },
     {
       key: 'requestName',

@@ -56,7 +56,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       });
     } catch (error) {
       console.error('Error loading business details:', error);
-      toast.error('Lỗi khi tải chi tiết danh mục sản phẩm 2');
+      toast.error('Lỗi khi tải chi tiết danh mục sản phẩm cấp 2');
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
         approvedBy: approvedByStr,
       });
 
-      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt danh mục sản phẩm 2 thành công!' : 'Đã phản hồi ý kiến đánh giá!');
+      toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt danh mục sản phẩm cấp 2 thành công!' : 'Đã phản hồi ý kiến đánh giá!');
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm 2:', error);
@@ -107,14 +107,14 @@ export const ApproverBusinessDetailPage: React.FC = () => {
   if (!detail) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <p className="error-text">Không tìm thấy thông tin danh mục sản phẩm 2</p>
+        <p className="error-text">Không tìm thấy thông tin danh mục sản phẩm cấp 2</p>
       </div>
     );
   }
 
   return (
     <ApproverDetailWrapper
-      moduleName="danh mục sản phẩm 2"
+      moduleName="danh mục sản phẩm cấp 2"
       itemName={detail.name}
       objectCode={detail.id}
       status={detail.status}
@@ -140,7 +140,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Danh mục sản phẩm 1 <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Danh mục sản phẩm cấp 1 <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 
@@ -150,7 +150,7 @@ export const ApproverBusinessDetailPage: React.FC = () => {
       </div>
 
       <div className="formGroup">
-        <label className="formLabel">Tên danh mục sản phẩm 2 <span className="required-asterisk">(*)</span></label>
+        <label className="formLabel">Tên danh mục sản phẩm cấp 2 <span className="required-asterisk">(*)</span></label>
         <input 
           type="text" 
           className="formInput readonly" 

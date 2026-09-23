@@ -83,7 +83,7 @@ const MOCK_NOTIFICATIONS: NotificationItem[] = [
     valueContent: 'Cán bộ quản lý Nguyễn Văn A đã tạo mới sản phẩm Tiết kiệm linh hoạt 6 tháng và gửi yêu cầu Phê duyệt.',
     actionLabel: 'Tạo mới',
     actionType: 'CREATE',
-    objectTypeLabel: 'Danh mục sản phẩm 1',
+    objectTypeLabel: 'Danh mục sản phẩm cấp 1',
     isRead: false,
     url: '/approver/products/single/p-4',
   },
@@ -395,7 +395,7 @@ const HeaderBar: React.FC = () => {
                         <span className={`tag-action ${getActionTagClass(item.actionType)}`}>
                           {item.actionLabel || 'Tạo mới'}
                         </span>
-                        <span className="tag-object">{item.objectTypeLabel || 'Danh mục sản phẩm 1'}</span>
+                        <span className="tag-object">{item.objectTypeLabel || 'Danh mục sản phẩm cấp 1'}</span>
                       </div>
                     </button>
                   ))
@@ -475,6 +475,7 @@ const HeaderBar: React.FC = () => {
                 onClick={() => {
                   setIsDropdownOpen(false);
                   localStorage.clear();
+                  sessionStorage.clear();
                   const redirectUri = window.location.origin + '/';
                   window.location.href = `${AUTH_SERVICE_LOGOUT_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
                 }}

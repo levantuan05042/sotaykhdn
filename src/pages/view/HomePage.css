@@ -295,6 +295,36 @@
 
 .categories-grid.is-reordering .category-reorder-card.is-reorder-mode {
   cursor: default;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.category-reorder-card {
+  position: relative;
+  overflow: visible;
+  min-width: 0;
+}
+
+.category-reorder-card h3 {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block !important;
+  width: 100% !important;
+  min-height: auto !important;
+}
+
+.category-drag-handle-left {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.category-drag-handle-left:active,
+.categories-grid.is-reordering .category-reorder-card.is-dragging .category-drag-handle-left {
+  cursor: grabbing;
 }
 
 .category-drag-handle {

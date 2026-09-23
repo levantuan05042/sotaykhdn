@@ -124,7 +124,7 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                 }}
                 title={hasMultipleVersions ? 'Nhấn để chọn xem phiên bản khác' : undefined}
               >
-                <span>{version !== null && version !== undefined && String(version).trim() !== '' && String(version).trim().toLowerCase() !== 'null' ? `Phiên bản ${version}` : '---'}</span>
+                <span>{version !== null && version !== undefined && String(version).trim() !== '' && String(version).trim().toLowerCase() !== 'null' && Number(version) > 0 ? `Phiên bản ${version}` : '---'}</span>
                 {hasMultipleVersions && (
                   <svg 
                     width="12" height="12" viewBox="0 0 20 20" fill="none"
@@ -178,7 +178,7 @@ const ProductInfoCard: React.FC<ProductInfoCardProps> = ({
                     {approvedVersions.map((v) => {
                       const isCurrent = currentId ? v.id === currentId : String(v.version) === String(version);
                       const badge = getStatusBadgeStyle();
-                      const versionDisplay = (v.version !== null && v.version !== undefined && String(v.version).trim() !== '' && String(v.version).trim().toLowerCase() !== 'null')
+                      const versionDisplay = (v.version !== null && v.version !== undefined && String(v.version).trim() !== '' && String(v.version).trim().toLowerCase() !== 'null' && Number(v.version) > 0)
                         ? `Phiên bản ${v.version}` 
                         : '---';
 

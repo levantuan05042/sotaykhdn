@@ -28,6 +28,7 @@ export const toDisplayUrl = (raw?: string | null): string => {
 };
 
 export const AUTH_ME_URL = `${BASE_URL}/auth/me`;
+export const AUTH_RECORD_ACCESS_URL = `${BASE_URL}/auth/record-access`;
 export const BEADMIN_USERS_URL = (username: string, branchCode: string) => 
   `${AUTH_SERVICE_BASE_URL}/branches/users-from-beadmin?username=${encodeURIComponent(username)}&branchCode=${encodeURIComponent(branchCode)}`;
 import axios from 'axios';
@@ -67,6 +68,7 @@ export const API_ENDPOINTS = {
     DELETE: (id: string | number) => `${BASE_URL}/criteria/delete/${id}`,
     LIST: `${BASE_URL}/criteria`,
     REVIEW: (id: string | number) => `${BASE_URL}/criteria/review/${id}`,
+    NEXT_CODE: `${BASE_URL}/criteria/next-code`,
   },
 
     PRODUCT_BUSINESS: {
@@ -121,6 +123,7 @@ export const API_ENDPOINTS = {
     },
     PRODUCT: {
       SINGLE_FOR_APPROVAL: `${BASE_URL}/approver/products/single/for-approval`,
+      SINGLE_DETAIL: (id: string | number) => `${BASE_URL}/approver/products/single/${id}`,
       DETAIL: (id: string | number) => `${BASE_URL}/approver/products/detail/${id}`,
       REVIEW: (id: string | number) => `${BASE_URL}/approver/products/review/${id}`,
     },
@@ -139,5 +142,11 @@ export const API_ENDPOINTS = {
   },
   LOGS: {
     GET_BY_OBJECT: (objectCode: string) => `${BASE_URL}/logs?objectCode=${encodeURIComponent(objectCode)}`,
-  }
+  },
+  BRANCHES: {
+    LIST: `${AUTH_SERVICE_BASE_URL}/branches`,
+  },
+  REPORTS: {
+    ACCESS_DATA: `${BASE_URL}/reports/access-data`,
+  },
 };

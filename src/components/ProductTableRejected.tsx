@@ -63,8 +63,8 @@ const ProductCategoryTable: React.FC<Props> = ({ data }) => {
             <th>STT</th>
             <th>Sản phẩm</th>     
             <th className="col-group">Nhóm sản phẩm</th> 
-            <th className="col-category">Danh mục sản phẩm 1</th> 
-            <th className="col-business">Danh mục sản phẩm 2</th> 
+            <th className="col-category">Danh mục sản phẩm cấp 1</th> 
+            <th className="col-business">Danh mục sản phẩm cấp 2</th> 
             <th className="col-status">Trạng thái</th>
             <th>Hiệu lực</th>
             <th>Người tạo</th>

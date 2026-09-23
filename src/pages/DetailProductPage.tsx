@@ -27,11 +27,12 @@ import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import VersionDetailModal from '../components/ui/VersionDetailModal';
 import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc, stripHtmlText } from '../utils/fieldValidation';
-import CriteriaQuillEditor, { formatDetailHtml } from '../components/ui/CriteriaQuillEditor';
+import CriteriaQuillEditor, { formatDetailHtml, isHtmlEmpty } from '../components/ui/CriteriaQuillEditor';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { SPECIAL_CRITERIA_LIST, isSpecialCriteria } from '../utils/specialCriteria';
 import iconChat from '../assets/icon/iconchat.svg';
 
-export { formatDetailHtml };
+export { formatDetailHtml, isHtmlEmpty };
 
 interface Criterion {
   id: string;
@@ -69,10 +70,6 @@ const serializeCriteriaForDiff = (list: Criterion[]) =>
       }))
   );
 
-const isHtmlEmpty = (html: string) => {
-  if (!html) return true;
-  return html.replace(/<[^>]*>?/gm, '').trim().length === 0 && !html.includes('<img');
-};
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -93,17 +90,40 @@ const checkIsRequired = (item: any) => {
   return t1.includes('(*)') || t2.includes('(*)');
 };
 
-const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = []): Criterion[] => {
-  const catalog: Criterion[] = (catalogItems || []).map((item: any) => {
+const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = [], superGroup?: string): Criterion[] => {
+  let effectiveCatalog = [...(catalogItems || [])];
+  if (superGroup) {
+    const specialConfig = SPECIAL_CRITERIA_LIST.find(sc => sc.superGroup === superGroup);
+    if (specialConfig) {
+      const hasSpecial = effectiveCatalog.some(item =>
+        (item.code && item.code.trim().toUpperCase() === specialConfig.code) ||
+        isSpecialCriteria(item)
+      );
+      if (!hasSpecial) {
+        effectiveCatalog.unshift({
+          id: `fixed-${specialConfig.code.toLowerCase()}`,
+          name: specialConfig.name,
+          code: specialConfig.code,
+          isRequired: true,
+          active: true,
+          status: 'ACTIVE',
+          createdAt: '1970-01-01T00:00:00Z',
+        });
+      }
+    }
+  }
+
+  const catalog: Criterion[] = effectiveCatalog.map((item: any) => {
+    const isSpecial = isSpecialCriteria(item);
     const name = (item.tieuChi || item.name || '').replace(/\s*\(\*\)/g, '').trim();
     return {
       id: String(item.id || item.criteriaId),
       name,
       code: item.code || item.maTieuChi || '',
-      isRequired: checkIsRequired(item),
+      isRequired: isSpecial ? true : checkIsRequired(item),
       isSelected: false,
       value: '',
-      createdAt: item.createdAt ?? item.created_at,
+      createdAt: isSpecial ? '1970-01-01T00:00:00Z' : (item.createdAt ?? item.created_at),
     };
   });
 
@@ -488,7 +508,7 @@ const DetailProductPage: React.FC = () => {
   const [categorySearch, setCategorySearch] = useState('');
   const [operationSearch, setOperationSearch] = useState('');
 
-  const [groupOptions,     setGroupOptions]     = useState<{ label: string; value: string }[]>([]);
+  const [groupOptions,     setGroupOptions]     = useState<{ label: string; value: string; superGroup?: string }[]>([]);
   const [categoryOptions,  setCategoryOptions]  = useState<{ label: string; value: string }[]>([]);
   const [operationOptions, setOperationOptions] = useState<{ label: string; value: string }[]>([]);
 
@@ -731,15 +751,16 @@ const DetailProductPage: React.FC = () => {
         ]);
         const pData = pRes.data;
         setProductData(pData);
-        setIsActive(pData.active ?? true);
+        setIsActive(pData.status === 'ARCHIVED' || pData.status === 'INACTIVE' ? false : (pData.active ?? true));
         setFormData({
           productGroupId:    pData.productGroupId    || '',
           productCategoryId: pData.productCategoryId || '',
           businessId:        pData.businessId        || '',
         });
+        let rawGroups: any[] = [];
         if (gRes.data) {
-          const rawGroups = Array.isArray(gRes.data) ? gRes.data : (gRes.data?.content || gRes.data?.data || []);
-          setGroupOptions(rawGroups.map((g: any) => ({ label: g.name, value: g.id })));
+          rawGroups = Array.isArray(gRes.data) ? gRes.data : (gRes.data?.content || gRes.data?.data || []);
+          setGroupOptions(rawGroups.map((g: any) => ({ label: g.name, value: g.id, superGroup: g.superGroup || '' })));
         }
 
         // Tải tiêu chí catalog của nhóm sản phẩm ngay tại init để đồng bộ tức thì, tránh race condition
@@ -756,7 +777,8 @@ const DetailProductPage: React.FC = () => {
           }
         }
 
-        const merged = buildMergedCriteria(catalogData, pData.details || []);
+        const currentGroup = rawGroups.find((g: any) => String(g.id) === String(pData.productGroupId));
+        const merged = buildMergedCriteria(catalogData, pData.details || [], currentGroup?.superGroup);
         const selectedBaseline = merged.filter(c => c.isSelected);
         setOriginalCriteria(JSON.parse(JSON.stringify(selectedBaseline)));
         setCriteria(merged);
@@ -829,7 +851,8 @@ const DetailProductPage: React.FC = () => {
           ? (productData?.details && productData.details.length > 0 ? productData.details : originalCriteria)
           : [];
 
-        const merged = buildMergedCriteria(data, savedDetails);
+        const currentGroup = groupOptions.find(g => String(g.value) === String(formData.productGroupId));
+        const merged = buildMergedCriteria(data, savedDetails, currentGroup?.superGroup);
         setCriteria(merged);
 
         if (lastLoadedProductIdRef.current !== id && isSameGroup) {
@@ -841,7 +864,7 @@ const DetailProductPage: React.FC = () => {
         console.error('Lỗi tải danh sách tiêu chí:', e); 
       }
     })();
-  }, [formData.productGroupId, productData?.productGroupId, id]);
+  }, [formData.productGroupId, productData?.productGroupId, id, groupOptions]);
 
   const missingRequiredCriteria = useMemo(() => {
     return criteria.filter(c => c.isRequired && !c.isSelected);
@@ -868,6 +891,7 @@ const DetailProductPage: React.FC = () => {
     if (isReadOnly) return;
     setCriteria(prev => prev.map(c => {
       if (c.id !== id) return c;
+      if (isSpecialCriteria(c) && c.isSelected) return c;
       if (c.isRequired && c.isSelected) return c;
       return { ...c, isSelected: !c.isSelected };
     }));
@@ -916,7 +940,7 @@ const DetailProductPage: React.FC = () => {
         productGroupId:    formData.productGroupId    || productData.productGroupId,
         productCategoryId: formData.productCategoryId || null,
         businessId:        formData.businessId        || null,
-        active:            isActive,
+        active:            status === 'ARCHIVED' ? false : isActive,
         imageUrl:          finalImageUrl,
         status,
         criteria: criteria.filter(c => c.isSelected).map(c => ({ criteriaId: c.id, value: c.value.trim() })),
@@ -1332,7 +1356,7 @@ const DetailProductPage: React.FC = () => {
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Danh mục sản phẩm 1</label>
+                  <label className="label">Danh mục sản phẩm cấp 1</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${(isReadOnly || !formData.productGroupId) ? 'is-disabled' : ''}`} 
@@ -1344,14 +1368,14 @@ const DetailProductPage: React.FC = () => {
                       }}
                       style={(isReadOnly || !formData.productGroupId) ? { cursor: 'not-allowed' } : undefined}
                     >
-                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục sản phẩm 1')}</span>
+                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || 'Chọn danh mục sản phẩm cấp 1')}</span>
                     </div>
                     {!isReadOnly && isCategoryOpen && (
                       <div className="custom-options-list" style={{ padding: 0 }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
                           <input
                             type="text"
-                            placeholder="Tìm danh mục sản phẩm 1..."
+                            placeholder="Tìm danh mục sản phẩm cấp 1..."
                             value={categorySearch}
                             onChange={e => setCategorySearch(e.target.value)}
                             onClick={e => e.stopPropagation()}
@@ -1375,7 +1399,7 @@ const DetailProductPage: React.FC = () => {
                 </div>
 
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Danh mục sản phẩm 2</label>
+                  <label className="label">Danh mục sản phẩm cấp 2</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${(isReadOnly || !formData.productCategoryId) ? 'is-disabled' : ''}`} 
@@ -1387,14 +1411,14 @@ const DetailProductPage: React.FC = () => {
                       }}
                       style={(isReadOnly || !formData.productCategoryId) ? { cursor: 'not-allowed' } : undefined}
                     >
-                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn danh mục sản phẩm 2')}</span>
+                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || 'Chọn danh mục sản phẩm cấp 2')}</span>
                     </div>
                     {!isReadOnly && isOperationOpen && (
                       <div className="custom-options-list" style={{ padding: 0 }}>
                         <div style={{ padding: '8px', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, backgroundColor: '#fff', zIndex: 1 }}>
                           <input
                             type="text"
-                            placeholder="Tìm danh mục sản phẩm 2..."
+                            placeholder="Tìm danh mục sản phẩm cấp 2..."
                             value={operationSearch}
                             onChange={e => setOperationSearch(e.target.value)}
                             onClick={e => e.stopPropagation()}

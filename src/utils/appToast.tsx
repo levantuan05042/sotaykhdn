@@ -209,17 +209,17 @@ export const getHideBlockedByPendingCopy = (
   if (kind === 'group') {
     return {
       title: `Không thể ẩn nhóm sản phẩm "${itemName}"`,
-      description: 'Đang có sản phẩm hoặc danh mục sản phẩm 1 hoặc danh mục sản phẩm 2 con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
+      description: 'Đang có sản phẩm hoặc danh mục sản phẩm cấp 1 hoặc danh mục sản phẩm cấp 2 con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
     };
   }
   if (kind === 'category') {
     return {
-      title: `Không thể ẩn danh mục sản phẩm 1 "${itemName}"`,
-      description: 'Đang có sản phẩm hoặc danh mục sản phẩm 2 con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
+      title: `Không thể ẩn danh mục sản phẩm cấp 1 "${itemName}"`,
+      description: 'Đang có sản phẩm hoặc danh mục sản phẩm cấp 2 con đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
     };
   }
   return {
-    title: `Không thể ẩn danh mục sản phẩm 2 "${itemName}"`,
+    title: `Không thể ẩn danh mục sản phẩm cấp 2 "${itemName}"`,
     description: 'Đang có sản phẩm đang ở trạng thái lưu nháp, chờ duyệt hoặc chỉnh sửa',
   };
 };

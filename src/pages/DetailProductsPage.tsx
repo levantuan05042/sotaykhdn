@@ -17,7 +17,7 @@ import { getRandomAvatar } from '../utils/avatarUtils';
 import { CASCADE_LOCK_MESSAGE, isCascadeHidden, DISABLED_CONTROL_STYLE } from '../utils/formatUtils';
 import { useCriteriaPointerDrag } from '../hooks/useDragAutoScroll';
 import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
-import CriteriaQuillEditor from '../components/ui/CriteriaQuillEditor';
+import CriteriaQuillEditor, { isHtmlEmpty } from '../components/ui/CriteriaQuillEditor';
 import iconChat from '../assets/icon/iconchat.svg';
 
 interface Criterion {
@@ -48,10 +48,6 @@ const stripHtml = (htmlString?: string | null) => {
   return String(htmlString).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
 };
 
-const isHtmlEmpty = (html: string) => {
-  if (!html) return true;
-  return html.replace(/<[^>]*>?/gm, '').trim().length === 0 && !html.includes('<img');
-};
 
 const formatDateTime = (dateString?: string) => {
   if (!dateString) return '---';
@@ -1018,14 +1014,14 @@ const DetailProductPage: React.FC = () => {
 
               <div style={{ display: 'flex', gap: 12 }}>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Danh mục sản phẩm 1</label>
+                  <label className="label">Danh mục sản phẩm cấp 1</label>
                   <div className="custom-select-container" ref={categoryRef}>
                     <div 
                       className={`select-custom ${isCategoryOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                       onClick={() => { if (!isReadOnly) setIsCategoryOpen(v => !v); }} 
                       style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
-                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục sản phẩm 1')}</span>
+                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục sản phẩm cấp 1')}</span>
                     </div>
                     {isCategoryOpen && !isReadOnly && (
                       <div className="custom-options-list">
@@ -1039,14 +1035,14 @@ const DetailProductPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="formGroup" style={{ flex: 1 }}>
-                  <label className="label">Danh mục sản phẩm 2</label>
+                  <label className="label">Danh mục sản phẩm cấp 2</label>
                   <div className="custom-select-container" ref={operationRef}>
                     <div 
                       className={`select-custom ${isOperationOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 
                       onClick={() => { if (!isReadOnly) setIsOperationOpen(v => !v); }} 
                       style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
-                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn danh mục sản phẩm 2')}</span>
+                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn danh mục sản phẩm cấp 2')}</span>
                     </div>
                     {isOperationOpen && !isReadOnly && (
                       <div className="custom-options-list">
@@ -1206,7 +1202,6 @@ const DetailProductPage: React.FC = () => {
                             showCharCount={!isReadOnly}
                             charCountMax={getCriteriaMaxLength(criterion.name, criterion.code)}
                             charCountError={lengthErr}
-                            formatIncoming={(v) => v}
                           />
                         </div>
                       </div>

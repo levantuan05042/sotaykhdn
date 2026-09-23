@@ -6,12 +6,12 @@ import axios from 'axios';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
-import { FIELD_LIMITS, getNameError, getCodeError } from '../utils/fieldValidation';
-import CharCountHint from '../components/ui/CharCountHint';
+import { getNameError, getCodeError } from '../utils/fieldValidation';
 import { useCloseOnOutsideClick } from '../hooks/useCloseOnOutsideClick';
 import { useSubmitLock, draftActionLabel, submitActionLabel } from '../hooks/useSubmitLock';
-import SuperGroupNestedSelect, { formatSelectedGroupsLabel, SUPER_GROUP_OPTIONS } from '../components/ui/SuperGroupNestedSelect';
+import SuperGroupNestedSelect from '../components/ui/SuperGroupNestedSelect';
 import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { checkSpecialCriteriaConflict } from '../utils/specialCriteria';
 import iconChat from '../assets/icon/iconchat.svg';
 
 const AddCriteriaPage: React.FC = () => {
@@ -23,11 +23,8 @@ const AddCriteriaPage: React.FC = () => {
   
   // --- STATES ---
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedSuperGroup, setSelectedSuperGroup] = useState('');
-  const [showSuperList, setShowSuperList] = useState(true);
   const [groupOptions, setGroupOptions] = useState<{ label: string; value: string; superGroup?: string }[]>([]);
   const [loadingGroups, setLoadingGroups] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(''); // State lưu từ khóa tìm kiếm nhóm
 
   // --- STATES CHO FORM ---
 
@@ -45,12 +42,6 @@ const AddCriteriaPage: React.FC = () => {
     { ref: statusRef, close: () => setIsStatusOpen(false) },
   ]);
 
-  // --- EFFECT: RESET TỪ KHÓA TÌM KIẾM KHI ĐÓNG DROPDOWN ---
-  useEffect(() => {
-    if (!isOpen) {
-      setSearchTerm('');
-    }
-  }, [isOpen]);
 
   // --- FETCH NHÓM SẢN PHẨM ---
   useEffect(() => {
@@ -58,14 +49,18 @@ const AddCriteriaPage: React.FC = () => {
       try {
         setLoadingGroups(true);
         const response = await axios.get(API_ENDPOINTS.PRODUCT_GROUPS.LIST, {
-          params: { status: 'ACTIVE', active: true }
+          params: { status: 'ACTIVE' }
         });
 
-        const options = response.data.map((g: any) => ({
-          label: g.name,
-          value: String(g.id),
-          superGroup: g.superGroup || '',
-        }));
+        const options = (response.data || [])
+          .filter((g: any) => !g.status || g.status === 'ACTIVE')
+          .map((g: any) => ({
+            label: g.name,
+            value: String(g.id),
+            superGroup: g.superGroup || '',
+            hidden: g.active === false,
+            fromCatalog: true,
+          }));
         setGroupOptions(options);
       } catch (error) {
         console.error("Lỗi fetch groups:", error);
@@ -78,6 +73,23 @@ const AddCriteriaPage: React.FC = () => {
     fetchActiveGroups();
   }, []);
 
+  // --- FETCH MÃ TIÊU CHÍ TỰ SINH ---
+  useEffect(() => {
+    const fetchNextCode = async () => {
+      try {
+        const response = await axios.get(API_ENDPOINTS.PRODUCT_CRITERIA.NEXT_CODE);
+        const nextCode = response.data?.code || response.data?.data?.code || response.data;
+        if (typeof nextCode === 'string' && nextCode.trim()) {
+          setFormData(prev => ({ ...prev, code: nextCode.trim() }));
+        }
+      } catch (error) {
+        console.error("Lỗi lấy mã tiêu chí tự sinh:", error);
+      }
+    };
+
+    fetchNextCode();
+  }, []);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -88,7 +100,6 @@ const AddCriteriaPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
-  const visibleGroupOptions = groupOptions.filter(opt => opt.superGroup === selectedSuperGroup);
 
   const handleToggleGroup = (id: string) => {
     setFormData(prev => {
@@ -100,47 +111,33 @@ const AddCriteriaPage: React.FC = () => {
     });
   };
 
-  const handleToggleSelectAll = () => {
+  const handleToggleGroupBatch = (ids: string[], select: boolean) => {
     setFormData(prev => {
-      const allIds = visibleGroupOptions.map(opt => opt.value);
-      const allSelected = allIds.length > 0 && allIds.every(id => prev.groupIds.includes(id));
-      if (allSelected) {
-        return { ...prev, groupIds: prev.groupIds.filter(id => !allIds.includes(id)) };
+      if (select) {
+        return { ...prev, groupIds: [...new Set([...prev.groupIds, ...ids])] };
+      } else {
+        return { ...prev, groupIds: prev.groupIds.filter(id => !ids.includes(id)) };
       }
-      return { ...prev, groupIds: [...new Set([...prev.groupIds, ...allIds])] };
     });
-  };
-
-  const handleSelectSuperGroup = (value: string) => {
-    setSelectedSuperGroup(value);
-    setShowSuperList(false);
-    setSearchTerm('');
-    setIsOpen(true);
-  };
-
-  const handleBackToSuperGroups = () => {
-    setShowSuperList(true);
-    setSearchTerm('');
-    setIsOpen(true);
   };
 
   const handleGoBack = () => navigate('/criteria-management');
 
-  const getSelectedGroupsLabel = () => {
-    if (loadingGroups) return "Đang tải nhóm sản phẩm...";
-    return formatSelectedGroupsLabel(groupOptions, formData.groupIds, "Chọn nhóm sản phẩm");
-  };
-
-  const selectedCountBySuperGroup = SUPER_GROUP_OPTIONS.reduce((acc, sg) => {
-    acc[sg.value] = groupOptions.filter(opt => opt.superGroup === sg.value && formData.groupIds.includes(opt.value)).length;
-    return acc;
-  }, {} as Record<string, number>);
 
   const [confirmAction, setConfirmAction] = useState<'DRAFT' | 'PENDING_APPROVAL' | null>(null);
   const { isSubmitting, submitKind, beginSubmit, endSubmit } = useSubmitLock();
 
   // --- VALIDATE FORM TRƯỚC KHI LƯU NHÁP HOẶC MỞ MODAL DUYỆT ---
   const onSaveDraftClick = () => {
+    const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
+    if (specialConflict.codeConflict) {
+      toast.error(specialConflict.codeConflict, { position: 'top-center' });
+      return;
+    }
+    if (specialConflict.nameConflict) {
+      toast.error(specialConflict.nameConflict, { position: 'top-center' });
+      return;
+    }
     const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
     if (codeErr) {
       toast.error(codeErr, { position: 'top-center' });
@@ -156,7 +153,16 @@ const AddCriteriaPage: React.FC = () => {
 
   const onSubmitClick = () => {
     if (!formData.code.trim()) {
-      toast.error("Vui lòng nhập mã tiêu chí", { position: 'top-center' });
+      toast.error("Đang khởi tạo mã tiêu chí, vui lòng thử lại sau giây lát", { position: 'top-center' });
+      return;
+    }
+    const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
+    if (specialConflict.codeConflict) {
+      toast.error(specialConflict.codeConflict, { position: 'top-center' });
+      return;
+    }
+    if (specialConflict.nameConflict) {
+      toast.error(specialConflict.nameConflict, { position: 'top-center' });
       return;
     }
     const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
@@ -183,6 +189,17 @@ const AddCriteriaPage: React.FC = () => {
   // Gửi API thực tế sau khi chọn người kiểm duyệt từ Modal hoặc lưu nháp
   const submitCriteriaData = async (status: 'DRAFT' | 'PENDING_APPROVAL', approvedBy?: string) => {
     if (!beginSubmit(status === 'DRAFT' ? 'draft' : 'submit')) return;
+    const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
+    if (specialConflict.codeConflict) {
+      toast.error(specialConflict.codeConflict, { position: 'top-center' });
+      endSubmit();
+      return;
+    }
+    if (specialConflict.nameConflict) {
+      toast.error(specialConflict.nameConflict, { position: 'top-center' });
+      endSubmit();
+      return;
+    }
     const codeErr = getCodeError(formData.code, 'Mã tiêu chí');
     if (codeErr) {
       toast.error(codeErr, { position: 'top-center' });
@@ -226,7 +243,6 @@ const AddCriteriaPage: React.FC = () => {
   };
 
   const isFormDirty =
-    formData.code.trim() !== '' ||
     formData.name.trim() !== '' ||
     formData.groupIds.length > 0 ||
     formData.required ||
@@ -235,6 +251,7 @@ const AddCriteriaPage: React.FC = () => {
 
   const canSaveDraft = !isSubmitting;
   const canSubmit = formData.code.trim() !== '' && formData.name.trim() !== '' && formData.groupIds.length > 0 && !isSubmitting;
+  const nameError = getNameError(formData.name, 'Tên tiêu chí');
 
   return (
     <div className="pageWrapper">
@@ -297,15 +314,17 @@ const AddCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="code" 
-                  className={`input ${getCodeError(formData.code, 'Mã tiêu chí') ? 'input-invalid' : ''}`}
-                  placeholder="Nhập mã tiêu chí..."
+                  className="input is-disabled"
+                  placeholder="Mã tiêu chí tự sinh..."
                   value={formData.code} 
-                  onChange={handleInputChange} 
-                />
-                <CharCountHint
-                  current={formData.code.length}
-                  max={FIELD_LIMITS.code}
-                  error={getCodeError(formData.code, 'Mã tiêu chí')}
+                  disabled
+                  readOnly
+                  style={{
+                    backgroundColor: '#F3F4F6',
+                    cursor: 'not-allowed',
+                    color: '#374151',
+                    fontWeight: 500,
+                  }}
                 />
               </div>
 
@@ -315,16 +334,12 @@ const AddCriteriaPage: React.FC = () => {
                 <input 
                   type="text" 
                   name="name" 
-                  className={`input ${getNameError(formData.name, 'Tên tiêu chí') ? 'input-invalid' : ''}`}
+                  className={`input ${nameError ? 'input-invalid' : ''}`}
                   placeholder="Nhập tên tiêu chí..."
                   value={formData.name} 
                   onChange={handleInputChange} 
                 />
-                <CharCountHint
-                  current={formData.name.length}
-                  max={FIELD_LIMITS.name}
-                  error={getNameError(formData.name, 'Tên tiêu chí')}
-                />
+                {nameError && <p className="field-hint-error">{nameError}</p>}
               </div>
               
               <div className="formGroup" ref={dropdownRef}>
@@ -332,19 +347,12 @@ const AddCriteriaPage: React.FC = () => {
                 <SuperGroupNestedSelect
                   isOpen={isOpen}
                   onToggleOpen={() => setIsOpen(!isOpen)}
-                  selectedSuperGroup={selectedSuperGroup}
-                  showSuperList={showSuperList}
-                  onSelectSuperGroup={handleSelectSuperGroup}
-                  onBackToSuperGroups={handleBackToSuperGroups}
-                  options={visibleGroupOptions}
+                  options={groupOptions}
                   selectedIds={formData.groupIds}
                   onToggleGroup={handleToggleGroup}
-                  onToggleSelectAll={handleToggleSelectAll}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                  closedLabel={getSelectedGroupsLabel()}
+                  onToggleGroupBatch={handleToggleGroupBatch}
                   loading={loadingGroups}
-                  selectedCountBySuperGroup={selectedCountBySuperGroup}
+                  placeholder="Chọn nhóm sản phẩm"
                 />
               </div>
 

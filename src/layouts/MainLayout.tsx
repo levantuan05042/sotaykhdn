@@ -4,7 +4,7 @@ import HeaderBar from '../components/HeaderBar';
 import Sidebar from '../components/Sidebar';
 import styles from './MainLayout.module.css'; // Đã dùng CSS Module
 import axios from 'axios';
-import { AUTH_ME_URL, BEADMIN_USERS_URL, AUTH_SERVICE_LOGIN_URL } from '../config/apiConfig';
+import { AUTH_ME_URL, AUTH_RECORD_ACCESS_URL, BEADMIN_USERS_URL, AUTH_SERVICE_LOGIN_URL } from '../config/apiConfig';
 import { getAllowedModesForRole, normalizeRole } from '../config/menuConfig';
 import { AdminKeepAliveOutlet } from './AdminKeepAliveOutlet';
 import { useViewScrollRestoration } from '../hooks/useViewScrollRestoration';
@@ -36,6 +36,7 @@ const MainLayout: React.FC = () => {
     // Lấy token từ URL query parameter nếu được auth-service redirect về
     const searchParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = searchParams.get('token');
+    const isNewLogin = Boolean(tokenFromUrl);
     if (tokenFromUrl) {
       localStorage.setItem('accessToken', tokenFromUrl);
       localStorage.setItem('token', tokenFromUrl);
@@ -51,6 +52,28 @@ const MainLayout: React.FC = () => {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // Ghi nhận lượt truy cập hệ thống ngay khi đăng nhập (+1 truy cập)
+    const sendAccessLog = (uName?: string, bCode?: string) => {
+      const payload: Record<string, string> = {};
+      if (uName) {
+        payload.username = uName;
+        payload.userId = bCode ? `${uName}_${bCode}` : uName;
+      }
+      if (bCode) {
+        payload.branchCode = bCode;
+      }
+      axios.post(AUTH_RECORD_ACCESS_URL, payload, { headers, withCredentials: true })
+        .catch(e => console.warn('Failed to record system access log', e));
+    };
+
+    const hasSessionAccessLogged = sessionStorage.getItem('session_access_logged') === 'true';
+    if (isNewLogin || !hasSessionAccessLogged) {
+      sessionStorage.setItem('session_access_logged', 'true');
+      const cachedUsername = localStorage.getItem('currentUserUsername');
+      const cachedBranch = localStorage.getItem('currentUserBranchCode');
+      sendAccessLog(cachedUsername || undefined, cachedBranch || undefined);
+    }
+
     setLoading(true);
     axios.get(AUTH_ME_URL, { headers, withCredentials: true })
       .then(res => {
@@ -61,6 +84,10 @@ const MainLayout: React.FC = () => {
           const username = user.username;
           const role = user.role || 'ETN08';
           const normalizedRole = normalizeRole(role);
+
+          if (isNewLogin || !hasSessionAccessLogged) {
+            sendAccessLog(username, branchCode);
+          }
 
           localStorage.setItem('currentUser', `${fullName}_${branchCode}`);
           localStorage.setItem('currentUserUsername', username);
@@ -110,6 +137,16 @@ const MainLayout: React.FC = () => {
     const isAdmin = roleUpper.includes('ESA08') || roleUpper.includes('ADMIN') || roleUpper.includes('QTERP');
     const isManager = isAdmin || roleUpper.includes('ETN08') || roleUpper.includes('USER');
     const isApprover = isAdmin || roleUpper.includes('ETK08');
+
+    const isReportsPath = path.startsWith('/reports');
+    const isReportAllowed = isAdmin || isManager || isApprover;
+
+    if (isReportsPath) {
+      if (!isReportAllowed) {
+        navigate('/view', { replace: true });
+      }
+      return;
+    }
 
     if (isApproverPath) {
       if (!isApprover) {

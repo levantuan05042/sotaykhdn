@@ -93,9 +93,9 @@ const ProductGroupTable: React.FC<Props> = ({ data, onToggleActive }) => {
   };
 
   const renderActiveToggle = (item: ProductGroup) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
-    const isActive = item.active || false;
+    const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 
     return (
       <div className="toggle-wrapper" onClick={(e) => e.stopPropagation()}>

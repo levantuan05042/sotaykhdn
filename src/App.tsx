@@ -38,6 +38,7 @@ import ApproverBusinessListPage from './pages/ApproverBusinessListPage';
 import ApproverBusinessDetailPage from './pages/ApproverBusinessDetailPage';
 import ApproverCriteriaListPage from './pages/ApproverCriteriaListPage';
 import ApproverCriteriaDetailPage from './pages/ApproverCriteriaDetailPage';
+import AccessDataReportPage from './pages/AccessDataReportPage';
 
 // ==========================================
 // 2. IMPORTS THÊM CHO LUỒNG VIEW (TRA CỨU)
@@ -108,6 +109,7 @@ const router = createBrowserRouter(
         <Route path="approver/business/:businessId" element={<ApproverBusinessDetailPage />} />
         <Route path="approver/criteria" element={<ApproverCriteriaListPage />} />
         <Route path="approver/criteria/:criteriaId" element={<ApproverCriteriaDetailPage />} />
+        <Route path="reports/access-data" element={<AccessDataReportPage />} />
       </Route>
 
       <Route path="/view" element={<ViewMainLayout />}>
