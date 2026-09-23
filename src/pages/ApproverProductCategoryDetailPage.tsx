@@ -88,6 +88,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
         comment: commentVal,
         approvedBy: approvedByStr,
       });
+      notifyAdminDataChanged();
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm:', error);
