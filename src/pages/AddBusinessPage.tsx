@@ -46,9 +46,10 @@ const AddBusinessPage: React.FC = () => {
           params: { status: 'ACTIVE', active: true }
         });
         
-        const options = response.data.map((c: any) => ({
+        const resList = Array.isArray(response.data) ? response.data : (response.data?.content || []);
+        const options = resList.map((c: any) => ({
           label: c.name,
-          value: c.id
+          value: String(c.id)
         }));
         setCategoryOptions(options);
       } catch (error) {
@@ -105,7 +106,7 @@ const AddBusinessPage: React.FC = () => {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
-    if (!formData.productCategoryId) {
+    if (!formData.productCategoryId || !String(formData.productCategoryId).trim()) {
       toast.error("Vui lòng chọn danh mục sản phẩm cấp 1", { position: 'top-center' });
       setIsOpen(true);
       return;
@@ -122,9 +123,11 @@ const AddBusinessPage: React.FC = () => {
       return;
     }
     try {
+      const selectedCatId = formData.productCategoryId ? String(formData.productCategoryId).trim() : undefined;
       await axios.post(API_ENDPOINTS.PRODUCT_BUSINESS.LIST, {
         name: formData.name.trim() || undefined,
-        categoryId: formData.productCategoryId || undefined,
+        productCategoryId: selectedCatId,
+        categoryId: selectedCatId,
         active: isActive,
         status
       });
@@ -225,7 +228,7 @@ const AddBusinessPage: React.FC = () => {
                     <span>
                       {loadingCategories 
                         ? "Đang tải danh mục sản phẩm cấp 1..." 
-                        : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm cấp 1")}
+                        : (categoryOptions.find(o => String(o.value) === String(formData.productCategoryId))?.label || "Chọn danh mục sản phẩm cấp 1")}
                     </span>
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
                       <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -276,9 +279,9 @@ const AddBusinessPage: React.FC = () => {
                           </div>
                         ) : (
                           filteredCategoryOptions.map((opt) => (
-                            <div key={opt.value} className={`custom-option ${formData.productCategoryId === opt.value ? 'selected' : ''}`}
+                            <div key={opt.value} className={`custom-option ${String(formData.productCategoryId) === String(opt.value) ? 'selected' : ''}`}
                               onClick={() => { 
-                                setFormData({...formData, productCategoryId: opt.value}); 
+                                setFormData({...formData, productCategoryId: String(opt.value)}); 
                                 setIsOpen(false); 
                                 setCategorySearchTerm(''); // Xóa text khi đã chọn xong
                               }}>

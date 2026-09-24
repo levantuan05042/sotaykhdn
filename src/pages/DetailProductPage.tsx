@@ -29,7 +29,7 @@ import type { VersionItem } from '../components/ui/ProductInfoCard';
 import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc, stripHtmlText } from '../utils/fieldValidation';
 import CriteriaQuillEditor, { formatDetailHtml, isHtmlEmpty } from '../components/ui/CriteriaQuillEditor';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
-import { SPECIAL_CRITERIA_LIST, isSpecialCriteria } from '../utils/specialCriteria';
+import { SPECIAL_CRITERIA_LIST, isSpecialCriteria, getSpecialCriteriaConfig } from '../utils/specialCriteria';
 import iconChat from '../assets/icon/iconchat.svg';
 
 export { formatDetailHtml, isHtmlEmpty };
@@ -90,15 +90,45 @@ const checkIsRequired = (item: any) => {
   return t1.includes('(*)') || t2.includes('(*)');
 };
 
-const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = [], superGroup?: string): Criterion[] => {
-  let effectiveCatalog = [...(catalogItems || [])];
+const buildMergedCriteria = (
+  catalogItems: any[],
+  savedDetails: any[] = [],
+  superGroup?: string,
+  fallbackProductName?: string
+): Criterion[] => {
+  // Tìm giá trị tiêu chí đặc biệt đã lưu trước đó (nếu có) để kế thừa khi đổi superGroup
+  let previousSpecialValue = '';
+  for (const s of savedDetails) {
+    if (isSpecialCriteria(s)) {
+      const sVal = formatDetailHtml(String(s.noiDung ?? s.value ?? ''));
+      if (!isHtmlEmpty(sVal)) {
+        previousSpecialValue = sVal;
+        break;
+      }
+    }
+  }
+
+  if (isHtmlEmpty(previousSpecialValue) && fallbackProductName && fallbackProductName.trim()) {
+    previousSpecialValue = `<p>${fallbackProductName.trim()}</p>`;
+  }
+
+  // Lọc catalogItems: loại bỏ các tiêu chí đặc biệt không thuộc superGroup của nhóm
+  let effectiveCatalog = (catalogItems || []).filter((item: any) => {
+    const cfg = getSpecialCriteriaConfig(item);
+    if (cfg) {
+      return superGroup ? cfg.superGroup === superGroup : false;
+    }
+    return true;
+  });
+
   if (superGroup) {
     const specialConfig = SPECIAL_CRITERIA_LIST.find(sc => sc.superGroup === superGroup);
     if (specialConfig) {
-      const hasSpecial = effectiveCatalog.some(item =>
-        (item.code && item.code.trim().toUpperCase() === specialConfig.code) ||
-        isSpecialCriteria(item)
-      );
+      const hasSpecial = effectiveCatalog.some(item => {
+        const cfg = getSpecialCriteriaConfig(item);
+        return (item.code && item.code.trim().toUpperCase() === specialConfig.code) ||
+               (cfg && cfg.code === specialConfig.code);
+      });
       if (!hasSpecial) {
         effectiveCatalog.unshift({
           id: `fixed-${specialConfig.code.toLowerCase()}`,
@@ -128,11 +158,15 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = [], supe
   });
 
   if (!savedDetails || savedDetails.length === 0) {
-    return sortCriteriaByCreatedAtAsc(catalog.map(c => ({
-      ...c,
-      isSelected: c.isRequired,
-      value: '',
-    })));
+    return sortCriteriaByCreatedAtAsc(catalog.map(c => {
+      const isSpecial = isSpecialCriteria(c);
+      const isReq = c.isRequired;
+      return {
+        ...c,
+        isSelected: isReq,
+        value: (isSpecial && !isHtmlEmpty(previousSpecialValue)) ? previousSpecialValue : '',
+      };
+    }));
   }
 
   const merged: Criterion[] = [];
@@ -140,14 +174,30 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = [], supe
   const usedCatalogNames = new Set<string>();
 
   for (const s of savedDetails) {
+    // Nếu tiêu chí đã lưu là tiêu chí đặc biệt của superGroup KHÁC thì bỏ qua, không hiển thị
+    const savedConfig = getSpecialCriteriaConfig(s);
+    if (savedConfig && superGroup && savedConfig.superGroup !== superGroup) {
+      continue;
+    }
+
     const sId = String(s.id || s.criteriaId || '');
     const sName = String(s.tieuChi || s.name || '').replace(/\s*\(\*\)/g, '').trim();
-    const sVal = formatDetailHtml(String(s.noiDung ?? s.value ?? ''));
+    let sVal = formatDetailHtml(String(s.noiDung ?? s.value ?? ''));
     const fromCatalog = catalog.find(c =>
       (sId && c.id === sId) || (sName && c.name.toLowerCase() === sName.toLowerCase())
     );
+    // Nếu tiêu chí này không còn thuộc danh mục của nhóm sản phẩm, gỡ khỏi sản phẩm
+    if (catalog.length > 0 && !fromCatalog) {
+      continue;
+    }
+
     const id = fromCatalog?.id || sId;
     const name = fromCatalog?.name || sName;
+
+    if (isSpecialCriteria(fromCatalog || s) && isHtmlEmpty(sVal) && !isHtmlEmpty(previousSpecialValue)) {
+      sVal = previousSpecialValue;
+    }
+
     merged.push({
       id,
       name,
@@ -165,10 +215,17 @@ const buildMergedCriteria = (catalogItems: any[], savedDetails: any[] = [], supe
 
   for (const c of catalog) {
     if (usedCatalogIds.has(c.id) || usedCatalogNames.has(c.name.toLowerCase())) continue;
+    const isSpecial = isSpecialCriteria(c);
+    let val = '';
+    let isSelected = false;
+    if (isSpecial) {
+      val = previousSpecialValue;
+      isSelected = true;
+    }
     merged.push({
       ...c,
-      isSelected: false,
-      value: '',
+      isSelected,
+      value: val,
     });
   }
 
@@ -778,7 +835,7 @@ const DetailProductPage: React.FC = () => {
         }
 
         const currentGroup = rawGroups.find((g: any) => String(g.id) === String(pData.productGroupId));
-        const merged = buildMergedCriteria(catalogData, pData.details || [], currentGroup?.superGroup);
+        const merged = buildMergedCriteria(catalogData, pData.details || [], currentGroup?.superGroup, pData?.name);
         const selectedBaseline = merged.filter(c => c.isSelected);
         setOriginalCriteria(JSON.parse(JSON.stringify(selectedBaseline)));
         setCriteria(merged);
@@ -849,10 +906,10 @@ const DetailProductPage: React.FC = () => {
         const isSameGroup = Boolean(productData?.productGroupId && formData.productGroupId === productData.productGroupId);
         const savedDetails: any[] = isSameGroup
           ? (productData?.details && productData.details.length > 0 ? productData.details : originalCriteria)
-          : [];
+          : (criteria.length > 0 ? criteria : (productData?.details || []));
 
         const currentGroup = groupOptions.find(g => String(g.value) === String(formData.productGroupId));
-        const merged = buildMergedCriteria(data, savedDetails, currentGroup?.superGroup);
+        const merged = buildMergedCriteria(data, savedDetails, currentGroup?.superGroup, productData?.name);
         setCriteria(merged);
 
         if (lastLoadedProductIdRef.current !== id && isSameGroup) {
@@ -935,8 +992,11 @@ const DetailProductPage: React.FC = () => {
       else if (avatarFile)   { try { finalImageUrl = await uploadImage(avatarFile); } catch (e: any) { toast.error(e.message || 'Lỗi upload ảnh', { position: 'top-center' }); return; } }
       else                   { finalImageUrl = productData.imageUrl || null; }
 
+      const specialCriterion = criteria.find(c => isSpecialCriteria(c) && c.isSelected && !isHtmlEmpty(c.value));
+      const resolvedName = specialCriterion ? stripHtmlText(specialCriterion.value) : productData.name;
+
       const payload = {
-        name:              productData.name,
+        name:              resolvedName,
         productGroupId:    formData.productGroupId    || productData.productGroupId,
         productCategoryId: formData.productCategoryId || null,
         businessId:        formData.businessId        || null,

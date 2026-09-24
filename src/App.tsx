@@ -54,12 +54,10 @@ import SavedProductsView from './pages/view/SavedProductsView';
 
 const IndexRedirect = () => {
   const currentMode = localStorage.getItem('userRole') || 'ETN08';
-  if (currentMode === 'ETK08') {
-    return <Navigate to="/approver/product-groups" replace />;
-  } else if (currentMode === 'VIEWER') {
+  if (currentMode === 'VIEWER') {
     return <Navigate to="/view" replace />;
   } else {
-    return <Navigate to="/product-groups" replace />;
+    return <Navigate to="/reports/access-data" replace />;
   }
 };
 
@@ -122,7 +120,7 @@ const router = createBrowserRouter(
         <Route path="saved-products" element={<SavedProductsView />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/product-groups" replace />} />
+      <Route path="*" element={<Navigate to="/reports/access-data" replace />} />
     </>
   )
 );

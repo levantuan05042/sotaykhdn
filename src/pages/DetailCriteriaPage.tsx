@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './DetailGroupPage.css';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
@@ -91,6 +92,9 @@ const DetailCriteriaPage: React.FC = () => {
   const [showCascadeModal, setShowCascadeModal] = useState(false);
   const [cascadeCounts, setCascadeCounts] = useState<ChildCounts>({});
   const [isCascadeProcessing, setIsCascadeProcessing] = useState(false);
+  const [showRemovedGroupsWarningModal, setShowRemovedGroupsWarningModal] = useState(false);
+  const [affectedGroupsInfo, setAffectedGroupsInfo] = useState<{ totalProducts: number; details: any[] } | null>(null);
+  const [pendingActionAfterWarning, setPendingActionAfterWarning] = useState<(() => void) | null>(null);
   
   const [groupOptions, setGroupOptions] = useState<NestedGroupOption[]>([]);
 
@@ -432,6 +436,33 @@ const DetailCriteriaPage: React.FC = () => {
     ) || null;
   };
 
+  const checkRemovedGroupsBeforeProceed = async (proceedFn: () => void) => {
+    const rawInitialGroups = criteriaData?.productGroups || [];
+    const initialGroupIds: string[] = rawInitialGroups.map((g: any) => String(g.id));
+    const removedGroupIds = initialGroupIds.filter((gid: string) => !formData.groupIds.includes(gid));
+
+    if (removedGroupIds.length === 0 || !id) {
+      proceedFn();
+      return;
+    }
+
+    try {
+      const res = await axios.post(API_ENDPOINTS.PRODUCT_CRITERIA.CHECK_REMOVED_GROUPS(id), {
+        groupIds: removedGroupIds,
+      });
+      if (res.data && res.data.hasAffectedProducts) {
+        setAffectedGroupsInfo(res.data);
+        setPendingActionAfterWarning(() => proceedFn);
+        setShowRemovedGroupsWarningModal(true);
+        return;
+      }
+    } catch (e) {
+      console.error("Lỗi kiểm tra nhóm sản phẩm bị gỡ:", e);
+    }
+
+    proceedFn();
+  };
+
   const onSaveDraftClick = (status: 'DRAFT' | 'NEEDS_REVISION') => {
     if (isReadOnly || !id || submittingRef.current || isSubmitting) return;
     const specialConflict = checkSpecialCriteriaConflict(formData.code, formData.name);
@@ -450,7 +481,10 @@ const DetailCriteriaPage: React.FC = () => {
       setShowDuplicateModal(true);
       return;
     }
-    setConfirmAction(status);
+
+    checkRemovedGroupsBeforeProceed(() => {
+      setConfirmAction(status);
+    });
   };
 
   const onSubmitClick = () => {
@@ -463,7 +497,10 @@ const DetailCriteriaPage: React.FC = () => {
       setShowDuplicateModal(true);
       return;
     }
-    setConfirmAction('PENDING_APPROVAL');
+
+    checkRemovedGroupsBeforeProceed(() => {
+      setConfirmAction('PENDING_APPROVAL');
+    });
   };
 
   const validateFormBeforeSubmit = () => {
@@ -998,6 +1035,33 @@ const DetailCriteriaPage: React.FC = () => {
         confirmText={confirmAction === 'DRAFT' || confirmAction === 'NEEDS_REVISION' ? 'Lưu nháp' : 'Gửi phê duyệt'}
         cancelText="Hủy"
         loading={isSubmitting}
+      />
+
+      <ActionConfirmModal
+        isOpen={showRemovedGroupsWarningModal}
+        onClose={() => {
+          setShowRemovedGroupsWarningModal(false);
+          setAffectedGroupsInfo(null);
+          setPendingActionAfterWarning(null);
+        }}
+        onConfirm={() => {
+          setShowRemovedGroupsWarningModal(false);
+          const next = pendingActionAfterWarning;
+          setPendingActionAfterWarning(null);
+          setAffectedGroupsInfo(null);
+          if (next) next();
+        }}
+        variant="delete"
+        title="Cảnh báo gỡ nhóm sản phẩm"
+        desc={
+          affectedGroupsInfo
+            ? `Tiêu chí này đang được áp dụng trong ${affectedGroupsInfo.totalProducts} sản phẩm thuộc các nhóm sau:\n${affectedGroupsInfo.details
+                .map((d: any) => `• ${d.groupName}: ${d.productCount} sản phẩm`)
+                .join('\n')}\n\nNếu bạn xác nhận bỏ nhóm, tiêu chí này sẽ được gỡ bỏ khỏi các sản phẩm thuộc nhóm trên khi phiên bản mới có hiệu lực. Bạn có chắc chắn muốn tiếp tục?`
+            : ''
+        }
+        confirmText="Xác nhận"
+        cancelText="Hủy"
       />
 
       <DuplicateVersionModal

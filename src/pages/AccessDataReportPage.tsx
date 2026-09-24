@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -1850,7 +1850,14 @@ export const AccessDataReportPage: React.FC = () => {
     }
   }, [navigate]);
 
-  const [dateRange, setDateRange] = useState<DateFilterRange>(() => getPresetRange('today'));
+  const [searchParams] = useSearchParams();
+  const [dateRange, setDateRange] = useState<DateFilterRange>(() => {
+    const filterKey = searchParams.get('filter') || searchParams.get('preset');
+    if (filterKey && PRESET_OPTIONS.some((o) => o.key === filterKey)) {
+      return getPresetRange(filterKey as PresetKey);
+    }
+    return getPresetRange('this_year');
+  });
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [, setLoading] = useState(true);
   const [data, setData] = useState<ReportData | null>(null);
