@@ -69,6 +69,7 @@ export const API_ENDPOINTS = {
     LIST: `${BASE_URL}/criteria`,
     REVIEW: (id: string | number) => `${BASE_URL}/criteria/review/${id}`,
     NEXT_CODE: `${BASE_URL}/criteria/next-code`,
+    CHECK_REMOVED_GROUPS: (id: string | number) => `${BASE_URL}/criteria/${id}/check-removed-groups`,
   },
 
     PRODUCT_BUSINESS: {

@@ -15,7 +15,7 @@ import ProductImageCard2 from '../components/ui/ProductImageCard2';
 import { getCriteriaMaxLength, getCriteriaValueError, getFirstCriteriaValueError, isProductNameCriteria, sortCriteriaByCreatedAtAsc } from '../utils/fieldValidation';
 import CriteriaQuillEditor, { isHtmlEmpty } from '../components/ui/CriteriaQuillEditor';
 import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
-import { SPECIAL_CRITERIA_LIST, isSpecialCriteria } from '../utils/specialCriteria';
+import { SPECIAL_CRITERIA_LIST, isSpecialCriteria, getSpecialCriteriaConfig } from '../utils/specialCriteria';
 import iconChat from '../assets/icon/iconchat.svg';
 
 interface Criterion {
@@ -228,12 +228,22 @@ const AddProductPage: React.FC = () => {
         const currentSuperGroup = currentGroup?.superGroup;
         const specialConfig = SPECIAL_CRITERIA_LIST.find(sc => sc.superGroup === currentSuperGroup);
 
-        const listWithSpecial = [...rawList];
+        // Lọc bỏ các tiêu chí đặc biệt không thuộc superGroup của nhóm đang chọn
+        const filteredList = rawList.filter((item: any) => {
+          const cfg = getSpecialCriteriaConfig(item);
+          if (cfg) {
+            return currentSuperGroup ? cfg.superGroup === currentSuperGroup : false;
+          }
+          return true;
+        });
+
+        const listWithSpecial = [...filteredList];
         if (specialConfig) {
-          const hasSpecial = listWithSpecial.some(item =>
-            (item.code && item.code.trim().toUpperCase() === specialConfig.code) ||
-            isSpecialCriteria(item)
-          );
+          const hasSpecial = listWithSpecial.some(item => {
+            const cfg = getSpecialCriteriaConfig(item);
+            return (item.code && item.code.trim().toUpperCase() === specialConfig.code) ||
+                   (cfg && cfg.code === specialConfig.code);
+          });
           if (!hasSpecial) {
             listWithSpecial.unshift({
               id: `fixed-${specialConfig.code.toLowerCase()}`,
@@ -247,22 +257,39 @@ const AddProductPage: React.FC = () => {
           }
         }
 
-        const formattedCriteria: Criterion[] = sortCriteriaByCreatedAtAsc(
-          listWithSpecial.map((item: any) => {
-            const isSpecial = isSpecialCriteria(item);
-            const isReq = isSpecial ? true : Boolean(item.isRequired);
-            return {
-              id: String(item.id || item.criteriaId),
-              name: item.name,
-              code: item.code,
-              isRequired: isReq,
-              isSelected: isReq,
-              value: '',
-              createdAt: isSpecial ? '1970-01-01T00:00:00Z' : (item.createdAt ?? item.created_at),
-            };
-          })
-        );
-        setCriteria(formattedCriteria);
+        setCriteria(prev => {
+          // Lấy giá trị của tiêu chí đặc biệt trước đó (nếu có)
+          const prevSpecialCriterion = prev.find(p => isSpecialCriteria(p) && !isHtmlEmpty(p.value));
+          const prevSpecialValue = prevSpecialCriterion?.value || '';
+
+          const prevMap = new Map(prev.map(p => [p.id, p.value]));
+          const prevNameMap = new Map(prev.map(p => [(p.name || '').trim().toLowerCase(), p.value]));
+
+          return sortCriteriaByCreatedAtAsc(
+            listWithSpecial.map((item: any) => {
+              const isSpecial = isSpecialCriteria(item);
+              const isReq = isSpecial ? true : Boolean(item.isRequired);
+              const id = String(item.id || item.criteriaId);
+              const nameLower = (item.name || '').trim().toLowerCase();
+
+              let val = prevMap.get(id) || prevNameMap.get(nameLower) || '';
+              // Kế thừa giá trị từ tiêu chí đặc biệt trước đó nếu đây là tiêu chí đặc biệt
+              if (isSpecial && isHtmlEmpty(val) && !isHtmlEmpty(prevSpecialValue)) {
+                val = prevSpecialValue;
+              }
+
+              return {
+                id,
+                name: item.name,
+                code: item.code,
+                isRequired: isReq,
+                isSelected: isReq,
+                value: val,
+                createdAt: isSpecial ? '1970-01-01T00:00:00Z' : (item.createdAt ?? item.created_at),
+              };
+            })
+          );
+        });
          
       } catch (error) {
         console.error("Lỗi fetch criteria:", error);

@@ -106,6 +106,14 @@ const MainLayout: React.FC = () => {
           window.dispatchEvent(new Event('userRoleChanged'));
           window.dispatchEvent(new Event('currentUserChanged'));
 
+          if (isNewLogin) {
+            if (currentMode !== 'VIEWER') {
+              navigate('/reports/access-data', { replace: true });
+            } else {
+              navigate('/view', { replace: true });
+            }
+          }
+
           axios.get(BEADMIN_USERS_URL(username, branchCode), { headers, withCredentials: true })
             .then(usersRes => {
               if (usersRes.data) {
