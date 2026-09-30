@@ -339,12 +339,12 @@ const ApproverBatchDetailPage: React.FC = () => {
                 >
                   Từ chối toàn bộ lô
                 </button>
-                <button 
-                  className="btn-send-action" 
+                <button
+                  className="btn-send-action"
                   onClick={triggerApproveBatch}
                   style={{ backgroundColor: '#AE1C3F', color: '#ffffff' }}
                 >
-                  Gửi
+                  {products.some(p => p.notes === '0') ? 'Yêu cầu chỉnh sửa' : 'Phê duyệt'}
                 </button>
               </>
             ) : (
@@ -562,9 +562,11 @@ const ApproverBatchDetailPage: React.FC = () => {
           }
         }}
         variant="submit"
-        title="Xác nhận phê duyệt"
-        desc={`Bạn muốn phê duyệt "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`}
-        confirmText="Phê duyệt"
+        title={products.some(p => p.notes === '0') ? 'Xác nhận yêu cầu chỉnh sửa' : 'Xác nhận phê duyệt'}
+        desc={products.some(p => p.notes === '0')
+          ? `Bạn muốn chuyển trả "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`
+          : `Bạn muốn phê duyệt "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`}
+        confirmText={products.some(p => p.notes === '0') ? 'Yêu cầu chỉnh sửa' : 'Phê duyệt'}
         cancelText="Hủy"
         loading={isApproving}
       />
