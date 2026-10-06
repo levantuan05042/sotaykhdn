@@ -144,9 +144,6 @@ const Sidebar: React.FC = () => {
   // Badge chỉ hiện khi người dùng đang hover HOẶC menu đang active
   const isBadgeVisible = (path?: string): boolean => {
     if (!path) return false;
-    if (activeChain.some((name) => false) === false) {
-      // placeholder để tránh unused warning
-    }
     return location.pathname === path || hoveredPath === path;
   };
 
