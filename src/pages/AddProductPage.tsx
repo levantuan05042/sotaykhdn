@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 
-import { API_ENDPOINTS } from '../config/apiConfig';
+import { API_ENDPOINTS, toDisplayUrl } from '../config/apiConfig';
 import { matchesSearch } from '../utils/searchText';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import { useUnsavedChangesGuard } from '../hooks/useUnsavedChangesGuard';
@@ -33,7 +33,9 @@ const createImage = (url: string): Promise<HTMLImageElement> =>
     const image = new Image();
     image.addEventListener('load', () => resolve(image));
     image.addEventListener('error', (error) => reject(error));
-    image.setAttribute('crossOrigin', 'anonymous'); 
+    if (!url.startsWith('blob:') && !url.startsWith('data:')) {
+      image.setAttribute('crossOrigin', 'anonymous');
+    }
     image.src = url;
   });
 
@@ -384,21 +386,17 @@ const AddProductPage: React.FC = () => {
       const uploadData = new FormData();
       uploadData.append('file', croppedFile);
 
-      const response = await fetch(API_ENDPOINTS.FILES.UPLOAD, { 
-        method: 'POST',
-        body: uploadData,
-      });
+      const response = await axios.post(API_ENDPOINTS.FILES.UPLOAD, uploadData);
 
-      if (!response.ok) throw new Error("Upload thất bại");
-
-      const data = await response.json(); 
+      const data = response.data;
       setImageUrl(data.url);  
       setShowImageModal(false);
       setPreviewUrl(null);
       toast.success("Cập nhật ảnh thành công");
     } catch (error: any) {
-      console.error(error);
-      toast.error("Lỗi: Server từ chối truy cập ảnh. Hãy kiểm tra cấu hình CORS.");
+      console.error("Lỗi upload ảnh:", error);
+      const errMsg = error?.response?.data?.message || error?.message || "Lỗi xử lý hoặc tải ảnh lên máy chủ";
+      toast.error(`Lỗi tải ảnh: ${errMsg}`);
     } finally {
       setIsUploading(false);
     }
@@ -423,7 +421,7 @@ const AddProductPage: React.FC = () => {
       toast.error(criteriaErr, { position: 'top-center' });
       return;
     }
-    setConfirmAction('DRAFT');
+    handleCreateProduct('DRAFT');
   };
 
   const onSubmitClick = () => {
@@ -578,7 +576,9 @@ const AddProductPage: React.FC = () => {
                 </label>
                 <div className="custom-select-container" ref={groupRef} style={{ position: 'relative' }}>
                   <div className={`select-custom ${isGroupOpen ? 'open' : ''}`} onClick={() => setIsGroupOpen(!isGroupOpen)} style={{ backgroundColor: 'white' }}>
-                    <span>{loadingGroups ? "Đang tải..." : (groupOptions.find(o => o.value === formData.productGroupId)?.label || "Chọn nhóm")}</span>
+                    <span className="truncate-text" title={loadingGroups ? "Đang tải..." : (groupOptions.find(o => o.value === formData.productGroupId)?.label || "Chọn nhóm")}>
+                      {loadingGroups ? "Đang tải..." : (groupOptions.find(o => o.value === formData.productGroupId)?.label || "Chọn nhóm")}
+                    </span>
                   </div>
                   {isGroupOpen && (
                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
@@ -618,7 +618,9 @@ const AddProductPage: React.FC = () => {
                       onClick={() => formData.productGroupId && setIsCategoryOpen(!isCategoryOpen)} 
                       style={{ backgroundColor: formData.productGroupId ? 'white' : '#F9FAFB', color: formData.productGroupId ? undefined : '#374151', cursor: formData.productGroupId ? 'pointer' : 'not-allowed' }}
                     >
-                      <span>{loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm cấp 1")}</span>
+                      <span className="truncate-text" title={loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm cấp 1")}>
+                        {loadingCategories ? "Đang tải..." : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || "Chọn danh mục sản phẩm cấp 1")}
+                      </span>
                     </div>
                     {isCategoryOpen && formData.productGroupId && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
@@ -659,7 +661,9 @@ const AddProductPage: React.FC = () => {
                       onClick={() => formData.productCategoryId && setIsOperationOpen(!isOperationOpen)} 
                       style={{ backgroundColor: formData.productCategoryId ? 'white' : '#F9FAFB', color: formData.productCategoryId ? undefined : '#374151', cursor: formData.productCategoryId ? 'pointer' : 'not-allowed' }}
                     >
-                      <span>{loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn danh mục sản phẩm cấp 2")}</span>
+                      <span className="truncate-text" title={loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn danh mục sản phẩm cấp 2")}>
+                        {loadingOperations ? "Đang tải..." : (operationOptions.find(o => o.value === formData.businessId)?.label || "Chọn danh mục sản phẩm cấp 2")}
+                      </span>
                     </div>
                     {isOperationOpen && formData.productCategoryId && (
                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', zIndex: 50, display: 'flex', flexDirection: 'column' }}>
@@ -785,7 +789,7 @@ const AddProductPage: React.FC = () => {
                       <CriteriaQuillEditor
                         value={criterion.value}
                         placeholder={criterion.isRequired ? "Tiêu chí này bắt buộc phải nhập..." : "Nhập nội dung chi tiết..."}
-                        hasError={(criterion.isRequired && isHtmlEmpty(criterion.value)) || Boolean(getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code)))}
+                        hasError={Boolean(getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code)))}
                         onChange={(newHtmlContent) => handleCriterionValueChange(criterion.id, newHtmlContent)}
                         showCharCount
                         charCountMax={getCriteriaMaxLength(criterion.name, criterion.code)}
@@ -853,8 +857,8 @@ const AddProductPage: React.FC = () => {
                       type="button" 
                       className="overlay-btn" 
                       onClick={() => {
-                        const cleanPath = imageUrl.replace(/^(https?:\/\/[^\/]+)/, '');
-                        setPreviewUrl(cleanPath); 
+                        const displayUrl = toDisplayUrl(imageUrl);
+                        setPreviewUrl(displayUrl); 
                         setShowImageModal(true);
                       }}
                     >

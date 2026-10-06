@@ -1,4 +1,4 @@
-import { createBrowserRouter, createRoutesFromElements, RouterProvider, Route, Navigate } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter, createRoutesFromElements, RouterProvider, Route, Navigate } from 'react-router-dom';
 import { installVisibleToasts } from './utils/appToast';
 
 installVisibleToasts();
@@ -52,7 +52,14 @@ import CategoryView from './pages/view/CategoryView';
 import BusinessView from './pages/view/BusinessView';
 import SavedProductsView from './pages/view/SavedProductsView';
 
+const isOffline =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' || Boolean((window as any).__OFFLINE_DATA__));
+
 const IndexRedirect = () => {
+  if (isOffline) {
+    return <Navigate to="/view" replace />;
+  }
   const currentMode = localStorage.getItem('userRole') || 'ETN08';
   if (currentMode === 'VIEWER') {
     return <Navigate to="/view" replace />;
@@ -61,7 +68,7 @@ const IndexRedirect = () => {
   }
 };
 
-const router = createBrowserRouter(
+const router = (isOffline ? createHashRouter : createBrowserRouter)(
   createRoutesFromElements(
     <>
       <Route path="/" element={<MainLayout />}>
@@ -120,7 +127,7 @@ const router = createBrowserRouter(
         <Route path="saved-products" element={<SavedProductsView />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/reports/access-data" replace />} />
+      <Route path="*" element={<Navigate to={isOffline ? "/view" : "/reports/access-data"} replace />} />
     </>
   )
 );

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
+import { notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 import StatusBadge2 from './ui/StatusBadge2'; 
 import { CellWithTooltip } from './ui/CellWithTooltip';
 import './ProductTable.css';
@@ -63,13 +64,16 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
 
     try {
+      const token = localStorage.getItem('token') || '';
       const response = await fetch(
         `${BASE_URL}/products/${item.id}/active?active=${newActiveStatus}`,
         {
           method: 'GET', 
           headers: {
             'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
+          credentials: 'include'
         }
       );
 
@@ -79,6 +83,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
       if (onToggleActive) {
         onToggleActive(item.id, newActiveStatus);
       }
+      notifyViewAffectingDataChanged();
     } catch (error) {
       setTableData(prev =>
         prev.map(d => d.id === item.id ? { ...d, active: !newActiveStatus } : d)
@@ -142,7 +147,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
                       <input 
                         type="checkbox" 
                         checked={item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false)}
-                        disabled={['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'].includes(item.status)}
+                        disabled={['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'].includes(item.status)}
                         onChange={(e) => handleToggleActive(e, item)}
                       />
                       <span className="toggle-slider"></span>

@@ -402,9 +402,14 @@ const ProductCriteriaPage: React.FC = () => {
     setIsCascadeProcessing(true);
     try {
       const url = `${BASE_URL}/criteria/${item.id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
+      const token = localStorage.getItem('token') || '';
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
@@ -446,7 +451,7 @@ const ProductCriteriaPage: React.FC = () => {
         </div>
       );
     }
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isCascadeLocked = isCriteriaFullyLocked(item);
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' || isCascadeLocked

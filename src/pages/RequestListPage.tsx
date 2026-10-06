@@ -510,17 +510,19 @@ const RequestListPage: React.FC = () => {
     }
   };
 
-  const STATUS_DETAIL_CONFIG: Record<string, { label: string; bg: string; color: string; border: string }> = {
-    ACTIVE: { label: 'Hoàn thành', bg: '#E0F9EC', color: '#14532D', border: '#A7F3D0' },
-    COMPLETED: { label: 'Hoàn thành', bg: '#E0F9EC', color: '#14532D', border: '#A7F3D0' },
-    APPROVED: { label: 'Đã duyệt', bg: '#E0F9EC', color: '#14532D', border: '#A7F3D0' },
-    PENDING_APPROVAL: { label: 'Chờ duyệt', bg: '#FED7AA', color: '#7C2D12', border: '#FDBA74' },
-    NEEDS_REVISION: { label: 'Yêu cầu chỉnh sửa', bg: '#FFF8B6', color: '#433D1F', border: '#FEF08A' },
-    REJECTED: { label: 'Từ chối', bg: '#FEE2E2', color: '#991B1B', border: '#FECACA' },
-    DRAFT: { label: 'Lưu nháp', bg: '#BAE6FD', color: '#082F49', border: '#7DD3FC' },
+  const STATUS_DETAIL_CONFIG: Record<string, { label: string; color: string }> = {
+    PENDING_APPROVAL: { label: 'chờ duyệt', color: '#7C2D12' },
+    PENDING: { label: 'chờ duyệt', color: '#7C2D12' },
+    NEEDS_REVISION: { label: 'yêu cầu chỉnh sửa', color: '#854D0E' },
+    REVISION: { label: 'yêu cầu chỉnh sửa', color: '#854D0E' },
+    REJECTED: { label: 'từ chối', color: '#6B7280' },
+    ACTIVE: { label: 'hoàn thành', color: '#15803D' },
+    COMPLETED: { label: 'hoàn thành', color: '#15803D' },
+    APPROVED: { label: 'đã duyệt', color: '#15803D' },
+    DRAFT: { label: 'lưu nháp', color: '#0369A1' },
   };
 
-  const ORDERED_STATUS_KEYS = ['ACTIVE', 'APPROVED', 'COMPLETED', 'PENDING_APPROVAL', 'NEEDS_REVISION', 'REJECTED', 'DRAFT'];
+  const ORDERED_STATUS_KEYS = ['PENDING_APPROVAL', 'PENDING', 'NEEDS_REVISION', 'REVISION', 'REJECTED', 'ACTIVE', 'APPROVED', 'COMPLETED', 'DRAFT'];
 
   const renderStatusDetail = (row: any) => {
     const counts: Record<string, number> = { ...(row.statusCounts || {}) };
@@ -543,11 +545,12 @@ const RequestListPage: React.FC = () => {
     }
 
     const tooltipText = activeEntries
-      .map(([statusKey, count]) => {
-        const cfg = STATUS_DETAIL_CONFIG[statusKey.toUpperCase()] || { label: statusKey };
-        return `${count} ${cfg.label}`;
+      .map(([statusKey, count], idx) => {
+        const isLast = idx === activeEntries.length - 1;
+        const cfg = STATUS_DETAIL_CONFIG[statusKey.toUpperCase()] || { label: statusKey.toLowerCase() };
+        return `${count} ${cfg.label}${!isLast ? ',' : ''}`;
       })
-      .join(', ');
+      .join('\n');
 
     return (
       <CellWithTooltip
@@ -556,27 +559,27 @@ const RequestListPage: React.FC = () => {
         contentStyle={{
           display: 'block',
           whiteSpace: 'normal',
-          overflow: 'hidden',
-          maxHeight: '40px',
-          WebkitLineClamp: 'unset',
-          WebkitBoxOrient: 'unset',
+          overflow: 'visible',
+          maxHeight: 'none',
         }}
       >
-        <div className="status-detail-row">
-          {activeEntries.map(([statusKey, count]) => {
+        <div className="status-detail-text-list">
+          {activeEntries.map(([statusKey, count], idx) => {
+            const isLast = idx === activeEntries.length - 1;
             const key = statusKey.toUpperCase();
             const cfg = STATUS_DETAIL_CONFIG[key] || {
-              label: statusKey,
-              bg: '#F3F4F6',
+              label: statusKey.toLowerCase(),
               color: '#374151',
-              border: '#E5E7EB',
             };
 
             return (
-              <span key={statusKey} className="status-detail-chip" style={{ backgroundColor: cfg.bg, color: cfg.color, borderColor: cfg.border }}>
-                <span className="status-detail-chip-count">{count}</span>
-                <span>{cfg.label}</span>
-              </span>
+              <div
+                key={statusKey}
+                className="status-detail-text-item"
+                style={{ color: cfg.color }}
+              >
+                {count} {cfg.label}{!isLast ? ',' : ''}
+              </div>
             );
           })}
         </div>
@@ -628,7 +631,7 @@ const RequestListPage: React.FC = () => {
     {
       key: 'statusDetail',
       header: 'Chi tiết trạng thái',
-      width: '300px',
+      width: '220px',
       render: (row) => renderStatusDetail(row),
     },
     {

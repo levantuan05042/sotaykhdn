@@ -29,6 +29,15 @@ const buildHideSummary = (counts: ChildCounts): string => {
   return `${parts.join(', ')} bên trong sẽ được ẩn cùng lúc`;
 };
 
+const formatModalName = (name: string, maxLen = 40): string => {
+  if (!name) return '';
+  const clean = name.replace(/<[^>]*>/g, '').trim();
+  if (clean.length > maxLen) {
+    return `${clean.slice(0, maxLen)}...`;
+  }
+  return clean;
+};
+
 export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
   isOpen,
   onClose,
@@ -38,6 +47,9 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
   counts,
   isProcessing = false,
 }) => {
+  const cleanFullName = (itemName || '').replace(/<[^>]*>/g, '').trim();
+  const displayName = formatModalName(cleanFullName, 40);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen && !isProcessing) {
@@ -81,6 +93,8 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
           textAlign: 'center',
           gap: '12px',
           animation: 'cascadePopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -110,6 +124,7 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
         </div>
 
         <h3
+          title={cleanFullName}
           style={{
             margin: '4px 0 0',
             fontSize: '16px',
@@ -117,9 +132,12 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
             color: '#1A191B',
             lineHeight: 1.4,
             fontFamily: 'Inter, sans-serif',
+            maxWidth: '100%',
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
           }}
         >
-          Ẩn {itemTypeLabel} "{itemName}"
+          Ẩn {itemTypeLabel} "{displayName}"
         </h3>
 
         <p
@@ -130,6 +148,9 @@ export const CascadeHideModal: React.FC<CascadeHideModalProps> = ({
             lineHeight: 1.5,
             fontFamily: 'Inter, sans-serif',
             maxWidth: '340px',
+            width: '100%',
+            wordBreak: 'break-word',
+            overflowWrap: 'anywhere',
           }}
         >
           {buildHideSummary(counts)}

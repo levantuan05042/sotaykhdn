@@ -278,6 +278,8 @@ const SuperGroupNestedSelect: React.FC<SuperGroupNestedSelectProps> = ({
           backgroundColor: readOnly ? '#F9FAFB' : '#FFFFFF',
           boxSizing: 'border-box',
           width: '100%',
+          maxWidth: '100%',
+          overflow: 'hidden',
           transition: 'border-color 0.2s, box-shadow 0.2s',
           ...triggerStyle,
         }}
@@ -519,6 +521,8 @@ const SuperGroupNestedSelect: React.FC<SuperGroupNestedSelectProps> = ({
                                     whiteSpace: 'nowrap',
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
+                                    flex: 1,
+                                    minWidth: 0,
                                   }}
                                 >
                                   {child.label}

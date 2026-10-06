@@ -89,7 +89,7 @@ const BusinessSection = ({
 
   return (
     <div className="sub-section-block">
-      <h4 className="sub-section-title">{business.name}</h4>
+      <h4 className="sub-section-title" title={business.name}>{business.name}</h4>
       <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
         {products.map((prod) => (
           <ProductCard key={prod.id} product={prod} layout={viewMode} onClick={() => onNavigate(prod.id)} />
@@ -143,7 +143,7 @@ const CategorySection = ({
 
   return (
     <div className="section-block">
-      <h3 className="section-title">{catData.categoryName}</h3>
+      <h3 className="section-title" title={catData.categoryName}>{catData.categoryName}</h3>
 
       {hasDirectProducts && (
         <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
@@ -227,13 +227,13 @@ const GroupView: React.FC = () => {
           Trang chủ
         </span>
         <span className="breadcrumb-separator">❯</span>
-        <span className="breadcrumb-link">{superGroupLabel}</span>
+        <span className="breadcrumb-link" title={superGroupLabel}>{superGroupLabel}</span>
         <span className="breadcrumb-separator">❯</span>
-        <span className="breadcrumb-current">{currentGroupName}</span>
+        <span className="breadcrumb-current" title={currentGroupName}>{currentGroupName}</span>
       </div>
 
       <div className="products-section-heading" style={{ marginBottom: 24 }}>
-        <h2 className="group-page-title" style={{ margin: 0 }}>{currentGroupName}</h2>
+        <h2 className="group-page-title" style={{ margin: 0 }} title={currentGroupName}>{currentGroupName}</h2>
         {!isEmpty && (
           <ProductsViewToggle value={viewMode} onChange={setViewMode} />
         )}

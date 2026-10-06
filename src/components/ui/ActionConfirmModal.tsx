@@ -171,11 +171,11 @@ export const ActionConfirmModal: React.FC<ActionConfirmModalProps> = ({
       >
         <div className="confirm-toast-body" style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
           {getIcon()}
-          <div className="confirm-toast-content" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <p className="confirm-toast-title" style={{ margin: 0, color: '#1A191B', fontSize: '16px', fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>
+          <div className="confirm-toast-content" style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0, flex: 1 }}>
+            <p className="confirm-toast-title" style={{ margin: 0, color: '#1A191B', fontSize: '16px', fontWeight: 600, fontFamily: 'Inter, sans-serif', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {title}
             </p>
-            <p className="confirm-toast-desc" style={{ margin: 0, color: '#6B7280', fontSize: '14px', lineHeight: 1.5, fontFamily: 'Inter, sans-serif', whiteSpace: 'pre-line' }}>
+            <p className="confirm-toast-desc" style={{ margin: 0, color: '#6B7280', fontSize: '14px', lineHeight: 1.5, fontFamily: 'Inter, sans-serif', whiteSpace: 'pre-line', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {desc}
             </p>
           </div>

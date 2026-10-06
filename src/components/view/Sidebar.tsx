@@ -5,26 +5,7 @@ import { API_ENDPOINTS } from '../../config/view/apiConfig';
 import styles from './Sidebar.module.css';
 import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 
-// --- IMPORT SVG ICONS ---
-import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
-import iconChoVay from '../../assets/icons/sp-cho-vay.svg';
-import iconBaoLanh from '../../assets/icons/sp-bao-lanh.svg';
-import iconThanhToanTrongNuoc from '../../assets/icons/sp-thanh-toan-trong-nuoc.svg';
-import iconKinhDoanhNgoaiTe from '../../assets/icons/sp-kinh-doanh-ngoai-te.svg';
-import iconThanhToanQuocTe from '../../assets/icons/sp-thanh-toan-quoc-te.svg';
-import iconThe from '../../assets/icons/sp-the.svg';
-import iconNganHangDienTu from '../../assets/icons/sp-ngan-hang-dien-tu.svg';
-import iconNganQuy from '../../assets/icons/sp-ngan-quy.svg';
-import iconBaoHiem from '../../assets/icons/sp-bao-hiem.svg';
-import iconChuongTrinhUuDai from '../../assets/icons/uu-dai-khdn.svg';
-
-const removeAccents = (str: string) => {
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-};
+import { getCategoryConfig } from '../../utils/categoryIconUtils';
 
 const renderIconImg = (iconSrc: string) => (
   <img src={iconSrc} className={styles['dynamic-icon-img']} alt="" />
@@ -32,21 +13,10 @@ const renderIconImg = (iconSrc: string) => (
 
 const getDynamicIcon = (itemName: string) => {
   if (!itemName) return <Icons.DefaultProduct />;
-
-  const cleanName = removeAccents(itemName.toLowerCase().trim());
-
-  if (cleanName.includes('huy dong von')) return renderIconImg(iconHuyDongVon);
-  if (cleanName.includes('cho vay')) return renderIconImg(iconChoVay);
-  if (cleanName.includes('bao lanh')) return renderIconImg(iconBaoLanh);
-  if (cleanName.includes('thanh toan trong nuoc')) return renderIconImg(iconThanhToanTrongNuoc);
-  if (cleanName.includes('ngoai te')) return renderIconImg(iconKinhDoanhNgoaiTe);
-  if (cleanName.includes('quoc te')) return renderIconImg(iconThanhToanQuocTe);
-  if (cleanName.includes('the')) return renderIconImg(iconThe);
-  if (cleanName.includes('dien tu')) return renderIconImg(iconNganHangDienTu);
-  if (cleanName.includes('ngan quy')) return renderIconImg(iconNganQuy);
-  if (cleanName.includes('bao hiem')) return renderIconImg(iconBaoHiem);
-  if (cleanName.includes('uu dai')) return renderIconImg(iconChuongTrinhUuDai);
-
+  const config = getCategoryConfig(itemName);
+  if (config.icon) {
+    return renderIconImg(config.icon);
+  }
   return <Icons.DefaultProduct />;
 };
 
@@ -221,6 +191,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
 
   useViewAutoRefresh(() => fetchGroups(true));
 
+  const staticItems = STATIC_ITEMS;
+
   return (
     <>
       {/* Overlay mờ dùng cho màn hình Tablet & Mobile */}
@@ -245,7 +217,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
         </button>
 
         <nav className={styles['sidebar-nav']}>
-          {STATIC_ITEMS.map((item) => (
+          {staticItems.map((item) => (
             <SidebarItem
               key={item.id}
               to={item.path}

@@ -4,7 +4,7 @@ const host = getHost();
 
 export const BASE_URL = `http://${host}:8082/api/v1`;
 export const FILE_BASE_URL = `http://${host}:8082`;
-export const LOCAL_IMAGE_STORAGE_PATH = 'E:/AGRIBANK/uploads'; // Đường dẫn thư mục lưu ảnh ở local ngoài dự án
+export const LOCAL_IMAGE_STORAGE_PATH = 'D:/Desktop/agri-microservices/uploads'; // Đường dẫn thư mục lưu ảnh ở local ngoài dự án
 export const AUTH_SERVICE_LOGIN_URL = `http://${host}:8080/login`;
 export const AUTH_SERVICE_LOGOUT_URL = `http://${host}:8080/logout`;
 export const AUTH_SERVICE_BASE_URL = `http://${host}:8080/api/v1`;

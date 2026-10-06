@@ -91,7 +91,7 @@ const AddCategoryPage: React.FC = () => {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
-    setConfirmAction('DRAFT');
+    handleCreateCategory('DRAFT');
   };
 
   const onSubmitClick = () => {
@@ -224,7 +224,7 @@ const AddCategoryPage: React.FC = () => {
                 {/* Thêm position relative nếu file CSS chưa cấu hình để dropdown con neo theo nó */}
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
-                    <span>
+                    <span className="truncate-text" title={loadingGroups ? "Đang tải nhóm sản phẩm..." : (groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm")}>
                       {loadingGroups 
                         ? "Đang tải nhóm sản phẩm..." 
                         : (groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm")}

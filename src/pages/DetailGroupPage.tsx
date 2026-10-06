@@ -27,7 +27,7 @@ import {
   showErrorToast,
   showSuccessToast,
 } from '../utils/appToast';
-import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { useAdminAutoRefresh, notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const GROUP_OPTIONS = [
   { label: 'Sản phẩm dịch vụ', value: 'SERVICE' },
@@ -121,7 +121,8 @@ const DetailGroupPage: React.FC = () => {
   const canEdit = isLoggedIn && (isOwner || isStatusActive);
 
   const isInputDisabled = !canEdit || productData?.status === 'PENDING_APPROVAL' || productData?.status === 'ARCHIVED';
-  const isStatusDisabled = !canEdit || !isStatusActive;
+  const isDisplayStatusAllowed = productData?.status === 'ACTIVE' || productData?.status === 'DRAFT';
+  const isStatusDisabled = !canEdit || !isDisplayStatusAllowed;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -216,7 +217,7 @@ const DetailGroupPage: React.FC = () => {
       setShowDuplicateModal(true);
       return;
     }
-    setConfirmAction(status);
+    handleUpdateGroup(status);
   };
 
   const onSubmitClick = () => {
@@ -393,7 +394,8 @@ const DetailGroupPage: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
+        },
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -402,7 +404,7 @@ const DetailGroupPage: React.FC = () => {
         setIsActive(newActive);
         setShowCascadeModal(false);
         showSuccessToast(displaySuccessMessage(newActive, 'Nhóm sản phẩm', productData?.name));
-        notifyAdminDataChanged();
+        notifyViewAffectingDataChanged();
       } else {
         showDisplayStatusFromApi(data);
       }
@@ -572,7 +574,9 @@ const DetailGroupPage: React.FC = () => {
                     onClick={() => !isInputDisabled && setIsOpen(!isOpen)}
                     style={{ cursor: isInputDisabled ? 'not-allowed' : 'pointer' }}
                   >
-                    <span>{GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm lớn"}</span>
+                    <span className="truncate-text" title={GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm lớn"}>
+                      {GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm lớn"}
+                    </span>
                     {!isInputDisabled && (
                       <svg 
                         width="10" height="6" viewBox="0 0 10 6" fill="none" 
@@ -692,7 +696,7 @@ const DetailGroupPage: React.FC = () => {
                       <div className="commentItem">
                         <div className="userInfo">
                           <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div className="userHeader">
                               <span className="userName">
                                 {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}

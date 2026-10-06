@@ -29,7 +29,7 @@ import {
   showSuccessToast,
 } from '../utils/appToast';
 import { matchesSearch } from '../utils/searchText';
-import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { useAdminAutoRefresh, notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -118,7 +118,8 @@ const DetailBusinessPage: React.FC = () => {
   
   const isPending = businessData?.status === 'PENDING_APPROVAL';
   const isFormDisabled = isReadOnly || isPending;
-  const isDisplayStatusReadOnly = isOwnerLocked || !isStatusActive;
+  const isDisplayStatusAllowed = businessData?.status === 'ACTIVE' || businessData?.status === 'DRAFT';
+  const isDisplayStatusReadOnly = isOwnerLocked || !isDisplayStatusAllowed;
 
   const [categoryOptions, setCategoryOptions] = useState<{ label: string; value: string }[]>([]);
   const [formData, setFormData] = useState({
@@ -285,7 +286,8 @@ const DetailBusinessPage: React.FC = () => {
       const url = `/api/v1/business/${id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        credentials: 'include'
       });
       const errorData = await response.json().catch(() => ({}));
 
@@ -294,7 +296,7 @@ const DetailBusinessPage: React.FC = () => {
         setBusinessData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
         showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm cấp 2', businessData?.name));
-        notifyAdminDataChanged();
+        notifyViewAffectingDataChanged();
       } else {
         showDisplayStatusFromApi(errorData);
       }
@@ -329,7 +331,7 @@ const DetailBusinessPage: React.FC = () => {
       setShowDuplicateModal(true);
       return;
     }
-    setConfirmAction(status);
+    handleUpdateBusiness(status);
   };
 
   const onSubmitClick = () => {
@@ -570,7 +572,9 @@ const DetailBusinessPage: React.FC = () => {
                     }}
                     style={{ cursor: isFormDisabled ? 'not-allowed' : 'pointer' }}
                   >
-                    <span>{categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm cấp 1"}</span>
+                    <span className="truncate-text" title={categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm cấp 1"}>
+                      {categoryOptions.find(o => o.value === formData.categoryId)?.label || "Chọn danh mục sản phẩm cấp 1"}
+                    </span>
                     {!isFormDisabled && (
                       <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
                         <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -698,7 +702,7 @@ const DetailBusinessPage: React.FC = () => {
                         <div className="commentItem">
                           <div className="userInfo">
                             <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
                               <div className="userHeader">
                                 <span className="userName">
                                   {getFullName(c.createdBy, userMap) || c.createdBy || 'Người kiểm duyệt'}

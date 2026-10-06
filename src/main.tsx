@@ -5,6 +5,12 @@ import './index.css'
 import axios from 'axios';
 import { AUTH_SERVICE_LOGIN_URL } from './config/apiConfig';
 
+const isOfflineEnv =
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' ||
+    Boolean((window as any).__OFFLINE_DATA__) ||
+    Boolean((window as any).__IS_OFFLINE__));
+
 // Configure Axios globally to send HttpOnly cookies in cross-origin requests
 axios.defaults.withCredentials = true;
 
@@ -29,7 +35,11 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   
   try {
     const response = await originalFetch(request, newInit);
-    if (response.status === 401 || response.status === 403) {
+    const requestUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : input?.toString?.() || '');
+    if (!isOfflineEnv && (response.status === 401 || response.status === 403)) {
+      if (requestUrl.includes('/auth/verify-password')) {
+        return response;
+      }
       const redirectUri = window.location.href;
       window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
       return new Promise<Response>(() => {});
@@ -44,7 +54,10 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+    if (!isOfflineEnv && error.response && (error.response.status === 401 || error.response.status === 403)) {
+      if (error.config?.url?.includes('/auth/verify-password')) {
+        return Promise.reject(error);
+      }
       const redirectUri = window.location.href;
       window.location.href = `${AUTH_SERVICE_LOGIN_URL}?redirect_uri=${encodeURIComponent(redirectUri)}`;
       return new Promise(() => {}); // Return a pending promise to cancel further processing
@@ -53,8 +66,22 @@ axios.interceptors.response.use(
   }
 );
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-)
+// Khởi chạy ứng dụng an toàn (chờ DOMContentLoaded nếu script nạp sớm trong <head>)
+const mountApp = () => {
+  const rootEl = document.getElementById('root');
+  if (!rootEl) {
+    console.error('Không tìm thấy phần tử root để gắn ứng dụng React');
+    return;
+  }
+  ReactDOM.createRoot(rootEl).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', mountApp);
+} else {
+  mountApp();
+}

@@ -132,21 +132,40 @@ const BusinessView: React.FC = () => {
            Trang chủ
          </span>
          <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-link">{superGroupLabel}</span>
+         <span className="breadcrumb-link" title={superGroupLabel}>{superGroupLabel}</span>
          <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-link" onClick={() => groupId && navigate(`/view/groups/${groupId}`)}>
+         <span
+           className="breadcrumb-link"
+           title={groupName || 'Nhóm sản phẩm'}
+           onClick={() => groupId && navigate(`/view/groups/${groupId}`)}
+         >
            {groupName || 'Nhóm sản phẩm'}
          </span>
          <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-link" onClick={() => categoryId && navigate(`/view/category/${categoryId}`)}>
+         <span
+           className="breadcrumb-link"
+           title={categoryName || 'Danh mục sản phẩm cấp 1'}
+           onClick={() => categoryId && navigate(`/view/category/${categoryId}`)}
+         >
            {categoryName || 'Danh mục sản phẩm cấp 1'}
          </span>
          <span className="breadcrumb-separator">❯</span>
-         <span className="breadcrumb-current">{businessName || 'Chi tiết danh mục sản phẩm cấp 2'}</span>
+         <span
+           className="breadcrumb-current"
+           title={businessName || 'Chi tiết danh mục sản phẩm cấp 2'}
+         >
+           {businessName || 'Chi tiết danh mục sản phẩm cấp 2'}
+         </span>
       </div>
 
       <div className="products-section-heading" style={{ marginBottom: 24 }}>
-        <h2 className="group-page-title" style={{ margin: 0 }}>{businessName || 'Chi tiết danh mục sản phẩm cấp 2'}</h2>
+        <h2
+          className="group-page-title"
+          style={{ margin: 0 }}
+          title={businessName || 'Chi tiết danh mục sản phẩm cấp 2'}
+        >
+          {businessName || 'Chi tiết danh mục sản phẩm cấp 2'}
+        </h2>
         {products.length > 0 && (
           <ProductsViewToggle value={viewMode} onChange={setViewMode} />
         )}

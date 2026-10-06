@@ -11,7 +11,7 @@ import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
 import AuditLogTimeline from '../components/AuditLogTimeline';
 import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
-import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 import iconChat from '../assets/icon/iconchat.svg';
 import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverProductDetailPage.css';
@@ -157,7 +157,11 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         'REVIEWED': 'Đã xem'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[notesVal] || notesVal}) thành công!`);
-      notifyAdminDataChanged();
+      if (notesVal === '2') {
+        notifyViewAffectingDataChanged();
+      } else {
+        notifyAdminDataChanged();
+      }
 
       if (onClose) {
         onClose({ notes: notesVal, feedback: newComment.trim() });

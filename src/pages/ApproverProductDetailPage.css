@@ -698,6 +698,9 @@
   font-size: 12px;
   line-height: 18px;
   color: #6C6E79;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   margin: 0;
   flex-basis: 100%;
   padding-left: 43px;

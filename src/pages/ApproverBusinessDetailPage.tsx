@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
-import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 interface CommentItem {
   id: string;
@@ -90,7 +90,11 @@ export const ApproverBusinessDetailPage: React.FC = () => {
         comment: commentVal,
         approvedBy: approvedByStr,
       });
-      notifyAdminDataChanged();
+      if (statusVal === 'ACTIVE') {
+        notifyViewAffectingDataChanged();
+      } else {
+        notifyAdminDataChanged();
+      }
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm 2:', error);

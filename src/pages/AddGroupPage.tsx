@@ -50,7 +50,7 @@ const AddProductPage: React.FC = () => {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
-    setConfirmAction('DRAFT');
+    handleCreateProduct('DRAFT');
   };
 
   const onSubmitClick = () => {
@@ -166,7 +166,9 @@ const AddProductPage: React.FC = () => {
                 <label className="label"> Thuộc nhóm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" ref={groupRef}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
-                    <span>{GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm cấp trên"}</span>
+                    <span className="truncate-text" title={GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm cấp trên"}>
+                      {GROUP_OPTIONS.find(o => o.value === formData.superGroup)?.label || "Chọn nhóm cấp trên"}
+                    </span>
                     <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`arrow-icon ${isOpen ? 'up' : ''}`}>
                       <path d="M1 1L5 5L9 1" stroke="#6B7280" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>

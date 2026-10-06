@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import Cropper from 'react-easy-crop';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
+import { notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 import StatusBadge2 from '../components/ui/StatusBadge2';
 import StatusBadgeListRequest from '../components/ui/StatusBadgeListRequest';
@@ -479,7 +480,7 @@ const DetailProductPage: React.FC = () => {
   const isNeedsRevision = productStatus === 'NEEDS_REVISION' || productStatus === 'REVISION';
   const isCascadeLocked = isCascadeHidden(productData);
   const isReadOnly = !isLoggedIn || !isOwner || isRejected || isCascadeLocked || isApproved || isPendingApproval;
-  const isDisplayStatusDisabled = isReadOnly || productStatus !== 'ACTIVE';
+  const isDisplayStatusDisabled = isReadOnly || (!isApproved && !isDraft);
   const canShowNewCriteriaNotice = (isApproved || isDraft || isNeedsRevision) && !isPendingApproval;
 
   const getCreatorDisplayName = () => {
@@ -728,15 +729,21 @@ const DetailProductPage: React.FC = () => {
     if (!id || newActiveStatus === isActive) return;
 
     try {
+      const token = localStorage.getItem('token') || '';
       const res = await fetch(`${BASE_URL}/products/${id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: { 'Accept': 'application/json, text/plain, */*' },
+        headers: {
+          'Accept': 'application/json, text/plain, */*',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
 
       if (res.ok) {
         setIsActive(newActiveStatus);
         setProductData((prev: any) => prev ? { ...prev, active: newActiveStatus } : prev);
         renderCustomToast(newActiveStatus ? 'Cập nhật hiển thị sản phẩm thành công' : 'Ẩn sản phẩm thành công');
+        notifyViewAffectingDataChanged();
       } else {
         const err = await res.json().catch(() => ({}));
         toast.error(err.message || 'Cập nhật trạng thái hiển thị thất bại', { position: 'top-center' });
@@ -991,7 +998,9 @@ const DetailProductPage: React.FC = () => {
                     onClick={() => { if (!isReadOnly) setIsGroupOpen(v => !v); }} 
                     style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                   >
-                    <span>{groupOptions.find(o => o.value === formData.productGroupId)?.label || productData?.productGroupName || 'Chọn nhóm'}</span>
+                    <span className="truncate-text" title={groupOptions.find(o => o.value === formData.productGroupId)?.label || productData?.productGroupName || 'Chọn nhóm'}>
+                      {groupOptions.find(o => o.value === formData.productGroupId)?.label || productData?.productGroupName || 'Chọn nhóm'}
+                    </span>
                   </div>
                   {isGroupOpen && !isReadOnly && (
                     <div className="custom-options-list">
@@ -1021,7 +1030,9 @@ const DetailProductPage: React.FC = () => {
                       onClick={() => { if (!isReadOnly) setIsCategoryOpen(v => !v); }} 
                       style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
-                      <span>{loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục sản phẩm cấp 1')}</span>
+                      <span className="truncate-text" title={loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục sản phẩm cấp 1')}>
+                        {loadingCategories ? 'Đang tải...' : (categoryOptions.find(o => o.value === formData.productCategoryId)?.label || productData?.productCategoryName || 'Chọn danh mục sản phẩm cấp 1')}
+                      </span>
                     </div>
                     {isCategoryOpen && !isReadOnly && (
                       <div className="custom-options-list">
@@ -1042,7 +1053,9 @@ const DetailProductPage: React.FC = () => {
                       onClick={() => { if (!isReadOnly) setIsOperationOpen(v => !v); }} 
                       style={isReadOnly ? DISABLED_CONTROL_STYLE : { backgroundColor: 'white' }}
                     >
-                      <span>{loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn danh mục sản phẩm cấp 2')}</span>
+                      <span className="truncate-text" title={loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn danh mục sản phẩm cấp 2')}>
+                        {loadingOperations ? 'Đang tải...' : (operationOptions.find(o => o.value === formData.businessId)?.label || productData?.businessName || 'Chọn danh mục sản phẩm cấp 2')}
+                      </span>
                     </div>
                     {isOperationOpen && !isReadOnly && (
                       <div className="custom-options-list">
@@ -1061,7 +1074,7 @@ const DetailProductPage: React.FC = () => {
                 <>
                   {selectedCriteria.map((criterion) => {
                     const lengthErr = getCriteriaValueError(criterion.value, criterion.name, isProductNameCriteria(criterion.name, criterion.code));
-                    const hasErr = (!isReadOnly && criterion.isRequired && isHtmlEmpty(criterion.value)) || Boolean(lengthErr);
+                    const hasErr = Boolean(lengthErr);
                     const isDraggingThis = draggedCriterionId === criterion.id;
                     const isDragOverThis = dragOverCriterionId === criterion.id && draggedCriterionId !== criterion.id;
                     const isNewInThisVersion = criterion.isRequired && !originalCriteria.some(o => o.id === criterion.id);
@@ -1482,7 +1495,7 @@ const DetailProductPage: React.FC = () => {
                         <div className="commentItem">
                           <div className="userInfo">
                             <img src={c.avatarUrl || getRandomAvatar(c.createdBy || i)} className="avatar" alt="avatar"/>
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
                               <div className="userHeader">
                                 <span className="userName" style={isLatest ? { fontWeight: 700, color: '#111827' } : undefined}>{c.createdBy || 'Người kiểm duyệt'}</span>
                                 <span className="commentDate" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>

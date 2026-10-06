@@ -214,3 +214,17 @@ export const isSameActor = (current?: string | null, createdBy?: string | null):
   return Boolean(a && b && a === b);
 };
 
+export const formatFullDateTimeVi = (dateInput?: string | number | Date | null): string => {
+  if (!dateInput) return '';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return '';
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const seconds = String(d.getSeconds()).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${hours} giờ ${minutes} phút ${seconds} giây, ngày ${day} tháng ${month} năm ${year}`;
+};
+
+

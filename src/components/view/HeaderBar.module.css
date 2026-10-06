@@ -303,7 +303,6 @@
   color: #1A191B;
   font-family: 'Inter', sans-serif;
   font-size: 18px;
-  font-weight: 700;
   line-height: 28px;
   align-self: stretch;
 }
@@ -471,4 +470,68 @@
   .avatar-wrapper {
     gap: 0;
   }
+}
+
+.badge-offline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFF1F3;
+  color: #AE1C3F;
+  border: 1px solid #AE1C3F;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(174, 28, 63, 0.1);
+}
+
+.badge-offline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #16A34A;
+  display: inline-block;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.2);
+}
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #AE1C3F;
+  color: #FFFFFF;
+  border: 1px solid #AE1C3F;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  outline: none;
+}
+
+.btn-export:hover {
+  background: #901633;
+  border-color: #901633;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(174, 28, 63, 0.25);
+}
+
+.btn-export:active {
+  transform: translateY(0);
+}
+
+.btn-export:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-export-icon {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
 }

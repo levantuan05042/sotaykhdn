@@ -317,7 +317,8 @@ const ProductBusinessPage: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
+        },
+        credentials: 'include'
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
@@ -341,7 +342,7 @@ const ProductBusinessPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: ProductBusinessItem) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 

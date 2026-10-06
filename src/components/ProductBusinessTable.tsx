@@ -9,6 +9,7 @@ import { API_ENDPOINTS, BASE_URL } from '../config/apiConfig';
 import { getUserMap, getFullName } from '../utils/userUtils';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+import { notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const STATUS_OPTIONS = [
   { label: 'Đang hoạt động', value: 'ACTIVE' },
@@ -199,11 +200,17 @@ const ProductBusinessPage: React.FC = () => {
     );
 
     try {
+      const token = localStorage.getItem('token') || '';
       const response = await fetch(`${BASE_URL}/business/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
       if (!response.ok) throw new Error('Không thể thay đổi trạng thái');
+      notifyViewAffectingDataChanged();
     } catch (error) {
       console.error("Lỗi cập nhật hiệu lực danh mục sản phẩm 2:", error);
       setData(prevData => 
@@ -218,7 +225,7 @@ const ProductBusinessPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: ProductBusinessItem) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 

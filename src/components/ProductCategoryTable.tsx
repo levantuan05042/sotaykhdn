@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { BASE_URL } from '../config/apiConfig';
+import { notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 import StatusBadge2 from './ui/StatusBadge2';
 import CellWithTooltip from './ui/CellWithTooltip';
 import './ProductCategoryTable.css';
@@ -65,9 +66,14 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
     );
 
     try {
+      const token = localStorage.getItem('token') || '';
       const response = await fetch(`${BASE_URL}/product-category/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) {
@@ -77,6 +83,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
       if (onToggleActive) {
         onToggleActive(item.id, newActiveStatus);
       }
+      notifyViewAffectingDataChanged();
 
     } catch (error) {
       setTableData(prevData =>
@@ -94,7 +101,7 @@ const ProductCategoryTable: React.FC<Props> = ({ data, onToggleActive }) => {
   };
 
   const renderActiveToggle = (item: ProductCategory) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 

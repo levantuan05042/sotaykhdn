@@ -148,7 +148,7 @@ const AddCriteriaPage: React.FC = () => {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
-    setConfirmAction('DRAFT');
+    submitCriteriaData('DRAFT');
   };
 
   const onSubmitClick = () => {

@@ -551,6 +551,8 @@
   color: #6C6E79;
   line-height: 18px;
   white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   text-align: left;
   margin: 0;
   flex-basis: 100%;

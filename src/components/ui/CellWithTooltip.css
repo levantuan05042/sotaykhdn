@@ -43,6 +43,8 @@
   line-height: 1.4 !important;
   white-space: normal !important;
   word-wrap: break-word !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
   width: max-content !important;
   max-width: 360px !important;
   box-shadow: 0px 6px 20px rgba(0, 0, 0, 0.18) !important;

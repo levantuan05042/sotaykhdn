@@ -20,7 +20,7 @@ import {
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
-import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { useAdminAutoRefresh, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const STATUS_OPTIONS = [
   { label: 'Đã duyệt', value: 'ACTIVE' },
@@ -265,7 +265,15 @@ const ProductGroupPage: React.FC = () => {
     setIsCascadeProcessing(true);
     try {
       const url = `${BASE_URL}/product-groups/${item.id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
-      const res = await fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+      const token = localStorage.getItem('token') || '';
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
+      });
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
         showDisplayStatusFromApi(errJson);
@@ -278,7 +286,7 @@ const ProductGroupPage: React.FC = () => {
       setShowCascadeModal(false);
       setCascadeTarget(null);
       showSuccessToast(displaySuccessMessage(newActive, 'Nhóm sản phẩm', item.name));
-      notifyAdminDataChanged();
+      notifyViewAffectingDataChanged();
     } catch (error: any) {
       console.error("Lỗi cập nhật hiệu lực:", error);
       showErrorToast(error.message || 'Không thể cập nhật hiệu lực');
@@ -288,7 +296,7 @@ const ProductGroupPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: ProductGroupItem) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.status === 'ARCHIVED' || item.status === 'INACTIVE' ? false : (item.active || false);
 
