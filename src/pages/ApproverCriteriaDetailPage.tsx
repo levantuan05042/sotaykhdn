@@ -5,12 +5,8 @@ import toast from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
-<<<<<<< HEAD
 import { notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
-=======
-import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import { notifyApproverStatusChanged } from '../config/apiConfig';
->>>>>>> main
 import './ApproverCriteriaDetailPage.css';
 
 interface CommentItem {
@@ -132,16 +128,12 @@ export const ApproverCriteriaDetailPage: React.FC = () => {
       });
 
       toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt tiêu chí thành công!' : 'Đã phản hồi ý kiến đánh giá!');
-<<<<<<< HEAD
       if (statusVal === 'ACTIVE') {
         notifyViewAffectingDataChanged();
       } else {
         notifyAdminDataChanged();
       }
-=======
-      notifyAdminDataChanged();
       notifyApproverStatusChanged();
->>>>>>> main
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt tiêu chí:', error);
