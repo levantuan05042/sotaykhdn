@@ -225,16 +225,12 @@ const ApproverBatchDetailPage: React.FC = () => {
         'REVIEWED': 'Đã xem'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[targetNotes] || targetNotes}) cho sản phẩm thành công!`);
-<<<<<<< HEAD
       if (targetNotes === '2') {
         notifyViewAffectingDataChanged();
       } else {
         notifyAdminDataChanged();
       }
-=======
-      notifyAdminDataChanged();
       notifyApproverStatusChanged();
->>>>>>> main
       return true;
     } catch (error) {
       console.error("Error saving product review:", error);

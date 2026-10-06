@@ -12,12 +12,8 @@ import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
 import AuditLogTimeline from '../components/AuditLogTimeline';
 import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
-<<<<<<< HEAD
 import { notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
-=======
-import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import { notifyApproverStatusChanged } from '../config/apiConfig';
->>>>>>> main
 import iconChat from '../assets/icon/iconchat.svg';
 import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverProductDetailPage.css';
