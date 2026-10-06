@@ -16,11 +16,20 @@ try {
   sharedBroadcastChannel = null;
 }
 
-/** Gọi sau create/update/delete/approve/toggle để các màn đang mở refresh ngay lập tức trên mọi tab. */
+export const LAST_VIEW_UPDATE_KEY = 'last_view_change_ts';
+
+/** Gọi sau khi tạo mới / lưu nháp / gửi duyệt để các màn quản trị refresh danh sách (KHÔNG ảnh hưởng đến mốc 'Cập nhật lúc' ở View). */
 export function notifyAdminDataChanged() {
+  const changeTs = Date.now();
+  try {
+    localStorage.setItem(LOCAL_STORAGE_SYNC_KEY, String(changeTs));
+  } catch {
+    /* ignore */
+  }
+
   try {
     // 1. Same-window event
-    window.dispatchEvent(new CustomEvent(ADMIN_DATA_CHANGED_EVENT));
+    window.dispatchEvent(new CustomEvent(ADMIN_DATA_CHANGED_EVENT, { detail: { ts: changeTs, isViewAffecting: false } }));
   } catch {
     /* ignore */
   }
@@ -28,15 +37,35 @@ export function notifyAdminDataChanged() {
   try {
     // 2. Cross-tab BroadcastChannel
     if (sharedBroadcastChannel) {
-      sharedBroadcastChannel.postMessage({ type: ADMIN_DATA_CHANGED_EVENT, ts: Date.now() });
+      sharedBroadcastChannel.postMessage({ type: ADMIN_DATA_CHANGED_EVENT, ts: changeTs, isViewAffecting: false });
     }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Gọi CHỈ KHI: Phê duyệt (trạng thái 'Đã duyệt' / ACTIVE), hoặc Ẩn/Hiện, hoặc sửa/xóa mục 'Đã duyệt' ảnh hưởng trực tiếp đến View. */
+export function notifyViewAffectingDataChanged() {
+  const changeTs = Date.now();
+  try {
+    localStorage.setItem(LOCAL_STORAGE_SYNC_KEY, String(changeTs));
+    localStorage.setItem(LAST_VIEW_UPDATE_KEY, String(changeTs));
   } catch {
     /* ignore */
   }
 
   try {
-    // 3. Fallback cross-tab storage event
-    localStorage.setItem(LOCAL_STORAGE_SYNC_KEY, String(Date.now()));
+    // 1. Same-window event
+    window.dispatchEvent(new CustomEvent(ADMIN_DATA_CHANGED_EVENT, { detail: { ts: changeTs, isViewAffecting: true } }));
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    // 2. Cross-tab BroadcastChannel
+    if (sharedBroadcastChannel) {
+      sharedBroadcastChannel.postMessage({ type: ADMIN_DATA_CHANGED_EVENT, ts: changeTs, isViewAffecting: true });
+    }
   } catch {
     /* ignore */
   }

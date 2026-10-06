@@ -356,6 +356,8 @@
   width: 100%;
   box-shadow: 0px 10px 30px rgba(0,0,0,0.15);
   text-align: center;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .warning-toast-icon-container {
@@ -393,6 +395,8 @@
   font-size: 18px;
   font-weight: 600;
   color: #171717;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .warning-toast-desc {
@@ -400,6 +404,8 @@
   font-size: 14px;
   color: #666469;
   line-height: 20px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .warning-toast-actions {

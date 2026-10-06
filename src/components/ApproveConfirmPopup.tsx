@@ -17,12 +17,15 @@ export const ApproveConfirmPopup: React.FC<ApproveConfirmPopupProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const cleanName = (itemName || '').replace(/<[^>]*>/g, '').trim();
+  const displayName = cleanName.length > 45 ? `${cleanName.slice(0, 45)}...` : cleanName;
+
   return createPortal(
     <div className="custom-popup-overlay" onClick={onClose}>
       <div className="custom-popup-confirm-card" onClick={(e) => e.stopPropagation()}>
         <div className="custom-confirm-body">
           <p className="custom-confirm-text">
-            Bạn muốn phê duyệt <span className="custom-confirm-highlight">{itemName}</span>
+            Bạn muốn phê duyệt <span className="custom-confirm-highlight" title={cleanName}>"{displayName}"</span>
           </p>
         </div>
         <div className="custom-confirm-footer">

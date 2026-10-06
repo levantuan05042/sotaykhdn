@@ -93,7 +93,7 @@ const AddBusinessPage: React.FC = () => {
       toast.error(nameErr, { position: 'top-center' });
       return;
     }
-    setConfirmAction('DRAFT');
+    handleCreateBusiness('DRAFT');
   };
 
   const onSubmitClick = () => {
@@ -225,7 +225,7 @@ const AddBusinessPage: React.FC = () => {
                 <label className="label"> Danh mục sản phẩm cấp 1 <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" style={{ position: 'relative' }}>
                   <div className={`select-custom ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}>
-                    <span>
+                    <span className="truncate-text" title={loadingCategories ? "Đang tải danh mục sản phẩm cấp 1..." : (categoryOptions.find(o => String(o.value) === String(formData.productCategoryId))?.label || "Chọn danh mục sản phẩm cấp 1")}>
                       {loadingCategories 
                         ? "Đang tải danh mục sản phẩm cấp 1..." 
                         : (categoryOptions.find(o => String(o.value) === String(formData.productCategoryId))?.label || "Chọn danh mục sản phẩm cấp 1")}

@@ -74,7 +74,7 @@ const BusinessSection = ({
 
   return (
     <div className="sub-section-block">
-      <h3 className="section-title" style={{ fontSize: '18px', marginBottom: '16px' }}>{business.name}</h3>
+      <h3 className="section-title" style={{ fontSize: '18px', marginBottom: '16px' }} title={business.name}>{business.name}</h3>
       <div className={viewMode === 'list' ? 'products-list' : 'products-grid'}>
         {products.map((prod) => (
           <ProductCard key={prod.id} product={prod} layout={viewMode} onClick={() => onNavigate(prod.id)} />
@@ -199,17 +199,21 @@ const CategoryView: React.FC = () => {
           Trang chủ
         </span>
         <span className="breadcrumb-separator">❯</span>
-        <span className="breadcrumb-link">{superGroupLabel}</span>
+        <span className="breadcrumb-link" title={superGroupLabel}>{superGroupLabel}</span>
         <span className="breadcrumb-separator">❯</span>
-        <span className="breadcrumb-link" onClick={() => categoryData.groupId && navigate(`/view/groups/${categoryData.groupId}`)}>
+        <span
+          className="breadcrumb-link"
+          title={categoryData.groupName || 'Nhóm sản phẩm'}
+          onClick={() => categoryData.groupId && navigate(`/view/groups/${categoryData.groupId}`)}
+        >
           {categoryData.groupName || 'Nhóm sản phẩm'}
         </span>
         <span className="breadcrumb-separator">❯</span>
-        <span className="breadcrumb-current">{currentCategoryName}</span>
+        <span className="breadcrumb-current" title={currentCategoryName}>{currentCategoryName}</span>
       </div>
 
       <div className="products-section-heading" style={{ marginBottom: 24 }}>
-        <h2 className="group-page-title" style={{ margin: 0 }}>{currentCategoryName}</h2>
+        <h2 className="group-page-title" style={{ margin: 0 }} title={currentCategoryName}>{currentCategoryName}</h2>
         {!isEmpty && (
           <ProductsViewToggle value={viewMode} onChange={setViewMode} />
         )}

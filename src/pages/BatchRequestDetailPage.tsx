@@ -1151,8 +1151,7 @@ const BatchRequestDetailPage: React.FC = () => {
       <CriteriaQuillEditor
         value={criterion.noiDung}
         hasError={
-          (!isQuickViewRejected && criterion.required && isHtmlEmpty(criterion.noiDung))
-          || Boolean(getCriteriaValueError(criterion.noiDung, criterion.tieuChi, isProductNameCriteria(criterion.tieuChi, criterion.code)))
+          Boolean(getCriteriaValueError(criterion.noiDung, criterion.tieuChi, isProductNameCriteria(criterion.tieuChi, criterion.code)))
         }
         onChange={(value) => handleDetailsChange(criterion.id, value)}
         readOnly={!canEditQuickView}
@@ -1198,7 +1197,7 @@ const BatchRequestDetailPage: React.FC = () => {
             <div className="batch-actions-group">
               <button 
                 disabled={!hasGlobalChanges || isSubmitting} 
-                onClick={() => setConfirmAction('DRAFT')}
+                onClick={() => handleSaveDraftToDB()}
                 className={`btnDraft ${hasGlobalChanges && !isSubmitting ? 'active' : 'disabled'}`}
                 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
               >

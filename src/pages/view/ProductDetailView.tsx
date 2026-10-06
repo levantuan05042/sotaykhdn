@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_ENDPOINTS, BASE_URL } from '../../config/view/apiConfig';
@@ -9,13 +9,25 @@ import { showSuccessToast } from '../../utils/appToast';
 import { stripHtmlText } from '../../utils/fieldValidation';
 import { formatDetailHtml as formatCriteriaHtml } from '../../components/ui/CriteriaQuillEditor';
 import { notifyAdminDataChanged } from '../../hooks/useAdminAutoRefresh';
+import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 import 'quill/dist/quill.snow.css';
 import './ProductDetailView.css';
 
 const getImageUrl = (path?: string | null) => {
   if (!path) return '';
-  if (path.startsWith('http')) return path;
-  return `${BASE_URL}${path.startsWith('/') ? path : '/' + path}`;
+  if (path.startsWith('data:') || path.startsWith('blob:')) return path;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  let cleanPath = path.trim();
+  if (cleanPath.startsWith('files') && !cleanPath.startsWith('files/')) {
+    cleanPath = '/' + cleanPath;
+  }
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+  if (!cleanPath.startsWith('/files/')) {
+    cleanPath = `/files${cleanPath}`;
+  }
+  return `${BASE_URL}${cleanPath}`;
 };
 
 const stringToColor = (string: string) => {
@@ -55,7 +67,14 @@ const formatDateOnly = (dateStr?: string) => {
   }
 };
 
+const isOfflineEnv = () =>
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' ||
+    Boolean((window as any).__OFFLINE_DATA__) ||
+    Boolean((window as any).__IS_OFFLINE__));
+
 const checkIsLoggedIn = () => {
+  if (isOfflineEnv()) return true;
   const username = localStorage.getItem('currentUserUsername');
   return !!username; 
 };
@@ -66,6 +85,8 @@ interface DetailItem {
   tieuChi: string;
   noiDung: string;
   required?: boolean;
+  active?: boolean;
+  status?: string;
 }
 
 interface ProductData {
@@ -205,36 +226,83 @@ const ProductDetailView: React.FC = () => {
     productRef.current = product;
   }, [product]);
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (!id) return;
-      if (appliedIdRef.current === id && productRef.current?.id === id) return;
-      try {
-        setLoading(true);
-        const res = await axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`);
-        if (res.data?.cascadeHiddenBy) {
+  const fetchProduct = useCallback(async (isRefresh = false) => {
+    if (!id) return;
+    if (!isRefresh && appliedIdRef.current === id && productRef.current?.id === id) return;
+    try {
+      if (!isRefresh) setLoading(true);
+      const token = localStorage.getItem('token') || '';
+      const authHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      };
+      const [res, critRes] = await Promise.allSettled([
+        axios.get(`${API_ENDPOINTS.PRODUCT.DETAIL(id)}?_t=${Date.now()}`, {
+          headers: authHeaders,
+          withCredentials: true,
+        }),
+        axios.get(`${BASE_URL}/api/v1/criteria?status=ACTIVE&active=true&_t=${Date.now()}`, {
+          headers: authHeaders,
+          withCredentials: true,
+        }),
+      ]);
+
+      const activeCritIds = new Set<string>();
+      const activeCritNames = new Set<string>();
+      if (critRes.status === 'fulfilled' && Array.isArray(critRes.value.data)) {
+        critRes.value.data.forEach((c: any) => {
+          if (c.id) activeCritIds.add(String(c.id));
+          if (c.name) activeCritNames.add(String(c.name).trim().toLowerCase());
+        });
+      }
+
+      if (res.status === 'fulfilled' && res.value.data) {
+        if (res.value.data.cascadeHiddenBy) {
           removeRecentlyViewed(String(id));
           setProduct(null);
           productRef.current = null;
           return;
         }
-        applyProductData(res.data);
-      } catch (err: any) {
-        console.error(err);
-        const status = err?.response?.status;
-        const message = String(err?.response?.data?.message || err?.message || '');
-        if (status === 404 || status === 400 || message.toLowerCase().includes('không tìm thấy')) {
-          removeRecentlyViewed(String(id));
+
+        const data = res.value.data;
+        if (Array.isArray(data.details)) {
+          data.details = data.details.filter((d: any) => {
+            if (d.active === false || d.isActive === false || d.criteriaActive === false) return false;
+            if (d.status && d.status !== 'ACTIVE' && d.status !== 'Active') return false;
+            if (activeCritIds.size > 0) {
+              const dId = String(d.id || '');
+              const dName = String(d.tieuChi || d.name || '').trim().toLowerCase();
+              const isIdOk = dId && activeCritIds.has(dId);
+              const isNameOk = dName && activeCritNames.has(dName);
+              if (!isIdOk && !isNameOk) return false;
+            }
+            return true;
+          });
         }
-      } finally {
-        setLoading(false);
+        applyProductData(data);
       }
-    };
-    fetchProduct();
+    } catch (err: any) {
+      console.error(err);
+      const status = err?.response?.status;
+      const message = String(err?.response?.data?.message || err?.message || '');
+      if (status === 404 || status === 400 || message.toLowerCase().includes('không tìm thấy')) {
+        removeRecentlyViewed(String(id));
+      }
+    } finally {
+      if (!isRefresh) setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => {
-    if (!id || loading) return;
+    fetchProduct(false);
+  }, [id, fetchProduct]);
+
+  useViewAutoRefresh(() => {
+    fetchProduct(true);
+  }, [id, fetchProduct]);
+
+  useEffect(() => {
+    if (!id || loading || isOfflineEnv()) return;
 
     const POLL_MS = 4000;
     const MIN_OVERLAY_MS = 1200;
@@ -330,7 +398,7 @@ const ProductDetailView: React.FC = () => {
 
   useEffect(() => {
     const checkSavedStatus = async () => {
-      if (!id || !checkIsLoggedIn()) return;
+      if (isOfflineEnv() || !id || !checkIsLoggedIn()) return;
       try {
         const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
         const headers: HeadersInit = {};
@@ -395,11 +463,17 @@ const ProductDetailView: React.FC = () => {
   if (!product) return <div className="dp-container"><div className="dp-error">Không tìm thấy sản phẩm.</div></div>;
 
   const allImages = [product.imageUrl, ...(product.images || [])].filter(Boolean) as string[];
-  const sortedDetails = [...(product.details || [])].sort((a, b) => {
-    const sttA = typeof a.stt === 'number' ? a.stt : 999999;
-    const sttB = typeof b.stt === 'number' ? b.stt : 999999;
-    return sttA - sttB;
-  });
+  const sortedDetails = [...(product.details || [])]
+    .filter((detail: any) => {
+      if (detail.active === false || detail.isActive === false || detail.criteriaActive === false) return false;
+      if (detail.status && detail.status !== 'ACTIVE' && detail.status !== 'Active') return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const sttA = typeof a.stt === 'number' ? a.stt : 999999;
+      const sttB = typeof b.stt === 'number' ? b.stt : 999999;
+      return sttA - sttB;
+    });
   if (openedCriteriaForIdRef.current !== product.id) {
     openedCriteriaForIdRef.current = product.id;
     setOpenCriteriaKeys(new Set(sortedDetails.map((detail, idx) => String(detail.id || idx))));
@@ -457,12 +531,14 @@ const ProductDetailView: React.FC = () => {
           </div>
 
           <div className="dp-actions">
-              <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-                </svg>
-                <span className="dp-action-label">Lưu sản phẩm</span>
-              </button>
+              {!isOfflineEnv() && (
+                <button className={`dp-action-btn ${isSaved ? 'is-active' : ''}`} onClick={handleToggleSave}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill={isSaved ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                  </svg>
+                  <span className="dp-action-label">Lưu sản phẩm</span>
+                </button>
+              )}
 
               <button className="dp-action-btn" onClick={handleShare}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

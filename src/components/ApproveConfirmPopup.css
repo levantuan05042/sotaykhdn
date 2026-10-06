@@ -36,11 +36,15 @@
   color: #1f2937;
   margin: 0;
   line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .custom-confirm-highlight {
   font-weight: 700;
   color: #AE1C3F; /* Crimson/dark red color from Agribank brand */
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .custom-confirm-footer {

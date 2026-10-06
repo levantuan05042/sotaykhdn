@@ -29,7 +29,7 @@ import {
   showDisplayStatusFromApi,
   showSuccessToast,
 } from '../utils/appToast';
-import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { useAdminAutoRefresh, notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 import {
   SPECIAL_CRITERIA_LIST,
   isSpecialCriteria,
@@ -483,7 +483,7 @@ const DetailCriteriaPage: React.FC = () => {
     }
 
     checkRemovedGroupsBeforeProceed(() => {
-      setConfirmAction(status);
+      handleUpdateCriteria(status);
     });
   };
 
@@ -664,7 +664,8 @@ const DetailCriteriaPage: React.FC = () => {
       const url = `/api/v1/criteria/${id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
       const response = await fetch(url, {
         method: 'GET',
-        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) }
+        headers: { ...(token ? { 'Authorization': `Bearer ${token}` } : {}) },
+        credentials: 'include'
       });
       const errorData = await response.json().catch(() => ({}));
 
@@ -673,7 +674,7 @@ const DetailCriteriaPage: React.FC = () => {
         setCriteriaData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
         showSuccessToast(displaySuccessMessage(newActive, 'tiêu chí', criteriaData?.name));
-        notifyAdminDataChanged();
+        notifyViewAffectingDataChanged();
       } else {
         showDisplayStatusFromApi(errorData);
       }
@@ -758,7 +759,8 @@ const DetailCriteriaPage: React.FC = () => {
   const canSubmit = !isReadOnly && isFormValid && !isSubmitting;
   const canSaveDraft = !isReadOnly && !isSubmitting;
 
-  const canChangeActiveStatus = !isSpecial && !isOwnerLocked && isStatusActive;
+  const isDisplayStatusAllowed = criteriaData?.status === 'ACTIVE' || criteriaData?.status === 'DRAFT';
+  const canChangeActiveStatus = !isSpecial && !isOwnerLocked && isDisplayStatusAllowed;
   const shownActive = isSpecial ? true : (isCascadeLocked ? false : isActive);
   const nameError = getNameError(formData.name, 'Tên tiêu chí');
 
@@ -999,7 +1001,7 @@ const DetailCriteriaPage: React.FC = () => {
                       <div className="commentItem">
                         <div className="userInfo">
                           <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div className="userHeader">
                               <span className="userName">
                                 {getFullName(extractBaseId(c.createdBy), userMap) || c.createdBy || 'Người kiểm duyệt'}

@@ -223,7 +223,28 @@
   font-style: normal;
   font-weight: 400;
   line-height: 30px;
-  margin: 0 0 32px 0;
+  margin: 0 0 12px 0;
+}
+
+.hero-badge-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 0 28px 0;
+}
+
+.hero-timestamp-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  background-color: #FEF2F2;
+  border: 1px solid #FECDD3;
+  border-radius: 9999px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #AE1C3F;
+  box-shadow: 0 1px 3px rgba(174, 28, 63, 0.06);
 }
 
 .section-meta {

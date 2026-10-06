@@ -9,6 +9,8 @@ import { useViewAutoRefresh } from '../../hooks/useViewAutoRefresh';
 import { usePointerListDrag } from '../../hooks/useDragAutoScroll';
 import { useProductsViewMode } from '../../hooks/useProductsViewMode';
 import { showSuccessToast } from '../../utils/appToast';
+import { formatFullDateTimeVi } from '../../utils/formatUtils';
+import { ADMIN_DATA_CHANGED_EVENT } from '../../hooks/useAdminAutoRefresh';
 import ProductsViewToggle from './common/ProductsViewToggle';
 
 import iconHuyDongVon from '../../assets/icons/san-pham-huy-dong-von.svg';
@@ -95,6 +97,16 @@ const HomePage: React.FC = () => {
   const [reorderMode, setReorderMode] = useState(false);
   const [groupProductCounts, setGroupProductCounts] = useState<Record<string, number>>({});
   const [recentUpdates, setRecentUpdates] = useState<any[]>([]);
+  const [lastUpdatedTime, setLastUpdatedTime] = useState<Date>(() => {
+    try {
+      const savedTs = Number(
+        localStorage.getItem('last_view_change_ts') ||
+        0
+      );
+      if (savedTs > 0) return new Date(savedTs);
+    } catch {}
+    return new Date();
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResult, setSearchResult] = useState<SearchResponse | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -116,6 +128,62 @@ const HomePage: React.FC = () => {
   };
 
   useEffect(() => {
+    const handleDataChanged = (e: any) => {
+      if (e?.detail?.isViewAffecting === false) return;
+      const ts =
+        e?.detail?.ts ||
+        Number(
+          localStorage.getItem('last_view_change_ts') ||
+          0
+        );
+      if (ts > 0) {
+        setLastUpdatedTime(new Date(ts));
+        try {
+          localStorage.setItem('last_view_change_ts', String(ts));
+        } catch {}
+      }
+    };
+
+    window.addEventListener(ADMIN_DATA_CHANGED_EVENT, handleDataChanged);
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'last_view_change_ts') {
+        const val = Number(e.newValue);
+        if (val > 0) setLastUpdatedTime(new Date(val));
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('admin_data_sync_channel');
+        bc.onmessage = (event) => {
+          if (event?.data?.type === ADMIN_DATA_CHANGED_EVENT) {
+            if (event?.data?.isViewAffecting === false) return;
+            const ts = Number(event?.data?.ts || 0);
+            if (ts > 0) {
+              setLastUpdatedTime(new Date(ts));
+              try {
+                localStorage.setItem('last_view_change_ts', String(ts));
+              } catch {}
+            }
+          }
+        };
+      }
+    } catch {
+      bc = null;
+    }
+
+    return () => {
+      window.removeEventListener(ADMIN_DATA_CHANGED_EVENT, handleDataChanged);
+      window.removeEventListener('storage', handleStorage);
+      if (bc) {
+        bc.close();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     setRecentSearches(getRecentSearches());
   }, [location]);
 
@@ -134,23 +202,121 @@ const HomePage: React.FC = () => {
   }, [reorderMode]);
 
   const loadViewData = useCallback(async () => {
+    let maxRecordTimestamp = 0;
+    let serverMetaTs = 0;
+
+    const token = localStorage.getItem('token') || '';
+    const authHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    };
+
+    // 1. Kiểm tra timestamp cập nhật hệ thống từ server (realtime endpoint)
     try {
-      const response = await fetch(`${BASE_URL}/api/v1/product-groups?status=ACTIVE&active=true&_t=${Date.now()}`);
+      const sysRes = await fetch(`${BASE_URL}/api/v1/system/last-view-change?_t=${Date.now()}`, {
+        headers: authHeaders,
+        credentials: 'include'
+      });
+      if (sysRes.ok) {
+        const sysJson = await sysRes.json();
+        const t = Number(sysJson?.epochMilli || Date.parse(sysJson?.timestamp || ''));
+        if (!isNaN(t) && t > 0) serverMetaTs = t;
+      }
+    } catch {}
+
+    // 2. Tải nhóm sản phẩm hiển thị view
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/product-groups?status=ACTIVE&active=true&_t=${Date.now()}`, {
+        headers: authHeaders,
+        credentials: 'include'
+      });
       if (response.ok) {
         const data: Category[] = await response.json();
         rawCategoriesRef.current = data;
         setCategories(sortCategoriesForUser(data));
+        if (Array.isArray(data)) {
+          data.forEach((cat: any) => {
+            const ts = new Date(cat.updatedAt || cat.createdAt || 0).getTime();
+            if (!isNaN(ts) && ts > maxRecordTimestamp) maxRecordTimestamp = ts;
+          });
+        }
       }
     } catch (error) {
       console.error(error);
     }
 
+    // 3. Quét toàn bộ nhóm (kể cả nhóm ẩn), danh mục 1, danh mục 2, tiêu chí để phát hiện ẩn/hiện tức thì
     try {
-      const response = await fetch(`${BASE_URL}/api/v1/products?_t=${Date.now()}`);
+      const [allGroupsRes, catRes, busRes, critRes] = await Promise.allSettled([
+        fetch(`${BASE_URL}/api/v1/product-groups?_t=${Date.now()}`, { headers: authHeaders, credentials: 'include' }),
+        fetch(`${BASE_URL}/api/v1/product-category?_t=${Date.now()}`, { headers: authHeaders, credentials: 'include' }),
+        fetch(`${BASE_URL}/api/v1/business?_t=${Date.now()}`, { headers: authHeaders, credentials: 'include' }),
+        fetch(`${BASE_URL}/api/v1/criteria?_t=${Date.now()}`, { headers: authHeaders, credentials: 'include' }),
+      ]);
+      if (allGroupsRes.status === 'fulfilled' && allGroupsRes.value.ok) {
+        const ag = await allGroupsRes.value.json();
+        if (Array.isArray(ag)) {
+          ag.forEach((g: any) => {
+            if (g.status === 'ACTIVE' || g.status === 'Active') {
+              const ts = new Date(g.updatedAt || g.createdAt || 0).getTime();
+              if (!isNaN(ts) && ts > maxRecordTimestamp) maxRecordTimestamp = ts;
+            }
+          });
+        }
+      }
+      if (catRes.status === 'fulfilled' && catRes.value.ok) {
+        const cats = await catRes.value.json();
+        if (Array.isArray(cats)) {
+          cats.forEach((c: any) => {
+            if (c.status === 'ACTIVE' || c.status === 'Active') {
+              const ts = new Date(c.updatedAt || c.createdAt || 0).getTime();
+              if (!isNaN(ts) && ts > maxRecordTimestamp) maxRecordTimestamp = ts;
+            }
+          });
+        }
+      }
+      if (busRes.status === 'fulfilled' && busRes.value.ok) {
+        const buses = await busRes.value.json();
+        if (Array.isArray(buses)) {
+          buses.forEach((b: any) => {
+            if (b.status === 'ACTIVE' || b.status === 'Active') {
+              const ts = new Date(b.updatedAt || b.createdAt || 0).getTime();
+              if (!isNaN(ts) && ts > maxRecordTimestamp) maxRecordTimestamp = ts;
+            }
+          });
+        }
+      }
+      if (critRes.status === 'fulfilled' && critRes.value.ok) {
+        const crits = await critRes.value.json();
+        if (Array.isArray(crits)) {
+          crits.forEach((cr: any) => {
+            if (cr.status === 'ACTIVE' || cr.status === 'Active') {
+              const ts = new Date(cr.updatedAt || cr.createdAt || 0).getTime();
+              if (!isNaN(ts) && ts > maxRecordTimestamp) maxRecordTimestamp = ts;
+            }
+          });
+        }
+      }
+    } catch {}
+
+    try {
+      const response = await fetch(`${BASE_URL}/api/v1/products?_t=${Date.now()}`, {
+        headers: authHeaders,
+        credentials: 'include'
+      });
       if (response.ok) {
         const data = await response.json();
         const products: ProductInfo[] = Array.isArray(data) ? data : (data.content || data.items || data.data || []);
         const counts: Record<string, number> = {};
+
+        if (Array.isArray(products)) {
+          products.forEach((prod: any) => {
+            if (prod.status === 'Active' || prod.status === 'ACTIVE') {
+              const ts = new Date(prod.updatedAt || prod.createdAt || 0).getTime();
+              if (!isNaN(ts) && ts > maxRecordTimestamp) maxRecordTimestamp = ts;
+            }
+          });
+        }
 
         products.forEach((product: any) => {
           const isStatusActive = product.status === 'Active' || product.status === 'ACTIVE';
@@ -207,6 +373,18 @@ const HomePage: React.FC = () => {
       }
     } catch (error) {
       console.error(error);
+    }
+
+    const savedActionTs = Number(
+      localStorage.getItem('last_view_change_ts') ||
+      0
+    );
+    const effectiveTime = Math.max(serverMetaTs, maxRecordTimestamp, savedActionTs);
+    if (effectiveTime > 0) {
+      setLastUpdatedTime(new Date(effectiveTime));
+      try {
+        localStorage.setItem('last_view_change_ts', String(effectiveTime));
+      } catch {}
     }
   }, []);
 
@@ -374,6 +552,16 @@ const HomePage: React.FC = () => {
           Tra cứu sản phẩm dịch vụ
         </h1>
         <p className="hero-subtitle">dành cho khách hàng doanh nghiệp</p>
+        
+        <div className="hero-badge-container">
+          <div className="hero-timestamp-badge">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <span>Cập nhật lúc: {formatFullDateTimeVi(lastUpdatedTime)}</span>
+          </div>
+        </div>
         
         <div className="w-full max-w-3xl relative" ref={dropdownRef}>
           <form onSubmit={handleSearchSubmit} className="relative flex items-center z-20">

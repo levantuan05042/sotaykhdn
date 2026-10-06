@@ -4,10 +4,12 @@ import axios from 'axios';
 import logoAgribank from '../../assets/logo-agribank.png';
 import styles from './HeaderBar.module.css';
 import { API_ENDPOINTS } from '../../config/view/apiConfig';
-import { AUTH_SERVICE_LOGOUT_URL } from '../../config/apiConfig';
-import { type UserRole } from '../../config/menuConfig';
+import { AUTH_SERVICE_LOGOUT_URL, AUTH_ME_URL } from '../../config/apiConfig';
+import { type UserRole, normalizeRole } from '../../config/menuConfig';
 import { getUserAvatar } from '../../utils/avatarUtils';
 import { addRecentSearch, getRecentSearches } from '../../utils/userHistoryStorage';
+import { exportOfflinePortalHtml } from '../../utils/exportOfflinePortal';
+import { ExportPasswordModal } from '../ui/ExportPasswordModal';
 
 import tracuuIcon from '../../assets/icon/tracuu.svg';
 import qlNoidungIcon from '../../assets/icon/ql-noidung.svg';
@@ -51,23 +53,120 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
   const searchInputRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
+  const offlineData = typeof window !== 'undefined' ? (window as any).__OFFLINE_DATA__ : null;
+
   const [role, setRole] = useState<UserRole>(() => {
-    return (localStorage.getItem('userRole') as UserRole) || 'VIEWER';
+    return (
+      (localStorage.getItem('userRole') as UserRole) ||
+      offlineData?.userProfile?.userRole ||
+      'VIEWER'
+    );
   });
   const [currentUserRole, setCurrentUserRole] = useState<UserRole>(() => {
-    return (localStorage.getItem('currentUserRole') as UserRole) || 'VIEWER';
+    return (
+      (localStorage.getItem('currentUserRole') as UserRole) ||
+      offlineData?.userProfile?.currentUserRole ||
+      'ETK08'
+    );
   });
   const [displayName, setDisplayName] = useState<string>(() => {
-    return localStorage.getItem('currentUserFullName') || 'Phạm Thùy Linh';
+    return (
+      localStorage.getItem('currentUserFullName') ||
+      offlineData?.userProfile?.currentUserFullName ||
+      offlineData?.userProfile?.displayName ||
+      'Lê Văn Tuấn'
+    );
+  });
+  const [currentUserUsername, setCurrentUserUsername] = useState<string>(() => {
+    return (
+      localStorage.getItem('currentUserUsername') ||
+      offlineData?.userProfile?.currentUserUsername ||
+      localStorage.getItem('username') ||
+      '37ETK081'
+    );
   });
   const [userAvatar] = useState<string>(() => {
     const username =
       localStorage.getItem('currentUserUsername') ||
+      offlineData?.userProfile?.currentUserUsername ||
       localStorage.getItem('username') ||
-      localStorage.getItem('currentUserFullName');
+      '37ETK081';
     return getUserAvatar(username);
   });
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isExportPasswordOpen, setIsExportPasswordOpen] = useState(false);
+
+  const isOffline =
+    typeof window !== 'undefined' &&
+    (window.location.protocol === 'file:' ||
+      Boolean((window as any).__OFFLINE_DATA__) ||
+      Boolean((window as any).__IS_OFFLINE__));
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setRole((localStorage.getItem('userRole') as UserRole) || 'VIEWER');
+      setCurrentUserRole((localStorage.getItem('currentUserRole') as UserRole) || 'VIEWER');
+      setDisplayName(localStorage.getItem('currentUserFullName') || 'Lê Văn Tuấn');
+      setCurrentUserUsername(
+        localStorage.getItem('currentUserUsername') ||
+        localStorage.getItem('username') ||
+        '37ETK081'
+      );
+    };
+
+    window.addEventListener('userRoleChanged', handleStorageChange);
+    window.addEventListener('currentUserChanged', handleStorageChange);
+    window.addEventListener('storage', handleStorageChange);
+
+    if (!isOffline) {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      axios
+        .get(AUTH_ME_URL, { headers, withCredentials: true })
+        .then((res) => {
+          if (res.data) {
+            const user = res.data;
+            const fullName = user.fullName || user.username;
+            const normRole = normalizeRole(user.role || 'VIEWER');
+            localStorage.setItem('currentUserFullName', fullName);
+            localStorage.setItem('currentUserUsername', user.username);
+            localStorage.setItem('currentUserRole', normRole);
+            if (user.branchCode) localStorage.setItem('currentUserBranchCode', user.branchCode);
+            setDisplayName(fullName);
+            setCurrentUserUsername(user.username || '37ETK081');
+            setCurrentUserRole(normRole as UserRole);
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener('userRoleChanged', handleStorageChange);
+      window.removeEventListener('currentUserChanged', handleStorageChange);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [isOffline]);
+
+  const handleExportPortal = () => {
+    if (isExporting) return;
+    setIsDropdownOpen(false);
+    setIsSearchOpen(false);
+    setIsExportPasswordOpen(true);
+  };
+
+  const handleExportPasswordSuccess = async (filePasscode: string) => {
+    setIsExportPasswordOpen(false);
+    setIsExporting(true);
+    try {
+      // Cho React render cập nhật đóng modal trước khi capture DOM
+      await new Promise((r) => setTimeout(r, 120));
+      await exportOfflinePortalHtml(filePasscode);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleRoleSelect = (newRole: UserRole) => {
     setRole(newRole);
@@ -385,42 +484,57 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
             )}
           </div>
 
+          {/* Badge Ngoại tuyến (chỉ hiển thị khi đang chạy ở chế độ offline) */}
+          {isOffline && (
+            <div
+              className={styles['badge-offline']}
+              title="Bạn đang sử dụng Sổ tay điện tử ở chế độ Ngoại tuyến"
+            >
+              <span className={styles['badge-offline-dot']} />
+              <span>Ngoại tuyến</span>
+            </div>
+          )}
+
           <div className={styles['user-profile-container']} ref={userMenuRef}>
             <div
               className={styles['user-profile-trigger']}
+              style={{ cursor: isOffline ? 'default' : 'pointer' }}
               onClick={() => {
+                if (isOffline) return;
                 setIsDropdownOpen(!isDropdownOpen);
                 setIsSearchOpen(false);
               }}
             >
               <div className={styles['user-text']}>
                 <p className={styles['user-name']}>{displayName}</p>
-                <p className={styles['user-role']}>{ROLE_LABELS[role] || 'Tra cứu sản phẩm'}</p>
+                <p className={styles['user-role']}>{ROLE_LABELS[currentUserRole] || ROLE_LABELS[role] || 'Tra cứu sản phẩm'}</p>
               </div>
               <div className={styles['avatar-wrapper']}>
                 <div
                   className={styles['avatar-container']}
-                  style={{ padding: 0, overflow: 'hidden', width: '40px', height: '40px', cursor: 'pointer', borderRadius: '50%' }}
+                  style={{ padding: 0, overflow: 'hidden', width: '40px', height: '40px', cursor: isOffline ? 'default' : 'pointer', borderRadius: '50%' }}
                 >
                   <img src={userAvatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className={styles['chevron-icon']}
-                >
-                  <path
-                    d="M17.4697 8.46967C17.7626 8.17678 18.2373 8.17678 18.5302 8.46967C18.8231 8.76256 18.8231 9.23732 18.5302 9.53022L12.5302 15.5302C12.2373 15.8231 11.7626 15.8231 11.4697 15.5302L5.46967 9.53022C5.17678 9.23732 5.17678 8.76256 5.46967 8.46967C5.76256 8.17678 6.23732 8.17678 6.53022 8.46967L11.9999 13.9394L17.4697 8.46967Z"
-                    fill="#211F26"
-                  />
-                </svg>
+                {!isOffline && (
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className={styles['chevron-icon']}
+                  >
+                    <path
+                      d="M17.4697 8.46967C17.7626 8.17678 18.2373 8.17678 18.5302 8.46967C18.8231 8.76256 18.8231 9.23732 18.5302 9.53022L12.5302 15.5302C12.2373 15.8231 11.7626 15.8231 11.4697 15.5302L5.46967 9.53022C5.17678 9.23732 5.17678 8.76256 5.46967 8.46967C5.76256 8.17678 6.23732 8.17678 6.53022 8.46967L11.9999 13.9394L17.4697 8.46967Z"
+                      fill="#211F26"
+                    />
+                  </svg>
+                )}
               </div>
             </div>
 
-            {isDropdownOpen && (
+            {!isOffline && isDropdownOpen && (
               <div className={styles['user-dropdown-menu']}>
                 <button
                   className={`${styles['dropdown-item']} ${role === 'VIEWER' ? styles.active : ''}`}
@@ -450,6 +564,23 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
                   </button>
                 )}
 
+                {!isOffline && (
+                  <button
+                    className={styles['dropdown-item']}
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      handleExportPortal();
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#AE1C3F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={styles['dropdown-icon']}>
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Xuất file ngoại tuyến</span>
+                  </button>
+                )}
+
                 <div className={styles['dropdown-divider']} />
 
                 <button
@@ -470,6 +601,14 @@ const HeaderBar: React.FC<HeaderBarProps> = ({ onMenuClick, isMenuOpen = false }
           </div>
         </div>
       </div>
+
+      <ExportPasswordModal
+        isOpen={isExportPasswordOpen}
+        username={currentUserUsername}
+        displayName={displayName}
+        onClose={() => setIsExportPasswordOpen(false)}
+        onSuccess={handleExportPasswordSuccess}
+      />
     </header>
   );
 };

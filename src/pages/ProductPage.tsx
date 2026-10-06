@@ -20,7 +20,7 @@ import {
 } from '../utils/appToast';
 import { getCachedPageState, setCachedPageState, savePageScroll, restorePageScroll } from '../utils/pageStateCache';
 import { matchesSearch } from '../utils/searchText';
-import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { useAdminAutoRefresh, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 
 const STATUS_OPTIONS = [
@@ -304,9 +304,14 @@ const ProductPage: React.FC = () => {
       prevData.map(d => d.id === item.id ? { ...d, active: newActiveStatus } : d)
     );
     try {
+      const token = localStorage.getItem('token') || '';
       const response = await fetch(`${BASE_URL}/products/${item.id}/active?active=${newActiveStatus}`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include',
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
@@ -317,7 +322,7 @@ const ProductPage: React.FC = () => {
         return;
       }
       showSuccessToast(displaySuccessMessage(newActiveStatus, 'Sản phẩm', item.name));
-      notifyAdminDataChanged();
+      notifyViewAffectingDataChanged();
     } catch (error) {
       setData(prevData =>
         prevData.map(d => d.id === item.id ? { ...d, active: currentActive } : d)
@@ -327,7 +332,7 @@ const ProductPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: any) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION', 'ARCHIVED', 'INACTIVE'];
     const isDisabled = disabledStatuses.includes(item.status?.toUpperCase());
     const isActive = item.status?.toUpperCase() === 'ARCHIVED' || item.status?.toUpperCase() === 'INACTIVE'
       ? false

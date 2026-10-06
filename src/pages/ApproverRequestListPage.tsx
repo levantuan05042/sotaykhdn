@@ -11,8 +11,12 @@ import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
+<<<<<<< HEAD
+import { useAdminAutoRefresh, notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
+=======
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
 import { notifyApproverStatusChanged } from '../config/apiConfig';
+>>>>>>> main
 import './ApproverRequestListPage.css';
 
 export interface RequestItem {
@@ -158,8 +162,16 @@ const ApproverRequestListPage: React.FC = () => {
       );
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
+<<<<<<< HEAD
+      if (actionType === 'APPROVE') {
+        notifyViewAffectingDataChanged();
+      } else {
+        notifyAdminDataChanged();
+      }
+=======
       notifyAdminDataChanged();
       notifyApproverStatusChanged();
+>>>>>>> main
       await fetchRequests(true);
     } catch (error: any) {
       console.error('Batch action error:', error);

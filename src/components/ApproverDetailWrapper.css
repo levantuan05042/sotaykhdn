@@ -554,8 +554,13 @@
   color: #6C6E79;
   line-height: 18px;
   white-space: pre-wrap;
+<<<<<<< HEAD
+  word-break: break-word;
+  overflow-wrap: anywhere;
+=======
   overflow-wrap: anywhere;
   word-break: break-word;
+>>>>>>> main
   text-align: left;
   margin: 0;
   flex-basis: 100%;

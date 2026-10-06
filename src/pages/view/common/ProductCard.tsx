@@ -23,8 +23,19 @@ export interface ProductInfo {
 
 const toDisplayUrl = (raw?: string | null) => {
   if (!raw) return '';
-  if (raw.startsWith('http')) return raw;
-  return `${BASE_URL}${raw.startsWith('/') ? raw : `/${raw}`}`;
+  if (raw.startsWith('data:') || raw.startsWith('blob:')) return raw;
+  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+  let cleanPath = raw.trim();
+  if (cleanPath.startsWith('files') && !cleanPath.startsWith('files/')) {
+    cleanPath = '/' + cleanPath;
+  }
+  if (!cleanPath.startsWith('/')) {
+    cleanPath = `/${cleanPath}`;
+  }
+  if (!cleanPath.startsWith('/files/')) {
+    cleanPath = `/files${cleanPath}`;
+  }
+  return `${BASE_URL}${cleanPath}`;
 };
 
 const getColorFromText = (text: string) => {
@@ -34,7 +45,13 @@ const getColorFromText = (text: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
-const checkIsLoggedIn = () => !!localStorage.getItem('currentUserUsername');
+const isOfflineEnv = () =>
+  typeof window !== 'undefined' &&
+  (window.location.protocol === 'file:' ||
+    Boolean((window as any).__OFFLINE_DATA__) ||
+    Boolean((window as any).__IS_OFFLINE__));
+
+const checkIsLoggedIn = () => isOfflineEnv() || !!localStorage.getItem('currentUserUsername');
 
 const formatDate = (dateString?: string | null) => {
   if (!dateString) return '---';
@@ -66,7 +83,7 @@ const ProductCard = ({
   useEffect(() => {
     let isMounted = true;
     const checkSavedStatus = async () => {
-      if (!checkIsLoggedIn()) return;
+      if (isOfflineEnv() || !checkIsLoggedIn()) return;
       if (initiallySaved) {
         if (isMounted) setIsSaved(true);
         return;
@@ -164,18 +181,20 @@ const ProductCard = ({
           </div>
 
           <div className="product-actions" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="product-action-btn" onClick={handleCopyLink}>
+            <button type="button" className="product-action-btn" onClick={handleCopyLink} title="Sao chép liên kết">
               <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
                 <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
               </svg>
             </button>
             
-            <button type="button" className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} onClick={handleToggleSave}>
-              <svg width="22" height="22" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-              </svg>
-            </button>
+            {!isOfflineEnv() && (
+              <button type="button" className={`product-action-btn ${isSaved ? 'saved-active' : ''}`} onClick={handleToggleSave} title="Lưu sản phẩm">
+                <svg width="22" height="22" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>

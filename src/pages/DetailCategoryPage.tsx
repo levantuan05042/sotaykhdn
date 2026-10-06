@@ -29,7 +29,7 @@ import {
   showSuccessToast,
 } from '../utils/appToast';
 import { matchesSearch } from '../utils/searchText';
-import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { useAdminAutoRefresh, notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
 
 const formatDateTime = (dateString: string) => {
   if (!dateString) return '---';
@@ -119,7 +119,8 @@ const DetailCategoryPage: React.FC = () => {
   const isNotCreator = !canEdit;
   const isCascadeLocked = isCascadeHidden(categoryData);
   const isFormReadOnly = isNotCreator || categoryData?.status === 'PENDING_APPROVAL' || isCascadeLocked;
-  const isDisplayStatusReadOnly = isNotCreator || !isStatusActive;
+  const isDisplayStatusAllowed = categoryData?.status === 'ACTIVE' || categoryData?.status === 'DRAFT';
+  const isDisplayStatusReadOnly = isNotCreator || !isDisplayStatusAllowed;
   const hideEditActions = isNotCreator || isCascadeLocked;
 
   const [formData, setFormData] = useState({
@@ -258,7 +259,7 @@ const DetailCategoryPage: React.FC = () => {
       setShowDuplicateModal(true);
       return;
     }
-    setConfirmAction(status);
+    handleUpdateCategory(status);
   };
 
   const onSubmitClick = () => {
@@ -406,7 +407,8 @@ const DetailCategoryPage: React.FC = () => {
         method: 'GET',
         headers: { 
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-        }
+        },
+        credentials: 'include'
       });
       
       const data = await response.json().catch(() => ({}));
@@ -416,7 +418,7 @@ const DetailCategoryPage: React.FC = () => {
         setCategoryData((prev: any) => ({ ...prev, active: newActive }));
         setShowCascadeModal(false);
         showSuccessToast(displaySuccessMessage(newActive, 'danh mục sản phẩm cấp 1', categoryData?.name));
-        notifyAdminDataChanged();
+        notifyViewAffectingDataChanged();
       } else {
         showDisplayStatusFromApi(data);
       }
@@ -575,7 +577,9 @@ const DetailCategoryPage: React.FC = () => {
                     onClick={() => !isFormReadOnly && setIsOpen(!isOpen)}
                     style={{ cursor: isFormReadOnly ? 'not-allowed' : 'pointer' }}
                   >
-                    <span>{groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm sản phẩm"}</span>
+                    <span className="truncate-text" title={groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm sản phẩm"}>
+                      {groupOptions.find(o => o.value === formData.groupId)?.label || "Chọn nhóm sản phẩm"}
+                    </span>
                     {!isFormReadOnly && (
                       <svg 
                         width="10" height="6" viewBox="0 0 10 6" fill="none" 
@@ -698,7 +702,7 @@ const DetailCategoryPage: React.FC = () => {
                       <div className="commentItem">
                         <div className="userInfo">
                           <img src={c.avatarUrl || getRandomAvatar(c.createdBy || index)} className="avatar" alt="avatar" />
-                          <div style={{ flex: 1 }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
                             <div className="userHeader">
                               <span className="userName">{getFullName(c.createdBy, userMap) || 'Người kiểm duyệt'}</span>
                               <span className="commentDate">{formatDateTime(c.createdAt)}</span>

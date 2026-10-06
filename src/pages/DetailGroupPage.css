@@ -196,12 +196,18 @@
 .contentGrid {
   display: flex;
   width: 100%;
+  max-width: 1180px;
   gap: 24px;
   align-items: flex-start;
+  box-sizing: border-box;
 }
 
 .leftCol {
-  flex: 1 0 0;
+  flex: 0 0 816px;
+  width: 816px;
+  max-width: 816px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .formCard {
@@ -212,6 +218,13 @@
   flex-direction: column;
   gap: 12px;
   box-sizing: border-box;
+  max-width: 100%;
+}
+
+.leftCol .formCard {
+  width: 816px;
+  max-width: 816px;
+  box-sizing: border-box;
 }
 
 .formGroup {
@@ -219,7 +232,10 @@
   flex-direction: column;
   gap: 6px;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   margin: 0;
+  box-sizing: border-box;
 }
 
 .label {
@@ -229,10 +245,13 @@
   font-family: 'Inter', sans-serif;
   line-height: 24px;
   margin: 0;
+  word-break: break-word;
 }
 
 .input {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   min-height: 44px;
   padding: 12px 16px;
   border-radius: 8px;
@@ -254,11 +273,15 @@
   font-size: 13px;
   font-weight: 500;
   line-height: 1.4;
+  word-break: break-word;
 }
 
 .custom-select-container {
   position: relative;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .select-custom {
@@ -279,11 +302,26 @@
   -moz-appearance: none;
   background-image: none !important;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .select-custom.open {
   border-color: #AE1C3F;
+}
+
+.select-custom > span,
+.select-custom .truncate-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  max-width: calc(100% - 20px);
+  margin-right: 12px;
+  color: #1A191B;
 }
 
 .truncate-text {
@@ -310,12 +348,14 @@
   top: 105%;
   left: 0;
   width: 100%;
+  max-width: 100%;
   background: #fff;
   border: 1px solid #E3DFE6;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   z-index: 1000;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .custom-option:nth-child(odd) { background-color: #ffffff; }
@@ -328,6 +368,17 @@
   cursor: pointer;
   font-size: 14px;
   transition: background 0.2s;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.custom-option > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .custom-option:hover {
@@ -361,10 +412,12 @@
 
 .rightCol {
   width: 340px;
+  max-width: 340px;
   flex-shrink: 0;
   position: -webkit-sticky; 
   position: sticky;
   height: fit-content; 
+  box-sizing: border-box;
 }
 
 .infoCard {
@@ -480,12 +533,22 @@
   border-radius: 12px;
   background: #E3DFE6;
   box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .userInfo {
   display: flex;
   gap: 12px;
   width: 100%;
+  min-width: 0;
+}
+
+.userInfo > div {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .avatar {
@@ -498,18 +561,24 @@
 .userHeader {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
   margin-bottom: 4px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .userName {
   color: #6C6E79;
   font-size: 14px;
   font-weight: 600;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .commentDate {
   color: #6F6D78;
   font-size: 14px;
+  flex-shrink: 0;
 }
 
 .commentText {
@@ -517,6 +586,9 @@
   color: #6C6E79;
   font-size: 12px;
   line-height: 18px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .commentDivider {

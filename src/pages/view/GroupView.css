@@ -25,12 +25,12 @@
   gap: 8px;
   font-size: 13px;
   margin-bottom: 32px;
+  max-width: 100%;
 }
 
 .breadcrumb-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: inline-block;
+  vertical-align: middle;
   background: none;
   border: none;
   color: #6B7280;
@@ -38,6 +38,17 @@
   font-weight: 500;
   padding: 0;
   transition: color 0.2s;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.breadcrumb-link svg {
+  display: inline-block;
+  vertical-align: -2px;
+  margin-right: 4px;
+  flex-shrink: 0;
 }
 
 .breadcrumb-link:hover {
@@ -47,28 +58,56 @@
 .breadcrumb-separator {
   color: #9CA3AF;
   font-size: 10px;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .breadcrumb-current {
   color: #111827;
   font-weight: 700;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* =======================================
    TIÊU ĐỀ CHÍNH & TIÊU ĐỀ DANH MỤC
 ======================================= */
+.products-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+  min-width: 0;
+}
+
+.group-view .group-page-title,
 .group-page-title {
+  display: block;
   color: #2D2932;
   font-family: Inter, sans-serif;
   font-size: 26px;
   font-weight: 700;
-  margin: 0 0 32px 0;
+  margin: 0;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section-block {
   margin-bottom: 40px;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .section-title {
@@ -77,11 +116,17 @@
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 20px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .sub-section-block {
   margin-top: 16px;
   margin-bottom: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .sub-section-title {
@@ -90,6 +135,10 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 16px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .cascade-hidden-section {

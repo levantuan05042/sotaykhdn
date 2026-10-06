@@ -148,14 +148,14 @@ export const DuplicateVersionModal: React.FC<DuplicateVersionModalProps> = ({
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
           </div>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 600, color: '#111827' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '17px', fontWeight: 600, color: '#111827', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {canReplace ? 'Thông báo phiên bản đã tồn tại' : 'Không thể tạo phiên bản mới'}
             </h3>
-            <p style={{ margin: 0, fontSize: '14px', color: '#4B5563', lineHeight: 1.5 }}>
+            <p style={{ margin: 0, fontSize: '14px', color: '#4B5563', lineHeight: 1.5, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
               {canReplace
-                ? <>Hệ thống ghi nhận đã có phiên bản mới hơn của <strong style={{ color: '#111827' }}>{itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong></>
-                : <>Đã có phiên bản mới hơn của <strong style={{ color: '#111827' }}>{itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong></>
+                ? <>Hệ thống ghi nhận đã có phiên bản mới hơn của <strong style={{ color: '#111827', wordBreak: 'break-word' }} title={itemName}>{itemName && itemName.length > 40 ? `${itemName.slice(0, 40)}...` : itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong></>
+                : <>Đã có phiên bản mới hơn của <strong style={{ color: '#111827', wordBreak: 'break-word' }} title={itemName}>{itemName && itemName.length > 40 ? `${itemName.slice(0, 40)}...` : itemName}</strong> đang ở trạng thái <strong style={{ color: '#AE1C3F' }}>{statusLabel}</strong></>
               }
               {creatorLabel && <> (tạo bởi <strong style={{ color: '#111827' }}>{creatorLabel}</strong>{timeLabel ? ` lúc ${timeLabel}` : ''})</>}.
             </p>

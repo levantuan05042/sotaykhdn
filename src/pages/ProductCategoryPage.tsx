@@ -271,9 +271,14 @@ const ProductCategoryPage: React.FC = () => {
     setIsCascadeProcessing(true);
     try {
       const url = `${BASE_URL}/product-category/${item.id}/active?active=${newActive}${cascade ? '&cascade=true' : ''}`;
+      const token = localStorage.getItem('token') || '';
       const response = await fetch(url, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        credentials: 'include'
       });
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
@@ -295,7 +300,7 @@ const ProductCategoryPage: React.FC = () => {
   };
 
   const renderActiveToggle = (item: any) => {
-    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'DRAFT', 'NEEDS_REVISION'];
+    const disabledStatuses = ['PENDING_APPROVAL', 'REJECTED', 'NEEDS_REVISION'];
     const isDisabled = disabledStatuses.includes(item.status);
     const isActive = item.active || false;
 
