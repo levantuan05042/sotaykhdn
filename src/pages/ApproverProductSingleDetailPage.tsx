@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { RevisionConfirmPopup } from '../components/RevisionConfirmPopup';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
@@ -11,7 +12,12 @@ import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
 import AuditLogTimeline from '../components/AuditLogTimeline';
 import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
+<<<<<<< HEAD
 import { notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
+=======
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
+>>>>>>> main
 import iconChat from '../assets/icon/iconchat.svg';
 import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverProductDetailPage.css';
@@ -67,6 +73,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+  const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [productGroups, setProductGroups] = useState<any[]>([]);
@@ -168,11 +175,16 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
       toast.success(`Đã lưu đánh giá (${labelMap[notesVal] || notesVal}) thành công!`);
       setNewComment('');
       setAuditRefreshKey((prev) => prev + 1);
+<<<<<<< HEAD
       if (notesVal === '2') {
         notifyViewAffectingDataChanged();
       } else {
         notifyAdminDataChanged();
       }
+=======
+      notifyAdminDataChanged();
+      notifyApproverStatusChanged();
+>>>>>>> main
       fetchDetail();
     } catch (error: any) {
       console.error("Error submitting review:", error);
@@ -245,7 +257,7 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
               {isCommentModified ? (
                 <button
                   className="btn-revision-request-yellow"
-                  onClick={() => handleSaveReview('0')}
+                  onClick={() => setIsRevisionConfirmOpen(true)}
                 >
                   <img src={iconPen} alt="" />
                   Yêu cầu chỉnh sửa
@@ -484,6 +496,15 @@ export const ApproverProductSingleDetailPage: React.FC = () => {
         </section>
 
       </main>
+
+      <RevisionConfirmPopup
+        isOpen={isRevisionConfirmOpen}
+        onClose={() => setIsRevisionConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsRevisionConfirmOpen(false);
+          await handleSaveReview('0');
+        }}
+      />
     </div>
   );
 };

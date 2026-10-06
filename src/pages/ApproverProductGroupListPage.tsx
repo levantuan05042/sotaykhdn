@@ -7,9 +7,10 @@ import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import { formatApprovedBy } from '../utils/formatUtils';
+import { formatApprovedBy, formatDateDDMMYYYY } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 import './ApproverProductGroupListPage.css';
 
 interface ProductGroupItem {
@@ -71,6 +72,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
           stt: index + 1,
           name: item.name || '---',
           status: item.status || 'DRAFT',
+          createdAt: item.createdAt ? formatDateDDMMYYYY(item.createdAt) : '---',
           createdBy: item.createdByFullName || item.createdBy || '---',
           approvedBy: item.approvedByFullName || item.approvedBy || '---',
           active: item.active !== false,
@@ -126,6 +128,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
         )
       );
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
@@ -160,6 +163,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
     {
       key: 'name',
       header: 'Tên nhóm sản phẩm',
+      width: '320px',
       render: (row) => <span className="product-group-item-title">{row.name}</span>,
     },
     {
@@ -171,6 +175,7 @@ export const ApproverProductGroupListPage: React.FC = () => {
     {
       key: 'active',
       header: 'Hiệu lực',
+      width: '140px',
       render: (row) => (
         <span style={{ color: row.active ? '#065F46' : '#6B7280', fontWeight: 600 }}>
           {row.active ? 'Đang hiển thị' : 'Đang ẩn'}
@@ -180,16 +185,25 @@ export const ApproverProductGroupListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
+      width: '180px',
       render: (row) => formatApprovedBy(row.createdBy),
+    },
+    {
+      key: 'createdAt',
+      header: 'Ngày tạo',
+      width: '140px',
+      render: (row) => (row as any).createdAt || '---',
     },
     {
       key: 'approvedBy',
       header: 'Người Phê duyệt',
+      width: '180px',
       render: (row) => formatApprovedBy(row.approvedBy),
     },
     {
       key: 'version',
       header: 'Phiên bản',
+      width: '140px',
       render: (row) => (
         <span style={{ fontWeight: 600, color: '#171717' }}>
           {row.version ? `Phiên bản ${row.version}` : '--'}

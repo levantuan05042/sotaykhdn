@@ -7,7 +7,8 @@ import StatusBadge from '../components/ui/StatusBadge';
 import ProductImageCard from '../components/ui/ProductImageCard';
 import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import ApproverProductDetailPage from './ApproverProductDetailPage';
-import { API_ENDPOINTS } from '../config/apiConfig';
+import { API_ENDPOINTS, notifyApproverStatusChanged } from '../config/apiConfig';
+import { RevisionConfirmPopup } from '../components/RevisionConfirmPopup';
 import RejectReasonPopup from '../components/RejectReasonPopup';
 import ActionConfirmModal from '../components/ui/ActionConfirmModal';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
@@ -40,6 +41,7 @@ const ApproverBatchDetailPage: React.FC = () => {
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
+  const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
@@ -138,6 +140,7 @@ const ApproverBatchDetailPage: React.FC = () => {
         }))
       });
       toast.success("Đã từ chối toàn bộ lô sản phẩm thành công!");
+      notifyApproverStatusChanged();
       navigate('/approver/request-list');
     } catch (error) {
       console.error("Error rejecting batch:", error);
@@ -177,10 +180,11 @@ const ApproverBatchDetailPage: React.FC = () => {
         }))
       });
       toast.success(
-        targetStatus === 'NEEDS_REVISION' 
-          ? "Đã yêu cầu chỉnh sửa và trả lại lô sản phẩm!" 
+        targetStatus === 'NEEDS_REVISION'
+          ? "Đã yêu cầu chỉnh sửa và trả lại lô sản phẩm!"
           : "Đã phê duyệt hoàn thành lô sản phẩm!"
       );
+      notifyApproverStatusChanged();
       navigate('/approver/request-list');
     } catch (error) {
       console.error("Error approving batch:", error);
@@ -221,11 +225,16 @@ const ApproverBatchDetailPage: React.FC = () => {
         'REVIEWED': 'Đã xem'
       };
       toast.success(`Đã lưu đánh giá (${labelMap[targetNotes] || targetNotes}) cho sản phẩm thành công!`);
+<<<<<<< HEAD
       if (targetNotes === '2') {
         notifyViewAffectingDataChanged();
       } else {
         notifyAdminDataChanged();
       }
+=======
+      notifyAdminDataChanged();
+      notifyApproverStatusChanged();
+>>>>>>> main
       return true;
     } catch (error) {
       console.error("Error saving product review:", error);
@@ -343,12 +352,12 @@ const ApproverBatchDetailPage: React.FC = () => {
                 >
                   Từ chối toàn bộ lô
                 </button>
-                <button 
-                  className="btn-send-action" 
+                <button
+                  className="btn-send-action"
                   onClick={triggerApproveBatch}
                   style={{ backgroundColor: '#AE1C3F', color: '#ffffff' }}
                 >
-                  Gửi
+                  {products.some(p => p.notes === '0') ? 'Yêu cầu chỉnh sửa' : 'Phê duyệt'}
                 </button>
               </>
             ) : (
@@ -440,7 +449,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                   </button>
 
                   <div className="quickview-field">
-                    <label className="quickview-label">Tên sản phẩm dịch vụ (*)</label>
+                    <label className="quickview-label">Tên sản phẩm dịch vụ <span style={{ color: '#EF4444' }}>(*)</span></label>
                     <input 
                       type="text" 
                       className="quickview-input" 
@@ -450,7 +459,7 @@ const ApproverBatchDetailPage: React.FC = () => {
                   </div>
 
                   <div className="quickview-field">
-                    <label className="quickview-label">Nhóm sản phẩm (*)</label>
+                    <label className="quickview-label">Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                     <input 
                       type="text" 
                       className="quickview-input" 
@@ -507,9 +516,9 @@ const ApproverBatchDetailPage: React.FC = () => {
                     Từ chối
                   </button>
                   {isCommentModified ? (
-                    <button 
-                      className="btn-qv-revision" 
-                      onClick={() => handleAction('REVISION')}
+                    <button
+                      className="btn-qv-revision"
+                      onClick={() => setIsRevisionConfirmOpen(true)}
                     >
                       Gửi lại chỉnh sửa
                     </button>
@@ -566,9 +575,11 @@ const ApproverBatchDetailPage: React.FC = () => {
           }
         }}
         variant="submit"
-        title="Xác nhận phê duyệt"
-        desc={`Bạn muốn phê duyệt "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`}
-        confirmText="Phê duyệt"
+        title={products.some(p => p.notes === '0') ? 'Xác nhận yêu cầu chỉnh sửa' : 'Xác nhận phê duyệt'}
+        desc={products.some(p => p.notes === '0')
+          ? `Bạn muốn chuyển trả "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`
+          : `Bạn muốn phê duyệt "${stripHtmlText(batchRequest?.name) || 'Lô sản phẩm'}"?`}
+        confirmText={products.some(p => p.notes === '0') ? 'Yêu cầu chỉnh sửa' : 'Phê duyệt'}
         cancelText="Hủy"
         loading={isApproving}
       />
@@ -579,6 +590,16 @@ const ApproverBatchDetailPage: React.FC = () => {
         onSubmit={(reason) => {
           setIsRejectReasonOpen(false);
           handleRejectBatchSubmit(reason);
+        }}
+      />
+
+      <RevisionConfirmPopup
+        isOpen={isRevisionConfirmOpen}
+        onClose={() => setIsRevisionConfirmOpen(false)}
+        itemName={quickViewProduct?.name}
+        onConfirm={async () => {
+          setIsRevisionConfirmOpen(false);
+          await handleAction('REVISION');
         }}
       />
     </div>

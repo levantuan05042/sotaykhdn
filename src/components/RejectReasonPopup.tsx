@@ -36,7 +36,7 @@ export const RejectReasonPopup: React.FC<RejectReasonPopupProps> = ({
           <button type="button" className="custom-popup-close-btn" onClick={onClose} title="Đóng">✕</button>
         </div>
         <div className="custom-popup-body">
-          <label className="custom-popup-label">Nội dung từ chối (*)</label>
+          <label className="custom-popup-label">Nội dung từ chối <span style={{ color: '#EF4444' }}>(*)</span></label>
           <textarea
             className={`custom-popup-textarea ${reasonError ? 'input-invalid' : ''}`}
             placeholder="Nhập nội dung..."

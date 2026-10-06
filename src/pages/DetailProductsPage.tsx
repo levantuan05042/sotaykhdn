@@ -991,7 +991,7 @@ const DetailProductPage: React.FC = () => {
             <div className="formCard">
               
               <div className="formGroup">
-                <label className="label">Nhóm sản phẩm (*)</label>
+                <label className="label">Nhóm sản phẩm <span style={{ color: '#EF4444' }}>(*)</span></label>
                 <div className="custom-select-container" ref={groupRef}>
                   <div 
                     className={`select-custom ${isGroupOpen ? 'open' : ''} ${isReadOnly ? 'is-disabled' : ''}`} 

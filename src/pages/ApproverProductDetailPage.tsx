@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import toast, { Toaster } from 'react-hot-toast';
 import { API_ENDPOINTS } from '../config/apiConfig';
+import { RevisionConfirmPopup } from '../components/RevisionConfirmPopup';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { getRandomAvatar } from '../utils/avatarUtils';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
@@ -11,7 +12,12 @@ import CriteriaRichBlock from '../components/ui/CriteriaRichBlock';
 import StatusBadge from '../components/ui/StatusBadge';
 import AuditLogTimeline from '../components/AuditLogTimeline';
 import CollapsibleRightCard from '../components/ui/CollapsibleRightCard';
+<<<<<<< HEAD
 import { notifyAdminDataChanged, notifyViewAffectingDataChanged } from '../hooks/useAdminAutoRefresh';
+=======
+import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
+>>>>>>> main
 import iconChat from '../assets/icon/iconchat.svg';
 import iconPen from '../assets/icon/iconpen.svg';
 import './ApproverProductDetailPage.css';
@@ -33,6 +39,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState('');
   const [auditRefreshKey, setAuditRefreshKey] = useState(0);
+  const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false);
 
   const [categories, setCategories] = useState<any[]>([]);
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -148,6 +155,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
       }));
       setNewComment('');
       setAuditRefreshKey((prev) => prev + 1);
+      notifyApproverStatusChanged();
 
       const labelMap: Record<string, string> = {
         '0': 'Yêu cầu chỉnh sửa',
@@ -271,7 +279,7 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
               {newComment.trim() ? (
                 <button
                   className="btn-revision-request-yellow"
-                  onClick={() => handleSaveReview('0')}
+                  onClick={() => setIsRevisionConfirmOpen(true)}
                 >
                   <img src={iconPen} alt="" />
                   Yêu cầu chỉnh sửa
@@ -548,6 +556,15 @@ const ApproverProductDetailPage: React.FC<ApproverProductDetailPageProps> = ({ r
         </section>
 
       </main>
+
+      <RevisionConfirmPopup
+        isOpen={isRevisionConfirmOpen}
+        onClose={() => setIsRevisionConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsRevisionConfirmOpen(false);
+          await handleSaveReview('0');
+        }}
+      />
     </div>
   );
 };

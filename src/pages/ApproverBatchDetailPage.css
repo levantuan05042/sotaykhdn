@@ -220,8 +220,15 @@
 .batch-data-table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 14px;
   text-align: left;
+}
+
+.batch-data-table th,
+.batch-data-table td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .batch-data-table th {

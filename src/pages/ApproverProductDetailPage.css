@@ -128,9 +128,10 @@
   color: #854D0E;
 }
 
-.header-note-tag--reject {
-  background-color: #FEE2E2;
-  color: #991B1B;
+.header-note-tag--reject,
+.header-note-tag.header-note-tag--reject {
+  background-color: #EAE7EC !important;
+  color: #5C5962 !important;
 }
 
 .header-note-tag--reviewed {
@@ -181,6 +182,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: min(60vw, 600px);
+  display: inline-block;
+  vertical-align: bottom;
 }
 
 .status-pair-card {

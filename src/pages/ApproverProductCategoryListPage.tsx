@@ -7,9 +7,10 @@ import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import { formatApprovedBy } from '../utils/formatUtils';
+import { formatApprovedBy, formatDateDDMMYYYY } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 import './ApproverProductCategoryListPage.css';
 
 interface ProductCategoryItem {
@@ -84,6 +85,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
           name: item.name || '---',
           groupName: item.groupName || '---',
           status: item.status || 'DRAFT',
+          createdAt: item.createdAt ? formatDateDDMMYYYY(item.createdAt) : '---',
           createdBy: item.createdByFullName || item.createdBy || '---',
           approvedBy: item.approvedByFullName || item.approvedBy || '---',
           active: item.active === true,
@@ -142,6 +144,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
         )
       );
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
@@ -176,11 +179,13 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     {
       key: 'name',
       header: 'Danh mục sản phẩm cấp 1',
+      width: '300px',
       render: (row) => <span className="category-item-title">{row.name}</span>,
     },
     {
       key: 'groupName',
       header: 'Nhóm sản phẩm',
+      width: '220px',
       render: (row) => row.groupName,
     },
     {
@@ -192,6 +197,7 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     {
       key: 'active',
       header: 'Hiệu lực',
+      width: '140px',
       render: (row) => (
         <span style={{ color: row.active ? '#065F46' : '#6B7280', fontWeight: 600 }}>
           {row.active ? 'Đang hiển thị' : 'Đang ẩn'}
@@ -201,16 +207,25 @@ export const ApproverProductCategoryListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
+      width: '180px',
       render: (row) => formatApprovedBy(row.createdBy),
+    },
+    {
+      key: 'createdAt',
+      header: 'Ngày tạo',
+      width: '140px',
+      render: (row) => (row as any).createdAt || '---',
     },
     {
       key: 'approvedBy',
       header: 'Người Phê duyệt',
+      width: '180px',
       render: (row) => formatApprovedBy(row.approvedBy),
     },
     {
       key: 'version',
       header: 'Phiên bản',
+      width: '140px',
       render: (row) => (
         <span style={{ fontWeight: 600, color: '#171717' }}>
           {row.version ? `Phiên bản ${row.version}` : '--'}

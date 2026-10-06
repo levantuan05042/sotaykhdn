@@ -51,6 +51,16 @@ export const formatVersion = (version: any): string => {
   return `Phiên bản ${str}`;
 };
 
+// Format ngày theo dd/MM/yyyy. Trả '---' nếu null/ràng/null/date không hợp lệ.
+export const formatDateDDMMYYYY = (dateStr?: string | null): string => {
+  if (!dateStr) return '---';
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return '---';
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  return `${day}/${month}/${date.getFullYear()}`;
+};
+
 export const isCascadeHidden = (item?: { cascadeHiddenBy?: string | null } | null): boolean =>
   Boolean(item?.cascadeHiddenBy);
 
