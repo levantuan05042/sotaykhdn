@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Toaster } from 'react-hot-toast';
 import RejectReasonPopup from './RejectReasonPopup';
 import ActionConfirmModal from './ui/ActionConfirmModal';
+import { RevisionConfirmPopup } from './RevisionConfirmPopup';
 import AuditLogTimeline from './AuditLogTimeline';
 import CollapsibleRightCard from './ui/CollapsibleRightCard';
 import StatusBadge from './ui/StatusBadge';
@@ -77,6 +78,7 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
   const [isApproveConfirmOpen, setIsApproveConfirmOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejectReasonOpen, setIsRejectReasonOpen] = useState(false);
+  const [isRevisionConfirmOpen, setIsRevisionConfirmOpen] = useState(false);
 
   const handleApprove = () => {
     setIsApproveConfirmOpen(true);
@@ -139,9 +141,9 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
                 Từ chối
               </button>
               {newComment.trim() !== '' ? (
-                <button 
-                  className="btn-action-revision" 
-                  onClick={() => submitReview('NEEDS_REVISION', newComment)} 
+                <button
+                  className="btn-action-revision"
+                  onClick={() => setIsRevisionConfirmOpen(true)}
                   disabled={loading}
                 >
                   <img src={iconPen} alt="" />
@@ -295,6 +297,16 @@ export const ApproverDetailWrapper: React.FC<ApproverDetailWrapperProps> = ({
         onSubmit={async (reason) => {
           setIsRejectReasonOpen(false);
           await submitReview('REJECTED', reason);
+        }}
+      />
+
+      <RevisionConfirmPopup
+        isOpen={isRevisionConfirmOpen}
+        onClose={() => setIsRevisionConfirmOpen(false)}
+        itemName={stripHtmlText(itemName) || itemName}
+        onConfirm={async () => {
+          setIsRevisionConfirmOpen(false);
+          await submitReview('NEEDS_REVISION', newComment);
         }}
       />
     </div>

@@ -7,9 +7,10 @@ import DataTable, { type Column } from '../components/ui/DataTable';
 import StatusBadge from '../components/ui/StatusBadge';
 import BatchApprovalModal from '../components/ui/BatchApprovalModal';
 import { API_ENDPOINTS } from '../config/apiConfig';
-import { formatApprovedBy } from '../utils/formatUtils';
+import { formatApprovedBy, formatDateDDMMYYYY } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 import './ApproverCriteriaListPage.css';
 
 interface ProductGroupItem {
@@ -174,6 +175,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
           status: item.status || 'DRAFT',
           active: !!item.active,
           createdBy: item.createdByFullName || item.createdBy || '---',
+          createdAt: item.createdAt ? formatDateDDMMYYYY(item.createdAt) : '---',
           approvedBy: item.approvedByFullName || item.approvedBy || '---',
           version: item.version || 1,
         };
@@ -230,6 +232,7 @@ export const ApproverCriteriaListPage: React.FC = () => {
         )
       );
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
@@ -280,16 +283,19 @@ export const ApproverCriteriaListPage: React.FC = () => {
     {
       key: 'code',
       header: 'Mã tiêu chí',
+      width: '140px',
       render: (row) => <span className="text-bold">{row.code}</span>,
     },
     {
       key: 'name',
       header: 'Tên tiêu chí',
+      width: '280px',
       render: (row) => row.name,
     },
     {
       key: 'groupName',
       header: 'Nhóm sản phẩm',
+      width: '220px',
       render: (row) => (
         <ApproverGroupNamesCell
           groups={row.productGroups.length > 0
@@ -332,11 +338,19 @@ export const ApproverCriteriaListPage: React.FC = () => {
     {
       key: 'createdBy',
       header: 'Người tạo',
+      width: '180px',
       render: (row) => formatApprovedBy(row.createdBy),
+    },
+    {
+      key: 'createdAt',
+      header: 'Ngày tạo',
+      width: '140px',
+      render: (row) => (row as any).createdAt || '---',
     },
     {
       key: 'approvedBy',
       header: 'Người kiểm duyệt',
+      width: '180px',
       render: (row) => formatApprovedBy(row.approvedBy),
     },
     {

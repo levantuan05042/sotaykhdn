@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './DataTable.css';
+import { CellWithTooltip } from './CellWithTooltip';
 
 export interface Column<T> {
   key: string;
@@ -287,7 +288,21 @@ export function DataTable<T extends Record<string, any>>({
                           textAlign: col.align || 'left',
                         }}
                       >
-                        {col.render ? col.render(row, actualIndex) : row[col.key]}
+                        {(() => {
+                          const raw = col.render ? col.render(row, actualIndex) : row[col.key];
+                          // Lấy text để hiển thị tooltip (ưu tiên raw value dạng string, fallback lấy từ row[col.key])
+                          const tooltipText = (() => {
+                            if (typeof raw === 'string' || typeof raw === 'number') return String(raw);
+                            const fromRow = row[col.key];
+                            if (typeof fromRow === 'string' || typeof fromRow === 'number') return String(fromRow);
+                            return '';
+                          })();
+                          if (raw === null || raw === undefined || raw === '') {
+                            return <span className="cell-truncate-wrapper">---</span>;
+                          }
+                          // Luôn bọc CellWithTooltip để đảm bảo tooltip khi hover cho mọi cell (kể cả khi render trả về <span>...</span>)
+                          return <CellWithTooltip text={tooltipText}>{raw}</CellWithTooltip>;
+                        })()}
                       </td>
                     ))}
                   </tr>

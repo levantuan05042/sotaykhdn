@@ -10,6 +10,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 import './ApproverProductSingleListPage.css';
 
 interface ProductItem {
@@ -156,6 +157,7 @@ export const ApproverProductSingleListPage: React.FC = () => {
         )
       );
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
 
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
@@ -190,32 +192,37 @@ export const ApproverProductSingleListPage: React.FC = () => {
     {
       key: 'name',
       header: 'Tên nội dung',
-      width: '28%',
+      width: '340px',
       render: (row) => <span className="product-item-title-text">{row.name}</span>,
     },
     {
       key: 'productGroupName',
       header: 'Nhóm sản phẩm',
+      width: '220px',
       render: (row) => row.productGroupName || '---',
     },
     {
       key: 'createdBy',
       header: 'Người tạo',
+      width: '180px',
       render: (row) => formatApprovedBy(row.createdBy),
     },
     {
       key: 'approvedBy',
       header: 'Người Phê duyệt',
+      width: '180px',
       render: (row) => formatApprovedBy(row.approvedBy),
     },
     {
       key: 'status',
       header: 'Trạng thái',
+      width: '180px',
       render: (row) => <StatusBadge status={row.status} />,
     },
     {
       key: 'createdAt',
       header: 'Thời gian',
+      width: '140px',
       render: (row) => row.createdAt,
     },
     {

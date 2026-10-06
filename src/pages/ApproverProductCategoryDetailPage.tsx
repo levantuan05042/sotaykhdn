@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
 import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 
 interface CommentItem {
   id: string;
@@ -89,6 +90,7 @@ export const ApproverProductCategoryDetailPage: React.FC = () => {
         approvedBy: approvedByStr,
       });
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt danh mục sản phẩm:', error);

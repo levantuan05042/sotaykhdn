@@ -26,7 +26,17 @@
   border-collapse: collapse;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
-  table-layout: auto;
+  table-layout: fixed;
+}
+
+/* Wrapper tối giản cho placeholder --- */
+.data-table .cell-truncate-wrapper {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #9CA3AF;
 }
 
 .data-table thead {
@@ -43,10 +53,9 @@
   font-weight: 600;
   padding: 16px;
   border-bottom: 1px solid #E5E7EB;
-  white-space: nowrap !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-  min-width: max-content;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .th-sort {
@@ -103,6 +112,7 @@
   color: #262626;
   border-bottom: 1px solid #F0F0F0;
   vertical-align: middle;
+  overflow: hidden;
 }
 
 .data-table tbody tr {

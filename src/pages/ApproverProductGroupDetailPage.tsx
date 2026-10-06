@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import ApproverDetailWrapper from '../components/ApproverDetailWrapper';
 import LoadingOverlay from '../components/ui/LoadingOverlay';
 import { notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 
 interface CommentItem {
   id: string;
@@ -97,6 +98,7 @@ export const ApproverProductGroupDetailPage: React.FC = () => {
 
       toast.success(statusVal === 'ACTIVE' ? 'Phê duyệt nhóm sản phẩm thành công!' : 'Đã phản hồi ý kiến đánh giá!');
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
       fetchDetail();
     } catch (error: any) {
       console.error('Lỗi khi lưu phê duyệt nhóm sản phẩm:', error);

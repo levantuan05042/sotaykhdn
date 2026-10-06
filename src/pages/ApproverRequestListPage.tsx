@@ -12,6 +12,7 @@ import { API_ENDPOINTS } from '../config/apiConfig';
 import { formatApprovedBy } from '../utils/formatUtils';
 import { matchesSearch } from '../utils/searchText';
 import { useAdminAutoRefresh, notifyAdminDataChanged } from '../hooks/useAdminAutoRefresh';
+import { notifyApproverStatusChanged } from '../config/apiConfig';
 import './ApproverRequestListPage.css';
 
 export interface RequestItem {
@@ -158,6 +159,7 @@ const ApproverRequestListPage: React.FC = () => {
       setSelectedKeys([]);
       setModalState({ isOpen: false, type: null });
       notifyAdminDataChanged();
+      notifyApproverStatusChanged();
       await fetchRequests(true);
     } catch (error: any) {
       console.error('Batch action error:', error);
@@ -196,6 +198,7 @@ const ApproverRequestListPage: React.FC = () => {
     {
       key: 'title',
       header: 'Tên yêu cầu',
+      width: '360px',
       render: (row) => <span className="request-item-title">{row.title}</span>,
     },
     {
@@ -213,11 +216,13 @@ const ApproverRequestListPage: React.FC = () => {
     {
       key: 'creator',
       header: 'Người tạo',
+      width: '180px',
       render: (row) => formatApprovedBy(row.creator),
     },
     {
       key: 'approver',
       header: 'Người kiểm duyệt',
+      width: '180px',
       render: (row) => formatApprovedBy(row.approver),
     },
     {

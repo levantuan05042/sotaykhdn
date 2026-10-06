@@ -42,6 +42,12 @@ axios.interceptors.request.use((config) => {
   return config;
 });
 
+// Thông báo cho Sidebar refetch số lượng "Chờ xử lý" ở module phê duyệt.
+// Gọi sau khi một bản ghi được duyệt / từ chối / yêu cầu chỉnh sửa / tạo mới.
+export const notifyApproverStatusChanged = () => {
+  window.dispatchEvent(new CustomEvent('approverStatusChanged'));
+};
+
 // Bạn có thể gom sẵn các đầu Endpoint vào đây cho dễ quản lý
 export const API_ENDPOINTS = {
   PRODUCT_GROUPS: {

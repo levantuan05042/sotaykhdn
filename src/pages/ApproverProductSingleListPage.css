@@ -1,3 +1,5 @@
+/* Bảng dùng DataTable component - CSS chống tràn đã được khai báo trong DataTable.css */
+
 .product-single-list-page {
   padding: 24px 32px;
   background-color: #FAFAFA;
@@ -48,6 +50,13 @@
 .product-item-title-text {
   color: #171717;
   font-weight: 500;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .table-card {
